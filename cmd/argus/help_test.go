@@ -17,7 +17,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"testing"
@@ -26,37 +25,15 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "main"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
-}
-
-// countRows counts the rows of a table.
-func countRows(t *testing.T, db *sql.DB, table string) int {
-	t.Helper()
-
-	var count int
-	//#nosec G201 -- table names come from the tests themselves.
-	if err := db.QueryRow(
-		fmt.Sprintf(`SELECT COUNT(*) FROM %s;`, table),
-	).Scan(&count); err != nil {
-		t.Fatalf(
-			"%s count %s: %v",
-			packageName, table, err,
-		)
-	}
-	return count
 }

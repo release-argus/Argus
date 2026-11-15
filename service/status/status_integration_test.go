@@ -17,17 +17,16 @@
 package status
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestUpdateUpdatesCurrentMetric(t *testing.T) {
-	// GIVEN: a Status that has just had a version change.
 	tests := []struct {
 		name                                     string
 		previousVersions, newVersions            serviceinfo.ServiceInfo
@@ -100,9 +99,7 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 			updateCountAvailable: 1,
 			updateCountSkipped:   0,
 		},
-		// Cannot go from deployed to approved/skipped without first being available.
-		// "1 to 2 - Latest version deployed -> Latest version approved": {}.
-		// "1 to 3 - Latest version deployed -> Latest version skipped": {}.
+		// Deployed cannot go to approved/skipped (1 to 2, 1 to 3) without first being available.
 		{
 			name: "2 to 0 - Latest version approved -> Latest version not deployed, approved, or skipped",
 			previousVersions: serviceinfo.ServiceInfo{
@@ -183,44 +180,37 @@ func TestUpdateUpdatesCurrentMetric(t *testing.T) {
 		},
 	}
 
-	// Changing and reading UpdatesCurrent.
+	// The subtests change and read metric.UpdatesCurrent.
 	metricsMu.Lock()
 	t.Cleanup(metricsMu.Unlock)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.UpdatesCurrent.
 
 			tc.newVersions.DeployedVersion = util.ValueOr(tc.newVersions.DeployedVersion, tc.previousVersions.DeployedVersion)
 			tc.newVersions.LatestVersion = util.ValueOr(tc.newVersions.LatestVersion, tc.previousVersions.LatestVersion)
 			hadUpdatesCurrentAvailable := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
 			hadUpdatesCurrentSkipped := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
 
-			// WHEN: updateUpdatesCurrentMetric is called with the previous and new versions.
 			updateUpdatesCurrentMetric(tc.previousVersions, tc.newVersions)
 
-			prefix := fmt.Sprintf(
-				"%s\nUpdateUpdatesCurrentMetric(previous=%+v, new=%+v)",
-				packageName, tc.previousVersions, tc.newVersions,
-			)
-
-			// Validate the update counts for both the approved and skipped metrics.
-			// For this, we assume that `SetUpdatesCurrent` has been correctly implemented,
-			// and the metrics have been updated accordingly.
 			want := hadUpdatesCurrentAvailable + tc.updateCountAvailable
 			got := testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("AVAILABLE"))
 			if got != want {
 				t.Errorf(
-					"%s 'updates available' metric mismatch\ngot:  %f\nwant: %f",
-					prefix, got, want,
+					"metric.UpdatesCurrent.WithLabelValues(\"AVAILABLE\") mismatch\n"+
+						"got:  %f\nwant: %f",
+					got, want,
 				)
 			}
 			want = hadUpdatesCurrentSkipped + tc.updateCountSkipped
 			got = testutil.ToFloat64(metric.UpdatesCurrent.WithLabelValues("SKIPPED"))
 			if got != want {
 				t.Errorf(
-					"%s 'updates skipped' metric mismatch\ngot:  %f\nwant: %f",
-					prefix, got, want,
+					"metric.UpdatesCurrent.WithLabelValues(\"SKIPPED\") mismatch\n"+
+						"got:  %f\nwant: %f",
+					got, want,
 				)
 			}
 		})

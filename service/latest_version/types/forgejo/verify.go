@@ -42,7 +42,7 @@ func (l *Lookup) CheckValues() error {
 	if l.accessToken() != "" && isPlaintext(util.EvalEnvVars(l.resolveHost())) {
 		logx.Warn(
 			"access_token will be sent unencrypted, as the host uses http",
-			logx.LogFrom{Primary: "latest_version", Secondary: l.GetServiceID()},
+			logx.LogFrom{Primary: l.GetServiceID(), Secondary: "latest_version"},
 			true,
 		)
 	}

@@ -18,7 +18,6 @@ package test
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -27,7 +26,6 @@ import (
 )
 
 func TestAssertDecode(t *testing.T) {
-	// GIVEN: a function to decode.
 	f := func(format string, data []byte) (string, error) {
 		if string(data) == "fail" {
 			return "", errors.New("fail")
@@ -65,10 +63,7 @@ func TestAssertDecode(t *testing.T) {
 			want:              "",
 			decodeErrRegex:    `^regex unmatched$`,
 			decodeErrMismatch: true,
-			testErrRegex: TrimYAML(`
-				test
-				.* error mismatch`,
-			),
+			testErrRegex:      `error mismatch`,
 		},
 		{
 			name:                "stringified want mismatch",
@@ -77,10 +72,17 @@ func TestAssertDecode(t *testing.T) {
 			want:                "abc",
 			stringifiedMismatch: true,
 			decodeErrRegex:      `^$`,
-			testErrRegex: TrimYAML(`
-				test
-				.* stringified mismatch`,
-			),
+			testErrRegex:        `^AssertDecode\(\) mismatch`,
+		},
+		{
+			name:                "missing error and stringified want mismatch are both reported",
+			data:                "hi",
+			stringify:           genericStringify[string],
+			want:                "abc",
+			decodeErrRegex:      `^fail$`,
+			decodeErrMismatch:   true,
+			stringifiedMismatch: true,
+			testErrRegex:        `^error mismatch\n(.*\n)+AssertDecode\(\) mismatch\n`,
 		},
 		{
 			name:           "stringify function missing",
@@ -97,7 +99,6 @@ func TestAssertDecode(t *testing.T) {
 
 			format := "yaml"
 
-			// WHEN: AssertDecode is called.
 			decoded, decodeErr, testErr := AssertDecode(
 				t,
 				f,
@@ -106,66 +107,47 @@ func TestAssertDecode(t *testing.T) {
 				tc.stringify,
 				tc.want,
 				tc.decodeErrRegex,
-				packageName,
 				"AssertDecode",
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nAssertDecode(f, format=%q, data=%q)",
-				packageName, format, tc.data,
-			)
-
-			// THEN: The result is as expected.
-			if !(decoded == "" && tc.want == "") {
-				gotBytes, _ := decode.Marshal("yaml", decoded)
+			if decoded != "" || tc.want != "" {
+				gotBytes, err := decode.Marshal("yaml", decoded)
+				if err != nil {
+					t.Fatalf("decode.Marshal() failed: %v", err)
+				}
 				gotStr := string(gotBytes)
 				stringifiedMatch := gotStr == tc.want
 				if tc.stringifiedMismatch {
 					if stringifiedMatch {
 						t.Fatalf(
-							"%s stringified result shouldn't match\ngot:  %q\nwant: NOT %q",
-							prefix, gotStr, tc.want,
+							"decode.Marshal() mismatch\ngot:  %q\nwant: NOT %q",
+							gotStr, tc.want,
 						)
 					}
 				} else if !stringifiedMatch {
-					t.Fatalf(
-						"%s stringified mismatch\ngot:  %q\nwant: %q",
-						prefix, gotStr, tc.want,
-					)
+					t.Fatalf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", gotStr, tc.want)
 				}
 			}
 
-			// AND: The decode error is as expected.
 			e := errfmt.FormatError(decodeErr)
 			decodeErrMatch := regexp.MustCompile(tc.decodeErrRegex).MatchString(e)
 			if tc.decodeErrMismatch {
 				if decodeErrMatch {
-					t.Fatalf(
-						"%s decode error regex shouldn't match\ngot:  %q\nwant: NOT %q",
-						prefix, e, tc.decodeErrRegex,
-					)
+					t.Fatalf("decode error mismatch\ngot:  %q\nwant: NOT %q", e, tc.decodeErrRegex)
 				}
 			} else if !decodeErrMatch {
-				t.Fatalf(
-					"%s decode error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.decodeErrRegex,
-				)
+				t.Fatalf("decode error mismatch\ngot:  %q\nwant: %q", e, tc.decodeErrRegex)
 			}
 
-			// AND: The test error is as expected.
 			e = errfmt.FormatError(testErr)
 			if !regexp.MustCompile(tc.testErrRegex).MatchString(e) {
-				t.Fatalf(
-					"%s test error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.testErrRegex,
-				)
+				t.Fatalf("test error mismatch\ngot:  %q\nwant: %q", e, tc.testErrRegex)
 			}
 		})
 	}
 }
 
 func TestAssertApplyOverrides(t *testing.T) {
-	// GIVEN: a function to apply overrides to a struct.
 	f := func(format string, data []byte, v *testStruct) (*testStruct, error) {
 		if string(data) == "fail" {
 			return nil, errors.New("fail")
@@ -178,12 +160,11 @@ func TestAssertApplyOverrides(t *testing.T) {
 		return v, nil
 	}
 	tests := []struct {
-		name                                      string
-		data                                      string
-		stringify                                 func(*testStruct) string
-		want                                      string
-		overridesErrRegex, testErrRegex           string
-		overridesErrMismatch, stringifiedMismatch bool
+		name                            string
+		data                            string
+		stringify                       func(*testStruct) string
+		want                            string
+		overridesErrRegex, testErrRegex string
 	}{
 		{
 			name: "success",
@@ -210,16 +191,12 @@ func TestAssertApplyOverrides(t *testing.T) {
 			testErrRegex:      `^$`,
 		},
 		{
-			name:                 "errRegex mismatch",
-			data:                 "fail",
-			stringify:            genericStringify[*testStruct],
-			want:                 "",
-			overridesErrRegex:    `^regex unmatched$`,
-			overridesErrMismatch: true,
-			testErrRegex: TrimYAML(`
-				test
-				.* error mismatch`,
-			),
+			name:              "errRegex mismatch",
+			data:              "fail",
+			stringify:         genericStringify[*testStruct],
+			want:              "",
+			overridesErrRegex: `^regex unmatched$`,
+			testErrRegex:      `error mismatch`,
 		},
 		{
 			name: "stringified want mismatch",
@@ -234,12 +211,8 @@ func TestAssertApplyOverrides(t *testing.T) {
 				int: 2
 				bool: false
 			`),
-			stringifiedMismatch: true,
-			overridesErrRegex:   `^$`,
-			testErrRegex: TrimYAML(`
-				test
-				.* stringified mismatch`,
-			),
+			overridesErrRegex: `^$`,
+			testErrRegex:      `^AssertApplyOverrides\(\) mismatch`,
 		},
 		{
 			name:              "stringify function missing",
@@ -257,7 +230,6 @@ func TestAssertApplyOverrides(t *testing.T) {
 			format := "yaml"
 			v := testStruct{}
 
-			// WHEN: AssertApplyOverrides is called.
 			overridden, overridesErr, testErr := AssertApplyOverrides(
 				t,
 				&v,
@@ -268,60 +240,77 @@ func TestAssertApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.overridesErrRegex,
 				true,
-				packageName,
 				"AssertApplyOverrides",
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nAssertApplyOverrides(f, format=%q, data=%q)",
-				packageName, format, tc.data,
-			)
-
-			// THEN: The test error is as expected.
 			e := errfmt.FormatError(testErr)
 			if !regexp.MustCompile(tc.testErrRegex).MatchString(e) {
-				t.Fatalf(
-					"%s test error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.testErrRegex,
-				)
+				t.Fatalf("test error mismatch\ngot:  %q\nwant: %q", e, tc.testErrRegex)
 			}
-			if e != "" {
+			if testErr != nil {
 				return
 			}
 
-			// AND: The result is as expected.
-			gotBytes, _ := decode.Marshal("yaml", overridden)
-			gotStr := string(gotBytes)
-			stringifiedMatch := gotStr == tc.want
-			if tc.stringifiedMismatch {
-				if stringifiedMatch {
-					t.Fatalf(
-						"%s stringified result shouldn't match\ngot:  %q\nwant: NOT %q",
-						prefix, gotStr, tc.want,
-					)
-				}
-			} else if !stringifiedMatch {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, tc.want,
-				)
+			gotBytes, err := decode.Marshal("yaml", overridden)
+			if err != nil {
+				t.Fatalf("decode.Marshal() failed: %v", err)
+			}
+			if gotStr := string(gotBytes); gotStr != tc.want {
+				t.Fatalf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", gotStr, tc.want)
 			}
 
-			// AND: The overrides error is as expected.
 			e = errfmt.FormatError(overridesErr)
-			overridesErrMatch := regexp.MustCompile(tc.overridesErrRegex).MatchString(e)
-			if tc.overridesErrMismatch {
-				if overridesErrMatch {
-					t.Fatalf(
-						"%s overrides error regex shouldn't match\ngot:  %q\nwant: NOT %q",
-						prefix, e, tc.overridesErrRegex,
-					)
-				}
-			} else if !overridesErrMatch {
-				t.Fatalf(
-					"%s overrides error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.overridesErrRegex,
-				)
+			if !regexp.MustCompile(tc.overridesErrRegex).MatchString(e) {
+				t.Fatalf("overrides error mismatch\ngot:  %q\nwant: %q", e, tc.overridesErrRegex)
+			}
+		})
+	}
+}
+
+func TestAssertApplyOverrides__nonPointer(t *testing.T) {
+	f := func(_ string, _ []byte, v testStruct) (testStruct, error) {
+		return v, nil
+	}
+	tests := []struct {
+		name         string
+		want         string
+		testErrRegex string
+	}{
+		{
+			name:         "stringified want matches",
+			want:         "string: hello\n",
+			testErrRegex: `^AssertApplyOverrides\(\) address check needs a pointer-like type, got test\.testStruct$`,
+		},
+		{
+			name: "stringified want mismatch",
+			want: "string: bye\n",
+			testErrRegex: TrimYAML(`
+				^AssertApplyOverrides\(\) mismatch
+				got:  \"string: hello\\n\"
+				want: \"string: bye\\n\"
+				AssertApplyOverrides\(\) address check needs a pointer-like type, got test\.testStruct$`),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, testErr := AssertApplyOverrides(
+				t,
+				testStruct{String: "hello"},
+				f,
+				"yaml",
+				"",
+				genericStringify[testStruct],
+				tc.want,
+				`^$`,
+				true,
+				"AssertApplyOverrides",
+			)
+
+			e := errfmt.FormatError(testErr)
+			if !regexp.MustCompile(tc.testErrRegex).MatchString(e) {
+				t.Errorf("test error mismatch\ngot:  %q\nwant: %q", e, tc.testErrRegex)
 			}
 		})
 	}
@@ -332,7 +321,6 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 		Foo() string
 	}
 
-	// GIVEN: a function to apply overrides to a struct.
 	f := func(format string, data []byte, v tStruct) (tStruct, error) {
 		if err := Unmarshal(format, data, v); err != nil {
 			return nil, err
@@ -347,12 +335,11 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 		return v, err
 	}
 	tests := []struct {
-		name                                      string
-		data                                      string
-		want                                      string
-		sameAddress                               bool
-		overridesErrRegex, testErrRegex           string
-		overridesErrMismatch, stringifiedMismatch bool
+		name                            string
+		data                            string
+		want                            string
+		sameAddress                     bool
+		overridesErrRegex, testErrRegex string
 	}{
 		{
 			name: "address unchanged",
@@ -384,10 +371,7 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 			`),
 			sameAddress:       false,
 			overridesErrRegex: `^$`,
-			testErrRegex: TrimYAML(`
-				test
-				.* pointer mismatch.*should have changed`,
-			),
+			testErrRegex:      `^AssertApplyOverrides\(\) address mismatch\ngot:  \S+\nwant: NOT \S+$`,
 		},
 		{
 			name: "want same address, but changed",
@@ -403,10 +387,7 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 			`),
 			sameAddress:       true,
 			overridesErrRegex: `^$`,
-			testErrRegex: TrimYAML(`
-				test
-				.* pointer mismatch.*unexpected`,
-			),
+			testErrRegex:      `^AssertApplyOverrides\(\) address mismatch\ngot:  \S+\nwant: \S+$`,
 		},
 	}
 	for _, tc := range tests {
@@ -416,7 +397,6 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 			format := "yaml"
 			var v tStruct = &testStruct{}
 
-			// WHEN: AssertApplyOverrides is called.
 			overridden, overridesErr, testErr := AssertApplyOverrides(
 				t,
 				v,
@@ -427,77 +407,29 @@ func TestAssertApplyOverrides_AddressMatch(t *testing.T) {
 				tc.want,
 				tc.overridesErrRegex,
 				tc.sameAddress,
-				packageName,
 				"AssertApplyOverrides",
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nAssertApplyOverrides(f, format=%q, data=%q)",
-				packageName, format, tc.data,
-			)
-
-			// THEN: The test error is as expected.
 			e := errfmt.FormatError(testErr)
 			if !regexp.MustCompile(tc.testErrRegex).MatchString(e) {
-				t.Fatalf(
-					"%s test error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.testErrRegex,
-				)
+				t.Fatalf("test error mismatch\ngot:  %q\nwant: %q", e, tc.testErrRegex)
 			}
-			if e != "" {
+			if testErr != nil {
 				return
 			}
 
-			// AND: The result is as expected.
-			gotBytes, _ := decode.Marshal("yaml", overridden)
-			gotStr := string(gotBytes)
-			stringifiedMatch := gotStr == tc.want
-			if tc.stringifiedMismatch {
-				if stringifiedMatch {
-					t.Fatalf(
-						"%s stringified result shouldn't match\ngot:  %q\nwant: NOT %q",
-						prefix, gotStr, tc.want,
-					)
-				}
-			} else if !stringifiedMatch {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, tc.want,
-				)
+			gotBytes, err := decode.Marshal("yaml", overridden)
+			if err != nil {
+				t.Fatalf("decode.Marshal() failed: %v", err)
+			}
+			if gotStr := string(gotBytes); gotStr != tc.want {
+				t.Fatalf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", gotStr, tc.want)
 			}
 
-			// AND: The overrides error is as expected.
 			e = errfmt.FormatError(overridesErr)
-			overridesErrMatch := regexp.MustCompile(tc.overridesErrRegex).MatchString(e)
-			if tc.overridesErrMismatch {
-				if overridesErrMatch {
-					t.Fatalf(
-						"%s overrides error regex shouldn't match\ngot:  %q\nwant: NOT %q",
-						prefix, e, tc.overridesErrRegex,
-					)
-				}
-			} else if !overridesErrMatch {
-				t.Fatalf(
-					"%s overrides error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.overridesErrRegex,
-				)
+			if !regexp.MustCompile(tc.overridesErrRegex).MatchString(e) {
+				t.Fatalf("overrides error mismatch\ngot:  %q\nwant: %q", e, tc.overridesErrRegex)
 			}
 		})
-	}
-}
-
-func TestTestStruct_Foo(t *testing.T) {
-	// GIVEN: a testStruct with a String.
-	v := testStruct{
-		String: t.Name(),
-	}
-	// WHEN: Foo is called.
-	got := v.Foo()
-	// THEN: that String value is returned.
-	if got != v.String {
-		t.Errorf(
-			"%s\ntestStruct.Foo() value mismatch\ngot:  %q\nwant: %q",
-			packageName, got, v.String,
-		)
 	}
 }

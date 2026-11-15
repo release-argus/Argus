@@ -20,13 +20,14 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestShoutrrrs_Metrics(t *testing.T) {
-	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name      string
 		shoutrrrs *Shoutrrrs
@@ -57,7 +58,7 @@ func TestShoutrrrs_Metrics(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.NotifyResultTotal.
 
 			if tc.shoutrrrs != nil {
 				for name, s := range *tc.shoutrrrs {
@@ -72,38 +73,28 @@ func TestShoutrrrs_Metrics(t *testing.T) {
 				}
 			}
 
-			// WHEN: the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.NotifyResultTotal)
 			tc.shoutrrrs.InitMetrics()
 
-			// THEN: it can be counted.
-			got := testutil.CollectAndCount(metric.NotifyResultTotal)
 			want := had
 			if tc.shoutrrrs != nil {
 				want += 2 * len(*tc.shoutrrrs)
 			}
-			if got != want {
-				t.Errorf(
-					"%s\nShoutrrrs.InitMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, want,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Shoutrrrs.InitMetrics() NotifyResultTotal",
+				metric.NotifyResultTotal, want,
+			)
 
-			// AND: the metrics can be deleted.
 			tc.shoutrrrs.DeleteMetrics()
-			got = testutil.CollectAndCount(metric.NotifyResultTotal)
-			if got != had {
-				t.Errorf(
-					"%s\nShoutrrrs.DeleteMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, had,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Shoutrrrs.DeleteMetrics() NotifyResultTotal",
+				metric.NotifyResultTotal, had,
+			)
 		})
 	}
 }
 
 func TestShoutrrr_Metrics(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []string{
 		"a service",
 		"another service",
@@ -111,35 +102,24 @@ func TestShoutrrr_Metrics(t *testing.T) {
 
 	for _, name := range tests {
 		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.NotifyResultTotal.
 
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.ServiceStatus.ServiceInfo.ID = name
 
-			// WHEN: the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.NotifyResultTotal)
 			shoutrrr.initMetrics()
 
-			// THEN: it can be collected.
-			// counters:
-			got := testutil.CollectAndCount(metric.NotifyResultTotal)
-			want := 2
-			if (got - had) != want {
-				t.Errorf(
-					"%s\nShoutrrr.initMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
-					packageName, got-had, want,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Shoutrrr.initMetrics() NotifyResultTotal",
+				metric.NotifyResultTotal, had+2,
+			)
 
-			// AND: it can be deleted.
 			shoutrrr.deleteMetrics()
-			got = testutil.CollectAndCount(metric.NotifyResultTotal)
-			if got != had {
-				t.Errorf(
-					"%s\nShoutrrr.deleteMetrics() metrics count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, had,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Shoutrrr.deleteMetrics() NotifyResultTotal",
+				metric.NotifyResultTotal, had,
+			)
 		})
 	}
 }

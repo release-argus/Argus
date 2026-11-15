@@ -17,7 +17,6 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 // #######################
 
 func TestECRRegistryDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: an ECRRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -60,7 +58,7 @@ func TestECRRegistryDefaults_Unmarshal(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     "{}",
+			data:     "",
 			registry: &ECRRegistryDefaults{},
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -127,25 +125,19 @@ func TestECRRegistryDefaults_Unmarshal(t *testing.T) {
 				func(v *ECRRegistryDefaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"ECRRegistryDefaults",
+				"ECRRegistryDefaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nECRRegistryDefaults.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("ECRRegistryDefaults.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestECRRegistry_Unmarshal(t *testing.T) {
-	// GIVEN: an ECRRegistry and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -195,7 +187,7 @@ func TestECRRegistry_Unmarshal(t *testing.T) {
 			want:     "{}\n",
 		},
 		{
-			name:   "JSON/image+tag (auth omitted, ECR is anonymous)",
+			name:   "JSON/image+tag/empty auth omitted",
 			format: "json",
 			data: test.TrimJSON(`{
 				"image": "i",
@@ -227,26 +219,20 @@ func TestECRRegistry_Unmarshal(t *testing.T) {
 				func(v *ECRRegistry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"ECRRegistry",
+				"ECRRegistry.Unmarshal",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if registry.Auth == nil {
-				t.Errorf(
-					"%s\nECRRegistry.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("ECRRegistry.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestECRRegistry_ApplyOverrides(t *testing.T) {
-	// GIVEN: an ECRRegistry and JSON/YAML to decode into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -292,7 +278,6 @@ func TestECRRegistry_ApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is decoded into itself.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.registry,
@@ -305,7 +290,6 @@ func TestECRRegistry_ApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
 				"ECRRegistry.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -319,7 +303,6 @@ func TestECRRegistry_ApplyOverrides(t *testing.T) {
 // ####################
 
 func TestECRRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: an ECRRegistryDefaults.
 	tests := []struct {
 		name     string
 		registry *ECRRegistryDefaults
@@ -336,7 +319,7 @@ func TestECRRegistryDefaults_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "non-empty/queryToken and validUntil",
+			name: "cache only/queryToken and validUntil",
 			registry: &ECRRegistryDefaults{
 				Auth: &ECRAuthDefaults{
 					queryToken: "abc",
@@ -351,22 +334,16 @@ func TestECRRegistryDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called with it.
 			got := tc.registry.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nECRRegistryDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestECRRegistry_IsZero(t *testing.T) {
-	// GIVEN: an ECRRegistry.
 	tests := []struct {
 		name string
 		data *ECRRegistry
@@ -412,22 +389,16 @@ func TestECRRegistry_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nECRRegistry.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestECRRegistry_Copy(t *testing.T) {
-	// GIVEN: an ECRRegistry.
 	tests := []struct {
 		name     string
 		registry *ECRRegistry
@@ -453,6 +424,7 @@ func TestECRRegistry_Copy(t *testing.T) {
 					validUntil: time.Now().Add(time.Hour),
 					defaults:   &ECRAuthDefaults{},
 				},
+				defaults: &ECRRegistryDefaults{},
 			},
 			want: test.TrimYAML(`
 				image: i1
@@ -465,28 +437,20 @@ func TestECRRegistry_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.registry.Copy()
 
-			prefix := fmt.Sprintf("%s\nECRRegistry.Copy()", packageName)
-
-			// THEN: the returned Registry unmarshals the same.
 			if got := decode.ToYAMLString(gotInterface, ""); got != tc.want {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("ECRRegistry mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned Registry is an ECRRegistry.
 			got, ok := gotInterface.(*ECRRegistry)
 			if !ok {
 				if gotInterface == nil {
 					return
 				}
 				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, gotInterface,
+					"ECRRegistry.Copy() type mismatch\ngot:  %T\nwant: *ECRRegistry",
+					gotInterface,
 				)
 			}
 			hadAuth, hasAuth := tc.registry.GetAuth().(*ECRAuth)
@@ -494,23 +458,29 @@ func TestECRRegistry_Copy(t *testing.T) {
 				return
 			}
 
-			// AND: the cache values are copied.
 			gotAuth, ok := got.GetAuth().(*ECRAuth)
-			if !ok ||
-				gotAuth.queryToken != hadAuth.queryToken ||
+			if !ok {
+				t.Fatalf(
+					"ECRRegistry.GetAuth() type mismatch\ngot:  %T\nwant: *ECRAuth",
+					got.GetAuth(),
+				)
+			}
+			if gotAuth.queryToken != hadAuth.queryToken ||
 				gotAuth.validUntil != hadAuth.validUntil ||
 				got.defaults != tc.registry.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %s",
-					prefix, got, tc.want,
+					"ECRRegistry mismatch\n"+
+						"got:  Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p\n"+
+						"want: Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p",
+					gotAuth.queryToken, gotAuth.validUntil, got.defaults,
+					hadAuth.queryToken, hadAuth.validUntil, tc.registry.defaults,
 				)
 			}
 
-			// AND: the returned ECRAuth is at a different address.
 			if gotAuth == hadAuth {
 				t.Fatalf(
-					"%s returned pointer to same Auth for instance %q",
-					prefix, tc.name,
+					"ECRRegistry.GetAuth(): copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotAuth, hadAuth,
 				)
 			}
 		})
@@ -522,7 +492,6 @@ func TestECRRegistry_Copy(t *testing.T) {
 // ########################
 
 func TestECRRegistryDefaults_String(t *testing.T) {
-	// GIVEN: an ECRRegistryDefaults.
 	tests := []struct {
 		name string
 		data *ECRRegistryDefaults
@@ -556,7 +525,7 @@ func TestECRRegistryDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"ECRRegistryDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -565,7 +534,6 @@ func TestECRRegistryDefaults_String(t *testing.T) {
 }
 
 func TestECRRegistry_String(t *testing.T) {
-	// GIVEN: an ECRRegistry.
 	tests := []struct {
 		name string
 		data *ECRRegistry
@@ -606,7 +574,7 @@ func TestECRRegistry_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"ECRRegistry.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -619,34 +587,22 @@ func TestECRRegistry_String(t *testing.T) {
 // #######################
 
 func TestECRRegistryDefaults_GetType(t *testing.T) {
-	// GIVEN: an ECRRegistryDefaults.
 	var registry ECRRegistryDefaults
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "ecr"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestECRRegistry_GetType(t *testing.T) {
-	// GIVEN: an ECRRegistry.
 	var registry ECRRegistry
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "ecr"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -655,7 +611,6 @@ func TestECRRegistry_GetType(t *testing.T) {
 // #########################
 
 func TestECRRegistry_NewRequest(t *testing.T) {
-	// GIVEN: an ECRRegistry, and a tag.
 	tests := []struct {
 		name     string
 		registry *ECRRegistry
@@ -705,7 +660,6 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 		},
 	}
 
-	// AND: Headers to verify being set.
 	headers := map[string]string{
 		"Accept": "application/vnd.oci.image.index.v1+json",
 	}
@@ -714,33 +668,20 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: newRequest() is called on it.
 			req, err := tc.registry.newRequest(tc.tag)
-
-			prefix := fmt.Sprintf(
-				"%s\nECRRegistry.newRequest(%q)",
-				packageName, tc.tag,
-			)
-
-			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: The headers are set.
 			for key, value := range headers {
 				if got := req.Header.Get(key); got != value {
 					t.Errorf(
-						"%s .Header[%q] mismatch\ngot:  %q\nwant: %q",
-						prefix, key,
-						got, value,
+						"http.Request.Header[%q] mismatch\ngot:  %q\nwant: %q",
+						key, got, value,
 					)
 				}
 			}
@@ -753,7 +694,6 @@ func TestECRRegistry_NewRequest(t *testing.T) {
 // ###################
 
 func TestECRAuthDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -768,7 +708,7 @@ func TestECRAuthDefaults_Unmarshal(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     "{}\n",
+			data:     "",
 			errRegex: `^$`,
 		},
 		{
@@ -791,14 +731,9 @@ func TestECRAuthDefaults_Unmarshal(t *testing.T) {
 
 			var auth ECRAuthDefaults
 			err := decode.Unmarshal(tc.format, []byte(tc.data), &auth)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nECRAuthDefaults.Unmarshal(format=%q, data=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.format, tc.data, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
@@ -809,7 +744,6 @@ func TestECRAuthDefaults_Unmarshal(t *testing.T) {
 // ################
 
 func TestECRAuthDefaults_IsZero(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	tests := []struct {
 		name string
 		data *ECRAuthDefaults
@@ -826,12 +760,12 @@ func TestECRAuthDefaults_IsZero(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "filled",
+			name: "cache only/queryToken and validUntil",
 			data: &ECRAuthDefaults{
 				queryToken: "qT",
 				validUntil: time.Now().Add(time.Hour),
 			},
-			want: true,
+			want: true, // ECR auth carries no configuration.
 		},
 	}
 
@@ -839,22 +773,16 @@ func TestECRAuthDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nECRAuthDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestECRAuth_Copy(t *testing.T) {
-	// GIVEN: an ECRAuth.
 	tests := []struct {
 		name string
 		auth *ECRAuth
@@ -885,50 +813,37 @@ func TestECRAuth_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			authCopy := tc.auth.Copy()
 
-			prefix := fmt.Sprintf("%s\nECRAuth.Copy()", packageName)
-
-			// THEN: the returned RegistryAuth unmarshals the same.
 			if got := decode.ToYAMLString(authCopy, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("ECRAuth mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned RegistryAuth is an ECRAuth.
 			got, ok := authCopy.(*ECRAuth)
 			if !ok {
 				if authCopy == nil {
 					return
 				}
-				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, authCopy,
-				)
+				t.Fatalf("ECRAuth.Copy() type mismatch\ngot:  %T\nwant: *ECRAuth", authCopy)
 			}
 			if tc.auth == nil {
 				return
 			}
 
-			// AND: the cache values are copied.
 			if got.queryToken != tc.auth.queryToken ||
 				got.validUntil != tc.auth.validUntil ||
 				got.defaults != tc.auth.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got, tc.auth,
+					"ECRAuth mismatch\n"+
+						"got:  queryToken=%q, validUntil=%s, defaults=%p\n"+
+						"want: queryToken=%q, validUntil=%s, defaults=%p",
+					got.queryToken, got.validUntil, got.defaults,
+					tc.auth.queryToken, tc.auth.validUntil, tc.auth.defaults,
 				)
 			}
 
-			// AND: the returned ECRAuth is at a different address.
 			if got == tc.auth {
-				t.Fatalf(
-					"%s returned pointer to the same Auth for instance %q",
-					prefix, tc.name,
-				)
+				t.Fatalf("copy aliases the original\ngot:  %p\nwant: NOT %p", got, tc.auth)
 			}
 		})
 	}
@@ -939,7 +854,6 @@ func TestECRAuth_Copy(t *testing.T) {
 // ####################
 
 func TestECRAuthDefaults_String(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	tests := []struct {
 		name string
 		data *ECRAuthDefaults
@@ -971,7 +885,7 @@ func TestECRAuthDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"ECRAuthDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -984,7 +898,6 @@ func TestECRAuthDefaults_String(t *testing.T) {
 // ###################
 
 func TestECRAuthDefaults_Defaults(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	tests := []struct {
 		name         string
 		data         *ECRAuthDefaults
@@ -1008,22 +921,16 @@ func TestECRAuthDefaults_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Defaults is called on it.
 			got := tc.data.Defaults()
 
-			// THEN: Defaults are returned when expected.
 			if gotDefaults := got != nil; gotDefaults != tc.haveDefaults {
-				t.Errorf(
-					"%s\nECRAuthDefaults.Defaults() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotDefaults, tc.haveDefaults,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", gotDefaults, tc.haveDefaults)
 			}
 		})
 	}
 }
 
 func TestECRAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1055,17 +962,18 @@ func TestECRAuthDefaults_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: an ECRAuthDefaults to take them.
 			data := &ECRAuthDefaults{}
 
-			// WHEN: SetDefaults() is called to give these defaults.
 			data.SetDefaults(tc.newDefaults)
 
-			// THEN: they are set when expected.
-			if got := data.defaults == tc.newDefaults; got != tc.doesSet {
+			var want *ECRAuthDefaults
+			if tc.doesSet {
+				want = tc.newDefaults.(*ECRAuthDefaults)
+			}
+			if data.defaults != want {
 				t.Errorf(
-					"%s\nECRAuthDefaults.SetDefaults() .defaults mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.doesSet,
+					"ECRAuthDefaults.defaults mismatch\ngot:  %p\nwant: %p",
+					data.defaults, want,
 				)
 			}
 		})
@@ -1077,7 +985,6 @@ func TestECRAuthDefaults_SetDefaults(t *testing.T) {
 // #####################
 
 func TestECRAuth_CheckValues(t *testing.T) {
-	// GIVEN: an ECRAuth.
 	tests := []struct {
 		name     string
 		input    *ECRAuth
@@ -1101,7 +1008,6 @@ func TestECRAuth_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -1114,18 +1020,13 @@ func TestECRAuth_CheckValues(t *testing.T) {
 // ######################
 
 func TestECRAuthDefaults_GetTokenSelf(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	data := &ECRAuthDefaults{}
 
-	// WHEN: GetTokenSelf() is called on it.
 	got := data.GetTokenSelf()
 
-	// THEN: the empty token is returned (Amazon ECR Public Gallery is anonymous).
-	if got != "" {
-		t.Errorf(
-			"%s\nECRAuthDefaults.GetTokenSelf() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, "",
-		)
+	// Amazon ECR Public Gallery is anonymous.
+	if want := ""; got != want {
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -1134,7 +1035,6 @@ func TestECRAuthDefaults_GetTokenSelf(t *testing.T) {
 // #######################
 
 func TestECRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults.
 	tests := []struct {
 		name string
 		data *ECRAuthDefaults
@@ -1167,52 +1067,61 @@ func TestECRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryTokenSelf() is called on it.
 			queryToken, _ := tc.data.GetQueryTokenSelf()
 
-			// THEN: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s\nECRAuthDefaults.GetQueryTokenSelf() queryToken mismatch\ngot:  %q\nwant: %q",
-					packageName, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 		})
 	}
 }
 
 func TestECRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
-	// GIVEN: an ECRAuthDefaults with a valid queryToken.
 	data := &ECRAuthDefaults{
 		queryToken: "query-token",
 		validUntil: time.Now().Add(time.Hour),
 	}
 
-	// AND: the mutex is held.
 	data.mu.Lock()
-	go func() {
-		time.Sleep(time.Second)
-		data.mu.Unlock()
-	}()
 
-	// WHEN: GetQueryTokenSelf() is queued on it by many goroutines.
-	for range 10 {
-		go func() { _, _ = data.GetQueryTokenSelf() }()
+	queryTokens := make([]string, 10)
+	done := make(chan int, len(queryTokens))
+	for i := range queryTokens {
+		go func() {
+			queryTokens[i], _ = data.GetQueryTokenSelf()
+			done <- i
+		}()
 	}
-	// Call again to verify we still get the queryToken once the lock is released.
-	queryToken, _ := data.GetQueryTokenSelf()
 
-	// THEN: the query token is returned as expected.
-	if queryToken != data.queryToken {
-		t.Errorf(
-			"%s\nECRAuthDefaults.GetQueryTokenSelf() queryToken mismatch\ngot:  %q\nwant: %q",
-			packageName, queryToken, data.queryToken,
+	select {
+	case i := <-done:
+		data.mu.Unlock()
+		t.Fatalf(
+			"goroutine %d: ECRAuthDefaults.GetQueryTokenSelf() returned while the lock was held",
+			i,
 		)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	data.mu.Unlock()
+	for range queryTokens {
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("ECRAuthDefaults.GetQueryTokenSelf() did not return once the lock was released")
+		}
+	}
+	for i, queryToken := range queryTokens {
+		if queryToken != data.queryToken {
+			t.Errorf(
+				"goroutine %d: ECRAuthDefaults.GetQueryTokenSelf() mismatch\ngot:  %q\nwant: %q",
+				i, queryToken, data.queryToken,
+			)
+		}
 	}
 }
 
 func TestECRAuth_GetQueryToken__cached(t *testing.T) {
-	// GIVEN: an ECRAuth with a valid cached query token.
 	tests := []struct {
 		name string
 		data *ECRAuth
@@ -1242,30 +1151,19 @@ func TestECRAuth_GetQueryToken__cached(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryToken() is called on it.
 			queryToken, err := tc.data.GetQueryToken(ContainerDetail{Image: test.ArgusDockerECRRepo})
-
-			// THEN: no refresh is needed, so no error.
 			if err != nil {
-				t.Fatalf(
-					"%s\nECRAuth.GetQueryToken() unexpected error: %s",
-					packageName, errfmt.FormatError(err),
-				)
+				t.Fatalf("unexpected error: %s", errfmt.FormatError(err))
 			}
 
-			// AND: the cached query token is returned.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s\nECRAuth.GetQueryToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 		})
 	}
 }
 
 func TestECRAuthDefaults_SetQueryToken(t *testing.T) {
-	// GIVEN: an ECRAuth with a defaults chain.
 	data := &ECRAuth{
 		defaults: &ECRAuthDefaults{},
 	}
@@ -1273,48 +1171,40 @@ func TestECRAuthDefaults_SetQueryToken(t *testing.T) {
 	queryToken := "new-query-token"
 	validUntil := time.Now().Add(10 * time.Second)
 
-	// WHEN: SetQueryToken() is called on it.
 	data.SetQueryToken(queryToken, validUntil)
 
-	// THEN: the queryToken is set on self.
 	if data.queryToken != queryToken || !data.validUntil.Equal(validUntil) {
 		t.Errorf(
-			"%s\nECRAuthDefaults.SetQueryToken() self not set\ngot:  %q/%v\nwant: %q/%v",
-			packageName, data.queryToken, data.validUntil, queryToken, validUntil,
+			"ECRAuth mismatch\n"+
+				"got:  queryToken=%q, validUntil=%s\n"+
+				"want: queryToken=%q, validUntil=%s",
+			data.queryToken, data.validUntil,
+			queryToken, validUntil,
 		)
 	}
 
-	// AND: the defaults are not touched (repo-global token cached per-instance).
+	// SetQueryToken writes only the receiver.
 	if data.defaults.queryToken != "" {
 		t.Errorf(
-			"%s\nECRAuthDefaults.SetQueryToken() should not propagate to defaults\ngot:  %q",
-			packageName, data.defaults.queryToken,
+			"ECRAuth.defaults.queryToken mismatch\ngot:  %q\nwant: \"\"",
+			data.defaults.queryToken,
 		)
 	}
 }
 
 func TestECRAuth_RefreshQueryToken__cached(t *testing.T) {
-	// GIVEN: an ECRAuth with a cached query token that is valid for a while.
 	auth := &ECRAuth{
 		queryToken: "cached-token",
 		validUntil: time.Now().Add(time.Hour),
 	}
 
-	// WHEN: refreshQueryToken is called on it.
 	queryToken, err := auth.refreshQueryToken(ContainerDetail{Image: test.ArgusDockerECRRepo})
-
-	prefix := fmt.Sprintf("%s\nECRAuth.refreshQueryToken()", packageName)
-
-	// THEN: the cached token is returned without error.
 	e := errfmt.FormatError(err)
 	if !util.RegexCheck(`^$`, e) {
-		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q", prefix, e, `^$`)
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, `^$`)
 	}
 	if got, want := queryToken, "cached-token"; got != want {
-		t.Fatalf(
-			"%s queryToken mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Fatalf("queryToken mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -1323,22 +1213,18 @@ func TestECRAuth_RefreshQueryToken__cached(t *testing.T) {
 // ######################
 
 func TestECRAuth_Inherit(t *testing.T) {
-	// GIVEN: an ECRAuth, and a RegistryAuth to try and inherit from.
 	tests := []struct {
 		name                 string
-		auth                 *ECRAuth
 		from                 RegistryAuth
 		srcDetail, dstDetail ContainerDetail
 		inherit              bool
 	}{
 		{
 			name: "inherit from nil",
-			auth: &ECRAuth{},
 			from: nil,
 		},
 		{
 			name: "inherit from ECRAuth (tokens are global, images differ)",
-			auth: &ECRAuth{},
 			from: &ECRAuth{
 				queryToken: "qt",
 				validUntil: time.Now(),
@@ -1349,14 +1235,12 @@ func TestECRAuth_Inherit(t *testing.T) {
 		},
 		{
 			name: "do not inherit from GHCRAuth",
-			auth: &ECRAuth{},
 			from: &GHCRAuth{
 				Token: "abc",
 			},
 		},
 		{
 			name: "do not inherit from HubAuth",
-			auth: &ECRAuth{},
 			from: &HubAuth{
 				Username: "user",
 				Token:    "abc",
@@ -1364,7 +1248,6 @@ func TestECRAuth_Inherit(t *testing.T) {
 		},
 		{
 			name: "do not inherit from QuayAuth",
-			auth: &ECRAuth{},
 			from: &QuayAuth{
 				Token: "abc",
 			},
@@ -1375,28 +1258,15 @@ func TestECRAuth_Inherit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, hadQueryToken, hadValidUntil := getTokenData(t, tc.auth)
-
-			// WHEN: Inherit is called on it.
-			tc.auth.Inherit(tc.from, tc.srcDetail, tc.dstDetail)
-
-			prefix := fmt.Sprintf(
-				"%s\nECRAuth.Inherit(from=%T)",
-				packageName, tc.from,
-			)
-
-			// THEN: the expected inheritance has occurred.
-			_, gotQueryToken, gotValidUntil := getTokenData(t, tc.auth)
-			queryTokenInherited := hadQueryToken != gotQueryToken
-			validUntilInherited := !hadValidUntil.Equal(gotValidUntil)
-			if queryTokenInherited != tc.inherit || validUntilInherited != tc.inherit {
-				t.Errorf(
-					"%s inheritance mismatch (want inherit=%t)\nqueryToken: had %q, got %q\nvalidUntil: had %q, got %q",
-					prefix, tc.inherit,
-					hadQueryToken, gotQueryToken,
-					hadValidUntil, gotValidUntil,
-				)
+			auth := &ECRAuth{
+				queryToken: "keep",
+				validUntil: time.Now().UTC().Add(10 * time.Minute),
 			}
+			had := getTokenData(auth)
+
+			auth.Inherit(tc.from, tc.srcDetail, tc.dstDetail)
+
+			assertInherited(t, "ECRAuth", had, auth, tc.from, tc.inherit)
 		})
 	}
 }

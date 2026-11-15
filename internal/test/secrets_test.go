@@ -24,7 +24,6 @@ import (
 )
 
 func TestRequireSecret(t *testing.T) {
-	// GIVEN: a secret env var, and the flag that makes a missing one fatal.
 	key := "ARGUS_TEST_REQUIRE_SECRET_VALUE"
 	tests := []struct {
 		name       string
@@ -47,70 +46,56 @@ func TestRequireSecret(t *testing.T) {
 		},
 		{
 			name:      "unset/skips",
-			wantSkipf: key + " is not set",
+			wantSkipf: fmt.Sprintf("%q is not set", key),
 		},
 		{
 			name:      "unset/skips when secrets are not required",
 			require:   "false",
-			wantSkipf: key + " is not set",
+			wantSkipf: fmt.Sprintf("%q is not set", key),
 		},
 		{
-			name:    "unset/fails when secrets are required",
-			require: "true",
-			wantFatalf: fmt.Sprintf(
-				"%s is not set, but %s is true",
-				key, requireSecretsEnv,
-			),
+			name:       "unset/fails when secrets are required",
+			require:    "true",
+			wantFatalf: fmt.Sprintf("%q is not set, but %q is true", key, requireSecretsEnv),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
+			// Serial: sets env vars.
 
-			// AND: the env is set.
-			SetEnv(t, map[string]string{
+			IsolateEnv(t, map[string]string{
 				key:               tc.value,
 				requireSecretsEnv: tc.require,
 			})
-			fT := &FakeT{Abort: true}
+			fakeT := &FakeT{Abort: true}
 
-			// WHEN: requireSecret is called on it.
 			var got string
-			aborted := fT.Aborted(func() { got = requireSecret(fT, key) })
+			aborted := fakeT.Aborted(func() {
+				got = requireSecret(fakeT, key)
+			})
 
-			// THEN: the value is returned, or the test is skipped/failed.
 			for _, check := range []struct {
 				name, got, want string
 			}{
 				{name: "value", got: got, want: tc.want},
-				{name: "Fatalf", got: strings.Join(fT.Fatals, "\n"), want: tc.wantFatalf},
-				{name: "Skipf", got: strings.Join(fT.Skips, "\n"), want: tc.wantSkipf},
+				{name: "FakeT.Fatals", got: strings.Join(fakeT.Fatals, "\n"), want: tc.wantFatalf},
+				{name: "FakeT.Skips", got: strings.Join(fakeT.Skips, "\n"), want: tc.wantSkipf},
 			} {
 				if check.got != check.want {
-					t.Errorf(
-						"%s\nrequireSecret(%q) %s mismatch\ngot:  %q\nwant: %q",
-						packageName, key, check.name,
-						check.got, check.want,
-					)
+					t.Errorf("%s mismatch\ngot:  %q\nwant: %q", check.name, check.got, check.want)
 				}
 			}
 
-			// AND: reporting ends the test.
 			wantAborted := tc.wantFatalf != "" || tc.wantSkipf != ""
 			if aborted != wantAborted {
-				t.Errorf(
-					"%s\nrequireSecret(%q) aborted mismatch\ngot:  %t\nwant: %t",
-					packageName, key,
-					aborted, wantAborted,
-				)
+				t.Errorf("FakeT.Aborted() mismatch\ngot:  %t\nwant: %t", aborted, wantAborted)
 			}
 		})
 	}
 }
 
 func TestSkipUnlessRequired(t *testing.T) {
-	// GIVEN: a reason to skip, and the flag that makes a missing secret fatal.
 	tests := []struct {
 		name       string
 		require    string
@@ -135,49 +120,36 @@ func TestSkipUnlessRequired(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
+			// Serial: sets env vars.
 
-			// AND: the env is set.
-			SetEnv(t, map[string]string{
+			IsolateEnv(t, map[string]string{
 				requireSecretsEnv: tc.require,
 			})
-			fT := &FakeT{Abort: true}
+			fakeT := &FakeT{Abort: true}
 
-			// WHEN: SkipUnlessRequired is called.
-			aborted := fT.Aborted(func() {
-				SkipUnlessRequired(fT, "%s is unreachable", "arg_here")
+			aborted := fakeT.Aborted(func() {
+				SkipUnlessRequired(fakeT, "%s is unreachable", "arg_here")
 			})
 
-			// THEN: the test is skipped, or failed.
 			for _, check := range []struct {
 				name, got, want string
 			}{
-				{name: "Fatalf", got: strings.Join(fT.Fatals, "\n"), want: tc.wantFatalf},
-				{name: "Skipf", got: strings.Join(fT.Skips, "\n"), want: tc.wantSkipf},
+				{name: "FakeT.Fatals", got: strings.Join(fakeT.Fatals, "\n"), want: tc.wantFatalf},
+				{name: "FakeT.Skips", got: strings.Join(fakeT.Skips, "\n"), want: tc.wantSkipf},
 			} {
 				if check.got != check.want {
-					t.Errorf(
-						"%s\nSkipUnlessRequired() %s mismatch\ngot:  %q\nwant: %q",
-						packageName, check.name,
-						check.got, check.want,
-					)
+					t.Errorf("%s mismatch\ngot:  %q\nwant: %q", check.name, check.got, check.want)
 				}
 			}
 
-			// AND: reporting ends the test.
 			if !aborted {
-				t.Errorf(
-					"%s\nSkipUnlessRequired() aborted mismatch\ngot:  %t\nwant: %t",
-					packageName,
-					aborted, true,
-				)
+				t.Error("FakeT.Aborted() mismatch\ngot:  false\nwant: true")
 			}
 		})
 	}
 }
 
 func TestShoutrrrGotifyToken(t *testing.T) {
-	// GIVEN: the environment variable ARGUS_TEST_GOTIFY_TOKEN.
 	tests := []struct {
 		name string
 		env  string
@@ -188,33 +160,26 @@ func TestShoutrrrGotifyToken(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
+			// Serial: sets env vars.
 
-			want := tc.env
-			if tc.env != "" {
-				env := map[string]string{"ARGUS_TEST_GOTIFY_TOKEN": tc.env}
-				SetEnv(t, env)
-			}
+			IsolateEnv(t, map[string]string{"ARGUS_TEST_GOTIFY_TOKEN": tc.env})
 
-			// WHEN: ShoutrrrGotifyToken is called.
 			token := ShoutrrrGotifyToken()
 
-			// THEN: the token should be as expected.
 			if tc.env == "" {
-				want = token // default token when env is empty.
+				if token == "" {
+					t.Error("token mismatch\ngot:  \"\"\nwant: NOT \"\" (default)")
+				}
+				return
 			}
-			if token != want {
-				t.Errorf(
-					"%s\nShoutrrrGotifyToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, token, want,
-				)
+			if token != tc.env {
+				t.Errorf("token mismatch\ngot:  %q\nwant: %q", token, tc.env)
 			}
 		})
 	}
 }
 
 func TestSecretGetters(t *testing.T) {
-	// GIVEN: the env vars that each getter reads.
 	const gitHubToken = "dummy-github-token"
 	tests := []struct {
 		name  string
@@ -269,21 +234,14 @@ func TestSecretGetters(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're manipulating the environment.
+			// Serial: sets env vars.
 
-			// AND: the env var holds a value.
-			SetEnv(t, map[string]string{tc.key: tc.value})
+			IsolateEnv(t, map[string]string{tc.key: tc.value})
 
-			// WHEN: the getter is called.
 			got := tc.get(t)
 
-			// THEN: the value that env var holds is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\n%s() mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.name,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

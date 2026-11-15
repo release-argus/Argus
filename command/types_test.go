@@ -17,7 +17,6 @@
 package command
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -31,7 +30,6 @@ import (
 // #########
 
 func TestCommands_Copy(t *testing.T) {
-	// GIVEN: a Commands slice.
 	tests := []struct {
 		name     string
 		commands *Commands
@@ -55,7 +53,7 @@ func TestCommands_Copy(t *testing.T) {
 			want:     Commands{},
 		},
 		{
-			name: "non-empty commands shallow-copied",
+			name: "non-empty commands deep-copied",
 			commands: new(Commands{
 				Command{"ls", "-la"},
 				Command{"echo", "hi"},
@@ -84,34 +82,22 @@ func TestCommands_Copy(t *testing.T) {
 
 			hadNil := tc.commands == nil
 
-			// WHEN: Copy() is called.
 			got := tc.commands.Copy()
 
-			prefix := fmt.Sprintf("%s\nCommands.Copy()", packageName)
-
-			// THEN: nil handling.
 			if hadNil {
 				if got != nil {
-					t.Fatalf(
-						"%s mismatch\ngot:  %v\nwant: nil",
-						prefix, got,
-					)
+					t.Fatalf("after Copy: copy mismatch\ngot:  %q\nwant: nil", got)
 				}
 				return
 			}
 			if got == nil {
-				t.Fatalf("%s mismatch\ngot:  nil\nwant: non-nil", prefix)
+				t.Fatal("after Copy: copy mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the lengths match.
 			if gotLen, wantLen := len(got), len(tc.want); gotLen != wantLen {
-				t.Fatalf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
+				t.Fatalf("after Copy: length mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
 			}
 
-			// AND: initial values match.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
@@ -119,13 +105,11 @@ func TestCommands_Copy(t *testing.T) {
 				func(a, b Command) bool {
 					return util.AreSlicesEqual(a, b)
 				},
-				fmt.Sprintf("%s mismatch", prefix),
-				"input",
+				"copy",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("after Copy: %v", testErr)
 			}
 
-			// AND: reassigning an element in the original doesn't affect the copy.
 			if tc.mutateOriginalReassignTo != nil {
 				(*tc.commands)[0] = *tc.mutateOriginalReassignTo
 				if testErr := test.AssertSlicesEqualFunc(
@@ -133,22 +117,18 @@ func TestCommands_Copy(t *testing.T) {
 					got,
 					tc.wantAfterReassignFirst,
 					func(a, b Command) bool { return util.AreSlicesEqual(a, b) },
-					fmt.Sprintf("%s mismatch after reassigning first element", prefix),
-					"input",
+					"copy",
 				); testErr != nil {
-					t.Error(testErr)
+					t.Errorf("after reassign: %v", testErr)
 				}
 			}
 
-			// AND: mutating nested Command contents doesn't affect the copy.
 			if tc.mutateOriginalNested {
 				(*tc.commands)[tc.mutateNestedIndexI][tc.mutateNestedIndexJ] = tc.mutateNestedValue
 				if got[tc.mutateNestedIndexI][tc.mutateNestedIndexJ] == tc.mutateNestedValue {
 					t.Fatalf(
-						"%s nested mutation unexpectedly reflected in copy i=%d j=%d\noriginal: %v\ncopy:     %v",
-						prefix,
-						tc.mutateNestedIndexI, tc.mutateNestedIndexJ,
-						*tc.commands, got,
+						"after nested mutation: copy mismatch\ngot:  %q\nwant: NOT %q",
+						got[tc.mutateNestedIndexI][tc.mutateNestedIndexJ], tc.mutateNestedValue,
 					)
 				}
 			}
@@ -157,7 +137,6 @@ func TestCommands_Copy(t *testing.T) {
 }
 
 func TestCommand_Copy(t *testing.T) {
-	// GIVEN: a Command.
 	tests := []struct {
 		name string
 		cmd  *Command
@@ -184,45 +163,23 @@ func TestCommand_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			result := tc.cmd.Copy()
 
-			prefix := fmt.Sprintf("%s\nCommand.Copy()", packageName)
-
-			// THEN: if nil was copied, we got nil
 			if tc.cmd == nil {
 				if result != nil {
-					t.Errorf(
-						"%s of nil got %v, want nil",
-						prefix, result,
-					)
+					t.Errorf("copy mismatch\ngot:  %q\nwant: nil", result)
 				}
 				return
 			}
 
-			// AND: the copied length is the same as the source.
-			if gotLen, wantLen := len(result), len(*tc.cmd); gotLen != wantLen {
-				t.Errorf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
-			}
-
-			// AND: the values match.
-			for i := range result {
-				if result[i] != (*tc.cmd)[i] {
-					t.Errorf(
-						"%s value mismatch at index %d\ngot:  %v\nwant: %v",
-						packageName, i, result[i], (*tc.cmd)[i],
-					)
-				}
+			if !util.AreSlicesEqual(result, *tc.cmd) {
+				t.Errorf("copy mismatch\ngot:  %q\nwant: %q", result, *tc.cmd)
 			}
 		})
 	}
 }
 
 func TestController_CopyFailsFrom(t *testing.T) {
-	// GIVEN: a Controller with fails and a Controller to copy them to.
 	tests := []struct {
 		name                             string
 		from, to                         *Controller
@@ -248,14 +205,9 @@ func TestController_CopyFailsFrom(t *testing.T) {
 			toFails: nil,
 		},
 		{
-			name: "doesn't copy if no commands",
-			from: &Controller{},
-			to:   &Controller{},
-			fromFails: []*bool{
-				new(true),
-				new(false),
-				nil,
-			},
+			name:    "doesn't copy if no commands",
+			from:    &Controller{},
+			to:      &Controller{},
 			toFails: nil,
 		},
 		{
@@ -365,48 +317,29 @@ func TestController_CopyFailsFrom(t *testing.T) {
 				)
 			}
 
-			// WHEN: CopyFailsFrom is called.
 			tc.to.CopyFailsFrom(tc.from)
 
-			prefix := fmt.Sprintf("%s\nController.CopyFailsFrom()", packageName)
-
-			// THEN: the fails aren't copied to a nil Controller.
 			if tc.toFails == nil && (tc.to == nil || tc.to.Failed == nil) {
 				return
-			} else if tc.to == nil {
-				t.Fatalf(
-					"%s .Failed mismatch\ngot:  %v\nwant: %v",
-					prefix, tc.to, tc.toFails,
-				)
 			}
 			if gotLen, wantLen := tc.to.Failed.Length(), len(tc.toFails); gotLen != wantLen {
-				t.Fatalf(
-					"%s .Failed length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
+				t.Fatalf("Controller.Failed.Length() mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
 			}
 
-			// AND: the matching fails are copied to the Controller.
 			for i := range tc.toFails {
 				got := test.StringifyPtr(tc.to.Failed.Get(i))
 				want := test.StringifyPtr(tc.toFails[i])
 				if got != want {
-					t.Errorf(
-						"%s .Failed[%d] mismatch\ngot:  %s\nwant: %s",
-						packageName, i,
-						got, want,
-					)
+					t.Errorf("Controller.Failed.Get(%d) mismatch\ngot:  %s\nwant: %s", i, got, want)
 				}
 			}
 
-			// AND: the next_runnable times are copied to the Controller.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				tc.to.nextRunnable,
 				tc.toNextRunnable,
 				func(a, b time.Time) bool { return a.Equal(b) },
-				fmt.Sprintf("%s\n", packageName),
-				"nextRunnable",
+				"Controller.nextRunnable",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -419,7 +352,6 @@ func TestController_CopyFailsFrom(t *testing.T) {
 // #############
 
 func TestCommand_String(t *testing.T) {
-	// GIVEN: a Command.
 	tests := []struct {
 		name string
 		cmd  *Command
@@ -455,27 +387,16 @@ func TestCommand_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the command is stringified with String().
 			got := tc.cmd.String()
 
-			prefix := fmt.Sprintf(
-				"%s\nCommand.String(%+v)",
-				packageName, tc.cmd,
-			)
-
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("Command.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommand_JSON(t *testing.T) {
-	// GIVEN: a Command.
 	tests := []struct {
 		name string
 		cmd  Command
@@ -512,20 +433,10 @@ func TestCommand_JSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the command is stringified with JSON.
 			got := tc.cmd.JSON()
 
-			prefix := fmt.Sprintf(
-				"%s\nCommand(%+v).JSON()",
-				packageName, tc.cmd,
-			)
-
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

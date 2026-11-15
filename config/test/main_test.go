@@ -22,137 +22,108 @@ import (
 	"github.com/release-argus/Argus/config"
 )
 
-var packageName = "config.test"
-
 func TestBareConfig(t *testing.T) {
-	// GIVEN: the config.settings flags.
-	strFlags := map[string]struct {
+	strFlags := []struct {
+		name string
 		flag *string
-		cfg  *string
 	}{
-		"log.level":          {flag: config.LogLevel},
-		"data.database-file": {flag: config.DataDatabaseFile},
-		"web.listen-host":    {flag: config.WebListenHost},
-		"web.listen-port":    {flag: config.WebListenPort},
-		"web.cert-file":      {flag: config.WebCertFile},
-		"web.pkey-file":      {flag: config.WebPKeyFile},
-		"web.route-prefix":   {flag: config.WebRoutePrefix},
+		{name: "log.level", flag: config.LogLevel},
+		{name: "data.database-file", flag: config.DataDatabaseFile},
+		{name: "web.listen-host", flag: config.WebListenHost},
+		{name: "web.listen-port", flag: config.WebListenPort},
+		{name: "web.cert-file", flag: config.WebCertFile},
+		{name: "web.pkey-file", flag: config.WebPKeyFile},
+		{name: "web.route-prefix", flag: config.WebRoutePrefix},
+		{name: "web.basic-auth.username", flag: config.WebBasicAuthUsername},
+		{name: "web.basic-auth.password", flag: config.WebBasicAuthPassword},
 	}
-	for key, value := range strFlags {
-		if value.flag == nil {
-			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
-				packageName, key, value.flag,
-			)
+	for _, f := range strFlags {
+		if f.flag == nil {
+			t.Errorf("before: flag %q: value mismatch\ngot:  nil\nwant: non-nil", f.name)
 		}
 	}
-	boolFlags := map[string]struct {
+	boolFlags := []struct {
+		name string
 		flag *bool
-		cfg  *bool
 	}{
-		"data.readonly":  {flag: config.DataReadonly},
-		"log.timestamps": {flag: config.LogTimestamps},
+		{name: "data.readonly", flag: config.DataReadonly},
+		{name: "log.timestamps", flag: config.LogTimestamps},
 	}
-	for key, value := range boolFlags {
-		if value.flag == nil {
-			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
-				packageName, key, value.flag,
-			)
-		}
-	}
-	webBasicAuthFlags := map[string]struct {
-		flag *string
-		cfg  *config.WebSettingsBasicAuth
-	}{
-		"web.basic-auth.username": {flag: config.WebBasicAuthUsername},
-		"web.basic-auth.password": {flag: config.WebBasicAuthPassword},
-	}
-	for key, value := range webBasicAuthFlags {
-		if value.flag == nil {
-			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: non-nil",
-				packageName, key, value.flag,
-			)
+	for _, f := range boolFlags {
+		if f.flag == nil {
+			t.Errorf("before: flag %q: value mismatch\ngot:  nil\nwant: non-nil", f.name)
 		}
 	}
 
-	// WHEN: the config is initialised.
-	cfg := BareConfig(t, true)
-	strFlags = map[string]struct {
+	cfg := BareConfig(true)
+
+	strAfter := []struct {
+		name string
 		flag *string
-		cfg  *string
+		cfg  string
 	}{
-		"log.level":          {cfg: &cfg.Settings.FromFlags.Log.Level},
-		"data.database-file": {cfg: &cfg.Settings.FromFlags.Data.DatabaseFile},
-		"web.listen-host":    {cfg: &cfg.Settings.FromFlags.Web.ListenHost},
-		"web.listen-port":    {cfg: &cfg.Settings.Web.ListenPort},
-		"web.cert-file":      {cfg: &cfg.Settings.FromFlags.Web.CertFile},
-		"web.pkey-file":      {cfg: &cfg.Settings.FromFlags.Web.KeyFile},
-		"web.route-prefix":   {cfg: &cfg.Settings.FromFlags.Web.RoutePrefix},
+		{name: "log.level", flag: config.LogLevel, cfg: cfg.Settings.FromFlags.Log.Level},
+		{name: "data.database-file", flag: config.DataDatabaseFile, cfg: cfg.Settings.FromFlags.Data.DatabaseFile},
+		{name: "web.listen-host", flag: config.WebListenHost, cfg: cfg.Settings.FromFlags.Web.ListenHost},
+		{name: "web.listen-port", flag: config.WebListenPort, cfg: cfg.Settings.FromFlags.Web.ListenPort},
+		{name: "web.cert-file", flag: config.WebCertFile, cfg: cfg.Settings.FromFlags.Web.CertFile},
+		{name: "web.pkey-file", flag: config.WebPKeyFile, cfg: cfg.Settings.FromFlags.Web.KeyFile},
+		{name: "web.route-prefix", flag: config.WebRoutePrefix, cfg: cfg.Settings.FromFlags.Web.RoutePrefix},
 	}
-	boolFlags = map[string]struct {
+	for _, f := range strAfter {
+		if f.flag != nil {
+			t.Errorf(
+				"after BareConfig: flag %q: value mismatch\ngot:  %q\nwant: nil",
+				f.name, *f.flag,
+			)
+		}
+		if f.cfg != "" {
+			t.Errorf(
+				"after BareConfig: flag %q: Settings.FromFlags mismatch\ngot:  %q\nwant: \"\"",
+				f.name, f.cfg,
+			)
+		}
+	}
+	boolAfter := []struct {
+		name string
 		flag *bool
 		cfg  *bool
 	}{
-		"data.readonly":  {cfg: cfg.Settings.FromFlags.Data.Readonly},
-		"log.timestamps": {cfg: cfg.Settings.FromFlags.Log.Timestamps},
+		{name: "data.readonly", flag: config.DataReadonly, cfg: cfg.Settings.FromFlags.Data.Readonly},
+		{name: "log.timestamps", flag: config.LogTimestamps, cfg: cfg.Settings.FromFlags.Log.Timestamps},
 	}
-	webBasicAuthFlags = map[string]struct {
+	for _, f := range boolAfter {
+		if f.flag != nil {
+			t.Errorf(
+				"after BareConfig: flag %q: value mismatch\ngot:  %t\nwant: nil",
+				f.name, *f.flag,
+			)
+		}
+		if f.cfg != nil {
+			t.Errorf(
+				"after BareConfig: flag %q: Settings.FromFlags mismatch\ngot:  %t\nwant: nil",
+				f.name, *f.cfg,
+			)
+		}
+	}
+	for _, f := range []struct {
+		name string
 		flag *string
-		cfg  *config.WebSettingsBasicAuth
 	}{
-		"web.basic-auth.username": {cfg: cfg.Settings.FromFlags.Web.BasicAuth},
-		"web.basic-auth.password": {cfg: cfg.Settings.FromFlags.Web.BasicAuth},
-	}
-
-	// THEN: all flags should be nil.
-	for key, value := range strFlags {
-		if value.flag != nil {
+		{name: "web.basic-auth.username", flag: config.WebBasicAuthUsername},
+		{name: "web.basic-auth.password", flag: config.WebBasicAuthPassword},
+	} {
+		if f.flag != nil {
 			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
-				packageName, key, value.flag,
-			)
-		}
-		if value.cfg == nil {
-			t.Errorf(
-				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: non-nil",
-				packageName, key, value.cfg,
-			)
-		} else if *value.cfg != "" {
-			t.Errorf(
-				"%s\nBareConfig cfg mismatch on %s\ngot:  %q\nwant: empty",
-				packageName, key, *value.cfg,
+				"after BareConfig: flag %q: value mismatch\ngot:  %q\nwant: nil",
+				f.name, *f.flag,
 			)
 		}
 	}
-	for key, value := range boolFlags {
-		if value.flag != nil {
-			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
-				packageName, key, value.flag,
-			)
-		}
-		if value.cfg != nil {
-			t.Errorf(
-				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: nil",
-				packageName, key, value.cfg,
-			)
-		}
-	}
-	for key, value := range webBasicAuthFlags {
-		if value.flag != nil {
-			t.Errorf(
-				"%s\nBareConfig flag mismatch on %s\ngot:  %v\nwant: nil",
-				packageName, key, value.flag,
-			)
-		}
-		if value.cfg != nil {
-			t.Errorf(
-				"%s\nBareConfig cfg mismatch on %s\ngot:  %v\nwant: nil",
-				packageName, key, value.cfg,
-			)
-			t.Error(value.cfg == nil)
-		}
+	if cfg.Settings.FromFlags.Web.BasicAuth != nil {
+		t.Error(
+			"after BareConfig: Settings.FromFlags.Web.BasicAuth mismatch\n" +
+				"got:  non-nil\nwant: nil",
+		)
 	}
 }

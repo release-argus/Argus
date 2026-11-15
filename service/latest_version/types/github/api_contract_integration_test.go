@@ -17,7 +17,10 @@
 package github
 
 import (
+	"maps"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -36,33 +39,26 @@ func getAPI(t *testing.T, path string, header http.Header) (*http.Response, stri
 
 	request, err := http.NewRequest(http.MethodGet, defaultAPIRoot+path, nil)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncould not build a request for %q: %v",
-			packageName, path, err,
-		)
+		t.Fatalf("http.NewRequest(%q) failed: %v", path, err)
 	}
 	for key, values := range header {
 		for _, value := range values {
 			request.Header.Add(key, value)
 		}
 	}
-	request.Header.Set("Authorization", "Bearer "+test.GitHubToken(t))
+	if request.Header.Get("Authorization") == "" {
+		request.Header.Set("Authorization", "Bearer "+test.GitHubToken(t))
+	}
 
 	response, err := httpx.Client.Do(request)
 	if err != nil {
-		test.SkipUnlessRequired(t,
-			"%s\nGitHub unreachable for %q: %v",
-			packageName, path, err,
-		)
+		test.SkipUnlessRequired(t, "GitHub unreachable for %q: %v", path, err)
 	}
 	t.Cleanup(func() { _ = response.Body.Close() })
 
 	body, err := httpx.ReadBody(response.Body)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncould not read the body of %q: %v",
-			packageName, path, err,
-		)
+		t.Fatalf("httpx.ReadBody(%q) failed: %v", path, err)
 	}
 
 	return response, string(body)
@@ -75,10 +71,7 @@ func getList(t *testing.T, path string) []forgetypes.Release {
 	_, body := getAPI(t, path, nil)
 	list, err := forge.UnmarshalReleases([]byte(body))
 	if err != nil {
-		t.Fatalf(
-			"%s\n%q no longer decodes as a release list: %v\ngot:  %q",
-			packageName, path, err, body,
-		)
+		t.Fatalf("%s: forge.UnmarshalReleases() failed: %v\nbody: %q", path, err, body)
 	}
 
 	return list
@@ -87,75 +80,60 @@ func getList(t *testing.T, path string) []forgetypes.Release {
 func TestAPIContract__emptyListIsTwoBytes(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: a repository that publishes no tags.
-	// WHEN: its tags are listed.
+	// release-argus/.github publishes no tags.
 	_, body := getAPI(t, "/repos/release-argus/.github/tags", nil)
 
-	// THEN: the empty list is exactly "[]", which handleStatusOK matches on.
+	// Lookup.handleStatusOK matches an empty list on exactly these two bytes.
 	if got, want := body, "[]"; got != want {
-		t.Errorf(
-			"%s\nan empty list is no longer exactly %q\ngot:  %q\nwant: %q",
-			packageName, want, got, want,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestAPIContract__tagsCarryANameNotATagName(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: a repository that publishes tags.
-	// WHEN: its tags are listed.
 	tags := getList(t, "/repos/release-argus/Argus/tags?per_page=5")
 	if len(tags) == 0 {
-		t.Fatalf(
-			"%s\nthe tags list is empty - this repository no longer exercises the /tags fallback",
-			packageName,
-		)
+		t.Fatal("tags length mismatch\ngot:  0\nwant: > 0")
 	}
 
-	// THEN: every entry names its tag in `name`, which forge.FilterReleases falls back to.
-	for _, tag := range tags {
-		if tag.Name == "" {
-			t.Errorf(
-				"%s\na tag no longer names itself in `name`\ngot:  tag_name=%q",
-				packageName, tag.TagName,
-			)
-		}
+	// forge.FilterReleases falls back to name.
+	for i, tag := range tags {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+
+			if tag.Name == "" {
+				t.Error("Release.Name mismatch\ngot:  \"\"\nwant: non-empty")
+			}
+		})
 	}
 }
 
-func TestAPIContract__theLatestReleaseHasAMatchingTag(t *testing.T) {
+func TestAPIContract__latestReleaseHasMatchingTag(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: a repository that publishes both releases and tags.
-	// WHEN: both lists are read.
 	releases := getList(t, "/repos/release-argus/Argus/releases?per_page=1")
 	tags := getList(t, "/repos/release-argus/Argus/tags?per_page=100")
 	if gotReleases, gotTags := len(releases), len(tags); gotReleases == 0 || gotTags == 0 {
 		t.Fatalf(
-			"%s\nexpected both endpoints to hold versions\ngot:  %d releases, %d tags",
-			packageName, gotReleases, gotTags,
+			"releases, tags length mismatch\ngot:  %d, %d\nwant: > 0, > 0",
+			gotReleases, gotTags,
 		)
 	}
 
-	// THEN: the newest release names its tag in `tag_name`.
 	latest := releases[0]
 	if latest.TagName == "" {
-		t.Fatalf(
-			"%s\na release no longer names its tag in `tag_name`\ngot:  name=%q",
-			packageName, latest.Name,
-		)
+		t.Fatalf("Release.TagName mismatch\ngot:  \"\" (name=%q)\nwant: non-empty", latest.Name)
 	}
 
-	// AND: a tag of that name exists, so the /tags fallback reaches the same versions.
 	tagNames := make(map[string]bool, len(tags))
 	for _, tag := range tags {
 		tagNames[tag.Name] = true
 	}
 	if !tagNames[latest.TagName] {
 		t.Errorf(
-			"%s\nthe newest release %q has no matching tag in the newest %d\ngot tags: %v",
-			packageName, latest.TagName, len(tags), tagNames,
+			"tagNames[%q] mismatch\ngot:  absent (keys=%q)\nwant: present",
+			latest.TagName, slices.Sorted(maps.Keys(tagNames)),
 		)
 	}
 }
@@ -163,137 +141,75 @@ func TestAPIContract__theLatestReleaseHasAMatchingTag(t *testing.T) {
 func TestAPIContract__listCarriesAnETag(t *testing.T) {
 	t.Parallel()
 
-	// WHEN: any list is requested.
 	response, _ := getAPI(t, "/repos/release-argus/.github/tags", nil)
 
-	// THEN: it carries an ETag to make the next request conditional with.
-	etag := response.Header.Get("ETag")
-	if etag == "" {
-		t.Errorf(
-			"%s\na list no longer carries an ETag\nwant: a non-empty ETag header",
-			packageName,
-		)
-	}
-	if strings.HasPrefix(etag, `W/`) {
-		t.Logf(
-			"%s\nthe ETag is now a weak validator (%q) - the 'W/' strip is load-bearing",
-			packageName, etag,
-		)
+	// Lookup sends this ETag to make its next request conditional.
+	if response.Header.Get("ETag") == "" {
+		t.Error("Response.Header[ETag] mismatch\ngot:  \"\"\nwant: non-empty")
 	}
 }
 
 func TestAPIContract__matchingETagGives304(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: the ETag of a list already held.
 	response, _ := getAPI(t, "/repos/release-argus/.github/tags", nil)
 	etag := response.Header.Get("ETag")
 	if etag == "" {
-		test.SkipUnlessRequired(t,
-			"%s\nno ETag to make a conditional request with",
-			packageName,
-		)
+		test.SkipUnlessRequired(t, "no ETag to make a conditional request with")
 	}
 
-	// WHEN: it is asked for again, conditionally with this ETag.
 	header := http.Header{}
 	header.Set("If-None-Match", etag)
 	conditional, body := getAPI(t, "/repos/release-argus/.github/tags", header)
 
-	// THEN: it is a 304 with no body.
 	wantStatusCode := http.StatusNotModified
 	if got := conditional.StatusCode; got != wantStatusCode {
-		t.Errorf(
-			"%s\nstatus code mismatch on matching If-None-Match\ngot:  %d\nwant: %d",
-			packageName, got, wantStatusCode,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, wantStatusCode)
 	}
 	if body != "" {
-		t.Errorf(
-			"%s\na %d now carries a body\ngot:  %q\nwant: empty",
-			packageName, wantStatusCode, body,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: \"\"", body)
 	}
 }
 
 func TestAPIContract__nextPageIsNamedInALinkHeader(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: a repository with more releases than one page holds.
-	// WHEN: the first page is requested.
 	response, _ := getAPI(t, "/repos/release-argus/Argus/releases?per_page=1", nil)
 
-	// THEN: the next page is advertised the way forge.NextPage reads it.
+	// forge.NextPage reads the next page from this header.
 	link := response.Header.Get("Link")
 	if want := `rel="next"`; !strings.Contains(link, want) {
-		t.Errorf(
-			"%s\nthe next page is no longer named in a Link header\ngot:  %q\nwant: %q entry",
-			packageName, link, want,
-		)
+		t.Errorf("Response.Header[Link] mismatch\ngot:  %q\nwant: %q", link, want)
 	}
 }
 
 func TestAPIContract__unknownRepositoryGives404(t *testing.T) {
 	t.Parallel()
 
-	// WHEN: a repository that cannot be seen is requested.
 	response, body := getAPI(t, "/repos/release-argus/no-such-repository-exists/releases", nil)
 
-	// THEN: it is a 404 naming the cause.
 	wantStatusCode := http.StatusNotFound
 	if got := response.StatusCode; got != wantStatusCode {
-		t.Errorf(
-			"%s\nstatus code mismatch on unknown repository\ngot:  %d\nwant: %d",
-			packageName, got, wantStatusCode,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, wantStatusCode)
 	}
 	if got, want := body, `"Not Found"`; !strings.Contains(got, want) {
-		t.Errorf(
-			"%s\nthe %d body no longer names an unknown repository as expected\ngot:  %q\nwant: %q",
-			packageName, wantStatusCode,
-			got, want,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestAPIContract__badCredentialGives401(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN: a token the API will not accept.
-	request, err := http.NewRequest(
-		http.MethodGet, defaultAPIRoot+"/repos/release-argus/Argus/releases", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncould not build a request: %v",
-			packageName, err,
-		)
-	}
-	request.Header.Set("Authorization", "Bearer not-a-real-token")
+	response, body := getAPI(
+		t, "/repos/release-argus/Argus/releases",
+		http.Header{"Authorization": {"Bearer not-a-real-token"}},
+	)
 
-	// WHEN: it is sent.
-	response, err := httpx.Client.Do(request)
-	if err != nil {
-		test.SkipUnlessRequired(t,
-			"%s\nGitHub unreachable: %v",
-			packageName, err,
-		)
+	if got, want := response.StatusCode, http.StatusUnauthorized; got != want {
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 	}
-	t.Cleanup(func() { _ = response.Body.Close() })
-	body, _ := httpx.ReadBody(response.Body)
-
-	// THEN: it is a 401 naming the cause, which handleStatusUnauthorized reads.
-	wantStatusCode := http.StatusUnauthorized
-	if got := response.StatusCode; got != wantStatusCode {
-		t.Errorf(
-			"%s\nstatus code mismatch on request with bad credential\ngot:  %d\nwant: %d",
-			packageName, got, wantStatusCode,
-		)
-	}
-	if got, want := string(body), "Bad credentials"; !strings.Contains(got, want) {
-		t.Errorf(
-			"%s\nthe %d body no longer names bad credentials as expected\ngot:  %q\nwant: %q",
-			packageName, wantStatusCode,
-			got, want,
-		)
+	// Lookup.handleStatusUnauthorized reads this to report an invalid token.
+	if got, want := body, "Bad credentials"; !strings.Contains(got, want) {
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }

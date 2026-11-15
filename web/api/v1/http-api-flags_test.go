@@ -17,13 +17,11 @@
 package v1
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -31,48 +29,34 @@ import (
 )
 
 func TestHTTP_HTTPFlags(t *testing.T) {
-	// GIVEN: an API and a request for the flag var values.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
-	apiMu := sync.RWMutex{}
 	bodyRegex := test.TrimJSON(`
 		{
-			"config.file": "`+api.Config.File+`",
-			"log.level": "`+api.Config.Settings.LogLevel()+`",
+			"config.file": "`+regexp.QuoteMeta(api.Config.File)+`",
+			"log.level": "`+regexp.QuoteMeta(api.Config.Settings.LogLevel())+`",
 			"log.timestamps": `+strconv.FormatBool(*api.Config.Settings.LogTimestamps())+`,
-			"data.database-file": "`+api.Config.Settings.DataDatabaseFile()+`",
+			"data.database-file": "`+regexp.QuoteMeta(api.Config.Settings.DataDatabaseFile())+`",
 			"data.readonly": `+strconv.FormatBool(api.Config.Settings.DataReadonly())+`,
-			"web.listen-host": "`+api.Config.Settings.WebListenHost()+`",
+			"web.listen-host": "`+regexp.QuoteMeta(api.Config.Settings.WebListenHost())+`",
 			"web.listen-port": "[0-9]{1,5}",
 			"web.cert-file": "",
 			"web.pkey-file": "",
-			"web.route-prefix": "`+strings.ReplaceAll(api.Config.Settings.WebRoutePrefix(), "/", `\/`)+`"
+			"web.route-prefix": "`+regexp.QuoteMeta(api.Config.Settings.WebRoutePrefix())+`"
 		}`,
 	) + "\n$"
 
-	// WHEN: that HTTP request is sent.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/flags", nil)
 	w := httptest.NewRecorder()
-	apiMu.RLock()
 	api.httpFlags(w, req)
-	apiMu.RUnlock()
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
+	resp := w.Result()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
-	prefix := fmt.Sprintf("%s\nAPI.httpFlags()", packageName)
-
-	// THEN: the expected body is returned.
-	data, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error:\n%v",
-			prefix, err,
-		)
+		t.Fatalf("io.ReadAll() failed: %v", err)
 	}
 	if got := string(data); !util.RegexCheck(bodyRegex, got) {
-		t.Errorf(
-			"%s response body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, bodyRegex,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, bodyRegex)
 	}
 }

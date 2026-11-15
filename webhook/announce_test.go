@@ -17,17 +17,19 @@
 package webhook
 
 import (
-	"fmt"
+	"errors"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestWebhook_AnnounceSend(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name           string
 		nilChannel     bool
@@ -59,57 +61,54 @@ func TestWebhook_AnnounceSend(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			webhook := testWebhook(true, false, false)
+			webhook := testWebhook(true, false)
 
 			webhook.Failed.Set(webhook.ID, tc.failed)
 			webhook.ServiceStatus.AnnounceChannel = nil
 			if !tc.nilChannel {
-				announceChannel := make(chan []byte, 4)
-				webhook.ServiceStatus.AnnounceChannel = announceChannel
+				webhook.ServiceStatus.AnnounceChannel = make(chan []byte, 1)
 			}
 
-			// WH AnnounceCommand is run.
-			go webhook.AnnounceSend()
+			webhook.AnnounceSend()
 
-			prefix := fmt.Sprintf("%s\nWebhook.AnnounceSend()", packageName)
-
-			// THEN: the correct response is received.
-			if webhook.ServiceStatus.AnnounceChannel == nil {
+			if tc.nilChannel {
 				return
 			}
-			m := <-webhook.ServiceStatus.AnnounceChannel
+			var m []byte
+			select {
+			case m = <-webhook.ServiceStatus.AnnounceChannel:
+			default:
+				t.Fatal("Status.AnnounceChannel message count mismatch\ngot:  0\nwant: 1")
+			}
 			var parsed apitype.WebSocketMessage
-			_ = decode.Unmarshal("json", m, &parsed)
-
+			if err := decode.Unmarshal("json", m, &parsed); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
 			if parsed.WebhookData[webhook.ID] == nil {
-				t.Fatalf(
-					"%s message mismatch\ngot:  %+v\nwant: message for service %q",
-					prefix, parsed.WebhookData, webhook.ID,
+				t.Fatal(
+					"WebSocketMessage.WebhookData[webhook.ID] mismatch\n" +
+						"got:  absent\nwant: present",
 				)
 			}
 
-			// if they failed status matches.
 			got := test.StringifyPtr(parsed.WebhookData[webhook.ID].Failed)
 			want := test.StringifyPtr(webhook.Failed.Get(webhook.ID))
 			if got != want {
 				t.Errorf(
-					"%s 'Failed' part of message didn't match\ngot:  %q\nwant: %q",
-					prefix, got, want,
+					"WebSocketMessage.WebhookData[webhook.ID].Failed mismatch\ngot:  %q\nwant: %q",
+					got, want,
 				)
 			}
 
-			// next runnable is within expected range.
 			now := time.Now().UTC()
 			minTime := now.Add(tc.timeDifference - time.Second)
 			maxTime := now.Add(tc.timeDifference + time.Second)
 			gotTime := parsed.WebhookData[webhook.ID].NextRunnable
 			if !(minTime.Before(gotTime)) || !(maxTime.After(gotTime)) {
 				t.Fatalf(
-					"%s NextRunnable mismatch for Webhook that ran at:\n     %s\ngot: %s\nwant between:\n     %s\n     %s",
-					prefix,
-					now,
-					gotTime,
-					minTime, maxTime,
+					"WebSocketMessage.WebhookData[webhook.ID].NextRunnable mismatch\n"+
+						"got:  %s\nwant: between %s and %s",
+					gotTime, minTime, maxTime,
 				)
 			}
 		})
@@ -117,31 +116,28 @@ func TestWebhook_AnnounceSend(t *testing.T) {
 }
 
 func TestWebhook_AnnounceSend__marshalError(t *testing.T) {
-	// GIVEN: a failing marshal function.
 	original := marshalWebhookPayload
-	customErr := fmt.Errorf("marshal failed")
+	customErr := errors.New("marshal failed")
 	marshalWebhookPayload = func(v any) ([]byte, error) {
 		return nil, customErr
 	}
 	t.Cleanup(func() { marshalWebhookPayload = original })
 
-	// AND: a Webhook with an AnnounceChannel.
 	announceChannel := make(chan []byte, 1)
-	webhook := testWebhook(true, false, false)
+	webhook := testWebhook(true, false)
 	webhook.ServiceStatus.AnnounceChannel = announceChannel
+	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// WHEN: AnnounceSend is called.
 	webhook.AnnounceSend()
 
-	prefix := fmt.Sprintf("%s\nWebhook.AnnounceSend(marshal error)", packageName)
+	stdoutRegex := `^ERROR: test \(testWebhook\), ` + regexp.QuoteMeta(customErr.Error()) + `\s$`
+	if stdout := releaseStdout(); !util.RegexCheck(stdoutRegex, stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, stdoutRegex)
+	}
 
-	// THEN: no message is sent to the announce channel.
 	select {
 	case msg := <-announceChannel:
-		t.Fatalf(
-			"%s unexpected message on AnnounceChannel\ngot:  %q\nwant: none",
-			prefix, msg,
-		)
+		t.Fatalf("Status.AnnounceChannel message mismatch\ngot:  %q\nwant: absent", msg)
 	default:
 	}
 }

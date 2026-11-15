@@ -17,17 +17,14 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
-var packageName = "whtest"
-
 func TestWebhook(t *testing.T) {
-	// GIVEN: the failing, self-signed certificate, and custom headers flags.
 	tests := []struct {
 		name                             string
 		failing, selfSignedCert, headers bool
@@ -132,7 +129,6 @@ func TestWebhook(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Webhook is called.
 			result := Webhook(
 				t,
 				tc.failing,
@@ -140,175 +136,32 @@ func TestWebhook(t *testing.T) {
 				tc.headers,
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nWebhook(failed=%t, selfSigned=%t, headers=%t)",
-				packageName, tc.failing, tc.selfSignedCert, tc.headers,
-			)
-
-			// THEN: the URL should be as expected.
-			if result.URL != tc.expectedURL {
-				t.Errorf(
-					"%s URL mismatch\ngot:  %q\nwant: %q",
-					prefix, result.URL, tc.expectedURL,
-				)
+			if testErr := test.AssertSlicesEqual(
+				t,
+				result.Headers,
+				util.DerefOrZero(tc.expectedHeaders),
+				"Webhook.Headers",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 
-			// AND: the secret should be as expected.
-			if result.Secret != tc.expectedSecret {
-				t.Errorf(
-					"%s Secret mismatch\ngot:  %q\nwant: %q",
-					prefix, result.Secret, tc.expectedSecret,
-				)
+			fieldTests := []test.FieldAssertion{
+				{Name: "URL", Got: result.URL, Want: tc.expectedURL, Mode: test.CompareEqual},
+				{Name: "Secret", Got: result.Secret, Want: tc.expectedSecret, Mode: test.CompareEqual},
+				{Name: "ID", Got: result.ID, Want: "test", Mode: test.CompareEqual},
+				{Name: "Delay", Got: result.Delay, Want: "0s", Mode: test.CompareEqual},
+				{Name: "DesiredStatusCode", Got: result.DesiredStatusCode, Mode: test.CompareNotNil},
+				{Name: "*DesiredStatusCode", Got: util.DerefOrZero(result.DesiredStatusCode), Want: uint16(0), Mode: test.CompareEqual},
+				{Name: "MaxTries", Got: result.MaxTries, Mode: test.CompareNotNil},
+				{Name: "*MaxTries", Got: util.DerefOrZero(result.MaxTries), Want: uint8(1), Mode: test.CompareEqual},
+				{Name: "Main", Got: result.Main, Mode: test.CompareNotNil},
+				{Name: "Defaults", Got: result.Defaults, Mode: test.CompareNotNil},
+				{Name: "HardDefaults", Got: result.HardDefaults, Mode: test.CompareNotNil},
+				{Name: "ServiceStatus", Got: result.ServiceStatus, Mode: test.CompareNotNil},
+				{Name: "Failed", Got: result.Failed, Mode: test.CompareNotNil},
 			}
-
-			// AND: the custom headers should be as expected.
-			if tc.expectedHeaders == nil {
-				if result.Headers != nil {
-					t.Errorf(
-						"%s Headers mismatch\ngot:  %+v\nwant: nil",
-						prefix, result.Headers,
-					)
-				}
-			} else {
-				if result.Headers == nil {
-					t.Errorf(
-						"%s Headers mismatch\ngot:  nil\nwant: %+v",
-						prefix, tc.expectedHeaders,
-					)
-				} else {
-					// Lengths differ.
-					if gotLen, wantLen := len(result.Headers), len(*tc.expectedHeaders); gotLen != wantLen {
-						t.Errorf(
-							"%s Headers length mismatch\ngot:  %d\nwant: %d",
-							prefix, gotLen, wantLen,
-						)
-					} else {
-						// Check each header.
-						for i := range *tc.expectedHeaders {
-							got := (result.Headers)[i]
-							want := (*tc.expectedHeaders)[i]
-							if got.Key != want.Key || got.Value != want.Value {
-								t.Errorf(
-									"%s Headers mismatch\ngot:  %v (%+v)\nwant: %v (%+v)",
-									prefix,
-									got, result.Headers,
-									want, *tc.expectedHeaders,
-								)
-								break
-							}
-						}
-					}
-				}
-			}
-
-			// AND: the ID should be set.
-			wantID := "test"
-			if result.ID != wantID {
-				t.Errorf(
-					"%s .ID mismatch\ngot:  %q\nwant: %q",
-					prefix, result.ID, wantID,
-				)
-			}
-
-			// AND: the ServiceStatus should be initialised.
-			if result.ServiceStatus == nil {
-				t.Errorf("%s ServiceStatus not initialised", prefix)
-			}
-
-			// AND: the Fails should be set.
-			if result.ServiceStatus == nil || result.Failed == nil {
-				if result.Failed == nil {
-					t.Errorf("%s ServiceStatus.Failed not set", prefix)
-				} else {
-					t.Errorf("%s ServiceStatus not set", prefix)
-				}
-			}
-
-			// AND: the DesiredStatusCode should be set.
-			wantDesiredStatusCode := 0
-			if result.DesiredStatusCode == nil || *result.DesiredStatusCode != uint16(wantDesiredStatusCode) {
-				if result.DesiredStatusCode == nil {
-					t.Errorf(
-						"%s DesiredStatusCode not set", prefix,
-					)
-				} else {
-					t.Errorf(
-						"%s DesiredStatusCode mismatch\ngot:  %d\nwant: %d",
-						prefix, *result.DesiredStatusCode, wantDesiredStatusCode,
-					)
-				}
-			}
-
-			// AND: the MaxTries should be set.
-			wantMaxTries := 1
-			if result.MaxTries == nil || *result.MaxTries != uint8(wantMaxTries) {
-				if result.MaxTries == nil {
-					t.Errorf("%s MaxTries not set", prefix)
-				} else {
-					t.Errorf(
-						"%s MaxTries mismatch\ngot:  %d\nwant: %d",
-						prefix, *result.MaxTries, wantMaxTries,
-					)
-				}
-			}
-
-			// AND: the Delay should be set.
-			wantDelay := "0s"
-			if result.Delay != wantDelay {
-				if result.Delay == "" {
-					t.Errorf("%s Delay not set", prefix)
-				} else {
-					t.Errorf(
-						"%s Delay mismatch\ngot:  %q\nwant: %q",
-						prefix, result.Delay, wantDelay,
-					)
-				}
-			}
-
-			// AND: the Main should be set.
-			if result.Main == nil {
-				t.Errorf("%s Main not set", prefix)
-			}
-
-			// AND: the Defaults should be set.
-			if result.Defaults == nil {
-				t.Errorf("%s Defaults not set", prefix)
-			}
-
-			// AND: the HardDefaults should be set.
-			if result.HardDefaults == nil {
-				t.Errorf("%s HardDefaults not set", prefix)
-			}
-
-			// AND: the URL should be modified if selfSignedCert is true.
-			if tc.selfSignedCert {
-				if result.URL != tc.expectedURL {
-					t.Errorf(
-						"%s URL mismatch when SelfSignedCert=true\ngot:  %q\nwant: %q",
-						prefix, result.URL, tc.expectedURL,
-					)
-				}
-			}
-
-			// AND: the Secret should be modified if failing is true.
-			if tc.failing {
-				expectedSecret := test.WebhookGitHub.SecretFail
-				if result.Secret != expectedSecret {
-					t.Errorf(
-						"%s Secret mismatch for failing Webhook\ngot:  %q\nwant: %q",
-						prefix, result.Secret, expectedSecret,
-					)
-				}
-			}
-
-			// AND: the URL should be modified and headers should be set if headers is true.
-			if tc.headers {
-				if result.URL != tc.expectedURL {
-					t.Errorf(
-						"%s URL mismatch for Webhook with Headers\ngot:  %q\nwant: %q",
-						packageName, result.URL, tc.expectedURL,
-					)
-				}
+			if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}

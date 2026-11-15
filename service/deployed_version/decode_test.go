@@ -17,24 +17,20 @@
 package deployedver
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
-	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
 func TestDecode(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: data in a given format to Decode into a Lookup.
 	tests := []struct {
 		name         string
 		format, data string
@@ -42,25 +38,28 @@ func TestDecode(t *testing.T) {
 		want         string
 	}{
 		{
-			name:   "JSON/empty",
-			data:   "",
-			format: "json",
-			want:   "",
+			name:     "JSON/empty",
+			data:     "",
+			format:   "json",
+			want:     "",
+			errRegex: `^$`,
 		},
 		{
-			name:   "JSON/empty object",
-			data:   "{}",
-			format: "json",
-			want:   "{}\n",
+			name:     "JSON/empty object",
+			data:     "{}",
+			format:   "json",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/empty",
-			data:   "",
-			format: "yaml",
-			want:   "",
+			name:     "YAML/empty",
+			data:     "",
+			format:   "yaml",
+			want:     "",
+			errRegex: `^$`,
 		},
 		{
-			name: "JSON/url, minimal",
+			name: "JSON/url/minimal",
 			data: test.TrimJSON(`{
 				"type": "url",
 				"url": "https://example.com"
@@ -70,6 +69,7 @@ func TestDecode(t *testing.T) {
 				type: url
 				url: https://example.com
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "YAML/url/minimal",
@@ -82,6 +82,7 @@ func TestDecode(t *testing.T) {
 				type: url
 				url: https://example.com
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/url/filled",
@@ -225,16 +226,9 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Options + Status.
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
-			svcStatus, _ := statustest.New(
-				"yaml", nil,
-			)
+			options := opttest.PlainOptions(t, optCfg)
+			svcStatus, _ := statustest.New("yaml", nil)
 
-			// WHEN: Decode is called on the input.
 			lookup, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (Lookup, error) {
@@ -249,7 +243,6 @@ func TestDecode(t *testing.T) {
 				func(v Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			)
 			if testErr != nil {
@@ -259,20 +252,14 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecode(format=%q, data%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// AND: Pointers are handed out to it correctly.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.GetOptions(), Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.GetStatus(), Want: svcStatus, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: lookup.GetDefaults(), Want: dvCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -282,15 +269,14 @@ type badInheritable struct{}
 
 func (b *badInheritable) GetType() string                                 { return "bad" }
 func (b *badInheritable) DecodeSelf(format string, data []byte) error     { return nil }
-func (f *badInheritable) ApplyOverrides(format string, data []byte) error { return nil }
+func (b *badInheritable) ApplyOverrides(format string, data []byte) error { return nil }
 
 func TestDecode_TypeAssertionFailure(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 
 	orig := ServiceMapInheritable
 	t.Cleanup(func() { ServiceMapInheritable = orig })
 
-	// GIVEN: ServiceMap with a struct that does not implement Lookup.
 	bad := map[string]func() polymorphic.Inheritable{
 		"bad": func() polymorphic.Inheritable {
 			return &badInheritable{}
@@ -300,9 +286,6 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 
 	data := `{"type":"bad"}`
 
-	hardDefaults := &base.Defaults{}
-	hardDefaults.Default()
-	// WHEN: We decode a payload that maps to that type.
 	_, err := Decode(
 		"json", []byte(data),
 		nil,
@@ -310,32 +293,27 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 		dvCfg,
 	)
 
-	// THEN: We get an error because the type assertion failed.
-	if err == nil {
-		t.Fatalf("%s\nexpected type assertion error", packageName)
-	}
-	if !strings.Contains(err.Error(), "expected deployedver.Lookup") {
-		t.Fatalf(
-			"%s\nunexpected error: %v",
-			packageName, err,
-		)
+	want := "expected deployedver.Lookup"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("error mismatch\ngot:  %v\nwant: %q", err, want)
 	}
 }
 
 func TestApplyOverrides(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	type Args struct {
 		format, data string
 		target       Lookup
 	}
+
 	tests := []struct {
-		name           string
-		args           Args
-		pointerChanged bool
-		errRegex       string
-		want           string
+		name        string
+		args        Args
+		sameAddress bool
+		errRegex    string
+		want        string
 	}{
 		{
 			name: "empty data returns previous",
@@ -344,9 +322,9 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &mockLookup{},
 			},
-			pointerChanged: true,
-			want:           "lookup: {}\n",
-			errRegex:       `^$`,
+			sameAddress: true,
+			want:        "lookup: {}\n",
+			errRegex:    `^$`,
 		},
 		{
 			name: "null data returns nil",
@@ -430,8 +408,8 @@ func TestApplyOverrides(t *testing.T) {
 					Method: "PUT",
 				},
 			},
-			errRegex:       `^$`,
-			pointerChanged: false,
+			errRegex:    `^$`,
+			sameAddress: false,
 			want: test.TrimYAML(`
 				type: manual
 				version: 1.2.3
@@ -443,16 +421,9 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Options + Status.
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
-			svcStatus, _ := statustest.New(
-				"yaml", nil,
-			)
+			options := opttest.PlainOptions(t, optCfg)
+			svcStatus, _ := statustest.New("yaml", nil)
 
-			// WHEN: ApplyOverrides is called.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -469,8 +440,7 @@ func TestApplyOverrides(t *testing.T) {
 				func(v Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				tc.pointerChanged,
-				packageName,
+				tc.sameAddress,
 				"ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)

@@ -19,7 +19,7 @@ package test
 
 import (
 	"errors"
-	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -41,6 +41,7 @@ type MockLookup struct {
 	OverrideErr string `json:"override_err,omitzero" yaml:"override_err,omitzero"`
 }
 
+// ApplyOverrides returns OverrideErr when configured, otherwise nil.
 func (f *MockLookup) ApplyOverrides(format string, data []byte) error {
 	if f.OverrideErr != "" {
 		return errors.New(f.OverrideErr)
@@ -67,10 +68,11 @@ func lookupBuilder(t test.TB, typ string) func(*testing.T, bool) latestver.Looku
 		return testWeb
 	}
 
-	t.Fatalf("lvtest.Lookup: unsupported type %q", typ)
+	t.Fatalf("unsupported lookup type %q", typ)
 	return nil
 }
 
+// Lookup returns a checked fixture Lookup of typ, built to fail its query when fail is set.
 func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
 	t.Helper()
 
@@ -78,12 +80,8 @@ func Lookup(t *testing.T, typ string, fail bool) (lv latestver.Lookup) {
 
 	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
 
-	// Check the values.
 	if err := lv.CheckValues(); err != nil {
-		t.Fatalf(
-			"lvtest.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
-			typ, fail, err,
-		)
+		t.Fatalf("Lookup(type=%q, fail=%t).CheckValues() failed: %v", typ, fail, err)
 	}
 
 	return lv
@@ -100,7 +98,7 @@ func testForgejo(t *testing.T, fail bool) latestver.Lookup {
 
 	svcStatus, _ := statustest.New("yaml", nil)
 
-	lv, _ := latestver.Decode(
+	lv, err := latestver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: forgejo
 			host: `+test.ValidCertHTTPS+`/forgejo
@@ -110,6 +108,9 @@ func testForgejo(t *testing.T, fail bool) latestver.Lookup {
 		svcStatus,
 		PlainDefaultsConfig(t),
 	)
+	if err != nil {
+		t.Fatalf("latestver.Decode() failed: %v", err)
+	}
 
 	return lv
 }
@@ -126,7 +127,7 @@ func testGitHub(t *testing.T, fail bool) latestver.Lookup {
 
 	svcStatus, _ := statustest.New("yaml", nil)
 
-	lv, _ := latestver.Decode(
+	lv, err := latestver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: github
 			url: `+test.ArgusGitHubRepo+`
@@ -136,6 +137,9 @@ func testGitHub(t *testing.T, fail bool) latestver.Lookup {
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("latestver.Decode() failed: %v", err)
+	}
 
 	return lv
 }
@@ -148,16 +152,19 @@ func testWeb(t *testing.T, fail bool) latestver.Lookup {
 
 	svcStatus, _ := statustest.New("yaml", nil)
 
-	lv, _ := latestver.Decode(
+	lv, err := latestver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: url
 			url: `+test.LookupBare.URLInvalid+`/1.2.3
-			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+			allow_invalid_certs: `+strconv.FormatBool(!fail)+`
 		`)),
 		opttest.Options(t),
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("latestver.Decode() failed: %v", err)
+	}
 
 	return lv
 }

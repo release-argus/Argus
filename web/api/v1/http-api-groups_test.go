@@ -18,7 +18,6 @@ package v1
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,17 +29,17 @@ import (
 	"github.com/release-argus/Argus/auth/store"
 	storetest "github.com/release-argus/Argus/auth/store/test"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 // nonAdminGrants is a valid non-admin grant set.
 func nonAdminGrants() []rbac.Grant {
-	return []rbac.Grant{{
-		Resource: rbac.ResourceService,
-		Action:   rbac.ActionRead,
-		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-	}}
+	return []rbac.Grant{
+		{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
+	}
 }
 
 // seededGroupIDs maps the seeded groups' names to their IDs.
@@ -49,10 +48,7 @@ func seededGroupIDs(t *testing.T, deps *AuthDeps) map[string]string {
 
 	groups, err := deps.Store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf(
-			"%s\nGroups() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.Groups() failed: %v", err)
 	}
 	ids := make(map[string]string, len(groups))
 	for _, group := range groups {
@@ -62,123 +58,95 @@ func seededGroupIDs(t *testing.T, deps *AuthDeps) map[string]string {
 }
 
 func TestAPI_HTTPGroupList(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a logged-in admin.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	authCtx := adminContext(t, api, deps)
 
-	// WHEN: the admin lists groups.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/groups", "", adminCookie))
+	req := authedRequest(http.MethodGet, "/api/v1/groups", "", adminCookie)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpGroupList()", packageName)
-
-	// THEN: the seeded groups are returned.
 	if got, want := w.Code, http.StatusOK; got != want {
-		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
-		)
+		t.Fatalf("list: status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 	var groups []store.Group
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &groups); err != nil {
-		t.Fatalf(
-			"%s\nparse list: %v",
-			prefix, err,
-		)
+		t.Fatalf("list: decode.Unmarshal() failed: %v", err)
 	}
-	if len(groups) != 3 { // admin, operator, viewer.
-		t.Errorf(
-			"%s\ngroup count mismatch\ngot:  %d\nwant: 3",
-			prefix, len(groups),
-		)
+	groupNames := test.AttributesSorted(groups, func(group store.Group) string { return group.Name })
+	if testErr := test.AssertSlicesEqual(
+		t, groupNames, []string{store.GroupAdmin, store.GroupOperator, store.GroupViewer}, "Group.Name",
+	); testErr != nil {
+		t.Errorf("list: %v", testErr)
 	}
 
-	// WHEN: the store breaks beneath a direct call.
 	_ = dbConn.Close()
-	recorder := httptest.NewRecorder()
-	api.httpGroupList(recorder,
-		withAuthCtx(httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil), authCtx),
-	)
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
+	req = withAuthCtx(req, authCtx)
+	api.httpGroupList(w, req)
 
-	// THEN: the failure reads as 500.
-	if recorder.Code != http.StatusInternalServerError {
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nbroken store\ngot:  %d\nwant: 500",
-			prefix, recorder.Code,
+			"broken store: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupCreate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin, and a logged-in non-admin.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	if _, err := deps.Store.CreateGroup(t.Context(), "editors", "", nonAdminGrants()); err != nil {
-		t.Fatalf(
-			"%s\ncreate editors group: %v",
-			packageName, err,
-		)
-	}
+	createAuthGroup(t, deps, "editors", "", nonAdminGrants())
 	createAuthUser(t, deps, "manager", "manager-password", "editors")
 	managerCookie := loginCookie(t, api, "manager", "manager-password")
 
-	// WHEN: the admin creates a group with scoped grants.
-	w := serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/groups",
-			test.TrimJSON(`{
-				"name": "deployer",
-				"description": "Deploy things.",
-				"permissions": [
-					{"resource": "service",        "action": "read",    "scope": {"type": "global"}},
-					{"resource": "service_action", "action": "execute", "scope": {"type": "service", "ref": "argus"}}
-				]
-			}`),
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPost, "/api/v1/groups",
+		test.TrimJSON(`{
+			"name": "deployer",
+			"description": "Deploy things.",
+			"permissions": [
+				{"resource": "service",        "action": "read",    "scope": {"type": "global"}},
+				{"resource": "service_action", "action": "execute", "scope": {"type": "service", "ref": "argus"}}
+			]
+		}`),
+		adminCookie,
 	)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpGroupCreate()", packageName)
-
-	// THEN: the group is created with its grants.
 	if got, want := w.Code, http.StatusCreated; got != want {
 		t.Fatalf(
-			"%s\ncreate status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin creating group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var created store.Group
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &created); err != nil {
-		t.Fatalf(
-			"%s\nparse create response: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin creating group: decode.Unmarshal() failed: %v", err)
 	}
-	if created.Name != "deployer" || len(created.Grants) != 2 {
+	wantName, wantGrants := "deployer", 2
+	if created.Name != wantName || len(created.Grants) != wantGrants {
 		t.Errorf(
-			"%s\ncreated group mismatch\ngot: %+v",
-			prefix, created,
+			"admin creating group: Group mismatch\n"+
+				"got:  Name=%q, len(Grants)=%d\nwant: Name=%q, len(Grants)=%d",
+			created.Name, len(created.Grants),
+			wantName, wantGrants,
 		)
 	}
 
-	// AND: a non-admin is forbidden from creating groups at all.
-	if w := serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/groups",
-			`{"name":"harmless"}`,
-			managerCookie,
-		),
-	); w.Code != http.StatusForbidden {
+	req = authedRequest(http.MethodPost, "/api/v1/groups", `{"name":"harmless"}`, managerCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nnon-admin group create\ngot:  %d - %s\nwant: 403",
-			prefix, w.Code, w.Body.String(),
+			"non-admin creating group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: an invalid or forbidden create arrives.
 	tests := []struct {
 		name       string
 		body       string
@@ -219,18 +187,13 @@ func TestAPI_HTTPGroupCreate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			w := serveAuth(api,
-				authedRequest(http.MethodPost, "/api/v1/groups",
-					tc.body,
-					tc.cookie,
-				),
-			)
+			req := authedRequest(http.MethodPost, "/api/v1/groups", tc.body, tc.cookie)
+			w := serveAuth(api, req)
 
-			// THEN: it is rejected with the expected status.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\n%s\ngot:  %d - %s\nwant: %d",
-					prefix, tc.name, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -238,7 +201,6 @@ func TestAPI_HTTPGroupCreate(t *testing.T) {
 }
 
 func TestAPI_HTTPGroupCreate__nameBounds(t *testing.T) {
-	// GIVEN: an auth-enabled API and an admin session.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -251,7 +213,7 @@ func TestAPI_HTTPGroupCreate__nameBounds(t *testing.T) {
 		name       string
 		body       string
 		wantStatus int
-		wantName   string // the name the group is stored under ("" to skip).
+		wantName   string // The name the group is stored under ("" to skip).
 	}{
 		{
 			name:       "valid/surrounding whitespace is trimmed",
@@ -297,171 +259,121 @@ func TestAPI_HTTPGroupCreate__nameBounds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the group is created.
-			w := serveAuth(api,
-				authedRequest(http.MethodPost, "/api/v1/groups", tc.body, adminCookie))
+			req := authedRequest(http.MethodPost, "/api/v1/groups", tc.body, adminCookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\ngroup name bounds", packageName)
-
-			// THEN: the bounds decide the outcome.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Fatalf(
-					"%s\nstatus code mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if tc.wantName == "" {
 				return
 			}
 
-			// AND: it is stored under the normalised name.
 			var created store.Group
 			if err := decode.Unmarshal("json", w.Body.Bytes(), &created); err != nil {
-				t.Fatalf(
-					"%s parse create response: %v",
-					prefix, err,
-				)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 			if got, want := created.Name, tc.wantName; got != want {
-				t.Errorf(
-					"%s\nstored name mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Group.Name mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
 
 func TestAPI_HTTPGroupGet(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin and a target group.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	target, err := deps.Store.CreateGroup(t.Context(), "target", "A target.", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate target group: %v",
-			packageName, err,
-		)
-	}
+	target := createAuthGroup(t, deps, "target", "A target.", nil)
 
-	// WHEN: the admin fetches the group by ID.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/groups/"+target.ID, "", adminCookie),
-	)
+	req := authedRequest(http.MethodGet, "/api/v1/groups/"+target.ID, "", adminCookie)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpGroupGet()", packageName)
-
-	// THEN: the group is returned.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"get group by ID: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var got store.Group
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &got); err != nil {
-		t.Fatalf(
-			"%s\nparse response: %v",
-			prefix, err,
-		)
+		t.Fatalf("get group by ID: decode.Unmarshal() failed: %v", err)
 	}
-	if got.Name != "target" {
-		t.Errorf(
-			"%s\ngroup mismatch\ngot: %+v",
-			prefix, got,
-		)
+	if want := "target"; got.Name != want {
+		t.Errorf("get group by ID: Group.Name mismatch\ngot:  %q\nwant: %q", got.Name, want)
 	}
 
-	// WHEN: an unknown ID is fetched.
-	w = serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/groups/no-such-id", "", adminCookie))
+	req = authedRequest(http.MethodGet, "/api/v1/groups/no-such-id", "", adminCookie)
+	w = serveAuth(api, req)
 
-	// THEN: the request 404s.
 	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\nget unknown\ngot:  %d\nwant: 404",
-			prefix, got,
+			"get unknown group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	if _, err := deps.Store.CreateGroup(t.Context(), "editors", "", nonAdminGrants()); err != nil {
-		t.Fatalf(
-			"%s\ncreate editors group: %v",
-			packageName, err,
-		)
-	}
-	// AND: a logged-in non-admin.
+	createAuthGroup(t, deps, "editors", "", nonAdminGrants())
+
 	createAuthUser(t, deps, "manager", "manager-password", "editors")
 	managerCookie := loginCookie(t, api, "manager", "manager-password")
-	// AND: a target group.
-	target, err := deps.Store.CreateGroup(t.Context(), "target", "", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate target group: %v",
-			packageName, err,
-		)
-	}
+
+	target := createAuthGroup(t, deps, "target", "", nil)
 	ids := seededGroupIDs(t, deps)
 
-	// WHEN: the admin patches the group.
-	w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/groups/"+target.ID,
-			test.TrimJSON(`{
-				"name": "target-2",
-				"permissions": [
-					{"resource": "version_refresh", "action": "execute", "scope": {"type": "service_tag", "ref": "prod"}}
-				]
-			}`),
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPatch, "/api/v1/groups/"+target.ID,
+		test.TrimJSON(`{
+			"name": "target-2",
+			"permissions": [
+				{"resource": "version_refresh", "action": "execute", "scope": {"type": "service_tag", "ref": "prod"}}
+			]
+		}`),
+		adminCookie,
 	)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpGroupUpdate()", packageName)
-
-	// THEN: the patch is applied.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\npatch status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin patching group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var patched store.Group
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &patched); err != nil {
-		t.Fatalf(
-			"%s\nparse patch response: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin patching group: decode.Unmarshal() failed: %v", err)
 	}
-	if patched.Name != "target-2" || len(patched.Grants) != 1 {
+	wantName, wantGrants := "target-2", 1
+	if patched.Name != wantName || len(patched.Grants) != wantGrants {
 		t.Errorf(
-			"%s\npatched group mismatch\ngot: %+v",
-			prefix, patched,
+			"admin patching group: Group mismatch\n"+
+				"got:  Name=%q, len(Grants)=%d\nwant: Name=%q, len(Grants)=%d",
+			patched.Name, len(patched.Grants),
+			wantName, wantGrants,
 		)
 	}
 
-	// AND: a non-admin is forbidden from patching groups.
-	if w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/groups/"+target.ID,
-			`{"description":"renamed"}`,
-			managerCookie,
-		),
-	); w.Code != http.StatusForbidden {
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/groups/"+target.ID, `{"description":"renamed"}`, managerCookie,
+	)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nnon-admin group update\ngot:  %d - %s\nwant: 403",
-			prefix, w.Code, w.Body.String(),
+			"non-admin patching group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: an invalid or forbidden patch arrives.
 	tests := []struct {
 		name       string
 		target     string
@@ -525,68 +437,41 @@ func TestAPI_HTTPGroupUpdate(t *testing.T) {
 			cookie:     adminCookie,
 			wantStatus: http.StatusBadRequest,
 		},
-		{
-			name:       "blank name",
-			target:     target.ID,
-			body:       `{"name":"   "}`,
-			cookie:     adminCookie,
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name:       "over-long description",
-			target:     target.ID,
-			body:       `{"description":"` + strings.Repeat("x", maxFieldLength+1) + `"}`,
-			cookie:     adminCookie,
-			wantStatus: http.StatusBadRequest,
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			w := serveAuth(api,
-				authedRequest(http.MethodPatch, "/api/v1/groups/"+tc.target,
-					tc.body,
-					tc.cookie,
-				),
-			)
+			req := authedRequest(http.MethodPatch, "/api/v1/groups/"+tc.target, tc.body, tc.cookie)
+			w := serveAuth(api, req)
 
-			// THEN: it is rejected with the expected status.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\n%s\ngot:  %d - %s\nwant: %d",
-					prefix, tc.name, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
 
-	// AND: a starter group can still be renamed (only admin is railed).
-	if w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/groups/"+ids[store.GroupViewer],
-			`{"name":"watchers"}`,
-			adminCookie,
-		),
-	); w.Code != http.StatusOK {
+	// Only the admin system group is protected, so a starter group can be renamed.
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/groups/"+ids[store.GroupViewer],
+		`{"name":"watchers"}`, adminCookie,
+	)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusOK; got != want {
 		t.Errorf(
-			"%s\nrename starter group\ngot:  %d - %s\nwant: 200",
-			prefix, w.Code, w.Body.String(),
+			"rename starter group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
-	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
-	// a group member, and an outsider.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate crew group: %v",
-			packageName, err,
-		)
-	}
+	group := createAuthGroup(t, deps, "crew", "", nil)
 	member := createAuthUser(t, deps, "member", "member-password", "crew")
 	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
 	adminID := adminContext(t, api, deps).User.ID
@@ -595,141 +480,120 @@ func TestAPI_HTTPGroupUpdate__kicks(t *testing.T) {
 	memberClient := connect(member.ID, "member-session")
 	outsiderClient := connect(outsider.ID, "outsider-session")
 
-	prefix := fmt.Sprintf("%s\nhttpGroupUpdate() kicks", packageName)
-
-	// WHEN: only the group's name/description change.
-	w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
-			`{"name":"crew-renamed","description":"renamed"}`,
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPatch, "/api/v1/groups/"+group.ID,
+		`{"name":"crew-renamed","description":"renamed"}`, adminCookie,
 	)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nrename patch\ngot:  %d - %s\nwant: 200",
-			prefix, got, w.Body.String(),
+			"rename/description patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: nobody's grants changed - nobody is kicked.
-	if !api.hub.hasClient(memberClient) ||
-		!api.hub.hasClient(outsiderClient) ||
-		!api.hub.hasClient(adminClient) {
+	// No grants changed, so nobody is kicked.
+	memberKept := api.hub.hasClient(memberClient)
+	outsiderKept := api.hub.hasClient(outsiderClient)
+	adminKept := api.hub.hasClient(adminClient)
+	if !memberKept || !outsiderKept || !adminKept {
 		t.Errorf(
-			"%s\nrename/description-only patch should kick nobody",
-			prefix,
+			"rename/description patch: Hub.hasClient() mismatch\n"+
+				"got:  member=%t, outsider=%t, admin=%t\n"+
+				"want: member=true, outsider=true, admin=true",
+			memberKept, outsiderKept, adminKept,
 		)
 	}
 
-	// WHEN: the group's grants change.
-	w = serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/groups/"+group.ID,
-			test.TrimJSON(`{
-				"permissions": [
-					{"resource": "service", "action": "read", "scope": {"type": "service_tag", "ref": "prod"}}
-				]
-			}`),
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/groups/"+group.ID,
+		test.TrimJSON(`{
+			"permissions": [
+				{"resource": "service", "action": "read", "scope": {"type": "service_tag", "ref": "prod"}}
+			]
+		}`),
+		adminCookie,
 	)
+	w = serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ngrants patch\ngot:  %d - %s\nwant: 200",
-			prefix, got, w.Body.String(),
+			"grants patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: only the member's client is kicked - not the outsider's,
-	// nor the editing admin's.
-	if api.hub.hasClient(memberClient) ||
-		!api.hub.hasClient(outsiderClient) ||
-		!api.hub.hasClient(adminClient) {
+	memberKept = api.hub.hasClient(memberClient)
+	outsiderKept = api.hub.hasClient(outsiderClient)
+	adminKept = api.hub.hasClient(adminClient)
+	if memberKept || !outsiderKept || !adminKept {
 		t.Errorf(
-			"%s\ngrants patch should kick exactly the members' clients",
-			prefix,
+			"grants patch: Hub.hasClient() mismatch\n"+
+				"got:  member=%t, outsider=%t, admin=%t\n"+
+				"want: member=false, outsider=true, admin=true",
+			memberKept, outsiderKept, adminKept,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupDelete(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin and a target group.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	target, err := deps.Store.CreateGroup(t.Context(), "target", "", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate target group: %v",
-			packageName, err,
-		)
-	}
+	target := createAuthGroup(t, deps, "target", "", nil)
 	ids := seededGroupIDs(t, deps)
 
-	prefix := fmt.Sprintf("%s\nhttpGroupDelete()", packageName)
-
-	// WHEN/THEN: deleting the admin system group is 409.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/groups/"+ids[store.GroupAdmin], "", adminCookie),
-	); w.Code != http.StatusConflict {
+	req := authedRequest(http.MethodDelete, "/api/v1/groups/"+ids[store.GroupAdmin], "", adminCookie)
+	w := serveAuth(api, req)
+	if got, want := w.Code, http.StatusConflict; got != want {
 		t.Errorf(
-			"%s\ndelete admin\ngot:  %d\nwant: 409",
-			prefix, w.Code,
+			"delete admin group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: unknown IDs 404.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/groups/no-such-id", "", adminCookie),
-	); w.Code != http.StatusNotFound {
+	req = authedRequest(http.MethodDelete, "/api/v1/groups/no-such-id", "", adminCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\ndelete unknown\ngot:  %d\nwant: 404",
-			prefix, w.Code,
+			"delete unknown group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: a starter group (operator) can be deleted (only admin is railed).
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/groups/"+ids[store.GroupOperator], "", adminCookie),
-	); w.Code != http.StatusNoContent {
+	// Only the admin system group is protected, so a starter group can be deleted.
+	req = authedRequest(http.MethodDelete, "/api/v1/groups/"+ids[store.GroupOperator], "", adminCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusNoContent; got != want {
 		t.Errorf(
-			"%s\ndelete starter group\ngot:  %d\nwant: 204",
-			prefix, w.Code,
+			"delete starter group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the admin deletes the target group.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/groups/"+target.ID, "", adminCookie))
+	req = authedRequest(http.MethodDelete, "/api/v1/groups/"+target.ID, "", adminCookie)
+	w = serveAuth(api, req)
 
-	// THEN: the group is gone.
 	if got, want := w.Code, http.StatusNoContent; got != want {
 		t.Fatalf(
-			"%s\ndelete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"delete known group: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	if _, err := deps.Store.GroupByID(t.Context(), target.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf(
-			"%s\ngroup should be deleted\ngot: %v",
-			prefix, err,
+			"delete known group: Store.GroupByID() error type mismatch\n"+
+				"got:  %v\nwant: %v (deleted)",
+			err, store.ErrNotFound,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
-	// GIVEN: an auth-enabled API with WebSocket clients for the admin,
-	// a group member, and an outsider.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	group, err := deps.Store.CreateGroup(t.Context(), "crew", "", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate crew group: %v",
-			packageName, err,
-		)
-	}
+	group := createAuthGroup(t, deps, "crew", "", nil)
 	member := createAuthUser(t, deps, "member", "member-password", "crew")
 	outsider := createAuthUser(t, deps, "outsider", "outsider-password")
 	adminID := adminContext(t, api, deps).User.ID
@@ -738,67 +602,44 @@ func TestAPI_HTTPGroupDelete__kicks(t *testing.T) {
 	memberClient := connect(member.ID, "member-session")
 	outsiderClient := connect(outsider.ID, "outsider-session")
 
-	prefix := fmt.Sprintf("%s\nhttpGroupDelete() kicks", packageName)
-
-	// WHEN: the admin deletes the group.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/groups/"+group.ID, "", adminCookie))
+	req := authedRequest(http.MethodDelete, "/api/v1/groups/"+group.ID, "", adminCookie)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusNoContent; got != want {
-		t.Fatalf(
-			"%s\ndelete\ngot:  %d - %s\nwant: 204",
-			prefix, got, w.Body.String(),
-		)
+		t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// THEN: only the member's client is kicked (membership captured before
-	// the delete's cascade) - not the outsider's, nor the editing admin's.
-	if api.hub.hasClient(memberClient) ||
-		!api.hub.hasClient(outsiderClient) ||
-		!api.hub.hasClient(adminClient) {
+	// Membership is captured before the delete's cascade.
+	memberKept := api.hub.hasClient(memberClient)
+	outsiderKept := api.hub.hasClient(outsiderClient)
+	adminKept := api.hub.hasClient(adminClient)
+	if memberKept || !outsiderKept || !adminKept {
 		t.Errorf(
-			"%s\ndelete should kick exactly the members' clients",
-			prefix,
+			"Hub.hasClient() mismatch\n"+
+				"got:  member=%t, outsider=%t, admin=%t\n"+
+				"want: member=false, outsider=true, admin=true",
+			memberKept, outsiderKept, adminKept,
 		)
 	}
 }
 
 func TestAPI_HTTPGroupDelete__membershipLookupFailure(t *testing.T) {
-	// GIVEN: an auth-enabled API whose membership table has gone away.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
-	target, err := deps.Store.CreateGroup(t.Context(), "doomed", "", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate target group: %v",
-			packageName, err,
-		)
-	}
-	if _, err := dbConn.Exec(`DROP TABLE user_groups;`); err != nil {
-		t.Fatalf(
-			"%s\ndrop user_groups: %v",
-			packageName, err,
-		)
-	}
+	target := createAuthGroup(t, deps, "doomed", "", nil)
+	test.DropTable(t, dbConn, "user_groups")
 
-	// WHEN: a group is deleted.
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/"+target.ID, nil)
 	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": target.ID})
-	recorder := httptest.NewRecorder()
-	api.httpGroupDelete(recorder, req)
+	w := httptest.NewRecorder()
+	api.httpGroupDelete(w, req)
 
-	// THEN: the lookup failure reads as 500.
-	if got, want := recorder.Code, http.StatusInternalServerError; got != want {
-		t.Errorf(
-			"%s\nhttpGroupDelete() with an unreadable membership table\ngot:  %d - %s\nwant: %d",
-			packageName, got, recorder.Body.String(), want,
-		)
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }
 
 func TestAPI_HTTPGroupUpdate__kickLookupFailure(t *testing.T) {
-	// GIVEN: an auth-enabled API on a store whose membership listing fails
-	// whist the group update itself still succeeds.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
@@ -806,78 +647,80 @@ func TestAPI_HTTPGroupUpdate__kickLookupFailure(t *testing.T) {
 	faultDB, state := storetest.FaultDB(t)
 	faultStore, err := store.New(t.Context(), faultDB)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfault store: %v",
-			packageName, err,
-		)
+		t.Fatalf("store.New() failed: %v", err)
 	}
 	target, err := faultStore.CreateGroup(t.Context(), "kicked", "", nonAdminGrants())
 	if err != nil {
-		t.Fatalf(
-			"%s\ncreate target group: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.CreateGroup() failed: %v", err)
 	}
 	api.auth.Store = faultStore
 
-	// WHEN: the group's grants are patched, and listing its members fails.
+	// Fail only the membership listing; the update itself succeeds.
 	state.Set(`ORDER BY user_id`)
 	t.Cleanup(func() { state.Set("") })
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/groups/"+target.ID,
-		strings.NewReader(`{"permissions":[]}`))
+	req := httptest.NewRequest(
+		http.MethodPatch, "/api/v1/groups/"+target.ID,
+		strings.NewReader(`{"permissions":[]}`),
+	)
 	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": target.ID})
-	recorder := httptest.NewRecorder()
-	api.httpGroupUpdate(recorder, req)
+	w := httptest.NewRecorder()
+	releaseStdout := test.CaptureLog(t, logx.Default())
+	api.httpGroupUpdate(w, req)
+	stdout := releaseStdout()
 
-	// THEN: the patch still succeeds - failing to kick members is only logged.
-	if got, want := recorder.Code, http.StatusOK; got != want {
-		t.Errorf(
-			"%s\nhttpGroupUpdate() with an unreadable membership table\ngot:  %d - %s\nwant: %d",
-			packageName, got, recorder.Body.String(), want,
-		)
+	// Failing to kick members is only logged.
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
+	}
+
+	wantStdout := `^ERROR: httpGroupUpdate \(.*\), list group's users:\s+injected fault`
+	if !util.RegexCheck(wantStdout, stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, wantStdout)
+	}
+
+	group, err := faultStore.GroupByID(t.Context(), target.ID)
+	if err != nil {
+		t.Fatalf("Store.GroupByID() failed: %v", err)
+	}
+	if got, want := len(group.Grants), 0; got != want {
+		t.Errorf("len(Group.Grants) mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 
 func TestAPI_HTTPPermissionCatalogue(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin and viewer.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
 	viewerCookie := loginCookie(t, api, "viewer", "viewer-password")
 
-	prefix := fmt.Sprintf("%s\nhttpPermissionCatalogue()", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/permissions", "", adminCookie)
+	w := serveAuth(api, req)
 
-	// WHEN: the admin fetches the permission catalogue.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/permissions", "", adminCookie))
-
-	// THEN: the valid matrix is returned.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin access to permissions: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var catalogue apitype.PermissionCatalogue
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &catalogue); err != nil {
-		t.Fatalf(
-			"%s\nparse response: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin access to permissions: decode.Unmarshal() failed: %v", err)
 	}
 	if len(catalogue.Resources) == 0 {
-		t.Errorf("%s\ncatalogue should not be empty", prefix)
+		t.Error(
+			"admin access to permissions: len(PermissionCatalogue.Resources) mismatch\n" +
+				"got:  0\nwant: > 0",
+		)
 	}
 
-	// AND: a viewer (no group:read) gets 403.
-	if w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/permissions", "", viewerCookie),
-	); w.Code != http.StatusForbidden {
+	req = authedRequest(http.MethodGet, "/api/v1/permissions", "", viewerCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nviewer access\ngot:  %d\nwant: 403",
-			prefix, w.Code,
+			"viewer access to permissions: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }

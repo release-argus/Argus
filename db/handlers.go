@@ -129,7 +129,7 @@ func (api *api) updateRow(serviceID string, cells []dbtype.Cell) {
 	if _, err := api.db.Exec(sqlStmt, params...); err != nil {
 		logx.Error(
 			fmt.Sprintf(
-				"updateRow UPSERT: %q %v, %s",
+				"failed to upsert status row: %q %v: %v",
 				sqlStmt, params, err,
 			),
 			logFrom,
@@ -155,7 +155,7 @@ func (api *api) deleteRow(serviceID string) {
 	if _, err := api.db.Exec(sqlStmt, serviceID); err != nil {
 		logx.Error(
 			fmt.Sprintf(
-				"deleteRow: %q with %q, %s",
+				"failed to delete status row: %q with %q: %v",
 				sqlStmt, serviceID, err,
 			),
 			logFrom,

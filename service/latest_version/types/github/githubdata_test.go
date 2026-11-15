@@ -18,140 +18,14 @@
 package github
 
 import (
-	"fmt"
-	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 )
 
-func TestGetEmptyListETag(t *testing.T) {
-	// GIVEN: ETags an empty list query answered with.
-	tests := []struct {
-		name string
-		etag string
-	}{
-		{
-			name: "weak",
-			etag: `W/"abc"`,
-		},
-		{
-			name: "strong",
-			etag: `"abc"`,
-		},
-		{
-			name: "empty",
-			etag: "",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - the empty-list ETag is package-wide state.
-
-			// WHEN: one is remembered.
-			setEmptyListETag(tc.etag)
-
-			// THEN: it is what is read back.
-			if got := getEmptyListETag(); got != tc.etag {
-				t.Errorf(
-					"%s\ngetEmptyListETag() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.etag,
-				)
-			}
-		})
-	}
-}
-
-func TestNewData(t *testing.T) {
-	startingEmptyListETag := getEmptyListETag()
-	// GIVEN: a Data is wanted with/without an ETag/releases.
-	tests := []struct {
-		name     string
-		etag     string
-		releases *[]forgetypes.Release
-		want     *Data
-	}{
-		{
-			name:     "no ETag or releases",
-			etag:     "",
-			releases: nil,
-			want: &Data{
-				etag: startingEmptyListETag,
-			},
-		},
-		{
-			name:     "ETag but no releases",
-			etag:     "foo",
-			releases: nil,
-			want: &Data{
-				etag: "foo",
-			},
-		},
-		{
-			name: "no ETag but releases",
-			etag: "",
-			releases: &[]forgetypes.Release{
-				{TagName: "bar"},
-			},
-			want: &Data{
-				etag: startingEmptyListETag,
-				releases: []forgetypes.Release{
-					{TagName: "bar"},
-				},
-			},
-		},
-		{
-			name: "ETag and releases",
-			etag: "zing",
-			releases: &[]forgetypes.Release{
-				{TagName: "zap"},
-			},
-			want: &Data{
-				etag: "zing",
-				releases: []forgetypes.Release{
-					{TagName: "zap"},
-				},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: newData is called.
-			got := newData(tc.etag, tc.releases)
-
-			prefix := fmt.Sprintf(
-				"%s\nnewData(etag=%q, releases=%v)",
-				packageName, tc.etag, tc.releases,
-			)
-
-			// THEN: the correct Data is returned.
-			if got.etag != tc.want.etag {
-				t.Errorf(
-					"%s ETag mismatch\ngot %q\nwant: %q",
-					prefix, got.etag, tc.want.etag,
-				)
-			}
-			if err := test.AssertSlicesEqualFunc(
-				t,
-				got.releases,
-				tc.want.releases,
-				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
-				prefix,
-				"Data.releases",
-			); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
 func TestData_String(t *testing.T) {
-	// GIVEN: a Data.
 	tests := []struct {
 		name       string
 		githubData *Data
@@ -193,22 +67,16 @@ func TestData_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the Data is stringified with String.
 			got := tc.githubData.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nData.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Data.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestData_TagFallback(t *testing.T) {
-	// GIVEN: a Data.
 	gd := &Data{}
 	tests := []bool{
 		true,
@@ -218,138 +86,97 @@ func TestData_TagFallback(t *testing.T) {
 		true,
 	}
 
-	if gd.tagFallback != false {
-		t.Fatalf("%s\nData.tagFallback wasn't set to false initially", packageName)
-	}
-
-	for _, tc := range tests {
+	for i, tc := range tests {
 		gd.SetTagFallback()
 
-		// WHEN: TagFallback is called.
 		got := gd.TagFallback()
 
-		// THEN: the correct value is returned.
 		if got != tc {
-			t.Errorf(
-				"%s\nData.TagFallback() mismatch\ngot:  %t\nwant: %t",
-				packageName, got, tc,
-			)
+			t.Errorf("toggle %d: Data.TagFallback() mismatch\ngot:  %t\nwant: %t", i, got, tc)
 		}
 	}
 }
 
 func TestData_ETag(t *testing.T) {
-	// GIVEN: a Data.
 	testData := &Data{}
 
-	// WHEN: ETag is called.
 	got := testData.ETag()
 
-	// THEN: the releases are returned.
-	want := testData.etag
+	want := ""
 	if got != want {
-		t.Errorf(
-			"%s\nfresh Data.ETag() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("fresh: Data.ETag() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// WHEN: the releases are changed.
 	newETag := "foo"
 	testData.SetETag(newETag)
 
-	// THEN: the new releases can be fetched.
 	got = testData.ETag()
 	want = newETag
 	if got != want {
-		t.Errorf(
-			"%s\nData.ETag() mismatch after SetETag(%q)\ngot:  %q\nwant: %q",
-			packageName, newETag,
-			got, want,
-		)
+		t.Errorf("after SetETag: Data.ETag() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestData_PerPage(t *testing.T) {
-	for range 10 {
-		// GIVEN: a Data instance.
-		data := &Data{}
+	for _, foundOnPage := range []int{1, 2, 10} {
+		t.Run(strconv.Itoa(foundOnPage), func(t *testing.T) {
+			t.Parallel()
 
-		// WHEN: SetPerPage is called with a new value.
-		foundOnPage := rand.Intn(10) + 1
-		data.SetPerPage(foundOnPage)
+			data := &Data{}
 
-		// THEN: the PerPage field is updated correctly.
-		want := foundOnPage * defaultPerPage
-		if got := data.PerPage(); got != want {
-			t.Errorf(
-				"%s\nData.SetPerPage(%d) failed to update .PerPage()\ngot:  %d\nwant: %d",
-				packageName, foundOnPage,
-				got, want,
-			)
-		}
+			data.SetPerPage(foundOnPage)
 
-		// WHEN: ResetPerPage is called.
-		data.ResetPerPage()
+			want := foundOnPage * defaultPerPage
+			if got := data.PerPage(); got != want {
+				t.Errorf("after SetPerPage: Data.PerPage() mismatch\ngot:  %d\nwant: %d", got, want)
+			}
 
-		// THEN: the PerPage field is reset to 0.
-		if got := data.PerPage(); got != 0 {
-			t.Errorf(
-				"%s\nData.PerPage() mismatch after ResetPerPage()\ngot:  %d\nwant: %d",
-				packageName, got, 0,
-			)
-		}
+			data.ResetPerPage()
+
+			if got, want := data.PerPage(), 0; got != want {
+				t.Errorf(
+					"after ResetPerPage: Data.PerPage() mismatch\ngot:  %d\nwant: %d",
+					got, want,
+				)
+			}
+		})
 	}
 }
 
 func TestData_Releases(t *testing.T) {
-	// GIVEN: a Data.
 	testData := &Data{}
 
-	// WHEN: Releases is called.
 	got := testData.Releases()
 
-	// THEN: the releases are returned.
-	want := testData.releases
-	match := len(got) == len(want)
-	if match {
-		for i, release := range got {
-			if release.String() != want[i].String() {
-				match = false
-				break
-			}
-		}
-	}
-	if !match {
-		t.Errorf(
-			"%s\nfresh Data.Releases() mismatch\ngot:  %v\nwant: %v",
-			packageName, got, want,
-		)
+	if testErr := test.AssertSlicesEqualFunc(
+		t,
+		got,
+		[]forgetypes.Release(nil),
+		releaseEqual,
+		"Data.Releases()",
+	); testErr != nil {
+		t.Fatalf("fresh: %v", testErr)
 	}
 
-	// WHEN: the releases are changed.
 	newReleases := []forgetypes.Release{
 		{TagName: "foo"},
 		{TagName: "bar"},
 	}
 	testData.SetReleases(newReleases)
 
-	// THEN: the new releases can be fetched.
 	got = testData.Releases()
-	if err := test.AssertSlicesEqualFunc(
+	if testErr := test.AssertSlicesEqualFunc(
 		t,
 		got,
 		newReleases,
-		func(a, b forgetypes.Release) bool { return a.String() == b.String() },
-		fmt.Sprintf("%s\nData.Releases", packageName),
-		"",
-	); err != nil {
-		t.Fatal(err)
+		releaseEqual,
+		"Data.Releases()",
+	); testErr != nil {
+		t.Fatalf("after SetReleases: %v", testErr)
 	}
 }
 
 func TestData_HasReleases(t *testing.T) {
-	// GIVEN: a Data that may/may not have releases.
 	tests := []struct {
 		name string
 		gd   *Data
@@ -385,22 +212,16 @@ func TestData_HasReleases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: hasReleases is called on it.
 			got := tc.gd.hasReleases()
 
-			// THEN: the correct value is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nData.hasReleases() mismatch\ngot:  %v\nwant: %v",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestData_Copy(t *testing.T) {
-	// GIVEN: a Data to copy from.
 	tests := []struct {
 		name string
 		gd   *Data
@@ -424,32 +245,25 @@ func TestData_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy is called.
 			got := tc.gd.Copy()
 
-			// THEN: the correct Data is returned.
 			if got.etag != tc.gd.etag {
-				t.Errorf(
-					"%s\nData.Copy() .etag mismatch\ngot:  %q\nwant: %q",
-					packageName, got.etag, tc.gd.etag,
-				)
+				t.Errorf("Data.etag mismatch\ngot:  %q\nwant: %q", got.etag, tc.gd.etag)
 			}
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got.releases,
 				tc.gd.releases,
-				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
-				fmt.Sprintf("%s\nData.Copy()", packageName),
-				".releases",
-			); err != nil {
-				t.Fatal(err)
+				releaseEqual,
+				"Data.releases",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestData_CopyFrom(t *testing.T) {
-	// GIVEN: a fresh Data and a Data to copy from.
 	tests := []struct {
 		name  string
 		fresh *Data
@@ -493,28 +307,128 @@ func TestData_CopyFrom(t *testing.T) {
 				tc.fresh = &Data{}
 			}
 
-			// WHEN: CopyFrom is called.
 			tc.fresh.CopyFrom(tc.gd)
 
-			// THEN: the correct Data is returned.
 			if tc.fresh.etag != tc.gd.etag {
-				t.Errorf(
-					"%s\nData.CopyFrom() .etag mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.fresh.etag, tc.gd.etag,
-				)
+				t.Errorf("Data.etag mismatch\ngot:  %q\nwant: %q", tc.fresh.etag, tc.gd.etag)
 			}
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				tc.fresh.releases,
 				tc.gd.releases,
-				func(a, b forgetypes.Release) bool { return a.String() == b.String() },
-				fmt.Sprintf(
-					"%s\nCopyFrom(%v)",
-					packageName, tc.gd,
-				),
-				".releases",
-			); err != nil {
-				t.Fatal(err)
+				releaseEqual,
+				"Data.releases",
+			); testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
+	}
+}
+
+func TestGetEmptyListETag(t *testing.T) {
+	tests := []struct {
+		name string
+		etag string
+	}{
+		{
+			name: "weak",
+			etag: `W/"abc"`,
+		},
+		{
+			name: "strong",
+			etag: `"abc"`,
+		},
+		{
+			name: "empty",
+			etag: "",
+		},
+	}
+	hadETag := getEmptyListETag()
+	t.Cleanup(func() { setEmptyListETag(hadETag) })
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: shares the empty-list ETag.
+
+			setEmptyListETag(tc.etag)
+
+			if got := getEmptyListETag(); got != tc.etag {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.etag)
+			}
+		})
+	}
+}
+
+func TestNewData(t *testing.T) {
+	startingEmptyListETag := getEmptyListETag()
+
+	tests := []struct {
+		name     string
+		etag     string
+		releases *[]forgetypes.Release
+		want     *Data
+	}{
+		{
+			name:     "no ETag or releases",
+			etag:     "",
+			releases: nil,
+			want: &Data{
+				etag: startingEmptyListETag,
+			},
+		},
+		{
+			name:     "ETag but no releases",
+			etag:     "foo",
+			releases: nil,
+			want: &Data{
+				etag: "foo",
+			},
+		},
+		{
+			name: "no ETag but have releases",
+			etag: "",
+			releases: &[]forgetypes.Release{
+				{TagName: "bar"},
+			},
+			want: &Data{
+				etag: startingEmptyListETag,
+				releases: []forgetypes.Release{
+					{TagName: "bar"},
+				},
+			},
+		},
+		{
+			name: "ETag and releases",
+			etag: "zing",
+			releases: &[]forgetypes.Release{
+				{TagName: "zap"},
+			},
+			want: &Data{
+				etag: "zing",
+				releases: []forgetypes.Release{
+					{TagName: "zap"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := newData(tc.etag, tc.releases)
+
+			if got.etag != tc.want.etag {
+				t.Errorf("Data.etag mismatch\ngot:  %q\nwant: %q", got.etag, tc.want.etag)
+			}
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				got.releases,
+				tc.want.releases,
+				releaseEqual,
+				"Data.releases",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

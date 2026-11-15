@@ -25,14 +25,14 @@ import (
 
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/auth/store"
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestAPI_Auth__RBAC(t *testing.T) {
-	// GIVEN: users in groups of differing power.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
-	createAuthUser(t, deps, "loner", "loner-password") // No groups.
+	createAuthUser(t, deps, "loner", "loner-password")
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	viewerCookie := loginCookie(t, api, "viewer", "viewer-password")
 	lonerCookie := loginCookie(t, api, "loner", "loner-password")
@@ -139,17 +139,13 @@ func TestAPI_Auth__RBAC(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nRBAC", packageName)
+			req := authedRequest(tc.method, tc.target, "", tc.cookie)
+			w := serveAuth(api, req)
 
-			// WHEN: the route is requested.
-			w := serveAuth(api,
-				authedRequest(tc.method, tc.target, "", tc.cookie))
-
-			// THEN: the status matches the user's permissions.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -157,69 +153,53 @@ func TestAPI_Auth__RBAC(t *testing.T) {
 }
 
 func TestAPI_Auth__infrastructureFailures(t *testing.T) {
-	// GIVEN: a logged-in admin whose auth store then breaks.
 	file := t.Name() + ".yml"
 	api, _, dbConn := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
-	// Break the store: every lookup now fails
+	// Closing the DB makes every store lookup fail.
 	_ = dbConn.Close()
 
-	prefix := fmt.Sprintf("%s\ninfrastructure failure", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
+	w := serveAuth(api, req)
 
-	// WHEN: an authenticated request arrives.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/flags", "", cookie))
-
-	// THEN: it reads as a 500, not as an auth failure.
+	// 500, not an auth failure.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"authenticated request: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: login reports 500 too (not "invalid credentials").
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login",
-		strings.NewReader(`{"username":"admin","password":"admin-password"}`))
-	if w := serveAuth(api, req); w.Code != http.StatusInternalServerError {
-		t.Errorf(
-			"%s\nlogin during outage\ngot:  %d\nwant: 500",
-			prefix, w.Code,
-		)
+	req = httptest.NewRequest(
+		http.MethodPost, "/api/v1/auth/login",
+		strings.NewReader(`{"username":"admin","password":"admin-password"}`),
+	)
+	w = serveAuth(api, req)
+	// 500, not "invalid credentials".
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
+		t.Errorf("login: status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }
 
 func TestAPI_Auth__disabledMidSession(t *testing.T) {
-	// GIVEN: a logged-in user who is then disabled behind the API's back.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	createAuthUser(t, deps, "victim", "victim-password", store.GroupViewer)
 	cookie := loginCookie(t, api, "victim", "victim-password")
 	if _, err := dbConn.Exec(`UPDATE users SET enabled = 0 WHERE username = 'victim';`); err != nil {
-		t.Fatalf(
-			"%s\nsetup disable failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("DB.Exec() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\ndisabled mid-session", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
+	w := serveAuth(api, req)
 
-	// WHEN: the still-live session is used.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/flags", "", cookie))
-
-	// THEN: the disabled user reads as unauthorised despite the valid session.
 	if got, want := w.Code, http.StatusUnauthorized; got != want {
-		t.Errorf(
-			"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }
 
 func TestAPI_Auth__originCheck(t *testing.T) {
-	// GIVEN: a logged-in admin.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -239,20 +219,16 @@ func TestAPI_Auth__originCheck(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nOrigin check", packageName)
-
-			// WHEN: an authenticated request carries the Origin header.
 			req := authedRequest(http.MethodGet, "http://example.com/api/v1/flags", "", cookie)
 			if tc.origin != "" {
 				req.Header.Set("Origin", tc.origin)
 			}
 			w := serveAuth(api, req)
 
-			// THEN: cross-site origins are rejected.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -260,14 +236,10 @@ func TestAPI_Auth__originCheck(t *testing.T) {
 }
 
 func TestAPI_Auth__guardDisabled(t *testing.T) {
-	// GIVEN: an API without auth enabled.
 	file := t.Name() + ".yml"
 	apiValue := testAPI(t, file)
 	api := &apiValue
 
-	prefix := fmt.Sprintf("%s\nguard() with auth disabled", packageName)
-
-	// WHEN: a handler is guarded.
 	called := false
 	handler := api.guard(
 		"service",
@@ -277,14 +249,13 @@ func TestAPI_Auth__guardDisabled(t *testing.T) {
 			called = true
 		},
 	)
-	handler(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	handler(httptest.NewRecorder(), req)
 
-	// THEN: the handler runs unwrapped.
 	if !called {
-		t.Errorf("%s\nhandler should have been called directly", prefix)
+		t.Error("after guard: handler called mismatch\ngot:  false\nwant: true")
 	}
 
-	// AND: GuardMetrics is a pass-through.
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTeapot)
 	})
@@ -292,24 +263,17 @@ func TestAPI_Auth__guardDisabled(t *testing.T) {
 	api.GuardMetrics(inner).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 	if got, want := w.Code, http.StatusTeapot; got != want {
 		t.Errorf(
-			"%s\nGuardMetrics should pass through when auth is disabled\ngot:  %d",
-			prefix, got,
+			"after GuardMetrics: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
-	// GIVEN: an auth-enabled API, a guarded metrics handler, and an API token.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCtx := adminContext(t, api, deps)
-	token, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "scrape", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
+	token, _ := createAPIToken(t, deps, adminCtx.User.ID, "scrape", nil)
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("metrics"))
 	})
@@ -346,9 +310,6 @@ func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nGuardMetrics", packageName)
-
-			// WHEN: /metrics is scraped.
 			req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 			if tc.header != "" {
 				req.Header.Set("Authorization", tc.header)
@@ -359,11 +320,10 @@ func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
 			w := httptest.NewRecorder()
 			guarded.ServeHTTP(w, req)
 
-			// THEN: the status matches expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -371,63 +331,45 @@ func TestAPI_Auth__tokenFallbackMetrics(t *testing.T) {
 }
 
 func TestAPI_Auth__guardMetricsErrors(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a user with no grants.
+
 	loner := createAuthUser(t, deps, "loner", "loner-password")
-	lonerToken, _, err := deps.Store.CreateAPIToken(t.Context(), loner.ID, "scrape", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
-	// AND: an admin.
+	lonerToken, _ := createAPIToken(t, deps, loner.ID, "scrape", nil)
+
 	adminCtx := adminContext(t, api, deps)
-	adminToken, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "scrape", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
+	adminToken, _ := createAPIToken(t, deps, adminCtx.User.ID, "scrape", nil)
 	guarded := api.GuardMetrics(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("metrics"))
 	}))
 
-	prefix := fmt.Sprintf("%s\nGuardMetrics errors", packageName)
-
-	// WHEN: an authenticated user without config:read scrapes.
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	req.Header.Set("Authorization", "Bearer "+lonerToken)
 	w := httptest.NewRecorder()
 	guarded.ServeHTTP(w, req)
-	// THEN: 403.
+
 	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nno permission\ngot:  %d\nwant: %d",
-			prefix, got, want,
+			"no permission: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the store breaks beneath the scrape from an authentication admin.
 	_ = dbConn.Close()
 	req = httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	req.Header.Set("Authorization", "Bearer "+adminToken)
 	w = httptest.NewRecorder()
 	guarded.ServeHTTP(w, req)
-	// THEN: 500.
+
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\ninfrastructure failure\ngot:  %d\nwant: %d",
-			prefix, got, want,
+			"broken store: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_Auth__webSocket(t *testing.T) {
-	// GIVEN: an auth-enabled API with a logged-in admin.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -448,27 +390,18 @@ func TestAPI_Auth__webSocket(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			prefix := fmt.Sprintf("%s\n/ws", packageName)
+			req := authedRequest(http.MethodGet, "/ws", "", tc.cookie)
+			w := serveAuth(api, req)
 
-			// WHEN: the /ws route is requested.
-			w := serveAuth(api,
-				authedRequest(http.MethodGet, "/ws", "", tc.cookie))
-
-			// THEN: only authenticated handshakes get past the gate
+			// An authenticated non-upgrade request fails at the WebSocket upgrade instead.
+			want := http.StatusBadRequest
 			if tc.want401 {
-				if got, want := w.Code, http.StatusUnauthorized; got != want {
-					t.Errorf(
-						"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-						prefix, got, want,
-					)
-				}
+				want = http.StatusUnauthorized
 			}
-			// AND: an authenticated non-upgrade request passes the auth gate and
-			// fails at the WebSocket upgrade instead, as 400.
-			if !tc.want401 && w.Code != http.StatusBadRequest {
+			if got := w.Code; got != want {
 				t.Errorf(
-					"%s\nauthenticated non-upgrade handshake should be 400\ngot: %d",
-					prefix, w.Code,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -476,33 +409,19 @@ func TestAPI_Auth__webSocket(t *testing.T) {
 }
 
 func TestAPI_Auth__serviceScopeHooks(t *testing.T) {
-	// GIVEN: an auth-enabled API whose config holds the fixture service
-	// "test", and a group with a grant scoped to it.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
-	group, err := deps.Store.CreateGroup(t.Context(), "scoped", "", []rbac.Grant{
-		{
-			Resource: rbac.ResourceService,
-			Action:   rbac.ActionRead,
-			Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
+	group := createAuthGroup(t, deps, "scoped", "", []rbac.Grant{
+		{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 	})
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate scoped group: %v",
-			packageName, err,
-		)
-	}
 
-	// AND: a local upstream so the edited lookup can fetch.
+	// A local upstream so the edited lookup can fetch.
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("v1.2.3"))
 	}))
 	t.Cleanup(upstream.Close)
 
-	prefix := fmt.Sprintf("%s\nservice scope hooks", packageName)
-
-	// WHEN: the service is renamed through the edit API.
 	payload := fmt.Sprintf(`{
 		"id": "test-renamed",
 		"latest_version": {
@@ -511,86 +430,63 @@ func TestAPI_Auth__serviceScopeHooks(t *testing.T) {
 			"url_commands": [{"type": "regex", "regex": "v([0-9.]+)"}]
 		}
 	}`, upstream.URL)
-	w := serveAuth(api,
-		authedRequest(http.MethodPut,
-			"/api/v1/service/config?service_id=test", payload, adminCookie))
+	req := authedRequest(
+		http.MethodPut, "/api/v1/service/config?service_id=test", payload, adminCookie,
+	)
+	w := serveAuth(api, req)
 
-	// THEN: the edit succeeds.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nedit status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"rename: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: the service-scoped grant followed the rename.
 	got, err := deps.Store.GroupByID(t.Context(), group.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s\nGroupByID failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("rename: Store.GroupByID() failed: %v", err)
 	}
-	if len(got.Grants) != 1 || got.Grants[0].Scope.Ref != "test-renamed" {
-		t.Errorf(
-			"%s\ngrant should follow the rename\ngot: %+v",
-			prefix, got.Grants,
-		)
+	grantRefs := test.AttributesSorted(got.Grants, func(g rbac.Grant) string { return g.Scope.Ref })
+	if testErr := test.AssertSlicesEqual(
+		t, grantRefs, []string{"test-renamed"}, "Group.Grants[].Scope.Ref",
+	); testErr != nil {
+		t.Errorf("rename: %v", testErr)
 	}
 
-	// WHEN: the renamed service is deleted through the API.
-	w = serveAuth(api,
-		authedRequest(http.MethodDelete,
-			"/api/v1/service/delete?service_id=test-renamed", "", adminCookie))
+	req = authedRequest(
+		http.MethodDelete, "/api/v1/service/delete?service_id=test-renamed", "", adminCookie,
+	)
+	w = serveAuth(api, req)
 
-	// THEN: the delete succeeds.
 	if got, want := w.Code, http.StatusOK; got != want {
-		t.Fatalf(
-			"%s\ndelete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
-		)
+		t.Fatalf("prune: status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// AND: the scoped grant was pruned.
 	got, err = deps.Store.GroupByID(t.Context(), group.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s\nGroupByID failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("prune: Store.GroupByID() failed: %v", err)
 	}
-	if len(got.Grants) != 0 {
-		t.Errorf(
-			"%s\nscoped grants should be pruned on delete\ngot: %+v",
-			prefix, got.Grants,
-		)
+	grantRefs = test.AttributesSorted(got.Grants, func(g rbac.Grant) string { return g.Scope.Ref })
+	if testErr := test.AssertSlicesEqual(
+		t, grantRefs, []string{}, "Group.Grants[].Scope.Ref",
+	); testErr != nil {
+		t.Errorf("prune: %v", testErr)
 	}
 }
 
 func TestAPI_Auth__serviceScopeHooks__storeFailure(t *testing.T) {
-	// GIVEN: an auth-enabled API whose grants table is broken, invoked
-	// directly (bypassing the middleware, which would fail first).
-	// Grant maintenance runs before config changes, so a store failure must
-	// abort the request rather than leave grants and services out of step.
+	// The middleware would hit the broken table first, so the handlers are called directly.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
-	if _, err := dbConn.Exec(`DROP TABLE group_permissions;`); err != nil {
-		t.Fatalf(
-			"%s\nsetup drop failed: %v",
-			packageName, err,
-		)
-	}
+	test.DropTable(t, dbConn, "group_permissions")
 
-	// AND: a local upstream so the edited lookup can fetch.
+	// A local upstream so the edited lookup can fetch.
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("v1.2.3"))
 	}))
 	t.Cleanup(upstream.Close)
 
-	prefix := fmt.Sprintf("%s\nscope hooks with a broken store", packageName)
-
-	// WHEN: the fixture service is renamed.
 	payload := fmt.Sprintf(`{
 		"id": "test-renamed",
 		"latest_version": {
@@ -599,54 +495,53 @@ func TestAPI_Auth__serviceScopeHooks__storeFailure(t *testing.T) {
 			"url_commands": [{"type": "regex", "regex": "v([0-9.]+)"}]
 		}
 	}`, upstream.URL)
-	req := withAuthCtx(httptest.NewRequest(http.MethodPut,
-		"/api/v1/service/config?service_id=test", strings.NewReader(payload)), authCtx)
+	req := httptest.NewRequest(
+		http.MethodPut, "/api/v1/service/config?service_id=test", strings.NewReader(payload),
+	)
+	req = withAuthCtx(req, authCtx)
 	w := httptest.NewRecorder()
 	api.httpServiceEdit(w, req, actionEdit)
 
-	// THEN: the rename is refused rather than half-applied.
+	// Grants move before the service, so the rename is refused rather than half-applied.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Fatalf(
-			"%s\nrename should fail when its grants cannot follow\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"rename: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	// AND: the service keeps its original ID, so no grant is orphaned.
+
+	// The original ID stays, so no grant is orphaned.
 	api.Config.OrderMu.RLock()
 	_, renamed := api.Config.Service["test-renamed"]
 	_, original := api.Config.Service["test"]
 	api.Config.OrderMu.RUnlock()
 	if wantRenamed, wantOriginal := false, true; renamed != wantRenamed || original != wantOriginal {
 		t.Fatalf(
-			"%s\nservice should be untouched by the failed rename\ngot:  test-renamed=%t, test=%t\nwant: %t, %t",
-			prefix,
+			"rename: Config.Service keys mismatch\n"+
+				"got:  test-renamed=%t, test=%t\nwant: test-renamed=%t, test=%t",
 			renamed, original,
 			wantRenamed, wantOriginal,
 		)
 	}
 
-	// WHEN: the service is deleted.
-	req = withAuthCtx(httptest.NewRequest(http.MethodDelete,
-		"/api/v1/service/delete?service_id=test", nil), authCtx)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/service/delete?service_id=test", nil)
+	req = withAuthCtx(req, authCtx)
 	w = httptest.NewRecorder()
 	api.httpServiceDelete(w, req)
 
-	// THEN: the delete is refused too.
+	// Grants are pruned before the service is removed.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Fatalf(
-			"%s\ndelete should fail when its grants cannot be pruned\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"delete: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	// AND: the service survives, so a later service of the same ID cannot
-	// silently inherit any grants that were left behind.
+
+	// The service survives, so a later service of the same ID cannot inherit leftover grants.
 	api.Config.OrderMu.RLock()
 	_, survived := api.Config.Service["test"]
 	api.Config.OrderMu.RUnlock()
 	if !survived {
-		t.Fatalf(
-			"%s\nservice should survive a failed grant prune",
-			prefix,
-		)
+		t.Fatal("delete: Config.Service[\"test\"] mismatch\ngot:  absent\nwant: present")
 	}
 }

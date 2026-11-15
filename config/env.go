@@ -69,7 +69,7 @@ func migrateDeprecatedEnvVars(envVars []string) []string {
 		if hasNew {
 			// The new name is already set explicitly - drop the deprecated one, new wins.
 			logx.Deprecated(fmt.Sprintf(
-				"Dropping deprecated env var '%s' ('%s' already set)",
+				"Dropping deprecated env var %q (%q already set)",
 				oldName, newName,
 			))
 			os.Unsetenv(oldName) //nolint:errcheck // best-effort; avoid leaving a stale duplicate.
@@ -77,7 +77,7 @@ func migrateDeprecatedEnvVars(envVars []string) []string {
 			continue
 		}
 		logx.Deprecated(fmt.Sprintf(
-			"Renaming env var '%s' to '%s'",
+			"Renaming env var %q to %q",
 			oldName, newName,
 		))
 		value := strings.TrimPrefix(envVars[oldIdx], oldPrefix)

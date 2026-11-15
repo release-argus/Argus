@@ -17,7 +17,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,12 +24,11 @@ import (
 )
 
 func TestRequireQueryParam(t *testing.T) {
-	// GIVEN: a query parameter.
 	tests := []struct {
 		name           string
 		queryParamName string
 		queryValue     string
-		ok             bool
+		omitParam      bool
 		statusCode     int
 	}{
 		{
@@ -48,7 +46,7 @@ func TestRequireQueryParam(t *testing.T) {
 		{
 			name:           "Query parameter missing",
 			queryParamName: "key",
-			queryValue:     "",
+			omitParam:      true,
 			statusCode:     http.StatusBadRequest,
 		},
 		{
@@ -63,49 +61,33 @@ func TestRequireQueryParam(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			params := url.Values{
-				"app":             {"argus"},
-				tc.queryParamName: {tc.queryValue},
+			params := url.Values{"app": {"argus"}}
+			if !tc.omitParam {
+				params.Set(tc.queryParamName, tc.queryValue)
 			}
 
-			// AND: a request made with this query parameter.
 			req := &http.Request{URL: &url.URL{RawQuery: params.Encode()}}
 			w := httptest.NewRecorder()
 
-			// WHEN: requireQueryParam is called on it.
 			value, ok := requireQueryParam(w, req, tc.queryParamName)
 
 			resp := w.Result()
 			defer resp.Body.Close()
 
-			prefix := fmt.Sprintf(
-				"%q\nAPI.requireQueryParam(%q) params=(%+v)",
-				packageName, params, tc.queryParamName,
-			)
-
-			// THEN: the expected value is returned.
 			if value != tc.queryValue {
+				t.Errorf("value mismatch\ngot:  %q\nwant: %q", value, tc.queryValue)
+			}
+
+			if got, want := resp.StatusCode, tc.statusCode; got != want {
 				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, value, tc.queryValue,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected status code is returned.
-			if resp.StatusCode != tc.statusCode {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, tc.statusCode,
-				)
-			}
-
-			// AND: the expected ok status is returned.
 			wantOk := tc.statusCode == http.StatusOK
 			if ok != wantOk {
-				t.Errorf(
-					"%s ok value mismatch\ngot:  %t\nwant: %t",
-					prefix, ok, wantOk,
-				)
+				t.Errorf("ok mismatch\ngot:  %t\nwant: %t", ok, wantOk)
 			}
 		})
 	}

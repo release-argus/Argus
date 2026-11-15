@@ -26,7 +26,6 @@ import (
 func TestIsEqual(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: two Lookups.
 	tests := []struct {
 		name string
 		a, b Lookup
@@ -182,15 +181,10 @@ func TestIsEqual(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the two Lookups are compared.
 			got := IsEqual(tc.a, tc.b)
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nIsEqual() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

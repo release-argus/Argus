@@ -167,7 +167,7 @@ func (api *API) httpServiceSummary(w http.ResponseWriter, r *http.Request) {
 	svc := api.Config.Service[serviceID]
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}

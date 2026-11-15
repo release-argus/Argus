@@ -26,24 +26,14 @@ import (
 // errInjected is the error produced by the fault-injecting test driver.
 var errInjected = storetest.ErrInjected
 
-// testFaultDB opens an in-memory database whose statements can be failed
-// selectively via the returned FaultState.
-func testFaultDB(t *testing.T) (*sql.DB, *storetest.FaultState) {
-	t.Helper()
-	return storetest.FaultDB(t)
-}
-
 // testFaultStore initialises a Store (fault disarmed) on a fault-injecting DB.
 func testFaultStore(t *testing.T) (*Store, *storetest.FaultState) {
 	t.Helper()
 
-	db, state := testFaultDB(t)
+	db, state := storetest.FaultDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nNew() on fault DB failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
 	return store, state
 }

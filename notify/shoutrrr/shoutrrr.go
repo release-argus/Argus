@@ -429,11 +429,11 @@ func (s *Shoutrrr) Send(
 
 	if useDelay && s.GetDelay() != "0s" {
 		// Delay sending the Shoutrrr message by the defined interval.
-		msg := fmt.Sprintf(
-			"%s, Sleeping for %s before sending the Shoutrrr message",
-			s.ID, s.GetDelay(),
+		logx.Info(
+			fmt.Sprintf("Sleeping for %s before sending the Shoutrrr message", s.GetDelay()),
+			logFrom,
+			true,
 		)
-		logx.Info(msg, logFrom, s.GetDelay() != "0s")
 		time.Sleep(s.GetDelayDuration())
 	}
 

@@ -19,7 +19,6 @@ package manual
 import "testing"
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
 	tests := []struct {
 		name  string
 		lType string
@@ -37,16 +36,12 @@ func TestLookup_GetType(t *testing.T) {
 			l := &Lookup{}
 			l.Type = tc.lType
 
-			// WHEN: GetType is called.
 			got := l.GetType()
 
 			wantType := "manual"
-			// THEN: the Type is returned.
+
 			if got != wantType {
-				t.Errorf(
-					"%s\nLookup.GetType() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantType,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, wantType)
 			}
 		})
 	}

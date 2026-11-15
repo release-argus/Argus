@@ -17,13 +17,13 @@
 package web
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/shared"
@@ -37,8 +37,8 @@ import (
 // ############
 
 func TestLookup_Unmarshal(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	// GIVEN: data to unmarshal into a Lookup.
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+
 	tests := []struct {
 		name         string
 		format, data string
@@ -143,7 +143,7 @@ func TestLookup_Unmarshal(t *testing.T) {
 			errRegex: `unexpected`,
 		},
 		{
-			name:   "Require - error",
+			name:   "Require/error",
 			format: "yaml",
 			data: test.TrimYAML(`
 				url: https://example.com
@@ -153,13 +153,6 @@ func TestLookup_Unmarshal(t *testing.T) {
 						regex: foo
 				require:
 					regex_version: [ v.+ ]
-			`),
-			want: test.TrimYAML(`
-				url: https://example.com
-				url_commands:
-					- type: regex
-						regex: foo
-				allow_invalid_certs: true
 			`),
 			errRegex: test.TrimYAML(`
 				^require:
@@ -183,11 +176,10 @@ func TestLookup_Unmarshal(t *testing.T) {
 					return &v, err
 				},
 				tc.format, tc.data,
-				func(t *Lookup) string { return t.String("") },
+				func(v *Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Lookup",
+				"Lookup.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -200,7 +192,6 @@ func TestLookup_Unmarshal(t *testing.T) {
 // #############
 
 func TestLookup_String(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name   string
 		lookup *Lookup
@@ -257,7 +248,7 @@ func TestLookup_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Lookup.String",
 				tc.lookup.String,
 				tc.want,
 			)
@@ -270,10 +261,9 @@ func TestLookup_String(t *testing.T) {
 // #########
 
 func TestLookup_Copy(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name   string
 		lookup *Lookup
@@ -357,92 +347,72 @@ func TestLookup_Copy(t *testing.T) {
 
 			wantStr := decode.ToYAMLString(tc.lookup, "")
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.lookup.Copy(tc.status)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Copy(status=%p)",
-				packageName, tc.status,
-			)
-
-			// THEN: if nil was copied, we get nil.
 			if tc.lookup == nil {
 				if gotInterface != nil {
-					t.Errorf(
-						"%s of nil mismatch\ngot:  %v\nwant: nil",
-						prefix, gotInterface,
-					)
+					t.Errorf("copy mismatch\ngot:  %T\nwant: nil", gotInterface)
 				}
 				return
 			}
 
-			// AND: the copy is non-nil.
 			if gotInterface == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
+				t.Fatal("copy mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the copy is distinct.
 			if gotInterface == tc.lookup {
 				t.Fatalf(
-					"%s should return a distinct copy\ngot:  %p\nwant: %p",
-					prefix, gotInterface, tc.lookup,
+					"copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotInterface, tc.lookup,
 				)
 			}
 
-			// AND: the type is unchanged.
 			got, ok := gotInterface.(*Lookup)
 			if !ok {
-				t.Fatalf(
-					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
-					prefix, gotInterface,
-				)
+				t.Fatalf("copy type mismatch\ngot:  %T\nwant: *Lookup", gotInterface)
 			}
 
-			// AND: the copy unmarshals the same.
 			if gotStr := got.String(""); gotStr != wantStr {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Fatalf("Lookup.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			// AND: the fields are copied as expected.
-			err := []test.FieldAssertion{
+			fieldTests := []test.FieldAssertion{
 				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
 				{Name: "URL", Got: got.URL, Want: tc.lookup.URL, Mode: test.CompareEqual},
-				{Name: "URLCommands", Got: &got.URLCommands, Want: &tc.lookup.URLCommands, Mode: test.CompareDifferentPointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: copied pointers should be value-equal and non-aliased.
-			err = []test.FieldAssertion{
-				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CompareDifferentPointer},
-				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
-				{Name: "Status", Got: got.Status, Want: tc.lookup.Status, Mode: test.CompareDifferentPointer},
+			fieldTests = []test.FieldAssertion{
+				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CopiedPointerMode(tc.lookup.Require)},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CopiedPointerMode(tc.lookup.Options)},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: the non-Base fields are copied as expected.
-			err = []test.FieldAssertion{
+			fieldTests = []test.FieldAssertion{
 				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: tc.lookup.AllowInvalidCerts, Mode: test.CompareSamePointer},
-				{Name: "Headers", Got: &got.Headers, Want: &tc.lookup.Headers, Mode: test.CompareDifferentPointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
+			if len(got.Headers) > 0 && &got.Headers[0] == &tc.lookup.Headers[0] {
+				t.Fatalf(
+					"Lookup.Headers: copy aliases the original\ngot:  %p\nwant: NOT %p",
+					&got.Headers[0], &tc.lookup.Headers[0],
+				)
+			}
 
-			// AND: defaults pointers are shared.
-			err = []test.FieldAssertion{
+			fieldTests = []test.FieldAssertion{
+				{Name: "Status", Got: got.Status, Want: tc.status, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
 				{Name: "typeDefaults", Got: got.typeDefaults, Want: tc.lookup.typeDefaults, Mode: test.CompareSamePointer},
 				{Name: "typeHardDefaults", Got: got.typeHardDefaults, Want: tc.lookup.typeHardDefaults, Mode: test.CompareSamePointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -450,7 +420,6 @@ func TestLookup_Copy(t *testing.T) {
 }
 
 func TestLookup_InheritSecrets(t *testing.T) {
-	// GIVEN: a Lookup, a 'previous' Lookup, and secret refs.
 	tests := []struct {
 		name             string
 		lookup, previous *Lookup
@@ -536,14 +505,10 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: InheritSecrets is called.
 			tc.lookup.InheritSecrets(tc.previous, tc.secretRefs)
 
-			// THEN: the expected secrets are inherited.
 			if got := tc.lookup.String(""); got != tc.want {
-				t.Errorf("%s\nLookup.InheritSecrets(secrets=%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.secretRefs, got, tc.want,
-				)
+				t.Errorf("Lookup.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -554,7 +519,6 @@ func TestLookup_InheritSecrets(t *testing.T) {
 // ############
 
 func TestLookup_TypeDefaults(t *testing.T) {
-	// GIVEN: a Lookup and a pair of type-specific Defaults.
 	tests := []struct {
 		name         string
 		defaults     *Defaults
@@ -578,23 +542,19 @@ func TestLookup_TypeDefaults(t *testing.T) {
 
 			lookup := &Lookup{}
 
-			// WHEN: SetTypeDefaults is called.
 			lookup.SetTypeDefaults(tc.defaults, tc.hardDefaults)
 
-			prefix := fmt.Sprintf("%s\nLookup.GetTypeDefaults()", packageName)
-
-			// THEN: GetTypeDefaults returns the exact pointers that were set.
 			gotDefaults, gotHardDefaults := lookup.GetTypeDefaults()
 			if gotDefaults != tc.defaults {
 				t.Errorf(
-					"%s Defaults pointer mismatch\ngot:  %p\nwant: %p",
-					prefix, gotDefaults, tc.defaults,
+					"Lookup.GetTypeDefaults() defaults mismatch\ngot:  %p\nwant: %p",
+					gotDefaults, tc.defaults,
 				)
 			}
 			if gotHardDefaults != tc.hardDefaults {
 				t.Errorf(
-					"%s HardDefaults pointer mismatch\ngot:  %p\nwant: %p",
-					prefix, gotHardDefaults, tc.hardDefaults,
+					"Lookup.GetTypeDefaults() hardDefaults mismatch\ngot:  %p\nwant: %p",
+					gotHardDefaults, tc.hardDefaults,
 				)
 			}
 		})

@@ -28,7 +28,6 @@ import (
 func TestDecode(t *testing.T) {
 	defaults, _ := plainDefaults(t)
 
-	// GIVEN: data in a given format to Decode into a Registry.
 	tests := []struct {
 		name         string
 		format, data string
@@ -123,7 +122,6 @@ func TestDecode(t *testing.T) {
 				func(v Registry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -141,40 +139,33 @@ func (u *unknownStruct) GetType() string {
 	return u.Type
 }
 
-func TestDecode_UnknownStructType(t *testing.T) {
-	// GIVEN: RegistryMapInheritable has a non-Registry type.
-	prevRegistryMapInheritable := RegistryMapInheritable
+// withUnknownRegistryType swaps [registryMapInheritable] for one whose "test" type is not a [Registry].
+func withUnknownRegistryType(t *testing.T) {
+	prevRegistryMapInheritable := registryMapInheritable
 	t.Cleanup(func() {
-		RegistryMapInheritable = prevRegistryMapInheritable
+		registryMapInheritable = prevRegistryMapInheritable
 	})
-	rMap := map[string]func() polymorphic.Inheritable{
+	registryMapInheritable = polymorphic.ToInheritableMap(map[string]func() polymorphic.Inheritable{
 		"test": func() polymorphic.Inheritable {
 			return &unknownStruct{}
 		},
-	}
-	RegistryMapInheritable = polymorphic.ToInheritableMap(rMap)
+	})
+}
+
+func TestDecode_UnknownStructType(t *testing.T) {
+	withUnknownRegistryType(t)
 
 	defaults, _ := plainDefaults(t)
-
-	// WHEN: We Decode() with data that resolves to this non-Registry type.
-	data := "type: test"
-	_, err := Decode(
-		"yaml", []byte(data),
-		defaults,
-	)
 
 	errRegex := test.TrimYAML(`
 		^docker:
 			expected Registry, got .*$`,
 	)
-	// THEN: We get an error.
+
+	_, err := Decode("yaml", []byte("type: test"), defaults)
 	e := errfmt.FormatError(err)
 	if !util.RegexCheck(errRegex, e) {
-		t.Fatalf(
-			"%s\nDecode(format=\"yaml\", data=%q) error mismatch:\ngot:  %q\nwant: %q",
-			packageName, data,
-			errRegex, e,
-		)
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
@@ -195,9 +186,10 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "ghcr",
-				"image": test/app,
+				"image": "test/app"
 			}`),
 			previous: nil,
+			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: ghcr
 				image: test/app
@@ -394,13 +386,14 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "ghcr",
-				"image": "test/app-ghcr",
+				"image": "test/app-ghcr"
 			}`),
 			previous: &HubRegistry{
 				Type:  "hub",
 				Image: "test/app-hub",
 				Tag:   "{{ version }}",
 			},
+			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: ghcr
 				image: test/app-ghcr
@@ -410,14 +403,15 @@ func TestApplyOverrides(t *testing.T) {
 			name:   "hub -> quay",
 			format: "json",
 			data: test.TrimJSON(`{
-				"type": "ghcr",
-				"image": "test/app-quay",
+				"type": "quay",
+				"image": "test/app-quay"
 			}`),
 			previous: &HubRegistry{
 				Type:  "hub",
 				Image: "test/app-hub",
 				Tag:   "{{ version }}",
 			},
+			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: quay
 				image: test/app-quay
@@ -448,13 +442,14 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "ghcr",
-				"image": "test/app-ghcr",
+				"image": "test/app-ghcr"
 			}`),
 			previous: &QuayRegistry{
 				Type:  "quay",
 				Image: "test/app-quay",
 				Tag:   "{{ version }}",
 			},
+			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: ghcr
 				image: test/app-ghcr
@@ -465,13 +460,14 @@ func TestApplyOverrides(t *testing.T) {
 			format: "json",
 			data: test.TrimJSON(`{
 				"type": "hub",
-				"image": "test/app-hub",
+				"image": "test/app-hub"
 			}`),
 			previous: &QuayRegistry{
 				Type:  "quay",
 				Image: "test/app-quay",
 				Tag:   "{{ version }}",
 			},
+			errRegex: `^$`,
 			want: test.TrimYAML(`
 				type: hub
 				image: test/app-hub
@@ -524,13 +520,13 @@ func TestApplyOverrides(t *testing.T) {
 			if tc.previous != nil {
 				switch v := tc.previous.(type) {
 				case *ECRRegistry:
-					v.Auth = RegistryMapInheritable["ecr"]().(Registry).GetAuth()
+					v.Auth = registryMapInheritable["ecr"]().(Registry).GetAuth()
 				case *GHCRRegistry:
-					v.Auth = RegistryMapInheritable["ghcr"]().(Registry).GetAuth()
+					v.Auth = registryMapInheritable["ghcr"]().(Registry).GetAuth()
 				case *HubRegistry:
-					v.Auth = RegistryMapInheritable["hub"]().(Registry).GetAuth()
+					v.Auth = registryMapInheritable["hub"]().(Registry).GetAuth()
 				case *QuayRegistry:
-					v.Auth = RegistryMapInheritable["quay"]().(Registry).GetAuth()
+					v.Auth = registryMapInheritable["quay"]().(Registry).GetAuth()
 				}
 				tc.previous.SetDefaults(tc.previous.GetType(), defaults)
 			}
@@ -546,7 +542,6 @@ func TestApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				tc.sameAddress,
-				packageName,
 				"ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -556,39 +551,18 @@ func TestApplyOverrides(t *testing.T) {
 }
 
 func TestApplyOverrides_UnknownStructType(t *testing.T) {
-	// GIVEN: RegistryMapInheritable has a non-Registry type.
-	prevRegistryMapInheritable := RegistryMapInheritable
-	t.Cleanup(func() {
-		RegistryMapInheritable = prevRegistryMapInheritable
-	})
-	rMap := map[string]func() polymorphic.Inheritable{
-		"test": func() polymorphic.Inheritable {
-			return &unknownStruct{}
-		},
-	}
-	RegistryMapInheritable = polymorphic.ToInheritableMap(rMap)
+	withUnknownRegistryType(t)
 
 	defaults, _ := plainDefaults(t)
-
-	// WHEN: We ApplyOverrides() with data that resolves to this non-Registry type.
-	data := "type: test"
-	_, err := ApplyOverrides(
-		"yaml", []byte(data),
-		nil,
-		defaults,
-	)
 
 	errRegex := test.TrimYAML(`
 		^docker:
 			expected Registry, got .*$`,
 	)
-	// THEN: We get an error.
+
+	_, err := ApplyOverrides("yaml", []byte("type: test"), nil, defaults)
 	e := errfmt.FormatError(err)
 	if !util.RegexCheck(errRegex, e) {
-		t.Fatalf(
-			"%s\nApplyOverrides(format=\"yaml\", data=%q) error mismatch:\ngot:  %q\nwant: %q",
-			packageName, data,
-			errRegex, e,
-		)
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }

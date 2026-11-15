@@ -18,7 +18,6 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -35,29 +34,21 @@ import (
 // ########
 
 func TestLookup_Init(t *testing.T) {
-	// GIVEN: a Lookup and its dependencies.
 	options := &opt.Options{}
 	svcStatus := &status.Status{}
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	l := &Lookup{}
 
-	// WHEN: Init is called.
 	l.Init(options, svcStatus, dvCfg)
 
-	prefix := fmt.Sprintf(
-		"%s\nLookup.Init(options=%v, status=%v, defaults=%v)",
-		packageName, options, &svcStatus, dvCfg,
-	)
-
-	// THEN: pointers to those vars are handed out to the Lookup.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
 		{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 		{Name: "Defaults", Got: l.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
 		{Name: "HardDefaults", Got: l.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }
 
@@ -66,7 +57,6 @@ func TestLookup_Init(t *testing.T) {
 // #############
 
 func TestLookup_GetServiceID(t *testing.T) {
-	// GIVEN: a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
 		Status: &status.Status{
@@ -76,126 +66,86 @@ func TestLookup_GetServiceID(t *testing.T) {
 		},
 	}
 
-	// WHEN: GetService is called.
 	got := l.GetServiceID()
 
-	// THEN: the ServiceID is returned.
 	if got != serviceID {
-		t.Errorf(
-			"%s\nLookup.GetServiceID() value mismatch\ngot:  %q\nwant: %q",
-			packageName, got, serviceID,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, serviceID)
 	}
 }
 
 func TestLookup_GetOptions(t *testing.T) {
-	// GIVEN: a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
 		Options: options,
 	}
 
-	// WHEN: GetOptions is called.
 	got := l.GetOptions()
 
-	// THEN: the Options are returned.
 	if got != options {
-		t.Errorf(
-			"%s\nLookup.GetOptions() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, options, got,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, options)
 	}
 }
 
 func TestLookup_GetStatus(t *testing.T) {
-	// GIVEN: a Lookup with Status.
 	svcStatus := &status.Status{}
 	l := &testLookup{
 		Status: svcStatus,
 	}
 
-	// WHEN: GetStatus is called.
 	got := l.GetStatus()
 
-	// THEN: the Status is returned.
 	if got != svcStatus {
-		t.Errorf(
-			"%s\nLookup.GetStatus() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, svcStatus, got,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, svcStatus)
 	}
 }
 
 func TestLookup_SetStatus(t *testing.T) {
-	// GIVEN: a Lookup and a Status.
 	l := &Lookup{}
 	svcStatus := &status.Status{}
 
-	// WHEN: SetStatus is called.
 	l.SetStatus(svcStatus)
 
-	// THEN: the Status is set.
 	if l.Status != svcStatus {
-		t.Errorf(
-			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, svcStatus,
-			l.Status, svcStatus,
-		)
+		t.Errorf("first SetStatus: Lookup.Status mismatch\ngot:  %p\nwant: %p", l.Status, svcStatus)
 	}
 
 	// ---
 
-	// GIVEN: a new Status.
 	svcStatus = &status.Status{}
 
-	// WHEN: SetStatus is called.
 	l.SetStatus(svcStatus)
 
-	// THEN: the Status is set.
 	if l.Status != svcStatus {
 		t.Errorf(
-			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, svcStatus,
+			"second SetStatus: Lookup.Status mismatch\ngot:  %p\nwant: %p",
 			l.Status, svcStatus,
 		)
 	}
 }
 
 func TestLookup_GetDefaults(t *testing.T) {
-	// GIVEN: a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
 		Defaults: defaults,
 	}
 
-	// WHEN: GetDefaults is called.
 	got := l.GetDefaults()
 
-	// THEN: the Defaults are returned.
 	if got != defaults {
-		t.Errorf(
-			"%s\nLookup.GetDefaults() pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, defaults, got,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, defaults)
 	}
 }
 
 func TestLookup_GetHardDefaults(t *testing.T) {
-	// GIVEN: a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
 		HardDefaults: hardDefaults,
 	}
 
-	// WHEN: GetHardDefaults is called.
 	got := l.GetHardDefaults()
 
-	// THEN: the HardDefaults are returned.
 	if got != hardDefaults {
-		t.Errorf(
-			"%s\nLookup.GetHardDefaults() pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, hardDefaults, got,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, hardDefaults)
 	}
 }
 
@@ -204,7 +154,6 @@ func TestLookup_GetHardDefaults(t *testing.T) {
 // #############
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name     string
 		data     string
@@ -230,17 +179,12 @@ func TestLookup_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			input := &testLookup{}
-			// Apply the YAML.
 			if err := decode.Unmarshal("yaml", []byte(tc.data), input); err != nil {
-				t.Fatalf(
-					"%s\nLookup failed unmarshaling YAML: %v",
-					packageName, err,
-				)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
@@ -249,25 +193,18 @@ func TestLookup_CheckValues(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN: a Lookup.
 	l := &testLookup{
 		Type: "test",
 	}
 
-	// WHEN: Query is called.
 	gotErr := l.Query(true, logx.LogFrom{})
 
-	// THEN: the function returns an error as it is not implemented.
 	if gotErr == nil {
-		t.Errorf(
-			"%s\nLookup.Query(), unexpected nil error",
-			packageName,
-		)
+		t.Error("error mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 
 func TestLookup_InheritSecrets(t *testing.T) {
-	// GIVEN: a Lookup and another Lookup to inherit secrets from.
 	otherLookup := &testLookup{
 		Type: "other",
 	}
@@ -281,15 +218,9 @@ func TestLookup_InheritSecrets(t *testing.T) {
 	}
 	strBefore := decode.ToYAMLString(l, "")
 
-	// WHEN: InheritSecrets is called.
 	l.InheritSecrets(otherLookup, secretRefs)
 
-	// THEN: no secrets are inherited as the function does nothing.
-	// As the function does nothing, we just ensure it doesn't panic or error.
 	if strAfter := decode.ToYAMLString(l, ""); strBefore != strAfter {
-		t.Errorf(
-			"%s\nLookup.InheritSecrets(), unexpected change\nbefore: %q\nafter:  %q",
-			packageName, strBefore, strBefore,
-		)
+		t.Errorf("Lookup mismatch\ngot:  %q\nwant: %q", strAfter, strBefore)
 	}
 }

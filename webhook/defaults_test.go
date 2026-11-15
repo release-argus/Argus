@@ -17,14 +17,12 @@
 package webhook
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: Defaults and an expected Defaults.
 	defaults := Defaults{}
 	expected := Defaults{
 		Type:              "github",
@@ -35,12 +33,8 @@ func TestDefaults_Default(t *testing.T) {
 		SilentFails:       new(false),
 	}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
-	prefix := fmt.Sprintf("%s\nDefaults.Default()", packageName)
-
-	// THEN: the values are set as expected.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Type", Got: defaults.Type, Want: expected.Type, Mode: test.CompareEqual},
 		{Name: "Delay", Got: defaults.Delay, Want: expected.Delay, Mode: test.CompareEqual},
@@ -49,7 +43,7 @@ func TestDefaults_Default(t *testing.T) {
 		{Name: "MaxTries", Got: test.StringifyPtr(defaults.MaxTries), Want: test.StringifyPtr(expected.MaxTries), Mode: test.CompareEqual},
 		{Name: "SilentFails", Got: test.StringifyPtr(defaults.SilentFails), Want: test.StringifyPtr(expected.SilentFails), Mode: test.CompareEqual},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Defaults"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }

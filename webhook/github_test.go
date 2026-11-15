@@ -18,8 +18,6 @@ package webhook
 
 import (
 	"crypto/hmac"
-	"fmt"
-
 	//#nosec G505 -- GitHub's X-Hub-Signature uses SHA-1
 	"crypto/sha1"
 	"crypto/sha256"
@@ -33,7 +31,6 @@ import (
 )
 
 func TestSetGitHubHeaders(t *testing.T) {
-	// GIVEN: a secret and a payload to send.
 	tests := []struct {
 		name   string
 		secret string
@@ -48,7 +45,6 @@ func TestSetGitHubHeaders(t *testing.T) {
 		},
 	}
 
-	// AND: headers to verify.
 	type headerTest struct {
 		key   string
 		regex string
@@ -97,54 +93,41 @@ func TestSetGitHubHeaders(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			payload, _ := decode.Marshal(
+			payload, err := decode.Marshal(
 				"json", GitHub{
 					Ref:    "refs/heads/master",
 					Before: "0123456789012345678901234567890123456789",
 					After:  "0123456789012345678901234567890123456789",
 				},
 			)
+			if err != nil {
+				t.Fatalf("decode.Marshal() failed: %v", err)
+			}
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 
-			// WHEN: SetGitHubHeaders is called.
 			SetGitHubHeaders(req, payload, tc.secret)
 
-			prefix := fmt.Sprintf(
-				"%s\nSetGitHubHeaders(secret=%q)",
-				packageName, tc.secret,
-			)
-
-			// THEN: the GitHub headers are correctly added.
 			for _, hTC := range headerTests {
-				got := getHeaderKey(req.Header[hTC.key])
+				got := req.Header.Get(hTC.key)
 
 				switch {
 				case hTC.regex != "":
 					if !util.RegexCheck(hTC.regex, got) {
 						t.Errorf(
-							"%s %q regex mismatch\ngot:  %q\nwant regex: %q",
-							prefix, hTC.key,
-							got, hTC.regex,
+							"http.Request.Header[%q] mismatch\ngot:  %q\nwant: %q",
+							hTC.key, got, hTC.regex,
 						)
 					}
 				case hTC.exact != nil:
 					want := hTC.exact(payload, tc.secret)
 					if got != want {
 						t.Errorf(
-							"%s key=%q value mismatch\ngot:  %q\nwant: %q",
-							prefix, hTC.key,
-							got, want,
+							"http.Request.Header[%q] mismatch\ngot:  %q\nwant: %q",
+							hTC.key, got, want,
 						)
 					}
 				}
 			}
 		})
 	}
-}
-
-func getHeaderKey(header []string) string {
-	if len(header) == 0 {
-		return "<nil header>"
-	}
-	return header[0]
 }

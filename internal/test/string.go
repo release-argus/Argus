@@ -21,14 +21,6 @@ import (
 	"strings"
 )
 
-// RegexBracketEscaper is a replacer to escape regex brackets.
-var RegexBracketEscaper = strings.NewReplacer(
-	"[", `\[`,
-	"]", `\]`,
-	"(", `\(`,
-	")", `\)`,
-)
-
 // Indent returns a string with lines indented by the given number of spaces.
 func Indent(str string, indent int) string {
 	lines := strings.Split(str, "\n")
@@ -81,7 +73,6 @@ func normaliseLeadingWhitespace(str string, joinWith string) string {
 	var whitespacePrefix string
 	for i := range lines {
 		if i != 0 {
-			// Remove whitespacePrefix from the beginning of the line.
 			lines[i] = strings.TrimPrefix(lines[i], whitespacePrefix)
 		}
 
@@ -91,11 +82,9 @@ func normaliseLeadingWhitespace(str string, joinWith string) string {
 			whitespacePrefix = leadingWhitespace
 			lines[i] = strings.Replace(lines[i], leadingWhitespace, "", 1)
 		} else if leadingWhitespace != "" && strings.Contains(leadingWhitespace, "\t") {
-			// Empty the line if it contains only whitespace.
 			if fullWhitespaceRegEx.MatchString(lines[i]) {
 				lines[i] = ""
 			} else {
-				// Convert leading tabs to spaces.
 				newWhitespace := strings.ReplaceAll(leadingWhitespace, "\t", "  ")
 				lines[i] = strings.Replace(lines[i], leadingWhitespace, newWhitespace, 1)
 			}

@@ -17,7 +17,6 @@
 package docker
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -35,7 +34,6 @@ import (
 // #######################
 
 func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a CommonRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name         string
 		format, data string
@@ -234,8 +232,7 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 				func(v *CommonRegistryDefaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"CommonRegistryDefaults",
+				"CommonRegistryDefaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -244,7 +241,6 @@ func TestCommonRegistryDefaults_Unmarshal(t *testing.T) {
 }
 
 func TestCommonRegistry_Unmarshal(t *testing.T) {
-	// GIVEN: a CommonRegistry and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -262,7 +258,6 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 				^jsontext:
 					unexpected EOF$`,
 			),
-			want: "",
 		},
 		{
 			name:     "JSON/empty object",
@@ -275,7 +270,7 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 		{
 			name:     "YAML/empty",
 			format:   "yaml",
-			data:     "{}",
+			data:     "",
 			registry: &CommonRegistry{},
 			errRegex: `^$`,
 			want:     "{}\n",
@@ -479,8 +474,7 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 				func(v *CommonRegistry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"CommonRegistry",
+				"CommonRegistry.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -493,7 +487,6 @@ func TestCommonRegistry_Unmarshal(t *testing.T) {
 // ####################
 
 func TestCommonRegistry_IsZero(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry *CommonRegistry
@@ -569,22 +562,16 @@ func TestCommonRegistry_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called with it.
 			got := tc.registry.IsZero()
 
-			// THEN: true is returned if all fields are empty.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_Clone(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry *CommonRegistry
@@ -612,6 +599,7 @@ func TestCommonRegistry_Clone(t *testing.T) {
 					validUntil: time.Now(),
 					defaults:   &HubAuthDefaults{},
 				},
+				defaults: &HubRegistryDefaults{},
 			},
 			want: test.TrimYAML(`
 				image: ` + test.ArgusDockerGHCRRepo + `
@@ -627,35 +615,26 @@ func TestCommonRegistry_Clone(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			result := tc.registry.Clone()
 
-			prefix := fmt.Sprintf("%s\nCommonRegistry.Clone()", packageName)
-
-			// THEN: the returned RegistryAuth unmarshals the same.
 			if got := decode.ToYAMLString(result, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("CommonRegistry mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 			if result == nil {
 				return
 			}
 
-			// AND: the defaults are at the same address.
 			if got := result.defaults; got != tc.registry.defaults {
 				t.Fatalf(
-					"%s .defaults pointer lost for %q",
-					prefix, tc.name,
+					"CommonRegistry.defaults mismatch\ngot:  %p\nwant: %p",
+					got, tc.registry.defaults,
 				)
 			}
 
-			// AND: the returned GHCRAuth is at a different address.
 			if result.Auth == tc.registry.Auth && (result.Auth != nil || tc.registry.Auth != nil) {
 				t.Fatalf(
-					"%s pointer to same Auth instance for %q",
-					prefix, tc.name,
+					"CommonRegistry.Auth: copy aliases the original\ngot:  %p\nwant: NOT %p",
+					result.Auth, tc.registry.Auth,
 				)
 			}
 		})
@@ -667,7 +646,6 @@ func TestCommonRegistry_Clone(t *testing.T) {
 // ########################
 
 func TestCommonRegistry_String(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry *CommonRegistry
@@ -721,7 +699,7 @@ func TestCommonRegistry_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"CommonRegistry.String",
 				tc.registry.String,
 				tc.want,
 			)
@@ -734,30 +712,25 @@ func TestCommonRegistry_String(t *testing.T) {
 // #######################
 
 func TestCommonRegistry_Defaults(t *testing.T) {
-	// GIVEN: a fresh CommonRegistry.
-	var registry CommonRegistry
+	var fresh CommonRegistry
 
-	// WHEN: Defaults is called on it.
-	got := registry.Defaults()
+	got := fresh.Defaults()
 
-	// THEN: nil is received.
 	if got != nil {
-		t.Errorf(
-			"%s\nfresh CommonRegistry\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
+		t.Errorf("CommonRegistry.Defaults() mismatch\ngot:  %p\nwant: nil", got)
 	}
 
 	for _, dType := range PossibleTypes {
 		t.Run(dType, func(t *testing.T) {
-			// GIVEN: registryDefaults.
+			t.Parallel()
+
 			defaults := Defaults{
 				Registry: RegistryDefaultsSet{
 					ECR: &ECRRegistryDefaults{
 						Auth: &ECRAuthDefaults{},
 					},
 					GHCR: &GHCRRegistryDefaults{
-						Auth: &HubAuthDefaults{
+						Auth: &GHCRAuthDefaults{
 							Token: "ghcr-token",
 						},
 					},
@@ -768,73 +741,56 @@ func TestCommonRegistry_Defaults(t *testing.T) {
 						},
 					},
 					Quay: &QuayRegistryDefaults{
-						Auth: &HubAuthDefaults{
-							Token: "hub-token",
+						Auth: &QuayAuthDefaults{
+							Token: "quay-token",
 						},
 					},
 				},
 			}
-			registry.Auth = RegistryMap[dType]().GetAuth()
+			registry := CommonRegistry{Auth: RegistryMap[dType]().GetAuth()}
 
-			// WHEN: SetDefaults is called with them.
 			registry.SetDefaults(dType, &defaults)
 
-			prefix := fmt.Sprintf(
-				"%s\nSetDefaults(type=%q, defaults=%+v)",
-				packageName, dType, defaults,
-			)
-
-			// THEN: Defaults is set to the corresponding type defaults.
-			got := registry.Defaults()
-			var want RegistryDefaults
-			if want = getRegistryDefaults(dType, &defaults); want == nil {
-				t.Fatalf(
-					"%s\nUnknown registry type: %q",
-					prefix, dType,
-				)
+			gotDefaults := registry.Defaults()
+			if gotDefaults == nil {
+				t.Fatal("CommonRegistry.Defaults() mismatch\ngot:  nil\nwant: non-nil")
 			}
-			if got != want {
-				t.Fatalf(
-					"%s .Defaults mismatch\ngot:  %v\nwant: %v",
-					prefix, got, want,
-				)
+			var wantDefaults RegistryDefaults
+			if wantDefaults = getRegistryDefaults(dType, &defaults); wantDefaults == nil {
+				t.Fatal("getRegistryDefaults() mismatch\ngot:  nil\nwant: non-nil")
 			}
-
-			// AND: Defaults of Auth are set to the corresponding type defaults.
-			gotAuth := got.GetAuth()
-			wantAuth := want.GetAuth()
-			if gotAuth != wantAuth {
-				t.Fatalf(
-					"%s .Defaults.Auth mismatch\ngot:  %v\nwant: %v",
-					prefix, gotAuth, wantAuth,
-				)
+			if testErr := test.AssertFields(
+				t,
+				[]test.FieldAssertion{
+					{Name: "Defaults()", Got: gotDefaults, Want: wantDefaults, Mode: test.CompareSamePointer},
+					{Name: "Defaults().GetAuth()", Got: gotDefaults.GetAuth(), Want: wantDefaults.GetAuth(), Mode: test.CompareSamePointer},
+				},
+				"CommonRegistry",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_Defaults__nil(t *testing.T) {
-	// GIVEN: a fresh CommonRegistry.
 	var registry CommonRegistry
 
-	// WHEN: SetDefaults is called on it with nil Defaults.
-	dType := PossibleTypes[0]
-	registry.SetDefaults(dType, nil)
+	registry.SetDefaults(PossibleTypes[0], nil)
 
-	// THEN: the Defaults are unchanged.
 	if got := registry.Defaults(); got != nil {
-		t.Fatalf("%s\nDefaults remain nil after SetDefaults with nil Defaults", packageName)
+		t.Fatalf("CommonRegistry.Defaults() mismatch\ngot:  %p\nwant: nil", got)
 	}
 }
 
 func TestCommonRegistry_SetDefaults__unknownType(t *testing.T) {
 	dockerType := "ghcr"
-	// GIVEN: a CommonRegistry with Defaults.
+
 	registry := RegistryMap[dockerType]()
 	defaults := Defaults{
 		Registry: RegistryDefaultsSet{
 			GHCR: &GHCRRegistryDefaults{
-				Auth: &HubAuthDefaults{
+				Auth: &GHCRAuthDefaults{
 					Token: "ghcr-token",
 				},
 			},
@@ -845,57 +801,34 @@ func TestCommonRegistry_SetDefaults__unknownType(t *testing.T) {
 				},
 			},
 			Quay: &QuayRegistryDefaults{
-				Auth: &HubAuthDefaults{
-					Token: "hub-token",
+				Auth: &QuayAuthDefaults{
+					Token: "quay-token",
 				},
 			},
 		},
 	}
-	prefix := fmt.Sprintf(
-		"%s\nSetDefaults(type=%q, defaults=%+v)",
-		packageName, dockerType, defaults,
-	)
-
 	registry.SetDefaults(dockerType, &defaults)
 	originalDefaults := registry.Defaults()
 	if originalDefaults == nil {
-		t.Fatalf("%s .Defaults() should not be nil for known type", prefix)
+		t.Fatal("known type: CommonRegistry.Defaults() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// WHEN: SetDefaults is called with an unknown type.
 	registry.SetDefaults("unknown", &defaults)
 
-	prefix = fmt.Sprintf(
-		"%s\nSetDefaults(type=\"unknown\", defaults=%+v)",
-		packageName, defaults,
-	)
-
-	// THEN: The defaults are unchanged.
-	if registry.Defaults() != originalDefaults {
-		t.Fatalf("%s .Defaults() should remain unchanged because of the unknown type", prefix)
+	if got := registry.Defaults(); got != originalDefaults {
+		t.Fatalf(
+			"unknown type: CommonRegistry.Defaults() mismatch\ngot:  %p\nwant: %p",
+			got, originalDefaults,
+		)
 	}
 
-	// WHEN: SetDefaults is called with a known type, but no defaults exist for this type.
-	switch dockerType {
-	case "ghcr":
-		defaults.Registry.GHCR = nil
-	case "hub":
-		defaults.Registry.Hub = nil
-	case "quay":
-		defaults.Registry.Quay = nil
-	}
+	defaults.Registry.GHCR = nil
 	registry.SetDefaults(dockerType, &defaults)
 
-	prefix = fmt.Sprintf(
-		"%s\nSetDefaults(type=%q, defaults=%+v)",
-		packageName, dockerType, defaults,
-	)
-
-	// THEN: The defaults are unchanged.
-	if registry.Defaults() != originalDefaults {
+	if got := registry.Defaults(); got != originalDefaults {
 		t.Fatalf(
-			"%s .Defaults() should remain unchanged when known type has nil defaults",
-			packageName,
+			"nil type defaults: CommonRegistry.Defaults() mismatch\ngot:  %p\nwant: %p",
+			got, originalDefaults,
 		)
 	}
 }
@@ -905,7 +838,6 @@ func TestCommonRegistry_SetDefaults__unknownType(t *testing.T) {
 // #######################
 
 func TestCommonRegistry_GetTypeSelf(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry *CommonRegistry
@@ -928,22 +860,16 @@ func TestCommonRegistry_GetTypeSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetTypeSelf is called on it.
 			got := tc.registry.GetTypeSelf()
 
-			// THEN: the type is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nGetTypeSelf() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_GetImageSelf(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -967,22 +893,16 @@ func TestCommonRegistry_GetImageSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetImageSelf is called on it.
 			got := tc.registry.GetImageSelf()
 
-			// THEN: the image is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.GetImageSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_GetImage(t *testing.T) {
-	// GIVEN: a CommonRegistry with an image.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1006,22 +926,16 @@ func TestCommonRegistry_GetImage(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetImage is called on it.
 			got := tc.registry.GetImage()
 
-			// THEN: the expected image is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.GetImage() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_GetTagSelf(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1056,22 +970,16 @@ func TestCommonRegistry_GetTagSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetTagSelf is called on it.
 			got := tc.registry.GetTagSelf()
 
-			// THEN: the tag is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.GetTagSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_GetTag(t *testing.T) {
-	// GIVEN: a CommonRegistry with a tag default chain.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1148,15 +1056,10 @@ func TestCommonRegistry_GetTag(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetTag is called on it.
 			got := tc.registry.GetTag()
 
-			// THEN: the expected Tag is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.GetTag() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -1167,74 +1070,65 @@ func TestCommonRegistry_GetTag(t *testing.T) {
 // #########################
 
 func TestCommonRegistry_CheckValues(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
-		name      string
-		input     *CommonRegistry
-		wantImage string
-		errRegex  string
+		name     string
+		input    *CommonRegistry
+		errRegex string
 	}{
 		{
 			name:     "image:tag at root",
 			errRegex: `^$`,
 			input: &CommonRegistry{
-				Image:    "test/app",
-				Tag:      "1.2.3",
-				defaults: nil,
+				Image: "test/app",
+				Tag:   "1.2.3",
 			},
 		},
 		{
 			name:     "image: missing",
 			errRegex: `^image: <required>.*$`,
 			input: &CommonRegistry{
-				Image:    "",
-				Tag:      "1.2.3",
-				defaults: nil,
+				Image: "",
+				Tag:   "1.2.3",
 			},
 		},
 		{
 			name:     "image: with period in name",
 			errRegex: `^$`,
 			input: &CommonRegistry{
-				Image:    "test/image.io",
-				Tag:      "1.2.3",
-				defaults: nil,
+				Image: "test/image.io",
+				Tag:   "1.2.3",
 			},
 		},
 		{
 			name:     "image: invalid",
 			errRegex: `image: .* <invalid>`,
 			input: &CommonRegistry{
-				Image:    "	test/app",
-				Tag:      "1.2.3",
-				defaults: nil,
+				Image: "	test/app",
+				Tag:   "1.2.3",
 			},
 		},
 		{
 			name:     "tag: missing",
 			errRegex: `^tag: <required>.*$`,
 			input: &CommonRegistry{
-				Image:    "test/app",
-				Tag:      "",
-				defaults: nil,
+				Image: "test/app",
+				Tag:   "",
 			},
 		},
 		{
 			name:     "tag: invalid templating",
 			errRegex: `^tag: .* <invalid>.*$`,
 			input: &CommonRegistry{
-				Image:    "test/app",
-				Tag:      "{{ version }",
-				defaults: nil,
+				Image: "test/app",
+				Tag:   "{{ version }",
 			},
 		},
 		{
 			name:     "tag: invalid url encoding",
 			errRegex: `^tag: .* <invalid>.*$`,
 			input: &CommonRegistry{
-				Image:    "test/app",
-				Tag:      "1.2	.3+",
-				defaults: nil,
+				Image: "test/app",
+				Tag:   "1.2	.3+",
 			},
 		},
 		{
@@ -1269,7 +1163,6 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -1282,7 +1175,6 @@ func TestCommonRegistry_CheckValues(t *testing.T) {
 // #########################
 
 func TestCommonRegistry_GetTagForVersion(t *testing.T) {
-	// GIVEN: a CommonRegistry with a tag.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1319,23 +1211,16 @@ func TestCommonRegistry_GetTagForVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetTagForVersion is called on it.
 			got := tc.registry.GetTagForVersion(tc.version)
 
-			// THEN: the expected Tag is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nCommonRegistry.GetTagForVersion(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.version,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_ParseBody(t *testing.T) {
-	// GIVEN: a HTTP response from a query.
 	tests := []struct {
 		name     string
 		errRegex string
@@ -1343,7 +1228,7 @@ func TestCommonRegistry_ParseBody(t *testing.T) {
 	}{
 		{
 			name:     "200",
-			errRegex: "^$",
+			errRegex: `^$`,
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
 			},
@@ -1365,7 +1250,6 @@ func TestCommonRegistry_ParseBody(t *testing.T) {
 		},
 	}
 
-	// AND: Container detail.
 	registry := CommonRegistry{
 		Image: "test/app",
 		Tag:   "ver",
@@ -1375,24 +1259,16 @@ func TestCommonRegistry_ParseBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: parseBody is called on this response.
 			err := registry.parseBody(registry.Tag, tc.resp)
-
-			// THEN: the expected error is returned.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nCommonRegistry parseBody(tag=%q, resp=%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, registry.Tag, tc.resp,
-					e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_Detail(t *testing.T) {
-	// GIVEN: a CommonRegistry.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1483,16 +1359,11 @@ func TestCommonRegistry_Detail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: we call Detail.
 			result := tc.registry.Detail()
 
-			// THEN: The expected ContainerDetail is returned.
 			want := decode.ToYAMLString(tc.want, "")
 			if got := decode.ToYAMLString(result, ""); got != want {
-				t.Errorf(
-					"%s\nCommonRegistry.Detail() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("ContainerDetail mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -1503,7 +1374,6 @@ func TestCommonRegistry_Detail(t *testing.T) {
 // ##########################
 
 func TestCommonRegistry_Inherit(t *testing.T) {
-	// GIVEN: A CommonRegistry and a Registry.
 	tests := []struct {
 		name     string
 		registry CommonRegistry
@@ -1657,10 +1527,28 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 			inherit: false,
 		},
 		{
-			name: "inherit from Quay, same auth",
+			name: "inherit from Quay/different token",
 			registry: CommonRegistry{
 				Auth: &QuayAuth{
 					Token: "t",
+				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
+			},
+			from: &QuayRegistry{
+				Auth: &QuayAuth{
+					Token: "t-new",
+				},
+				Image: "test/app",
+				Tag:   "{{ latest_version }}",
+			},
+			inherit: false,
+		},
+		{
+			name: "inherit from Quay/secret token restored",
+			registry: CommonRegistry{
+				Auth: &QuayAuth{
+					Token: util.SecretValue,
 				},
 				Image: "test/app",
 				Tag:   "{{ latest_version }}",
@@ -1672,7 +1560,7 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 				Image: "test/app",
 				Tag:   "{{ latest_version }}",
 			},
-			inherit: false, // We don't use query tokens for Quay.
+			inherit: true,
 		},
 	}
 
@@ -1680,41 +1568,18 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			hadToken, hadQueryToken, hadValidUntil := getTokenData(t, tc.registry.Auth)
+			had := getTokenData(tc.registry.Auth)
+			var fromAuth RegistryAuth
+			if tc.from != nil {
+				fromAuth = tc.from.GetAuth()
+			}
 
-			// WHEN: Inherit is called on them.
 			tc.registry.Inherit(tc.from)
 
-			prefix := fmt.Sprintf(
-				"%s\nCommonRegistry.Inherit(from=%T)",
-				packageName, tc.from,
+			assertInherited(
+				t, "CommonRegistry.GetAuth()",
+				had, tc.registry.GetAuth(), fromAuth, tc.inherit,
 			)
-
-			// THEN: the expected inheritance has occurred.
-			if tc.from == nil {
-				return
-			}
-			gotAuth := tc.registry.GetAuth()
-			gotToken, gotQueryToken, gotValidUntil := getTokenData(t, gotAuth)
-			wantToken, wantQueryToken, wantValidUntil := getTokenData(t, tc.from.GetAuth())
-			tokenInherited := hadToken != gotToken
-			queryTokenInherited := hadQueryToken != gotQueryToken
-			validUntilInherited := !hadValidUntil.Equal(gotValidUntil)
-			if (tokenInherited != tc.inherit && hadToken != gotToken) ||
-				(queryTokenInherited != tc.inherit && hadQueryToken != gotQueryToken) ||
-				(validUntilInherited != tc.inherit && !hadValidUntil.Equal(gotValidUntil)) {
-				msg := "%s expected to inherit but did not\ntoken inherited: %t (had %q, got %q, want %q)\nqueryToken inherited: %t (had %q, got %q, want %q)\nvalidUntil inherited: %t (had %q, got %q, want %q)"
-				if !tc.inherit {
-					msg = "%s expected not to inherit but did\ntoken inherited: %t (had: %q, got: %q, want: NOT %q)\nqueryToken inherited: %t (had: %q, got: %q, want: NOT %q)\nvalidUntil inherited: %t (had: %q, got: %q, want: NOT %q)"
-				}
-				t.Errorf(
-					msg,
-					prefix,
-					tokenInherited, hadToken, gotToken, wantToken,
-					queryTokenInherited, hadQueryToken, gotQueryToken, wantQueryToken,
-					validUntilInherited, hadValidUntil, gotValidUntil, wantValidUntil,
-				)
-			}
 		})
 	}
 }
@@ -1724,7 +1589,6 @@ func TestCommonRegistry_Inherit(t *testing.T) {
 // ###################
 
 func TestCommonRegistryDefaults_GetAuth(t *testing.T) {
-	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name string
 		auth RegistryAuthDefaults
@@ -1758,26 +1622,25 @@ func TestCommonRegistryDefaults_GetAuth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a CommonRegistryDefaults with this Auth.
 			registry := CommonRegistryDefaults{}
 			registry.Auth = tc.auth
 
-			// WHEN: GetAuth() is called on it.
 			got := registry.GetAuth()
 
-			// THEN: the expected Auth is returned.
-			if got != tc.auth {
-				t.Errorf(
-					"%s\nCommonRegistry.GetAuth() result mismatch\ngot:  %v\nwant: %v",
-					packageName, got, tc.auth,
-				)
+			if testErr := test.AssertFields(
+				t,
+				[]test.FieldAssertion{
+					{Name: "GetAuth()", Got: got, Want: tc.auth, Mode: test.CompareSamePointer},
+				},
+				"CommonRegistryDefaults",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestCommonRegistry_GetAuth(t *testing.T) {
-	// GIVEN: a RegistryAuth.
 	tests := []struct {
 		name string
 		auth RegistryAuth
@@ -1811,19 +1674,19 @@ func TestCommonRegistry_GetAuth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a CommonRegistry with this Auth.
 			registry := CommonRegistry{}
 			registry.Auth = tc.auth
 
-			// WHEN: GetAuth() is called on it.
 			got := registry.GetAuth()
 
-			// THEN: the expected Auth is returned.
-			if got != tc.auth {
-				t.Errorf(
-					"%s\nCommonRegistry.GetAuth() result mismatch\ngot:  %v\nwant: %v",
-					packageName, got, tc.auth,
-				)
+			if testErr := test.AssertFields(
+				t,
+				[]test.FieldAssertion{
+					{Name: "GetAuth()", Got: got, Want: tc.auth, Mode: test.CompareSamePointer},
+				},
+				"CommonRegistry",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}

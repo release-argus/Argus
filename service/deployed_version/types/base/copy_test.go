@@ -17,7 +17,6 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -29,10 +28,9 @@ import (
 )
 
 func TestLookup_Copy(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name   string
 		lookup *Lookup
@@ -48,7 +46,7 @@ func TestLookup_Copy(t *testing.T) {
 			lookup: test.Must(t, func() (*Lookup, error) {
 				svcStatus, _ := statustest.New("yaml", nil)
 				return Decode(
-					"yaml", nil,
+					"yaml", []byte(`type: test`),
 					test.Must(t, func() (*opt.Options, error) {
 						return opt.Decode(
 							"yaml", []byte(test.TrimYAML(`
@@ -64,6 +62,21 @@ func TestLookup_Copy(t *testing.T) {
 				)
 			}),
 			status: nil,
+		},
+		{
+			name: "status",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				svcStatus, _ := statustest.New("yaml", nil)
+				return Decode(
+					"yaml", []byte(`type: test`),
+					nil,
+					svcStatus,
+					dvCfg,
+				)
+			}),
+			status: test.Must(t, func() (*status.Status, error) {
+				return statustest.New("yaml", nil)
+			}),
 		},
 		{
 			name: "filled",
@@ -97,79 +110,56 @@ func TestLookup_Copy(t *testing.T) {
 
 			wantStr := decode.ToYAMLString(tc.lookup, "")
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.lookup.Copy(tc.status)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Copy(status=%p)",
-				packageName, tc.status,
-			)
-
-			// THEN: if nil was copied, we get nil.
 			if tc.lookup == nil {
 				if gotInterface != nil {
-					t.Errorf(
-						"%s of nil mismatch\ngot:  %v\nwant: nil",
-						prefix, gotInterface,
-					)
+					t.Error("Lookup.Copy() mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
 
-			// AND: the copy is non-nil.
 			if gotInterface == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
+				t.Fatal("Lookup.Copy() mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the copy is distinct.
 			if gotInterface == tc.lookup {
 				t.Fatalf(
-					"%s should return a distinct copy\ngot:  %p\nwant: %p",
-					prefix, gotInterface, tc.lookup,
+					"copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotInterface, tc.lookup,
 				)
 			}
 
-			// AND: the type is unchanged.
 			got, ok := gotInterface.(*Lookup)
 			if !ok {
-				t.Fatalf(
-					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
-					prefix, gotInterface,
-				)
+				t.Fatalf("type mismatch\ngot:  %T\nwant: *Lookup", gotInterface)
 			}
 
-			// AND: the copy unmarshals the same.
 			if gotStr := decode.ToYAMLString(gotInterface, ""); gotStr != wantStr {
-				t.Fatalf(
-					"%s stringified mismatch:\ngot;  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Fatalf("Lookup mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			// AND: the fields are copied as expected.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: copied pointers should be value-equal and non-aliased.
 			fieldTests = []test.FieldAssertion{
-				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CopiedPointerMode(tc.lookup.Options)},
 				{Name: "Status", Got: got.Status, Want: tc.status, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: defaults pointers are shared.
 			fieldTests = []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

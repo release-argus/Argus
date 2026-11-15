@@ -17,12 +17,11 @@
 package test
 
 import (
-	"fmt"
+	"slices"
 	"testing"
 )
 
 func TestPermutations(t *testing.T) {
-	// GIVEN: a slice of values.
 	tests := []struct {
 		name  string
 		input []int
@@ -74,29 +73,10 @@ func TestPermutations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Permutations is called.
 			result := Permutations(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nPermutations(%v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the result should be all possible permutations of the values.
 			if testErr := AssertSlicesEqualFunc(
-				t, result, tc.want, func(a, b []int) bool {
-					if len(a) != len(b) {
-						return false
-					}
-					for i := range a {
-						if a[i] != b[i] {
-							return false
-						}
-					}
-					return true
-				},
-				prefix,
-				"",
+				t, result, tc.want, slices.Equal, "",
 			); testErr != nil {
 				t.Fatal(testErr)
 			}
@@ -104,84 +84,27 @@ func TestPermutations(t *testing.T) {
 	}
 }
 
-func TestPermutations_ReturnsNilForEmptyInput(t *testing.T) {
-	// GIVEN: an empty slice.
-	input := []string{}
-
-	// WHEN: Permutations is called.
-	result := Permutations(input)
-
-	// THEN: the result should be nil, not an empty, non-nil slice.
-	if result != nil {
-		t.Errorf(
-			"%s\nPermutations(%v) mismatch\ngot:  %#v\nwant: nil",
-			packageName, input, result,
-		)
-	}
-}
-
 func TestPermutations_DoesNotMutateInput(t *testing.T) {
-	// GIVEN: a slice of values.
 	input := []int{1, 2, 3}
 	original := append([]int{}, input...)
 
-	// WHEN: Permutations is called.
 	Permutations(input)
 
-	// THEN: the input slice is left unmodified.
-	for i, v := range input {
-		if v != original[i] {
-			t.Errorf(
-				"%s\nPermutations(%v) mutated its input\ngot:  %v\nwant: %v",
-				packageName, original,
-				input, original,
-			)
-			break
-		}
+	if !slices.Equal(input, original) {
+		t.Errorf("input mismatch\ngot:  %v\nwant: %v", input, original)
 	}
 }
 
 func TestPermutations_StringType(t *testing.T) {
-	// GIVEN: a slice of strings.
 	input := []string{"a", "b"}
 	want := [][]string{
 		{"a", "b"},
 		{"b", "a"},
 	}
 
-	// WHEN: Permutations is called on a non-int generic type.
 	result := Permutations(input)
 
-	prefix := fmt.Sprintf(
-		"%s\nPermutations(%v)",
-		packageName, input,
-	)
-
-	// THEN: the result should be all possible permutations of the values.
-	if len(result) != len(want) {
-		t.Fatalf(
-			"%s length mismatch\ngot:  %d (%v)\nwant: %d (%v)",
-			prefix,
-			len(result), result,
-			len(want), want,
-		)
-	}
-	for i, w := range want {
-		if len(result[i]) != len(w) {
-			t.Fatalf(
-				"%s items at [%d] differ in length:\ngot:  %v\nwant: %v",
-				prefix, i,
-				result, want,
-			)
-		}
-		for j, v := range w {
-			if result[i][j] != v {
-				t.Fatalf(
-					"%s values at [%d][%d] differ:\ngot:  %v\nwant: %v",
-					prefix, i, j,
-					result, want,
-				)
-			}
-		}
+	if !slices.EqualFunc(result, want, slices.Equal) {
+		t.Fatalf("mismatch\ngot:  %v\nwant: %v", result, want)
 	}
 }

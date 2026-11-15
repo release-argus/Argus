@@ -25,7 +25,6 @@ import (
 )
 
 func TestServiceMap(t *testing.T) {
-	// GIVEN: a service type string.
 	tests := []struct {
 		name     string
 		key      string
@@ -55,28 +54,18 @@ func TestServiceMap(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			// WHEN: the service type is looked up in the ServiceMap.
 			lookupFunc, exists := ServiceMap[tc.key]
 
-			// THEN: a type is returned.
 			if !exists {
-				// If the expected value is nil, then the key should not exist.
 				if tc.expected == nil {
 					return
 				}
-				t.Fatalf(
-					"%s\nServiceMap[%q] does not exist",
-					packageName, tc.key,
-				)
+				t.Fatal("ServiceMap key mismatch\ngot:  absent\nwant: present")
 			}
-			// And the returned type is of the expected type.
+
 			lookup := lookupFunc()
 			if getType(lookup) != getType(tc.expected) {
-				t.Errorf(
-					"%s\nServiceMap[%q]() = %T, want %T",
-					packageName, tc.key, lookup, tc.expected,
-				)
+				t.Errorf("type mismatch\ngot:  %T\nwant: %T", lookup, tc.expected)
 			}
 		})
 	}

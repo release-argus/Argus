@@ -18,7 +18,7 @@ package config
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,7 +33,6 @@ import (
 )
 
 func TestDrainChannel(t *testing.T) {
-	// GIVEN: a channel with buffer size and values.
 	tests := []struct {
 		name   string
 		buffer int
@@ -66,42 +65,102 @@ func TestDrainChannel(t *testing.T) {
 			t.Parallel()
 
 			ch := make(chan int, tc.buffer)
-			// Push the values into the channel.
 			for _, v := range tc.values {
 				ch <- v
 			}
 
 			done := make(chan struct{})
-			// WHEN: drainChannel is called.
+
 			go func() {
 				drainChannel(ch)
 				close(done)
 			}()
 
-			// THEN: drainChannel must not block (even for unbuffered channels)
 			select {
 			case <-done:
-				// success
 			case <-time.After(100 * time.Millisecond):
-				t.Fatalf("%s\ndrainChannel blocked", packageName)
+				t.Fatal("timed out waiting for drainChannel() to return")
 			}
 
-			// AND: buffered channels should be fully drained.
 			if tc.buffer > 0 {
-				if got := len(ch); got != 0 {
-					t.Fatalf(
-						"%s\ndrainChannel() drain failed\ngot:  %d\nwant: 0",
-						packageName, got,
-					)
+				if got, want := len(ch), 0; got != want {
+					t.Fatalf("len(ch) mismatch\ngot:  %d\nwant: %d", got, want)
 				}
 			}
 		})
 	}
 }
 
-func TestDrainAndDebounce(t *testing.T) {
+func TestConfig_SaveHandler(t *testing.T) {
+	originalDebounce := DebounceDuration
 	DebounceDuration = 2 * time.Second
-	// GIVEN: a Config.SaveChannel and messages to send/not send.
+	t.Cleanup(func() { DebounceDuration = originalDebounce })
+
+	tests := []struct {
+		name      string
+		cancelCtx bool
+	}{
+		{
+			name:      "normal debounce",
+			cancelCtx: false,
+		},
+		{
+			name:      "cancelled",
+			cancelCtx: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
+			_ = test.CaptureLog(t, logx.Default())
+
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			config := testConfig(t)
+
+			done := make(chan struct{}, 1)
+			go func() {
+				config.SaveHandler(ctx)
+				done <- struct{}{}
+			}()
+			now := time.Now().UTC()
+
+			config.SaveChannel <- true
+
+			if tc.cancelCtx {
+				time.Sleep(100 * time.Millisecond)
+				cancel()
+			}
+
+			timeout := (2 * DebounceDuration) - (DebounceDuration / 2)
+
+			// testConfig cannot be saved, so the handler exits fatally.
+			select {
+			case <-done:
+				t.Error("SaveHandler() returned before logx.ExitCodeChannel() received a message")
+			case <-logx.ExitCodeChannel():
+				elapsed := time.Since(now)
+				if tc.cancelCtx {
+					if maxWait := DebounceDuration - 500*time.Millisecond; elapsed >= maxWait {
+						t.Errorf("elapsed mismatch\ngot:  %s\nwant: < %s", elapsed, maxWait)
+					}
+				} else if elapsed > timeout {
+					t.Errorf("elapsed mismatch\ngot:  %s\nwant: <= %s", elapsed, timeout)
+				}
+			case <-time.After(timeout):
+				t.Error("timed out waiting for logx.ExitCodeChannel()")
+			}
+		})
+	}
+}
+
+func TestDrainAndDebounce(t *testing.T) {
+	originalDebounce := DebounceDuration
+	DebounceDuration = 2 * time.Second
+	t.Cleanup(func() { DebounceDuration = originalDebounce })
+
 	tests := []struct {
 		name      string
 		messages  int
@@ -130,7 +189,6 @@ func TestDrainAndDebounce(t *testing.T) {
 
 			config := testConfig(t)
 
-			// WHEN: those messages are sent to the channel midway through the wait.
 			go func() {
 				for tc.messages != 0 {
 					time.Sleep(4 * (DebounceDuration / 10))
@@ -141,106 +199,21 @@ func TestDrainAndDebounce(t *testing.T) {
 			start := time.Now().UTC()
 			drainAndDebounce(t.Context(), config.SaveChannel, DebounceDuration)
 
-			// THEN: after `DebounceDuration`, it would have tried to Save.
+			// One debounce, plus one more if messages arrived during the first.
 			elapsed := time.Since(start)
 			if elapsed < tc.timeTaken-100*time.Millisecond ||
 				elapsed > tc.timeTaken+100*time.Millisecond {
-				t.Errorf(
-					"%s\nDrainAndDebounce waited %s, but should have waited at least %s",
-					packageName, elapsed, tc.timeTaken,
-				)
-			}
-		})
-	}
-}
-
-func TestConfig_SaveHandler(t *testing.T) {
-	originalDebounce := DebounceDuration
-	DebounceDuration = 2 * time.Second
-	t.Cleanup(func() { DebounceDuration = originalDebounce })
-
-	tests := []struct {
-		name      string
-		cancelCtx bool
-	}{
-		{
-			name:      "normal debounce",
-			cancelCtx: false,
-		},
-		{
-			name:      "cancelled",
-			cancelCtx: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log exitCodeChannel.
-			_ = test.CaptureLog(t, logx.Default())
-
-			// GIVEN: a SaveHandler running on a Config with a SaveChannel.
-			ctx, cancel := context.WithCancel(context.Background())
-			t.Cleanup(cancel)
-			config := testConfig(t)
-
-			done := make(chan struct{}, 1)
-			go func() {
-				config.SaveHandler(ctx)
-				done <- struct{}{}
-			}()
-			now := time.Now().UTC()
-
-			// WHEN: a message is sent to the SaveHandler.
-			config.SaveChannel <- true
-
-			// AND: the context optionally cancelled.
-			if tc.cancelCtx {
-				time.Sleep(100 * time.Millisecond)
-				cancel()
-			}
-
-			prefix := fmt.Sprintf("%s\nConfig SaveHandler", packageName)
-
-			// THEN: it should exit in the expected time window
-			timeout := (2 * DebounceDuration) - (DebounceDuration / 2)
-
-			select {
-			case <-done:
-				t.Errorf(
-					"%s didn't error, expected to on saving before returning",
-					prefix,
-				)
-			case <-logx.ExitCodeChannel():
-				elapsed := time.Since(now)
-				if tc.cancelCtx {
-					if elapsed >= DebounceDuration-500*time.Millisecond {
-						t.Errorf(
-							"%s waited %s, should have exited <=%s on cancellation",
-							prefix, elapsed, DebounceDuration,
-						)
-					}
-				} else if elapsed > timeout {
-					t.Errorf(
-						"%s did not exit within %s timeout",
-						prefix, timeout,
-					)
-				}
-			case <-time.After(timeout):
-				t.Errorf(
-					"%s did not exit within expected time (%s)",
-					prefix, timeout,
-				)
+				t.Errorf("elapsed mismatch\ngot:  %s\nwant: %s (±100ms)", elapsed, tc.timeTaken)
 			}
 		})
 	}
 }
 
 func TestConfig_Save(t *testing.T) {
-	// GIVEN: we have a bunch of files that want to be Saved.
 	tests := []struct {
 		name        string
-		file        func(path string)
-		preSaveFunc func(path string)
+		file        func(t *testing.T, path string)
+		preSaveFunc func(t *testing.T, path string)
 		openFile    func(string) (io.WriteCloser, error)
 		corrections map[string]string
 		fatal       bool
@@ -302,29 +275,24 @@ func TestConfig_Save(t *testing.T) {
 		{
 			name: "unreadable file",
 			file: testYAML_Argus,
-			preSaveFunc: func(path string) {
+			preSaveFunc: func(t *testing.T, path string) {
 				if err := os.Chmod(path, 0_222); err != nil {
-					t.Fatalf(
-						"%s\nFailed to chmod the file to 222: %v",
-						packageName, err,
-					)
+					t.Fatalf("os.Chmod() failed: %v", err)
 				}
 			},
 			fatal:       true,
-			stdoutRegex: `error opening`,
+			stdoutRegex: `failed to open`,
 		},
 		{
 			name: "unwritable file",
 			file: testYAML_Argus,
-			preSaveFunc: func(path string) {
+			preSaveFunc: func(t *testing.T, path string) {
 				if err := os.Chmod(path, 0_444); err != nil {
-					t.Fatalf(
-						"%s\nFailed to chmod the file to 444: %v",
-						packageName, err,
-					)
+					t.Fatalf("os.Chmod() failed: %v", err)
 				}
 			},
-			stdoutRegex: `error opening`,
+			fatal:       true,
+			stdoutRegex: `failed to open`,
 		},
 		{
 			name: "flush error",
@@ -333,7 +301,7 @@ func TestConfig_Save(t *testing.T) {
 				return &failWriter{}, nil
 			},
 			fatal:       true,
-			stdoutRegex: `error flushing`,
+			stdoutRegex: `failed to flush`,
 		},
 		{
 			name: "write error",
@@ -342,30 +310,26 @@ func TestConfig_Save(t *testing.T) {
 				return &failAfterNBytesWriter{remaining: 10240}, nil
 			},
 			fatal:       true,
-			stdoutRegex: `error writing`,
+			stdoutRegex: `failed to write`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout and swaps openSaveFile.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// Write the initial file and load the config from it.
 			file := filepath.Join(t.TempDir(), "config.yml")
-			tc.file(file)
-			t.Log(file)
+			tc.file(t, file)
 			originalData, err := os.ReadFile(file)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed opening the file - %s",
-					packageName, err,
-				)
+				t.Fatalf("original: os.ReadFile() failed: %v", err)
 			}
 			had := string(originalData)
 			cfg := testLoadBasic(t, file)
 			if tc.preSaveFunc != nil {
-				tc.preSaveFunc(file)
+				tc.preSaveFunc(t, file)
 			}
 			if tc.openFile != nil {
 				original := openSaveFile
@@ -373,7 +337,6 @@ func TestConfig_Save(t *testing.T) {
 				t.Cleanup(func() { openSaveFile = original })
 			}
 
-			// WHEN: we Save it to a new location.
 			t.Cleanup(func() { _ = os.Remove(cfg.File) })
 			saveDone := make(chan struct{})
 			go func() {
@@ -384,44 +347,37 @@ func TestConfig_Save(t *testing.T) {
 			}()
 			gotExit := gotExitCodeDuringSave(saveDone, tc.fatal)
 
-			prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
-
-			// THEN: the stdout is expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 			if tc.fatal && !gotExit {
-				t.Fatalf("%s didn't Fatal log to ExitCodeChannel", prefix)
+				t.Fatal("logx.ExitCodeChannel() message mismatch\ngot:  absent\nwant: present")
+			}
+			if !tc.fatal && gotExit {
+				t.Fatal("logx.ExitCodeChannel() message mismatch\ngot:  present\nwant: absent")
 			}
 			if tc.stdoutRegex != "" {
 				return
 			}
-			if gotExit {
-				t.Fatalf("%s unexpected Fatal log to ExitCodeChannel", prefix)
-			}
 
-			// AND: it's the same as the original file.
 			newData, err := os.ReadFile(cfg.File)
+			if err != nil {
+				t.Fatalf("saved: os.ReadFile() failed: %v", err)
+			}
 			for from := range tc.corrections {
 				had = strings.ReplaceAll(had, from, tc.corrections[from])
 			}
 			if string(newData) != had {
-				t.Errorf(
-					"%s shouldn't change data in file\ngot:  %q\nwant: %q",
-					prefix, string(newData), had,
-				)
+				t.Errorf("saved file mismatch\ngot:  %q\nwant: %q", string(newData), had)
 			}
 		})
 	}
 }
 
-// reindentLines converts the leading whitespace of lines from indent size
-// `from` to `to`, preserving any partial offset (e.g. the 2-space alignment
-// of sequence continuation lines).
+// reindentLines converts the leading whitespace of lines from one indent size
+// to another, preserving any partial offset (e.g. the 2-space alignment of
+// sequence continuation lines).
 func reindentLines(lines []string, from, to int) []string {
 	out := make([]string, len(lines))
 	for i, line := range lines {
@@ -434,31 +390,32 @@ func reindentLines(lines []string, from, to int) []string {
 }
 
 func TestConfig_Save__indentation(t *testing.T) {
-	// GIVEN: a valid config file and an indentation count to save with.
 	tests := []struct {
+		name        string
 		indentation uint8
 	}{
-		{indentation: 2},
-		{indentation: 4},
-		{indentation: 6},
+		{name: "2 spaces", indentation: 2},
+		{name: "4 spaces", indentation: 4},
+		{name: "6 spaces", indentation: 6},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("%d spaces", tc.indentation)
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			file := filepath.Join(t.TempDir(), "config.yml")
-			testYAML_config_indent4(file)
-			hadData, _ := os.ReadFile(file)
+			testYAML_config_indent4(t, file)
+			hadData, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatalf("original: os.ReadFile() failed: %v", err)
+			}
 			cfg := testLoadBasic(t, file)
 			hadIndentation := cfg.Settings.Indentation
 
-			// AND: the indentation replaced with the test count.
 			cfg.Settings.Indentation = tc.indentation
 
-			// WHEN: the config is saved.
 			saveDone := make(chan struct{})
 			go func() {
 				loadMu.RLock()
@@ -469,20 +426,14 @@ func TestConfig_Save__indentation(t *testing.T) {
 			gotExit := gotExitCodeDuringSave(saveDone, false)
 
 			releaseStdout()
-			prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
 
-			// THEN: the save succeeds.
 			if gotExit {
-				t.Fatalf("%s unexpected Fatal log to ExitCodeChannel", prefix)
+				t.Fatal("logx.ExitCodeChannel() message mismatch\ngot:  present\nwant: absent")
 			}
 
-			// AND: the file uses this indentation with the service subtree intact.
 			newData, err := os.ReadFile(cfg.File)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed opening the file - %s",
-					packageName, err,
-				)
+				t.Fatalf("saved: os.ReadFile() failed: %v", err)
 			}
 			gotLines := strings.Split(string(newData), "\n")
 			wantLines := reindentLines(
@@ -494,62 +445,48 @@ func TestConfig_Save__indentation(t *testing.T) {
 				gotLines,
 				wantLines,
 				func(a, b string) bool { return a == b },
-				prefix,
 				"",
 			); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: the saved config still decodes to the same service structure.
 			var cfg2 Config
 			if err := cfg2.Decode(newData); err != nil {
-				t.Fatalf(
-					"%s saved config failed to decode: %v",
-					prefix, err,
-				)
+				t.Fatalf("Config.Decode() failed: %s", errfmt.FormatError(err))
 			}
 			svc := cfg2.Service["awesome"]
 			if svc == nil {
-				t.Fatalf(
-					"%s service %q lost on save",
-					prefix, "awesome",
-				)
+				t.Fatal("Config.Service[\"awesome\"] mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if svc.LatestVersion == nil {
-				t.Errorf("%s latest_version lost on save", prefix)
+				t.Error("Service.LatestVersion mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if svc.Options.SemanticVersioning == nil {
-				t.Errorf("%s options.semantic_versioning lost on save", prefix)
+				t.Error("Service.Options.SemanticVersioning mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if svc.Dashboard.Icon == "" {
-				t.Errorf("%s dashboard.icon lost on save", prefix)
+				t.Error("Service.Dashboard.Icon mismatch\ngot:  \"\"\nwant: NOT \"\"")
 			}
-			if len(svc.Command) != 1 {
-				t.Errorf(
-					"%s command lost on save\ngot:  %d commands\nwant: 1",
-					prefix, len(svc.Command),
-				)
+			if got, want := len(svc.Command), 1; got != want {
+				t.Errorf("len(Service.Command) mismatch\ngot:  %d\nwant: %d", got, want)
 			}
 		})
 	}
 }
 
 func TestConfig_Save__encodeError(t *testing.T) {
-	// GIVEN: a failing YAML encode.
 	original := encodeConfigYAML
 	encodeConfigYAML = func(w io.Writer, indent int, c *Config) error {
-		return fmt.Errorf("encode failed")
+		return errors.New("encode failed")
 	}
 	t.Cleanup(func() { encodeConfigYAML = original })
 
-	// AMD: valid config.
 	file := filepath.Join(t.TempDir(), "config.yml")
-	testYAML_config_small(file)
+	testYAML_config_small(t, file)
 	cfg := testLoadBasic(t, file)
 
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// WHEN: Save is called.
 	saveDone := make(chan struct{})
 	go func() {
 		cfg.Save()
@@ -557,93 +494,75 @@ func TestConfig_Save__encodeError(t *testing.T) {
 	}()
 	gotExit := gotExitCodeDuringSave(saveDone, true)
 
-	prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
-
-	// THEN: the encode error is fatal.
 	stdout := releaseStdout()
-	if !util.RegexCheck(`error encoding config`, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, `error encoding config`,
-		)
+	wantRegex := `failed to encode config`
+	if !util.RegexCheck(wantRegex, stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, wantRegex)
 	}
 	if !gotExit {
-		t.Fatalf("%s didn't Fatal log to ExitCodeChannel", prefix)
+		t.Fatal("logx.ExitCodeChannel() message mismatch\ngot:  absent\nwant: present")
 	}
 }
 
 func TestConfig_Save__readonly(t *testing.T) {
-	// GIVEN: a Config loaded in readonly mode.
 	file := filepath.Join(t.TempDir(), "config.yml")
-	testYAML_config_small(file)
+	testYAML_config_small(t, file)
 	cfg := testLoadBasic(t, file)
 	cfg.Settings.Data.Readonly = new(true)
 
-	// AND: openSaveFile is spied so any write attempt is detected.
-	opened := false
+	opens := 0
 	original := openSaveFile
 	openSaveFile = func(name string) (io.WriteCloser, error) {
-		opened = true
+		opens++
 		return original(name)
 	}
 	t.Cleanup(func() { openSaveFile = original })
 
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// WHEN: Save is called.
 	loadMu.RLock()
 	got := cfg.Save()
 	loadMu.RUnlock()
 
 	stdout := releaseStdout()
-	prefix := fmt.Sprintf("%s\nConfig.Save()", packageName)
 
-	// THEN: the file is never opened
-	if opened {
-		t.Errorf("%s in readonly mode should not open the file for writing", prefix)
+	if opens != 0 {
+		t.Errorf("openSaveFile() call count mismatch\ngot:  %d\nwant: 0", opens)
 	}
 
-	// AND: ok is reported
 	if !got {
-		t.Errorf(
-			"%s response mismatch in readonly mode\ngot:  %t\nwant: ok=true",
-			prefix, got,
-		)
+		t.Error("ok mismatch\ngot:  false\nwant: true")
 	}
 
-	// AND: a readonly log is emitted.
 	wantRegex := `Readonly mode: not saving`
 	if !util.RegexCheck(wantRegex, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, wantRegex,
-		)
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, wantRegex)
 	}
 }
 
 // failWriter is an io.WriteCloser whose Write always fails.
-// Used to trigger the "error flushing" path in Save() when all data fits in
+// Used to trigger the "failed to flush" path in Save() when all data fits in
 // bufio's buffer and the error surfaces at the final Flush().
 type failWriter struct{}
 
 func (f *failWriter) Write(_ []byte) (int, error) {
-	return 0, fmt.Errorf("simulated disk full")
+	return 0, errors.New("simulated disk full")
 }
 func (f *failWriter) Close() error { return nil }
 
-// failAfterNBytesWriter is an io.WriteCloser that succeeds for the first
-// `remaining` bytes then fails. Used to trigger the "error writing" path in
+// failAfterNBytesWriter is an io.WriteCloser that succeeds until remaining
+// bytes are written, then fails. Used to trigger the "failed to write" path in
 // Save() when the config is large enough to overflow bufio's buffer mid-loop.
 type failAfterNBytesWriter struct{ remaining int }
 
 func (f *failAfterNBytesWriter) Write(p []byte) (int, error) {
 	if f.remaining <= 0 {
-		return 0, fmt.Errorf("simulated disk full")
+		return 0, errors.New("simulated disk full")
 	}
 	if len(p) > f.remaining {
 		n := f.remaining
 		f.remaining = 0
-		return n, fmt.Errorf("simulated disk full")
+		return n, errors.New("simulated disk full")
 	}
 	f.remaining -= len(p)
 	return len(p), nil
@@ -677,7 +596,6 @@ func gotExitCodeDuringSave(saveDone <-chan struct{}, expectFatal bool) bool {
 }
 
 func TestConfig_ReorderYAML(t *testing.T) {
-	// GIVEN: a YAML to sort with a certain order of services.
 	tests := []struct {
 		name  string
 		order []string
@@ -888,6 +806,30 @@ func TestConfig_ReorderYAML(t *testing.T) {
 				"          host: example.com",
 			},
 		},
+		{
+			name:  "deep nesting/an indentation jump of 10+ levels",
+			order: []string{"alpha"},
+			lines: []string{
+				"service:",
+				"  alpha:",
+				"    notify:",
+				"      discord:",
+				"        options:",
+				"          message: |-",
+				"            a",
+				"                                            b",
+			},
+			want: []string{
+				"service:",
+				"  alpha:",
+				"    notify:",
+				"      discord:",
+				"        options:",
+				"          message: |-",
+				"            a",
+				"                                            b",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -897,25 +839,17 @@ func TestConfig_ReorderYAML(t *testing.T) {
 			var cfg Config
 			yamlStr := strings.Join(tc.lines, "\n")
 			if err := cfg.Decode([]byte(yamlStr)); err != nil {
-				t.Fatalf(
-					"%s\n%s",
-					packageName, errfmt.FormatError(err),
-				)
+				t.Fatalf("Config.Decode() failed: %s", errfmt.FormatError(err))
 			}
 			cfg.Order = tc.order
 			cfg.Settings.Indentation = 2
 
-			// WHEN: reorderYAML is called.
 			got := cfg.reorderYAML(tc.lines)
 
-			// THEN: the resulting lines match the expected output.
 			gotStr := strings.Join(got, "\n")
 			wantStr := strings.Join(tc.want, "\n")
 			if gotStr != wantStr {
-				t.Errorf(
-					"%s\nConfig.reorderYAML() value mismatch\ngot:  %q\nwant: %q",
-					packageName, gotStr, wantStr,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}

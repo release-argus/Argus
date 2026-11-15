@@ -17,7 +17,6 @@
 package rbac
 
 import (
-	"fmt"
 	"slices"
 	"testing"
 
@@ -25,13 +24,8 @@ import (
 )
 
 func TestCatalogue(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nCatalogue()", packageName)
-
-	// GIVEN: the permission catalogue.
-	// WHEN: Catalogue is called.
 	got := Catalogue()
 
-	// THEN: every known Resource appears exactly once, in stable order.
 	wantResources := []Resource{
 		ResourceService,
 		ResourceServiceOrder,
@@ -48,45 +42,44 @@ func TestCatalogue(t *testing.T) {
 		func(g ResourcePermissions, w Resource) bool {
 			return g.Resource == w
 		},
-		prefix,
 		"",
 	); testErr != nil {
 		t.Fatal(testErr)
 	}
 
-	// AND: every entry has at least one Action, each supporting global scope.
 	for _, rp := range got {
 		if len(rp.Actions) == 0 {
 			t.Errorf(
-				"%s %q has no actions",
-				prefix, rp.Resource,
+				"ResourcePermissions[%q].Actions mismatch\ngot:  []\nwant: non-empty",
+				rp.Resource,
 			)
 		}
 		for _, ap := range rp.Actions {
 			if !slices.Contains(ap.Scopes, ScopeGlobal) {
 				t.Errorf(
-					"%s %q:%q does not support global scope",
-					prefix, rp.Resource, ap.Action,
+					"ResourcePermissions[%q].Actions[%q].Scopes mismatch\ngot:  %q\nwant: %q",
+					rp.Resource, ap.Action,
+					ap.Scopes, ScopeGlobal,
 				)
 			}
 		}
 	}
 
-	// AND: mutating the returned slice (or its nested scopes) does not affect
-	// the source of truth.
 	got[0].Actions[0].Action = Action("mutated")
 	got[0].Actions[0].Scopes[0] = ScopeType("mutated")
-	if catalogue[0].Actions[0].Action == Action("mutated") ||
-		catalogue[0].Actions[0].Scopes[0] == ScopeType("mutated") {
+	original := catalogue[0].Actions[0]
+	if original.Action == Action("mutated") ||
+		original.Scopes[0] == ScopeType("mutated") {
 		t.Errorf(
-			"%s mutating the returned catalogue mutated the source of truth",
-			prefix,
+			"catalogue[0].Actions[0] mismatch\ngot:  Action=%q, Scopes[0]=%q\nwant: NOT %q",
+			original.Action, original.Scopes[0], "mutated",
 		)
 	}
 }
 
 func TestResourcePermissions(t *testing.T) {
-	// GIVEN: a set of Resources to look up in the catalogue.
+	wantAllScopes := []ScopeType{ScopeGlobal, ScopeService, ScopeServiceTag}
+	wantGlobalOnly := []ScopeType{ScopeGlobal}
 	tests := []struct {
 		name        string
 		resource    Resource
@@ -97,36 +90,41 @@ func TestResourcePermissions(t *testing.T) {
 			name:     "known/service (create is global-only, rest all scopes)",
 			resource: ResourceService,
 			wantActions: []ActionPermission{
-				{ActionCreate, globalOnly},
-				{ActionRead, allScopes},
-				{ActionUpdate, allScopes},
-				{ActionDelete, allScopes},
+				{ActionCreate, wantGlobalOnly},
+				{ActionRead, wantAllScopes},
+				{ActionUpdate, wantAllScopes},
+				{ActionDelete, wantAllScopes},
 			},
 		},
 		{
 			name:        "known/service_order (global only)",
 			resource:    ResourceServiceOrder,
-			wantActions: []ActionPermission{{ActionUpdate, globalOnly}},
+			wantActions: []ActionPermission{{ActionUpdate, wantGlobalOnly}},
 		},
 		{
 			name:        "known/service_action (execute, all scopes)",
 			resource:    ResourceServiceAction,
-			wantActions: []ActionPermission{{ActionExecute, allScopes}},
+			wantActions: []ActionPermission{{ActionExecute, wantAllScopes}},
 		},
 		{
 			name:        "known/version_refresh (execute, all scopes)",
 			resource:    ResourceVersionRefresh,
-			wantActions: []ActionPermission{{ActionExecute, allScopes}},
+			wantActions: []ActionPermission{{ActionExecute, wantAllScopes}},
 		},
 		{
 			name:        "known/notify (global only)",
 			resource:    ResourceNotify,
-			wantActions: []ActionPermission{{ActionExecute, globalOnly}},
+			wantActions: []ActionPermission{{ActionExecute, wantGlobalOnly}},
 		},
 		{
 			name:        "known/config (read, global only)",
 			resource:    ResourceConfig,
-			wantActions: []ActionPermission{{ActionRead, globalOnly}},
+			wantActions: []ActionPermission{{ActionRead, wantGlobalOnly}},
+		},
+		{
+			name:        "known/metric (read, global only)",
+			resource:    ResourceMetric,
+			wantActions: []ActionPermission{{ActionRead, wantGlobalOnly}},
 		},
 		{
 			name:     "unknown/not in catalogue",
@@ -144,36 +142,25 @@ func TestResourcePermissions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: resourcePermissions is called.
 			got := resourcePermissions(tc.resource)
 
-			prefix := fmt.Sprintf(
-				"%s\nresourcePermissions(%q)",
-				packageName, tc.resource,
-			)
-
-			// THEN: an unknown Resource yields nil.
 			if tc.wantNil {
 				if got != nil {
 					t.Fatalf(
-						"%s mismatch\ngot:  %+v\nwant: nil",
-						prefix, *got,
+						"resourcePermissions() mismatch\ngot:  Resource=%q\nwant: nil",
+						got.Resource,
 					)
 				}
 				return
 			}
 
-			// AND: a known Resource yields its catalogue entry.
 			if got == nil {
-				t.Fatalf(
-					"%s mismatch\ngot:  nil\nwant: catalogue entry",
-					prefix,
-				)
+				t.Fatal("resourcePermissions() mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if got.Resource != tc.resource {
 				t.Errorf(
-					"%s Resource mismatch\ngot:  %q\nwant: %q",
-					prefix, got.Resource, tc.resource,
+					"ResourcePermissions.Resource mismatch\ngot:  %q\nwant: %q",
+					got.Resource, tc.resource,
 				)
 			}
 			if testErr := test.AssertSlicesEqualFunc(
@@ -183,7 +170,6 @@ func TestResourcePermissions(t *testing.T) {
 				func(a, b ActionPermission) bool {
 					return a.Action == b.Action && slices.Equal(a.Scopes, b.Scopes)
 				},
-				prefix,
 				"",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -193,7 +179,6 @@ func TestResourcePermissions(t *testing.T) {
 }
 
 func TestPermission_Valid(t *testing.T) {
-	// GIVEN: a set of Permissions.
 	tests := []struct {
 		name       string
 		permission Permission
@@ -245,27 +230,16 @@ func TestPermission_Valid(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf(
-				"%s\nPermission{%q, %q}.Valid()",
-				packageName, tc.permission.Resource, tc.permission.Action,
-			)
-
-			// WHEN: Valid is called.
 			got := tc.permission.Valid()
 
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestGrant_Valid(t *testing.T) {
-	// GIVEN: a set of Grants.
 	tests := []struct {
 		name  string
 		grant Grant
@@ -302,58 +276,34 @@ func TestGrant_Valid(t *testing.T) {
 			want:  false,
 		},
 		{
-			name: "invalid/permission not in catalogue",
-			grant: Grant{
-				Resource: ResourceConfig,
-				Action:   ActionDelete,
-				Scope:    Scope{Type: ScopeGlobal},
-			},
-			want: false,
+			name:  "invalid/permission not in catalogue",
+			grant: Grant{Resource: ResourceConfig, Action: ActionDelete, Scope: Scope{Type: ScopeGlobal}},
+			want:  false,
 		},
 		{
-			name: "invalid/scope type unsupported by resource (service_order:service-scoped)",
-			grant: Grant{
-				Resource: ResourceServiceOrder,
-				Action:   ActionUpdate,
-				Scope:    Scope{Type: ScopeService, Ref: "argus"},
-			},
-			want: false,
+			name:  "invalid/scope type unsupported by resource (service_order:service-scoped)",
+			grant: Grant{Resource: ResourceServiceOrder, Action: ActionUpdate, Scope: Scope{Type: ScopeService, Ref: "argus"}},
+			want:  false,
 		},
 		{
-			name: "invalid/unknown scope type",
-			grant: Grant{
-				Resource: ResourceService,
-				Action:   ActionRead,
-				Scope:    Scope{Type: ScopeType("unknown")},
-			},
-			want: false,
+			name:  "invalid/unknown scope type",
+			grant: Grant{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeType("unknown")}},
+			want:  false,
 		},
 		{
-			name: "invalid/global grant with a ref",
-			grant: Grant{
-				Resource: ResourceService,
-				Action:   ActionRead,
-				Scope:    Scope{Type: ScopeGlobal, Ref: "argus"},
-			},
-			want: false,
+			name:  "invalid/global grant with a ref",
+			grant: Grant{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeGlobal, Ref: "argus"}},
+			want:  false,
 		},
 		{
-			name: "invalid/service-scoped grant without a ref",
-			grant: Grant{
-				Resource: ResourceService,
-				Action:   ActionRead,
-				Scope:    Scope{Type: ScopeService},
-			},
-			want: false,
+			name:  "invalid/service-scoped grant without a ref",
+			grant: Grant{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeService}},
+			want:  false,
 		},
 		{
-			name: "invalid/service_tag-scoped grant without a ref",
-			grant: Grant{
-				Resource: ResourceService,
-				Action:   ActionRead,
-				Scope:    Scope{Type: ScopeServiceTag},
-			},
-			want: false,
+			name:  "invalid/service_tag-scoped grant without a ref",
+			grant: Grant{Resource: ResourceService, Action: ActionRead, Scope: Scope{Type: ScopeServiceTag}},
+			want:  false,
 		},
 	}
 
@@ -361,22 +311,10 @@ func TestGrant_Valid(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf(
-				"%s\nGrant{resource=%q, action=%q, type=%q, ref=%q}.Valid()",
-				packageName,
-				tc.grant.Resource, tc.grant.Action,
-				tc.grant.Scope.Type, tc.grant.Scope.Ref,
-			)
-
-			// WHEN: Valid is called.
 			got := tc.grant.Valid()
 
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

@@ -18,7 +18,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -28,11 +27,10 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/notify/shoutrrr"
-	"github.com/release-argus/Argus/util/errfmt"
-
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/notify/shoutrrr"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 type testInterface interface{}
@@ -47,7 +45,6 @@ type testStructChild struct {
 }
 
 func TestMigrateDeprecatedEnvVars(t *testing.T) {
-	// GIVEN: a slice of env vars, possibly containing deprecated names.
 	tests := []struct {
 		name    string
 		envVars []string
@@ -111,43 +108,31 @@ func TestMigrateDeprecatedEnvVars(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			// Serial: sets env vars.
 
-			for k := range tc.want {
-				if v, ok := os.LookupEnv(k); ok {
-					os.Unsetenv(k)
-					t.Cleanup(func() { _ = os.Setenv(k, v) })
-				}
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
 			envVars := test.SplitEnvVars(tc.envVars)
-			test.SetEnv(t, envVars)
+			test.IsolateEnv(t, envVars)
 
-			// WHEN: migrateDeprecatedEnvVars is called.
 			got := migrateDeprecatedEnvVars(tc.envVars)
 
-			prefix := fmt.Sprintf(
-				"%s\nmigrateDeprecatedEnvVars(%v)",
-				packageName, tc.envVars,
-			)
-
-			// THEN: the returned slice has the deprecated vars renamed/dropped as expected.
 			gotSorted, wantSorted := append([]string{}, got...), test.MapJoin(tc.want, "=")
 			sort.Strings(gotSorted)
 			if !slices.Equal(gotSorted, wantSorted) {
-				t.Errorf(
-					"%s mismatch\ngot:  %v\nwant: %v",
-					prefix, gotSorted, wantSorted,
-				)
+				t.Errorf("env vars mismatch\ngot:  %q\nwant: %q", gotSorted, wantSorted)
 			}
 
-			// AND: any renamed var was also set for real.
 			for k, v := range tc.want {
-				if got := os.Getenv(k); got != v {
-					t.Errorf(
-						"%s real env var %q mismatch\ngot:  %q\nwant: %q",
-						prefix, k, got, v,
-					)
+				if gotEnv := os.Getenv(k); gotEnv != v {
+					t.Errorf("os.Getenv(%q) mismatch\ngot:  %q\nwant: %q", k, gotEnv, v)
+				}
+			}
+
+			for k := range envVars {
+				if _, kept := tc.want[k]; kept {
+					continue
+				}
+				if v, ok := os.LookupEnv(k); ok {
+					t.Errorf("os.LookupEnv(%q) mismatch\ngot:  present (%q)\nwant: absent", k, v)
 				}
 			}
 		})
@@ -155,7 +140,6 @@ func TestMigrateDeprecatedEnvVars(t *testing.T) {
 }
 
 func TestMigrateDeprecatedEnvVarPrefixes(t *testing.T) {
-	// GIVEN: a slice of env vars, possibly prefixed with a deprecated prefix.
 	tests := []struct {
 		name    string
 		envVars []string
@@ -197,44 +181,31 @@ func TestMigrateDeprecatedEnvVarPrefixes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			// Serial: sets env vars.
 
-			for k := range tc.want {
-				if v, ok := os.LookupEnv(k); ok {
-					os.Unsetenv(k)
-					t.Cleanup(func() { _ = os.Setenv(k, v) })
-				}
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
 			envVars := test.SplitEnvVars(tc.envVars)
-			test.SetEnv(t, envVars)
+			test.IsolateEnv(t, envVars)
 
-			// WHEN: migrateDeprecatedEnvVarPrefixes is called.
 			got := migrateDeprecatedEnvVarPrefixes(tc.envVars)
 
-			prefix := fmt.Sprintf(
-				"%s\nmigrateDeprecatedEnvVarPrefixes(%v)",
-				packageName, tc.envVars,
-			)
-
-			// THEN: the returned slice has the deprecated-prefixed vars renamed/dropped
-			// as expected.
 			gotSorted, wantSorted := append([]string{}, got...), test.MapJoin(tc.want, "=")
 			sort.Strings(gotSorted)
 			if !slices.Equal(gotSorted, wantSorted) {
-				t.Errorf(
-					"%s mismatch\ngot:  %v\nwant: %v",
-					prefix, gotSorted, wantSorted,
-				)
+				t.Errorf("env vars mismatch\ngot:  %q\nwant: %q", gotSorted, wantSorted)
 			}
 
-			// AND: any renamed var was also set for real.
 			for k, v := range tc.want {
-				if got := os.Getenv(k); got != v {
-					t.Errorf(
-						"%s real env var %q mismatch\ngot:  %q\nwant: %q",
-						prefix, k, got, v,
-					)
+				if gotEnv := os.Getenv(k); gotEnv != v {
+					t.Errorf("os.Getenv(%q) mismatch\ngot:  %q\nwant: %q", k, gotEnv, v)
+				}
+			}
+
+			for k := range envVars {
+				if _, kept := tc.want[k]; kept {
+					continue
+				}
+				if v, ok := os.LookupEnv(k); ok {
+					t.Errorf("os.LookupEnv(%q) mismatch\ngot:  present (%q)\nwant: absent", k, v)
 				}
 			}
 		})
@@ -253,17 +224,13 @@ type testMapEntry struct {
 }
 
 func TestMapEnvToStruct(t *testing.T) {
-	// GIVEN: a struct and a bunch of env vars.
 	tests := []struct {
-		name                string
-		customStruct        any
-		customStructBuilder *func() any
-		prefix              string
-		env                 map[string]string
-		envCleanup          []string
-		marshalWant         bool
-		want                string
-		errRegex            string
+		name         string
+		customStruct any
+		env          map[string]string
+		marshalWant  bool
+		want         string
+		errRegex     string
 	}{
 		{
 			name: "no env vars",
@@ -279,6 +246,7 @@ func TestMapEnvToStruct(t *testing.T) {
 					string: ''
 					int: 0
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "no ARGUS_ env vars",
@@ -297,6 +265,7 @@ func TestMapEnvToStruct(t *testing.T) {
 					string: ''
 					int: 0
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "nil non-comparable pointer",
@@ -321,6 +290,7 @@ func TestMapEnvToStruct(t *testing.T) {
 					func: null
 					int: 1
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "non-nil pointer to a string slice",
@@ -464,6 +434,7 @@ func TestMapEnvToStruct(t *testing.T) {
 						ptr2: null
 						val: bar
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "uint8/valid",
@@ -513,12 +484,6 @@ func TestMapEnvToStruct(t *testing.T) {
 					} `yaml:"unsigned_integer_8"`
 				} `yaml:"test"`
 			}{},
-			want: test.TrimYAML(`
-				test:
-					unsigned_integer_8:
-						ptr_invalid: null
-						val_invalid: 0
-			`),
 			errRegex: test.TrimYAML(`
 				^ARGUS_TEST_UNSIGNED_INTEGER_8_PTR_INVALID: "1024" <invalid>.*
 				ARGUS_TEST_UNSIGNED_INTEGER_8_VAL_INVALID: "-1" <invalid>.*$`,
@@ -572,12 +537,6 @@ func TestMapEnvToStruct(t *testing.T) {
 					} `yaml:"unsigned_integer_16"`
 				} `yaml:"test"`
 			}{},
-			want: test.TrimYAML(`
-				test:
-					unsigned_integer_16:
-						ptr_invalid: null
-						val_invalid: 0
-			`),
 			errRegex: test.TrimYAML(`
 				^ARGUS_TEST_UNSIGNED_INTEGER_16_PTR_INVALID: "65536" <invalid>.*
 				ARGUS_TEST_UNSIGNED_INTEGER_16_VAL_INVALID: "-1" <invalid>.*$`,
@@ -689,10 +648,6 @@ func TestMapEnvToStruct(t *testing.T) {
 					} `yaml:",inline"`
 				} `yaml:"test_inline"`
 			}{},
-			want: test.TrimYAML(`
-				test_inline:
-					int: 0
-			`),
 			errRegex: `^ARGUS_TEST_INLINE_INT: "foo" <invalid>.*$`,
 		},
 		{
@@ -738,6 +693,7 @@ func TestMapEnvToStruct(t *testing.T) {
 						string: bar
 						bool: true
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "map/pointer-typed struct elements are written back",
@@ -760,6 +716,7 @@ func TestMapEnvToStruct(t *testing.T) {
 					foo:
 						string: bar
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "map of pointers/entries are created from their variables",
@@ -784,6 +741,7 @@ func TestMapEnvToStruct(t *testing.T) {
 					present:
 						string: ''
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "map of strings/the rest of the name is a lower-cased key",
@@ -828,6 +786,30 @@ func TestMapEnvToStruct(t *testing.T) {
 							url: https://git.example.com
 							auth:
 								insecure: true
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name: "map of structs/the longest field match names the key",
+			env: map[string]string{
+				"ARGUS_TEST_HOST_CODEBERG_AUTH_TOKEN": "cb-token",
+			},
+			customStruct: &struct {
+				Test struct {
+					Host map[string]struct {
+						Auth struct {
+							Token string `yaml:"token,omitzero"`
+						} `yaml:"auth,omitzero"`
+						Token string `yaml:"token,omitzero"`
+					} `yaml:"host,omitempty"`
+				} `yaml:"test"`
+			}{},
+			want: test.TrimYAML(`
+				test:
+					host:
+						codeberg:
+							auth:
+								token: cb-token
 			`),
 			errRegex: `^$`,
 		},
@@ -941,9 +923,10 @@ func TestMapEnvToStruct(t *testing.T) {
 							bar:
 								string: baz
 			`),
+			errRegex: `^$`,
 		},
 		{
-			name: "struct that was nil - error",
+			name: "struct that was nil/error",
 			env: map[string]string{
 				"ARGUS_STRUCT_BOOL": "sometimes",
 			},
@@ -978,7 +961,6 @@ func TestMapEnvToStruct(t *testing.T) {
 				Int: &testStructChild{},
 			},
 			marshalWant: true,
-			want:        `{}`,
 			errRegex:    `^ARGUS_IFACE_INT: "1.1" <invalid>.*$`,
 		},
 		{
@@ -996,7 +978,7 @@ func TestMapEnvToStruct(t *testing.T) {
 			errRegex:    `^$`,
 		},
 		{
-			name: "map vars - ARGUS_NOTIFY_",
+			name: "map vars/ARGUS_NOTIFY_",
 			env: map[string]string{
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY":        "2s",
 				"ARGUS_NOTIFY_MATTERMOST_OPTIONS_MAX_TRIES": "7",
@@ -1025,11 +1007,12 @@ func TestMapEnvToStruct(t *testing.T) {
 				defaults.Default()
 				types := util.SortedKeys(defaults)
 				for _, typ := range types {
-					str.WriteString(fmt.Sprintf("  %s: {}\n", typ))
+					str.WriteString("  ")
+					str.WriteString(typ)
+					str.WriteString(": {}\n")
 				}
 
 				val := str.String()
-				// Discord.
 				d := strings.ReplaceAll(
 					test.TrimYAML(`
 						discord:
@@ -1039,7 +1022,6 @@ func TestMapEnvToStruct(t *testing.T) {
 					"\n", "\n  ",
 				)
 				val = strings.Replace(val, "discord: {}", d, 1)
-				// MatterMost.
 				mm := strings.ReplaceAll(
 					test.TrimYAML(`
 						mattermost:
@@ -1064,11 +1046,6 @@ func TestMapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_deprecated",
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
-			},
-			envCleanup: []string{
-				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN",
-				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE",
-				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS",
 			},
 			customStruct: &Defaults{},
 			want: test.TrimYAML(`
@@ -1116,9 +1093,6 @@ func TestMapEnvToStruct(t *testing.T) {
 			env: map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_REQUIRE_DOCKER_TYPE": "hub",
 			},
-			envCleanup: []string{
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE",
-			},
 			customStruct: &Defaults{},
 			want: test.TrimYAML(`
 				service:
@@ -1134,95 +1108,56 @@ func TestMapEnvToStruct(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			// Serial: sets env vars.
 
-			for _, k := range tc.envCleanup {
-				if v, ok := os.LookupEnv(k); ok {
-					os.Unsetenv(k)
-					t.Cleanup(func() { _ = os.Setenv(k, v) })
-				}
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: mapEnvToStruct is called on it.
-			err := mapEnvToStruct(tc.customStruct, tc.prefix, nil)
-
-			// THEN: any error is as expected.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
+			err := mapEnvToStruct(tc.customStruct, "", nil)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) { // Expected a FATAL panic to be caught above.
-				t.Errorf(
-					"%s\nMapEnvToStruct() error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the defaults are set to the appropriate env vars.
-			var gotYAML string
+			gotYAML, producer := "", "decode.ToYAMLString()"
 			if tc.marshalWant {
-				got, _ := decode.Marshal("yaml", tc.customStruct)
-				gotYAML = string(got)
+				producer = "decode.Marshal()"
+				marshalled, err := decode.Marshal("yaml", tc.customStruct)
+				if err != nil {
+					t.Fatalf("decode.Marshal() failed: %v", err)
+				}
+				gotYAML = string(marshalled)
 			} else {
 				gotYAML = decode.ToYAMLString(tc.customStruct, "")
 			}
 			if gotYAML != tc.want {
-				t.Errorf(
-					"%s\nMapEnvToStruct() stringified mismatch\ngot:  %q\nwant: %q",
-					packageName, gotYAML, tc.want,
-				)
+				t.Errorf("%s mismatch\ngot:  %q\nwant: %q", producer, gotYAML, tc.want)
 			}
 		})
 	}
 }
 
 func TestMapEnvToStruct_NoEnvVars(t *testing.T) {
-	// GIVEN: no env vars are set.
-	envVars := os.Environ()
-	originalEnv := make(map[string]string, len(envVars))
-	for _, kv := range envVars {
-		vals := strings.SplitN(kv, "=", 2)
-		k, v := vals[0], vals[1]
-		originalEnv[k] = v
-		os.Unsetenv(k)
-	}
-	t.Logf(
-		"%s\noriginal env vars pre-TestMapEnvToStruct_NoEnvVars (%d):\n%+v",
-		packageName, len(originalEnv), originalEnv,
-	)
-	t.Cleanup(func() {
-		for k, v := range originalEnv {
-			os.Setenv(k, v)
+	test.IsolateEnv(t, nil)
+	// mapEnvToStruct collects every ARGUS-prefixed var, but IsolateEnv keeps ARGUS_TEST_*.
+	for k := range test.SplitEnvVars(os.Environ()) {
+		if strings.HasPrefix(k, "ARGUS") {
+			_ = os.Unsetenv(k)
 		}
-	})
+	}
 
-	// AND: a config to map no env vars onto.
 	var cfg Config
 
-	// WHEN: mapEnvToStruct is called on it.
 	err := mapEnvToStruct(&cfg, "", nil)
-
-	prefix := fmt.Sprintf("%s\nmapEnvToStruct()", packageName)
-
-	// THEN: any error is as expected.
-	e := errfmt.FormatError(err)
-	if !util.RegexCheck(`^$`, e) { // Expected a FATAL panic to be caught above.
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: nil",
-			prefix, e,
-		)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	// AND: the Config stringifies empty.
 	want := "{}\n"
 	if got := decode.ToYAMLString(&cfg, ""); got != want {
-		t.Errorf(
-			"%s with no env vars, Config mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("decode.ToYAMLString() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -1280,10 +1215,8 @@ func TestConvertToEnvErrors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// WHEN: convertToEnvErrors is called with the input error.
 			got := convertToEnvErrors(tc.input)
 
-			// THEN: the result should match the expected error.
 			if got == nil &&
 				tc.want == nil {
 				return
@@ -1291,17 +1224,13 @@ func TestConvertToEnvErrors(t *testing.T) {
 			if got == nil ||
 				tc.want == nil ||
 				got.Error() != tc.want.Error() {
-				t.Errorf(
-					"%s\nconvertToEnvErrors() error mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("error mismatch\ngot:  %v\nwant: %v", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLoadEnvFile(t *testing.T) {
-	// GIVEN: a file of environment variables.
 	tests := []struct {
 		name           string
 		content        *string
@@ -1318,7 +1247,7 @@ func TestLoadEnvFile(t *testing.T) {
 			name:     "empty file",
 			content:  new(""),
 			want:     map[string]string{},
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name:           "cannot read file",
@@ -1340,7 +1269,7 @@ func TestLoadEnvFile(t *testing.T) {
 				"FOO": "bar",
 			},
 			doNotWant: []string{"# comment", " comment", "comment"},
-			errRegex:  "^$",
+			errRegex:  `^$`,
 		},
 		{
 			name: "basic key-value pairs",
@@ -1352,7 +1281,7 @@ func TestLoadEnvFile(t *testing.T) {
 				"FOO": "bar",
 				"BAR": "baz",
 			},
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name: "export prefix",
@@ -1366,7 +1295,7 @@ func TestLoadEnvFile(t *testing.T) {
 				"BAR":    "test",
 				"export": "argus",
 			},
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name: "quoted values",
@@ -1378,7 +1307,23 @@ func TestLoadEnvFile(t *testing.T) {
 				"FOO": "bar",
 				"BAR": "123",
 			},
-			errRegex: "^$",
+			errRegex: `^$`,
+		},
+		{
+			name: "unmatched quotes are kept",
+			content: new(test.TrimYAML(`
+				FOO="bar
+				BAR=baz"
+				BAZ='123
+				QUX=123'
+			`)),
+			want: map[string]string{
+				"FOO": `"bar`,
+				"BAR": `baz"`,
+				"BAZ": `'123`,
+				"QUX": `123'`,
+			},
+			errRegex: `^$`,
 		},
 		{
 			name: "env var expansion",
@@ -1390,7 +1335,7 @@ func TestLoadEnvFile(t *testing.T) {
 				"FOO": "bar",
 				"BAR": "bar",
 			},
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid line format",
@@ -1412,60 +1357,38 @@ func TestLoadEnvFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
-			tmpDir := t.TempDir()
+			// Serial: sets env vars.
 
-			// Create env file if content provided.
+			tmpDir := t.TempDir()
+			test.IsolateEnv(t, nil)
+
 			filePath := filepath.Join(tmpDir, "nonexistent.env")
 			if tc.content != nil {
 				filePath = filepath.Join(tmpDir, ".env")
 				if err := os.WriteFile(filePath, []byte(test.TrimYAML(*tc.content)), 0644); err != nil {
-					t.Fatalf(
-						"%s\n failed to create test file: %v",
-						packageName, err,
-					)
+					t.Fatalf("os.WriteFile() failed: %v", err)
 				}
 			}
 			if tc.cannotReadFile {
-				_ = os.Chmod(filePath, 0000)
+				if err := os.Chmod(filePath, 0000); err != nil {
+					t.Fatalf("os.Chmod() failed: %v", err)
+				}
 			}
 
-			// WHEN: loadEnvFile is called.
 			err := loadEnvFile(filePath)
-
-			prefix := fmt.Sprintf("%s\nLoadEnvFile()", packageName)
-
-			// THEN: any error matches expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: environment variables are set as expected.
-			if tc.errRegex == "^$" {
-				// Verify the expected env vars are set.
-				for k, v := range tc.want {
-					if got := os.Getenv(k); got != v {
-						t.Errorf(
-							"%s env var %q mismatch\ngot:  %q\nwant: %q",
-							prefix, k,
-							got, v,
-						)
-					}
+			for k, v := range tc.want {
+				if got := os.Getenv(k); got != v {
+					t.Errorf("os.Getenv(%q) mismatch\ngot:  %q\nwant: %q", k, got, v)
 				}
-				// Verify unexpected env vars are not set.
-				want := ""
-				for _, k := range tc.doNotWant {
-					if got := os.Getenv(k); got != want {
-						t.Errorf(
-							"%s\nenv var %q should not be set\ngot:  %q\nwant: %q",
-							prefix, k,
-							got, want,
-						)
-					}
+			}
+			for _, k := range tc.doNotWant {
+				if got, ok := os.LookupEnv(k); ok {
+					t.Errorf("os.LookupEnv(%q) mismatch\ngot:  present (%q)\nwant: absent", k, got)
 				}
 			}
 		})
@@ -1488,21 +1411,14 @@ func (f *failingReader) Read(p []byte) (int, error) {
 }
 
 func TestLoadEnvFile_ReadError(t *testing.T) {
-	// GIVEN: a reader that fails after a certain number of bytes.
-	content := "FOO=bar\ntest=123\n"
 	reader := &failingReader{
-		r:      strings.NewReader(content),
-		failAt: 10, // fail after 10 bytes.
+		r:      strings.NewReader("FOO=bar\ntest=123\n"),
+		failAt: 10,
 	}
+	test.IsolateEnv(t, nil)
 
-	// WHEN: LoadEnvFile is called with the failing reader.
 	err := loadEnvFromReader(reader)
-
-	// THEN: an error is returned.
 	if err == nil {
-		t.Fatalf(
-			"%s\nerror mismatch after LoadEnvFile that should fail\ngot:  nil\nwant: error",
-			packageName,
-		)
+		t.Fatal("error mismatch\ngot:  nil\nwant: non-nil")
 	}
 }

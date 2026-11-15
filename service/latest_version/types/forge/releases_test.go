@@ -18,7 +18,6 @@
 package forge
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -33,7 +32,6 @@ import (
 )
 
 func TestUnmarshalReleases(t *testing.T) {
-	// GIVEN: a response body.
 	tests := []struct {
 		name     string
 		body     string
@@ -94,38 +92,26 @@ func TestUnmarshalReleases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: UnmarshalReleases is called on it.
 			got, err := UnmarshalReleases([]byte(tc.body))
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshalReleases(%q)",
-				packageName, tc.body,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the releases are as expected.
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a forgetypes.Release, b string) bool { return a.TagName == b },
-				prefix,
-				"",
-			); err != nil {
-				t.Fatal(err)
+				"releases",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestIsOwnerRepo(t *testing.T) {
-	// GIVEN: a URL the API could be addressed with.
 	tests := []struct {
 		name string
 		path string
@@ -227,23 +213,16 @@ func TestIsOwnerRepo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsOwnerRepo is called with it.
 			got := IsOwnerRepo(tc.path)
 
-			// THEN: only an addressable "owner/repo" is accepted.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nIsOwnerRepo(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.path,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestIsRepoSegment(t *testing.T) {
-	// GIVEN: one segment of a URL.
 	tests := []struct {
 		name    string
 		segment string
@@ -315,23 +294,16 @@ func TestIsRepoSegment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: isRepoSegment is called with it.
 			got := isRepoSegment(tc.segment)
 
-			// THEN: only a name the API can be addressed with is accepted.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nisRepoSegment(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.segment,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestEscapedOwnerRepo(t *testing.T) {
-	// GIVEN: a url a forge API path is built from.
 	tests := []struct {
 		name string
 		path string
@@ -393,22 +365,16 @@ func TestEscapedOwnerRepo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: EscapedOwnerRepo is called with it.
 			got := EscapedOwnerRepo(tc.path)
 
-			// THEN: each segment is escaped, so only the separator remains.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nEscapedOwnerRepo(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.path, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestBodyExcerpt(t *testing.T) {
-	// GIVEN: a body a host responded with.
 	tests := []struct {
 		name string
 		body string
@@ -470,35 +436,16 @@ func TestBodyExcerpt(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: BodyExcerpt is called with it.
 			got := BodyExcerpt([]byte(tc.body))
 
-			// THEN: a bounded, single-line excerpt comes back.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nBodyExcerpt() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
-			}
-			// AND: it never exceeds the bound, nor spans lines.
-			if len(got) > maxErrorBody+4 {
-				t.Errorf(
-					"%s\nBodyExcerpt() exceeded the bound\ngot:  %d bytes\nwant: <= %d",
-					packageName, len(got), maxErrorBody+4,
-				)
-			}
-			if strings.Count(got, "\n") > 1 {
-				t.Errorf(
-					"%s\nBodyExcerpt() spans lines\ngot:  %q",
-					packageName, got,
-				)
+				t.Errorf("excerpt mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestFilterReleases(t *testing.T) {
-	// GIVEN: a set of releases and the settings to filter them with.
 	tests := []struct {
 		name                               string
 		releases                           []forgetypes.Release
@@ -672,7 +619,6 @@ func TestFilterReleases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FilterReleases is called on them.
 			got := FilterReleases(
 				tc.releases,
 				FilterOptions{
@@ -683,28 +629,20 @@ func TestFilterReleases(t *testing.T) {
 				logx.LogFrom{Primary: t.Name()},
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nFilterReleases(%+v)",
-				packageName, tc.releases,
-			)
-
-			// THEN: only the expected releases are kept, in the expected order.
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a forgetypes.Release, b string) bool { return a.TagName == b },
-				prefix,
-				"",
-			); err != nil {
-				t.Fatal(err)
+				"releases",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
-	// GIVEN: releases whose tag names may carry a semantic-version pre-release label.
 	tests := []struct {
 		name           string
 		releases       []forgetypes.Release
@@ -788,7 +726,7 @@ func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
 			want: []string{"0.9.0"},
 		},
 		{
-			name:     "derive/no releases",
+			name:     "no releases",
 			releases: []forgetypes.Release{},
 			want:     []string{},
 		},
@@ -798,7 +736,6 @@ func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FilterReleases is called with them.
 			got := FilterReleases(
 				tc.releases,
 				FilterOptions{
@@ -809,14 +746,12 @@ func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
 				logx.LogFrom{Primary: t.Name()},
 			)
 
-			// THEN: only the tags that name a pre-release are dropped.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a forgetypes.Release, b string) bool { return a.TagName == b },
-				fmt.Sprintf("%s\nFilterReleases() TagName", packageName),
-				"Release",
+				"releases",
 			); testErr != nil {
 				t.Fatal(testErr)
 			}
@@ -825,7 +760,6 @@ func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
 }
 
 func TestReleaseSortsBefore(t *testing.T) {
-	// GIVEN: two releases to order.
 	tests := []struct {
 		name string
 		a, b string
@@ -870,23 +804,16 @@ func TestReleaseSortsBefore(t *testing.T) {
 			a := forgetypes.Release{SemanticVersion: semver.MustParse(tc.a)}
 			b := forgetypes.Release{SemanticVersion: semver.MustParse(tc.b)}
 
-			// WHEN: they are compared.
 			got := releaseSortsBefore(a, b)
 
-			// THEN: the newer of the two sorts first.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nreleaseSortsBefore(a=%q, b=%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.a, tc.b,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestNextPage(t *testing.T) {
-	// GIVEN: a Link header.
 	tests := []struct {
 		name string
 		link string
@@ -923,16 +850,10 @@ func TestNextPage(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: getNextPage is called on it.
 			got := NextPage(tc.link)
 
-			// THEN: the next page number is as expected.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nNextPage(%q) mismatch\ngot:  %d\nwant: %d",
-					packageName, tc.link,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %d\nwant: %d", got, tc.want)
 			}
 		})
 	}

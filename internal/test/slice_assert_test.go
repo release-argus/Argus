@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -25,21 +24,18 @@ import (
 )
 
 func TestAssertSlicesEqualFunc(t *testing.T) {
-	prefix := t.Name()
 	targetToUse := "target"
-	// GIVEN: two slices to compare.
+
 	tests := []struct {
 		name                             string
 		a, b                             []any
 		eq                               func(any, any) bool
-		want                             bool
 		noTargetErrRegex, targetErrRegex string
 	}{
 		{
 			name: "equal",
 			a:    []any{"foo", "bar"},
 			b:    []any{"foo", "bar"},
-			want: true,
 			eq: func(a, b any) bool {
 				return a == b
 			},
@@ -51,16 +47,16 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 			a:                nil,
 			b:                []any{},
 			eq:               func(a, b any) bool { return a == b },
-			noTargetErrRegex: fmt.Sprintf("%s nil mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s nil mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^nil mismatch\n`,
+			targetErrRegex:   `^` + targetToUse + ` nil mismatch\n`,
 		},
 		{
 			name:             "explicitly empty is not unset",
 			a:                []any{},
 			b:                nil,
 			eq:               func(a, b any) bool { return a == b },
-			noTargetErrRegex: fmt.Sprintf("%s nil mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s nil mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^nil mismatch\n`,
+			targetErrRegex:   `^` + targetToUse + ` nil mismatch\n`,
 		},
 		{
 			name:             "both unset",
@@ -85,8 +81,8 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 			eq: func(a, b any) bool {
 				return a == b
 			},
-			noTargetErrRegex: fmt.Sprintf("%s length mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s length mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^length mismatch\n`,
+			targetErrRegex:   `^` + targetToUse + ` length mismatch\n`,
 		},
 		{
 			name: "element mismatch",
@@ -95,8 +91,8 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 			eq: func(a, b any) bool {
 				return a == b
 			},
-			noTargetErrRegex: fmt.Sprintf(`%s\[1\] element mismatch`, prefix),
-			targetErrRegex:   fmt.Sprintf(`%s %s\[1\] element mismatch`, prefix, targetToUse),
+			noTargetErrRegex: `\[1\] element mismatch`,
+			targetErrRegex:   targetToUse + `\[1\] element mismatch`,
 		},
 	}
 
@@ -106,42 +102,26 @@ func TestAssertSlicesEqualFunc(t *testing.T) {
 
 			target := ""
 
-			// WHEN: AssertSlicesEqualFunc is called with no target
-			err := AssertSlicesEqualFunc(t, tc.a, tc.b, tc.eq, prefix, target)
-
-			// THEN: The error is as expected.
+			err := AssertSlicesEqualFunc(t, tc.a, tc.b, tc.eq, target)
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.noTargetErrRegex).MatchString(e) {
-				t.Errorf(
-					"%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.a, tc.b, target,
-					e, tc.noTargetErrRegex,
-				)
+				t.Errorf("no target: error mismatch\ngot:  %q\nwant: %q", e, tc.noTargetErrRegex)
 			}
 
-			// GIVEN: a target
 			target = targetToUse
 
-			// WHEN: AssertSlicesEqualFunc is called with a target
-			err = AssertSlicesEqualFunc(t, tc.a, tc.b, tc.eq, "TestAssertSlicesEqualFunc", target)
-
-			// THEN: The error is as expected.
+			err = AssertSlicesEqualFunc(t, tc.a, tc.b, tc.eq, target)
 			e = errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.targetErrRegex).MatchString(e) {
-				t.Errorf(
-					"%s\nAssertSlicesEqualFunc(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.a, tc.b, target,
-					e, tc.targetErrRegex,
-				)
+				t.Errorf("target: error mismatch\ngot:  %q\nwant: %q", e, tc.targetErrRegex)
 			}
 		})
 	}
 }
 
 func TestAssertSlicesEqual(t *testing.T) {
-	prefix := t.Name()
 	targetToUse := "target"
-	// GIVEN: two slices of comparable elements to compare.
+
 	tests := []struct {
 		name                             string
 		a, b                             []string
@@ -169,35 +149,35 @@ func TestAssertSlicesEqual(t *testing.T) {
 		{
 			name:             "nil (unset) != empty",
 			b:                []string{},
-			noTargetErrRegex: fmt.Sprintf("%s nil mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s nil mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^nil mismatch\ngot:  nil\nwant: \[\]$`,
+			targetErrRegex:   `^` + targetToUse + ` nil mismatch\n`,
 		},
 		{
 			name:             "empty != nil (unset)",
 			a:                []string{},
-			noTargetErrRegex: fmt.Sprintf("%s nil mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s nil mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^nil mismatch\n`,
+			targetErrRegex:   `^` + targetToUse + ` nil mismatch\n`,
 		},
 		{
 			name:             "length mismatch",
 			a:                []string{"foo"},
 			b:                []string{"foo", "bar"},
-			noTargetErrRegex: fmt.Sprintf("%s length mismatch", prefix),
-			targetErrRegex:   fmt.Sprintf("%s %s length mismatch", prefix, targetToUse),
+			noTargetErrRegex: `^length mismatch\n`,
+			targetErrRegex:   `^` + targetToUse + ` length mismatch\n`,
 		},
 		{
 			name:             "element mismatch",
 			a:                []string{"foo", "bar"},
 			b:                []string{"foo", "baz"},
-			noTargetErrRegex: fmt.Sprintf(`%s\[1\] element mismatch`, prefix),
-			targetErrRegex:   fmt.Sprintf(`%s %s\[1\] element mismatch`, prefix, targetToUse),
+			noTargetErrRegex: `^\[1\] element mismatch\ngot:  "bar" \(\["foo" "bar"\]\)\nwant: "baz" \(\["foo" "baz"\]\)$`,
+			targetErrRegex:   targetToUse + `\[1\] element mismatch`,
 		},
 		{
 			name:             "order mismatch",
 			a:                []string{"foo", "bar"},
 			b:                []string{"bar", "foo"},
-			noTargetErrRegex: fmt.Sprintf(`%s\[0\] element mismatch`, prefix),
-			targetErrRegex:   fmt.Sprintf(`%s %s\[0\] element mismatch`, prefix, targetToUse),
+			noTargetErrRegex: `\[0\] element mismatch`,
+			targetErrRegex:   targetToUse + `\[0\] element mismatch`,
 		},
 	}
 
@@ -205,44 +185,26 @@ func TestAssertSlicesEqual(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: no target.
 			target := ""
 
-			// WHEN: AssertSlicesEqual is called with no target.
-			err := AssertSlicesEqual(t, tc.a, tc.b, prefix, target)
-
-			// THEN: the error is as expected.
+			err := AssertSlicesEqual(t, tc.a, tc.b, target)
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.noTargetErrRegex).MatchString(e) {
-				t.Errorf(
-					"%s\nAssertSlicesEqual(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.a, tc.b, target,
-					e, tc.noTargetErrRegex,
-				)
+				t.Errorf("no target: error mismatch\ngot:  %q\nwant: %q", e, tc.noTargetErrRegex)
 			}
 
-			// GIVEN: a target.
 			target = targetToUse
 
-			// WHEN: AssertSlicesEqual is called with a target.
-			err = AssertSlicesEqual(t, tc.a, tc.b, prefix, target)
-
-			// THEN: the error names it.
+			err = AssertSlicesEqual(t, tc.a, tc.b, target)
 			e = errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.targetErrRegex).MatchString(e) {
-				t.Errorf(
-					"%s\nAssertSlicesEqual(a=%v, b=%v, target=%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.a, tc.b, target,
-					e, tc.targetErrRegex,
-				)
+				t.Errorf("target: error mismatch\ngot:  %q\nwant: %q", e, tc.targetErrRegex)
 			}
 		})
 	}
 }
 
 func TestAssertSlicesEqual__otherComparableTypes(t *testing.T) {
-	prefix := t.Name()
-	// GIVEN: slices of types other than string.
 	tests := []struct {
 		name     string
 		invoke   func(t *testing.T) error
@@ -251,21 +213,21 @@ func TestAssertSlicesEqual__otherComparableTypes(t *testing.T) {
 		{
 			name: "ints/equal",
 			invoke: func(t *testing.T) error {
-				return AssertSlicesEqual(t, []int{1, 2}, []int{1, 2}, prefix, "")
+				return AssertSlicesEqual(t, []int{1, 2}, []int{1, 2}, "")
 			},
 			errRegex: `^$`,
 		},
 		{
 			name: "ints/mismatch",
 			invoke: func(t *testing.T) error {
-				return AssertSlicesEqual(t, []int{1, 2}, []int{1, 3}, prefix, "")
+				return AssertSlicesEqual(t, []int{1, 2}, []int{1, 3}, "")
 			},
 			errRegex: `\[1\] element mismatch`,
 		},
 		{
 			name: "bools/mismatch",
 			invoke: func(t *testing.T) error {
-				return AssertSlicesEqual(t, []bool{true}, []bool{false}, prefix, "")
+				return AssertSlicesEqual(t, []bool{true}, []bool{false}, "")
 			},
 			errRegex: `\[0\] element mismatch`,
 		},
@@ -275,16 +237,10 @@ func TestAssertSlicesEqual__otherComparableTypes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: AssertSlicesEqual is called.
 			err := tc.invoke(t)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf(
-					"%s\nerror mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}

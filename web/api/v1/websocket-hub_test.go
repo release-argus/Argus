@@ -18,7 +18,6 @@ package v1
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -28,34 +27,37 @@ import (
 )
 
 func TestNewHub(t *testing.T) {
-	// GIVEN: we want a WebSocket Hub.
-
-	// WHEN: we create a new one with NewHub.
 	hub := NewHub()
 
-	prefix := fmt.Sprintf("%s\nNewHub()", packageName)
-
-	// THEN: it returns a Hub with all the channels and maps initialised.
 	fieldTests := []test.FieldAssertion{
-		{Name: "Broadcast", Got: hub.Broadcast, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "register", Got: hub.register, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "unregister", Got: hub.unregister, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "query", Got: hub.query, Want: nil, Mode: test.CompareNotEqual},
-		{Name: "clients", Got: hub.clients, Want: nil, Mode: test.CompareNotEqual},
+		{Name: "Broadcast", Got: hub.Broadcast, Mode: test.CompareNotNil},
+		{Name: "register", Got: hub.register, Mode: test.CompareNotNil},
+		{Name: "unregister", Got: hub.unregister, Mode: test.CompareNotNil},
+		{Name: "query", Got: hub.query, Mode: test.CompareNotNil},
+		{Name: "clients", Got: hub.clients, Mode: test.CompareNotNil},
 	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+	if testErr := test.AssertFields(t, fieldTests, "Hub"); testErr != nil {
 		t.Fatal(testErr)
 	}
 }
 
 // hubQuery runs fn against the clients map on the Run goroutine, so a live hub can
-// be read race-free. Requires Run() to be active.
+// be read race-free. Panics if Run() does not answer within 5s.
 func hubQuery[T any](h *Hub, fn func(map[*Client]bool) T) T {
+	timeout := time.After(5 * time.Second)
 	done := make(chan T, 1)
-	h.query <- func(clients map[*Client]bool) {
-		done <- fn(clients)
+	select {
+	case h.query <- func(clients map[*Client]bool) { done <- fn(clients) }:
+	case <-timeout:
+		panic("hubQuery: Hub.Run() did not accept the query within 5s")
 	}
-	return <-done
+
+	select {
+	case got := <-done:
+		return got
+	case <-timeout:
+		panic("hubQuery: Hub.Run() did not answer the query within 5s")
+	}
 }
 
 // drainBroadcasts waits for [Hub.Run] to dequeue every queued broadcast, then
@@ -97,7 +99,6 @@ func (h *Hub) clientList() []*Client {
 }
 
 func TestAnnounceMSG_ServiceID(t *testing.T) {
-	// GIVEN: announce messages of every shape.
 	tests := []struct {
 		name string
 		msg  AnnounceMSG
@@ -143,111 +144,89 @@ func TestAnnounceMSG_ServiceID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nAnnounceMSG.serviceID()", packageName)
-
-			// WHEN: the service ID is extracted.
 			got := tc.msg.serviceID()
 
-			// THEN: it matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nresult mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHub_AddClient(t *testing.T) {
-	// GIVEN: a Hub and two clients (not connected).
 	hub := NewHub()
 	client := testClient()
 	otherClient := testClient()
 
-	// WHEN: the clients register.
 	hub.addClient(&client)
 	hub.addClient(&otherClient)
 
-	// THEN: those client are both registered to the Hub.
 	if !hub.clients[&client] {
-		t.Errorf("%s\nclient 1 wasn't registered to the Hub with addClient", packageName)
+		t.Error("Hub.clients[client] mismatch\ngot:  false\nwant: true")
 	}
 	if !hub.clients[&otherClient] {
-		t.Errorf("%s\nclient 2 wasn't registered to the Hub with addClient", packageName)
+		t.Error("Hub.clients[otherClient] mismatch\ngot:  false\nwant: true")
 	}
 }
 
 func TestHub_RemoveClient(t *testing.T) {
-	// GIVEN: a Hub with two registered clients.
 	hub := NewHub()
 	client := testClient()
 	otherClient := testClient()
 	hub.addClient(&client)
 	hub.addClient(&otherClient)
 	if !hub.clients[&client] || !hub.clients[&otherClient] {
-		t.Errorf("%s\nclient wasn't registered to the Hub", packageName)
+		t.Fatalf(
+			"before removal: Hub.clients mismatch\n"+
+				"got:  client=%t, otherClient=%t\nwant: client=true, otherClient=true",
+			hub.clients[&client], hub.clients[&otherClient],
+		)
 	}
 
-	// WHEN: the clients disconnect.
 	hub.removeClient(&client)
 	hub.removeClient(&otherClient)
 
-	// THEN: those client are unregistered from the Hub.
 	if hub.clients[&client] {
-		t.Errorf(
-			"%s\nclient 1 should have been removed from the Hub after removeClient\nremaining clients: %d",
-			packageName, len(hub.clients),
-		)
+		t.Error("after removal: Hub.clients[client] mismatch\ngot:  true\nwant: false")
 	}
 	if hub.clients[&otherClient] {
-		t.Errorf(
-			"%s\nclient 2 should have been removed from the Hub after removeClient\nremaining clients: %d",
-			packageName, len(hub.clients),
-		)
+		t.Error("after removal: Hub.clients[otherClient] mismatch\ngot:  true\nwant: false")
 	}
 }
 
 func TestHub_Broadcast(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
-
-	// GIVEN: a Hub with a registered client.
 	client := testClient()
 	hub := client.hub
 	hub.addClient(&client)
 
-	// AND: a valid message.
 	msg := AnnounceMSG{
 		Type:    "test",
 		SubType: "something",
 	}
 
-	// WHEN: that message is broadcast.
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
-		t.Fatalf(
-			"%s failed to marshal broadcast message: %v",
-			prefix, err,
-		)
+		t.Fatalf("decode.Marshal() failed: %v", err)
 	}
 	hub.broadcast(data)
 
-	// THEN: that message is broadcast to the client.
-	got := <-client.send
+	var got []byte
+	select {
+	case got = <-client.send:
+	case <-time.After(time.Second):
+		t.Fatal("Client.send message count mismatch\ngot:  0\nwant: 1")
+	}
+
 	var gotMsg AnnounceMSG
-	_ = decode.Unmarshal("json", got, &gotMsg)
+	if err := decode.Unmarshal("json", got, &gotMsg); err != nil {
+		t.Fatalf("decode.Unmarshal() failed: %v", err)
+	}
 	if gotMsg != msg {
-		t.Errorf(
-			"%s message should have been received by the client channel\ngot:  %v\nwant: %v",
-			prefix, gotMsg, msg,
-		)
+		t.Errorf("Client.send message mismatch\ngot:  %q\nwant: %q", got, data)
 	}
 }
 
 func TestHub_Broadcast_allClients(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
-
-	// GIVEN: a Hub with multiple registered clients.
 	hub := NewHub()
 	clientA := testClient()
 	clientB := testClient()
@@ -256,145 +235,128 @@ func TestHub_Broadcast_allClients(t *testing.T) {
 	hub.addClient(&clientB)
 	hub.addClient(&clientC)
 
-	// AND: a valid message.
 	msg := AnnounceMSG{
 		Type:    "test",
 		SubType: "something",
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
-		t.Fatalf(
-			"%s failed to marshal broadcast message: %v",
-			prefix, err,
-		)
+		t.Fatalf("decode.Marshal() failed: %v", err)
 	}
 
-	// WHEN: that message is broadcast.
 	hub.broadcast(data)
 
-	// THEN: every registered client receives the message.
-	for name, client := range map[string]*Client{
-		"A": &clientA,
-		"B": &clientB,
-		"C": &clientC,
+	for _, c := range []struct {
+		name   string
+		client *Client
+	}{
+		{name: "A", client: &clientA},
+		{name: "B", client: &clientB},
+		{name: "C", client: &clientC},
 	} {
-		select {
-		case got := <-client.send:
-			var gotMsg AnnounceMSG
-			if unmarshalErr := decode.Unmarshal("json", got, &gotMsg); unmarshalErr != nil {
-				t.Errorf(
-					"%s client %q failed to unmarshal broadcast: %v",
-					prefix, name, unmarshalErr,
-				)
-				continue
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			select {
+			case got := <-c.client.send:
+				var gotMsg AnnounceMSG
+				if unmarshalErr := decode.Unmarshal("json", got, &gotMsg); unmarshalErr != nil {
+					t.Fatalf("decode.Unmarshal() failed: %v", unmarshalErr)
+				}
+				if gotMsg != msg {
+					t.Errorf("Client.send message mismatch\ngot:  %q\nwant: %q", got, data)
+				}
+			default:
+				t.Error("Client.send message count mismatch\ngot:  0\nwant: 1")
 			}
-			if gotMsg != msg {
-				t.Errorf(
-					"%s client %q message mismatch\ngot:  %v\nwant: %v",
-					prefix, name, gotMsg, msg,
-				)
-			}
-		default:
-			t.Errorf(
-				"%s client %q did not receive the broadcast",
-				prefix, name,
-			)
-		}
+		})
 	}
 }
 
 func TestHub_Broadcast__dropsFullClient(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nHub.broadcast()", packageName)
-
-	// GIVEN: a hub with a client whose outbound buffer is full and another with capacity.
 	hub := NewHub()
 	slowClient := Client{
 		ip:   "1.1.1.1",
 		send: make(chan []byte, 1),
 	}
-	slowClient.send <- []byte(`{"type":"test"}`)
+	staleMessage := `{"type":"test"}`
+	slowClient.send <- []byte(staleMessage)
 	readyClient := testClient()
 	hub.addClient(&slowClient)
 	hub.addClient(&readyClient)
 
-	// AND: a valid message.
 	msg := AnnounceMSG{
 		Type:    "test",
 		SubType: "something",
 	}
 	data, err := decode.Marshal("json", msg)
 	if err != nil {
-		t.Fatalf(
-			"%s failed to marshal broadcast message: %v",
-			prefix, err,
-		)
+		t.Fatalf("decode.Marshal() failed: %v", err)
 	}
 
-	// WHEN: that message is broadcast.
 	hub.broadcast(data)
 
-	// THEN: the slow client is removed from the Hub.
 	if hub.clients[&slowClient] {
-		t.Errorf("%s slow client should have been removed from the Hub as outbound buffer is full", prefix)
+		t.Error("slow client: Hub.clients[slowClient] mismatch\ngot:  true\nwant: false (dropped)")
 	}
 
-	// AND: its send channel is closed.
-	if _, ok := <-slowClient.send; !ok {
-		t.Errorf("%s slow client send channel should still hold the previous message", prefix)
+	select {
+	case got, ok := <-slowClient.send:
+		if !ok || string(got) != staleMessage {
+			t.Errorf(
+				"slow client: first Client.send receive mismatch\ngot:  %q (ok=%t)\nwant: %q",
+				got, ok, staleMessage,
+			)
+		}
+	case <-time.After(time.Second):
+		t.Errorf(
+			"slow client: first Client.send receive mismatch\ngot:  empty\nwant: %q",
+			staleMessage,
+		)
 	}
-	if _, ok := <-slowClient.send; ok {
-		t.Errorf("%s slow client send channel should be empty as it was closed", prefix)
+	select {
+	case _, ok := <-slowClient.send:
+		if ok {
+			t.Error("slow client: second Client.send receive mismatch\ngot:  message\nwant: closed")
+		}
+	case <-time.After(time.Second):
+		t.Error("slow client: second Client.send receive mismatch\ngot:  open\nwant: closed")
 	}
 
-	// AND: the ready client is still registered.
 	if !hub.clients[&readyClient] {
-		t.Errorf("%s ready client should still be registered", prefix)
+		t.Error("ready client: Hub.clients[readyClient] mismatch\ngot:  false\nwant: true")
 	}
 
-	// AND: it received the message.
-	got := <-readyClient.send
+	var got []byte
+	select {
+	case got = <-readyClient.send:
+	case <-time.After(time.Second):
+		t.Fatal("ready client: Client.send message count mismatch\ngot:  0\nwant: 1")
+	}
 	var gotMsg AnnounceMSG
 	if unmarshalErr := decode.Unmarshal("json", got, &gotMsg); unmarshalErr != nil {
-		t.Fatalf(
-			"%s ready client failed to unmarshal broadcast: %v",
-			prefix, unmarshalErr,
-		)
+		t.Fatalf("ready client: decode.Unmarshal() failed: %v", unmarshalErr)
 	}
 	if gotMsg != msg {
-		t.Errorf(
-			"%s ready client message mismatch\ngot:  %v\nwant: %v",
-			prefix, gotMsg, msg,
-		)
+		t.Errorf("ready client: Client.send message mismatch\ngot:  %q\nwant: %q", got, data)
 	}
 }
 
 func TestHub_Broadcast__invalid(t *testing.T) {
-	// GIVEN: a Hub with a registered Client.
 	client := testClient()
 	hub := client.hub
 	hub.addClient(&client)
 
-	// AND: an invalid message.
-	msg := []byte("key: value\nkey: value")
+	hub.broadcast([]byte("key: value\nkey: value"))
 
-	// WHEN: that message is broadcast.
-	data, _ := decode.Marshal("json", msg)
-	hub.broadcast(data)
-
-	// THEN: that message is NOT sent to the client.
 	got := len(client.send)
 	want := 0
 	if got != want {
-		t.Errorf(
-			"%s\nHub.broadcast() message should have failed Unmarshal and not been sent\n"+
-				"got:  %d\nwant: %d",
-			packageName, got, want,
-		)
+		t.Errorf("Client.send message count mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 
 func TestHub_Broadcast__readableFiltering(t *testing.T) {
-	// GIVEN: a running hub with an unrestricted and a restricted client.
 	hub := NewHub()
 	go hub.Run(t.Context())
 
@@ -410,9 +372,6 @@ func TestHub_Broadcast__readableFiltering(t *testing.T) {
 	hub.register <- unrestricted
 	hub.register <- restricted
 
-	prefix := fmt.Sprintf("%s\nHub broadcast filtering", packageName)
-
-	// WHEN: messages about different services are broadcast.
 	messages := [][]byte{
 		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"allowed-svc"}}`),
 		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"secret-svc"}}`),
@@ -424,32 +383,30 @@ func TestHub_Broadcast__readableFiltering(t *testing.T) {
 	}
 	drainBroadcasts(t, hub)
 
-	// THEN: the unrestricted client received everything.
-	if got := len(unrestricted.send); got != len(messages) {
+	if got, want := len(unrestricted.send), len(messages); got != want {
 		t.Errorf(
-			"%s\nunrestricted message count mismatch\ngot:  %d\nwant: %d",
-			prefix, got, len(messages),
+			"unrestricted client: Client.send message count mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
 	}
 
-	// AND: the restricted client received only its service's message.
-	if got := len(restricted.send); got != 1 {
+	// Only allowed-svc's message: ORDER names no service.
+	if got, want := len(restricted.send), 1; got != want {
 		t.Fatalf(
-			"%s\nrestricted message count mismatch\ngot:  %d\nwant: 1",
-			prefix, got,
+			"restricted client: Client.send message count mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
 	}
 	received := <-restricted.send
-	if !strings.Contains(string(received), "allowed-svc") {
+	if want := "allowed-svc"; !strings.Contains(string(received), want) {
 		t.Errorf(
-			"%s\nrestricted client received the wrong message: %s",
-			prefix, received,
+			"restricted client: Client.send message mismatch\ngot:  %q\nwant: %q",
+			received, want,
 		)
 	}
 }
 
 func TestHub_Broadcast__actionableFiltering(t *testing.T) {
-	// GIVEN: a running hub with clients of differing service_action grants.
 	hub := NewHub()
 	go hub.Run(t.Context())
 
@@ -473,9 +430,6 @@ func TestHub_Broadcast__actionableFiltering(t *testing.T) {
 		hub.register <- client
 	}
 
-	prefix := fmt.Sprintf("%s\nHub broadcast action filtering", packageName)
-
-	// WHEN: version and action messages about a visible service are broadcast.
 	messages := [][]byte{
 		[]byte(`{"page":"APPROVALS","type":"VERSION","sub_type":"QUERY","service_data":{"id":"svc"}}`),
 		[]byte(`{"page":"APPROVALS","type":"COMMAND","sub_type":"EVENT","service_data":{"id":"svc"},"command_data":{"bash -c true":{"failed":false}}}`),
@@ -486,7 +440,6 @@ func TestHub_Broadcast__actionableFiltering(t *testing.T) {
 	}
 	drainBroadcasts(t, hub)
 
-	// THEN: clients holding the service_action:execute grant received every message.
 	for _, tc := range []struct {
 		name   string
 		client *Client
@@ -494,33 +447,30 @@ func TestHub_Broadcast__actionableFiltering(t *testing.T) {
 		{name: "unrestricted", client: unrestricted},
 		{name: "actioner", client: actioner},
 	} {
-		if got := len(tc.client.send); got != len(messages) {
-			t.Errorf(
-				"%s\n%s message count mismatch\ngot:  %d\nwant: %d",
-				prefix, tc.name, got, len(messages),
-			)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			if got, want := len(tc.client.send), len(messages); got != want {
+				t.Errorf("Client.send message count mismatch\ngot:  %d\nwant: %d", got, want)
+			}
+		})
 	}
 
-	// AND: the read-only client received only the VERSION message.
-	if got := len(readOnly.send); got != 1 {
+	// An empty action set withholds COMMAND and WEBHOOK.
+	if got, want := len(readOnly.send), 1; got != want {
 		t.Fatalf(
-			"%s\nread-only message count mismatch\ngot:  %d\nwant: 1",
-			prefix, got,
+			"read-only client: Client.send message count mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
 	}
 	received := <-readOnly.send
-	if !strings.Contains(string(received), `"type":"VERSION"`) {
+	if want := `"type":"VERSION"`; !strings.Contains(string(received), want) {
 		t.Errorf(
-			"%s\nread-only client message mismatch (not VERSION): %s",
-			prefix, received,
+			"read-only client: Client.send message mismatch\ngot:  %q\nwant: %q",
+			received, want,
 		)
 	}
 }
 
 func TestNonEmptySet(t *testing.T) {
-	// GIVEN: sets of values to collect.
-	// Some carrying the blank identity a client has when auth is disabled.
 	tests := []struct {
 		name   string
 		values []string
@@ -537,7 +487,8 @@ func TestNonEmptySet(t *testing.T) {
 			want:   map[string]bool{},
 		},
 		{
-			name:   "empty/only blanks",
+			name: "empty/only blanks",
+			// A blank value is the identity a client has when auth is disabled.
 			values: []string{"", "", ""},
 			want:   map[string]bool{},
 		},
@@ -567,26 +518,10 @@ func TestNonEmptySet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the set is built.
 			got := nonEmptySet(tc.values)
 
-			prefix := fmt.Sprintf(
-				"%s\nnonEmptySet(%v)",
-				packageName, tc.values,
-			)
-
-			// THEN: it holds exactly the non-blank values.
-			if testErr := test.AssertMapEqual(t, got, tc.want, prefix, "set"); testErr != nil {
+			if testErr := test.AssertMapEqual(t, got, tc.want, "set"); testErr != nil {
 				t.Error(testErr)
-			}
-
-			// AND: the blank identity never becomes a member, so a client with
-			// no user/session can never be matched by a kick.
-			if got[""] {
-				t.Errorf(
-					"%s\nthe blank value became a member\ngot: %+v",
-					prefix, got,
-				)
 			}
 		})
 	}
@@ -594,36 +529,30 @@ func TestNonEmptySet(t *testing.T) {
 
 // assertKicked checks which clients were kicked (send channel closed and
 // deregistered) and which were spared, after a Kick*Clients call.
-func assertKicked(t *testing.T, hub *Hub, prefix string, kicked, spared []*Client) {
+func assertKicked(t *testing.T, hub *Hub, kicked, spared []*Client) {
 	t.Helper()
 
 	for i, client := range kicked {
 		if hub.hasClient(client) {
-			t.Errorf(
-				"%s\nkicked client %d should be deregistered",
-				prefix, i,
-			)
+			t.Errorf("kicked %d: Hub.hasClient() mismatch\ngot:  true\nwant: false", i)
 		}
-		if _, open := <-client.send; open {
-			t.Errorf(
-				"%s\nkicked client %d's send channel should be closed",
-				prefix, i,
-			)
+		select {
+		case _, open := <-client.send:
+			if open {
+				t.Errorf("kicked %d: Client.send mismatch\ngot:  message\nwant: closed", i)
+			}
+		case <-time.After(time.Second):
+			t.Errorf("kicked %d: Client.send mismatch\ngot:  open\nwant: closed", i)
 		}
 	}
 	for i, client := range spared {
 		if !hub.hasClient(client) {
-			t.Errorf(
-				"%s\nspared client %d should stay registered",
-				prefix, i,
-			)
+			t.Errorf("spared %d: Hub.hasClient() mismatch\ngot:  false\nwant: true", i)
 		}
 	}
 }
 
 func TestHub_KickUserClients(t *testing.T) {
-	// GIVEN: a running hub with clients of several users,
-	// plus one with no user identity (auth disabled).
 	hub := NewHub()
 	go hub.Run(t.Context())
 	targetTab1 := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a"}
@@ -634,30 +563,23 @@ func TestHub_KickUserClients(t *testing.T) {
 		hub.register <- client
 	}
 
-	prefix := fmt.Sprintf("%s\nHub.KickUserClients()", packageName)
-
-	// WHEN: one user's clients are kicked
-	// (an empty ID must never match the anonymous client).
+	// The empty ID must not match the anonymous client.
 	hub.KickUserClients("user-a", "")
 
-	// THEN: only that user's clients are kicked; the rest are spared.
-	assertKicked(t, hub, prefix,
+	assertKicked(t, hub,
 		[]*Client{targetTab1, targetTab2},
 		[]*Client{otherUser, anonymous},
 	)
 
-	// AND: kicking no users is a no-op.
 	hub.KickUserClients()
 	hub.KickUserClients("")
-	assertKicked(t, hub, prefix,
+	assertKicked(t, hub,
 		nil,
 		[]*Client{otherUser, anonymous},
 	)
 }
 
 func TestHub_KickSessionClients(t *testing.T) {
-	// GIVEN: a running hub with clients of several sessions,
-	// plus one with no session (auth disabled).
 	hub := NewHub()
 	go hub.Run(t.Context())
 	target := &Client{hub: hub, send: make(chan []byte, 8), userID: "user-a", sessionHash: "hash-1"}
@@ -668,30 +590,23 @@ func TestHub_KickSessionClients(t *testing.T) {
 		hub.register <- client
 	}
 
-	prefix := fmt.Sprintf("%s\nHub.KickSessionClients()", packageName)
-
-	// WHEN: one session's clients are kicked
-	// (an empty hash must never match the anonymous client).
+	// The empty hash must not match the anonymous client.
 	hub.KickSessionClients("hash-1", "")
 
-	// THEN: only that session's client is kicked - even the same user's
-	// other session survives.
-	assertKicked(t, hub, prefix,
+	assertKicked(t, hub,
 		[]*Client{target},
 		[]*Client{sameUserOtherSession, otherUser, anonymous},
 	)
 
-	// AND: kicking no sessions is a no-op.
 	hub.KickSessionClients()
 	hub.KickSessionClients("")
-	assertKicked(t, hub, prefix,
+	assertKicked(t, hub,
 		nil,
 		[]*Client{sameUserOtherSession, otherUser, anonymous},
 	)
 }
 
 func TestHub_KickRestrictedClients(t *testing.T) {
-	// GIVEN: a running hub with restricted and unrestricted clients.
 	hub := NewHub()
 	go hub.Run(t.Context())
 	unrestricted := &Client{hub: hub, send: make(chan []byte, 8)}
@@ -702,20 +617,16 @@ func TestHub_KickRestrictedClients(t *testing.T) {
 		hub.register <- client
 	}
 
-	prefix := fmt.Sprintf("%s\nHub.KickRestrictedClients()", packageName)
-
-	// WHEN: the restricted clients are kicked.
 	hub.KickRestrictedClients()
 
-	// THEN: only clients with a permitted-service set are kicked.
-	assertKicked(t, hub, prefix,
+	// Any non-nil set restricts, even an empty one.
+	assertKicked(t, hub,
 		[]*Client{restricted, restrictedToNothing, actionRestricted},
 		[]*Client{unrestricted},
 	)
 }
 
 func TestHub_Run__stopsWithContext(t *testing.T) {
-	// GIVEN: a running Hub running with a context and a registered client.
 	hub := NewHub()
 	ctx, cancel := context.WithCancel(t.Context())
 	stopped := make(chan struct{})
@@ -726,20 +637,14 @@ func TestHub_Run__stopsWithContext(t *testing.T) {
 	client := &Client{hub: hub, send: make(chan []byte, 8)}
 	hub.register <- client
 
-	// WHEN: the context is cancelled.
 	cancel()
 
-	// THEN: Run returns.
 	select {
 	case <-stopped:
 	case <-time.After(time.Second):
-		t.Fatalf(
-			"%s\nHub.Run() did not return after its context was cancelled",
-			packageName,
-		)
+		t.Fatal("Hub.Run() mismatch\ngot:  running after 1s\nwant: returned")
 	}
 
-	// AND: a client unregistering afterwards is not stranded.
 	unregistered := make(chan struct{})
 	go func() {
 		client.unregister()
@@ -748,13 +653,9 @@ func TestHub_Run__stopsWithContext(t *testing.T) {
 	select {
 	case <-unregistered:
 	case <-time.After(time.Second):
-		t.Errorf(
-			"%s\nClient.unregister() blocked on a stopped Hub",
-			packageName,
-		)
+		t.Error("Client.unregister() mismatch\ngot:  blocked after 1s\nwant: returned")
 	}
 
-	// AND: a kick against the stopped Hub returns rather than blocking.
 	kicked := make(chan struct{})
 	go func() {
 		hub.KickUserClients("user-a")
@@ -763,9 +664,6 @@ func TestHub_Run__stopsWithContext(t *testing.T) {
 	select {
 	case <-kicked:
 	case <-time.After(time.Second):
-		t.Errorf(
-			"%s\nHub.KickUserClients() blocked on a stopped Hub",
-			packageName,
-		)
+		t.Error("Hub.KickUserClients() mismatch\ngot:  blocked after 1s\nwant: returned")
 	}
 }

@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
@@ -43,9 +42,7 @@ import (
 )
 
 func TestAPI_Get(t *testing.T) {
-	// GIVEN: a DB is running (see TestMain).
-
-	// WHEN: a message is send to the DatabaseChannel targeting latest_version.
+	// Uses the DB that [TestMain] runs.
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	cfg.DatabaseChannel <- dbtype.Message{
@@ -54,77 +51,56 @@ func TestAPI_Get(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	// THEN: the cell was changed in the DB.
 	otherCfg := testConfig(t)
 	otherCfg.Settings.Data.DatabaseFile = t.Name() + "-copy.db"
 	bytesRead, err := os.ReadFile(cfg.Settings.Data.DatabaseFile)
 	if err != nil {
-		t.Fatalf("%s\n%v", packageName, err)
+		t.Fatalf("os.ReadFile() failed: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Remove(otherCfg.Settings.Data.DatabaseFile) })
 	err = os.WriteFile(otherCfg.Settings.Data.DatabaseFile, bytesRead, os.FileMode(0644))
 	if err != nil {
-		t.Fatalf("%s\n%v", packageName, err)
+		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
 	tAPI := api{config: otherCfg}
 	t.Cleanup(func() { dbCleanup(&tAPI) })
 	tAPI.initialise()
 	got := queryRow(t, tAPI.db, target)
-	want := status.Status{}
-	want.Init(
-		0, 0, 0,
-		status.ServiceInfo{
-			ID: target,
-		},
-		&dashboard.Options{
-			WebURL: "https://example.com",
-		},
-	)
-	want.SetLatestVersion("9.9.9", "2022-01-01T01:01:01Z", false)
-	want.SetDeployedVersion("0.0.0", "2020-01-01T01:01:01Z", false)
-	want.SetApprovedVersion("0.0.1", false)
-	if got.LatestVersion() != want.LatestVersion() {
+	if got.LatestVersion() != cell.Value {
 		t.Errorf(
-			"%s\nwant: %q to be updated to %q\ngot:  %q",
-			packageName, cell.Column, cell.Value, got,
+			"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+			got.LatestVersion(), cell.Value,
 		)
 	}
 }
 
 func TestAPI_Get__fail(t *testing.T) {
-	// GIVEN: a DB to set up.
 	tests := []struct {
-		name         string
-		setupDB      func(cfg *config.Config)
-		deleteDBFile bool
-		ok           bool
-		errRegex     string
+		name     string
+		setupDB  func(t *testing.T, cfg *config.Config)
+		ok       bool
+		errRegex string
 	}{
 		{
 			name: "initialise fails",
-			setupDB: func(cfg *config.Config) {
+			setupDB: func(t *testing.T, cfg *config.Config) {
 				// Directory rather than file.
 				cfg.Settings.Data.DatabaseFile = t.TempDir()
-				fmt.Println()
 			},
 			ok:       false,
 			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db .+ path "[^"]+" .*is a directory, not a file` + "\n$",
 		},
 		{
 			name: "removeUnknownServices fails",
-			setupDB: func(cfg *config.Config) {
-				// Drop required column so removeUnknownServices fails.
+			setupDB: func(t *testing.T, cfg *config.Config) {
 				tAPI := testAPI(t)
-				t.Cleanup(func() { dbCleanup(tAPI) })
 				tAPI.initialise()
 				defer tAPI.db.Close()
-				if _, err := tAPI.db.Exec("DROP TABLE status"); err != nil {
-					t.Fatalf(
-						"%s\nerror dropping table in setupDB:\n%v",
-						packageName, err,
-					)
-				}
-				if _, err := tAPI.db.Exec(`
+				// Recreate status without an id column so api.removeUnknownServices fails.
+				test.DropTable(t, tAPI.db, "status")
+				test.ExecSQL(
+					t, tAPI.db,
+					`
 					CREATE TABLE IF NOT EXISTS status (
 						name TEXT PRIMARY KEY,
 						latest_version TEXT,
@@ -133,13 +109,7 @@ func TestAPI_Get__fail(t *testing.T) {
 						deployed_version_timestamp TEXT,
 						approved_version TEXT
 					);`,
-				); err != nil {
-					t.Fatalf(
-						"%s\nerror creating table in setupDB:\n%v",
-						packageName, err,
-					)
-				}
-				if _, err := tAPI.db.Exec(`
+					`
 					INSERT INTO status (
 						latest_version,
 						latest_version_timestamp,
@@ -152,12 +122,7 @@ func TestAPI_Get__fail(t *testing.T) {
 					  '0.0.0',
 					  '2020-01-01T01:01:01Z',
 					  '0.0.1')`,
-				); err != nil {
-					t.Fatalf(
-						"%s\nerror inserting row in setupDB:\n%v",
-						packageName, err,
-					)
-				}
+				)
 				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
 			},
 			ok:       false,
@@ -165,17 +130,13 @@ func TestAPI_Get__fail(t *testing.T) {
 		},
 		{
 			name: "extractServiceStatus fails",
-			setupDB: func(cfg *config.Config) {
-				// Drop required column so extractServiceStatus fails.
+			setupDB: func(t *testing.T, cfg *config.Config) {
 				tAPI := testAPI(t)
-				t.Cleanup(func() { dbCleanup(tAPI) })
 				tAPI.initialise()
 				defer tAPI.db.Close()
+				// Drop a required column so [api.extractServiceStatus] fails.
 				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN deployed_version;"); err != nil {
-					t.Fatalf(
-						"%s\nerror dropping column in setupDB:\n%v",
-						packageName, err,
-					)
+					t.Fatalf("drop column: DB.Exec() failed: %v", err)
 				}
 				if _, err := tAPI.db.Exec(`
 					INSERT INTO status (
@@ -191,10 +152,7 @@ func TestAPI_Get__fail(t *testing.T) {
 					  '2020-01-01T01:01:01Z',
 					  '0.0.1')`,
 				); err != nil {
-					t.Fatalf(
-						"%s\nerror inserting row in setupDB:\n%v",
-						packageName, err,
-					)
+					t.Fatalf("insert: DB.Exec() failed: %v", err)
 				}
 				cfg.Settings.Data.DatabaseFile = tAPI.config.Settings.Data.DatabaseFile
 			},
@@ -203,7 +161,7 @@ func TestAPI_Get__fail(t *testing.T) {
 		},
 		{
 			name:     "success",
-			setupDB:  func(cfg *config.Config) {},
+			setupDB:  func(t *testing.T, cfg *config.Config) {},
 			ok:       true,
 			errRegex: `^(?:INFO: [^\n]*\n)*$`,
 		},
@@ -211,43 +169,99 @@ func TestAPI_Get__fail(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tAPI := testAPI(t)
 			tAPI.initialise()
-			tc.setupDB(tAPI.config)
+			tc.setupDB(t, tAPI.config)
 
 			go tAPI.Handler(t.Context())
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: that DB is fetched.
-			api := Get(tAPI.config)
-			if api != nil {
-				defer api.db.Close()
-			}
-			resultChannel <- api != nil
-
-			prefix := fmt.Sprintf("%s\napi.removeUnknownServices()", packageName)
-
-			// THEN: the Status in the Config is updated.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool {
+					gotAPI := Get(tAPI.config)
+					if gotAPI == nil {
+						return false
+					}
+					t.Cleanup(func() { _ = gotAPI.db.Close() })
+					return true
+				},
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
-			}
+				tc.errRegex,
+			)
 		})
+	}
+}
+
+func TestAPI_dbHandles(t *testing.T) {
+	tAPI := testAPI(t)
+	tAPI.initialise()
+
+	got := tAPI.DB()
+	if got != tAPI.db {
+		t.Errorf("open: DB mismatch\ngot:  %p\nwant: %p", got, tAPI.db)
+	}
+
+	tAPI.CloseDB()
+	if err := tAPI.db.Ping(); err == nil {
+		t.Error("closed: DB.Ping() error mismatch\ngot:  nil\nwant: non-nil")
+	}
+
+	unopened := &api{}
+	unopened.CloseDB()
+	gotUnopened := unopened.DB()
+	if gotUnopened != nil {
+		t.Errorf("unopened: DB mismatch\ngot:  %p\nwant: nil", gotUnopened)
+	}
+}
+
+// closeFailConn is a connection that cannot be closed.
+type closeFailConn struct {
+	driver.Conn
+}
+
+func (closeFailConn) Close() error { return errors.New("close failed") }
+
+// closeFailConnector hands out connections that cannot be closed.
+type closeFailConnector struct {
+	inner driver.Driver
+}
+
+func (c closeFailConnector) Connect(context.Context) (driver.Conn, error) {
+	conn, err := c.inner.Open(":memory:")
+	if err != nil {
+		return nil, err
+	}
+	return closeFailConn{Conn: conn}, nil
+}
+
+func (c closeFailConnector) Driver() driver.Driver { return c.inner }
+
+func TestAPI_CloseDB__error(t *testing.T) {
+	releaseStdout := test.CaptureLog(t, logx.Default())
+
+	probe, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("sql.Open() failed: %v", err)
+	}
+	tAPI := &api{db: sql.OpenDB(closeFailConnector{inner: probe.Driver()})}
+	_ = probe.Close()
+
+	if err := tAPI.db.Ping(); err != nil {
+		t.Fatalf("DB.Ping() failed: %v", err)
+	}
+
+	tAPI.CloseDB()
+
+	stdout := releaseStdout()
+	wantRegex := `close failed`
+	if !util.RegexCheck(wantRegex, stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, wantRegex)
 	}
 }
 
@@ -258,28 +272,28 @@ func TestAPI_Initialise(t *testing.T) {
 		itemType string
 		data     string
 	}
-	// GIVEN: a config with a database location.
+
 	tests := []struct {
 		name  string
 		ok    bool
 		paths []pathInfo
 	}{
 		{
-			name: "DB/rw-r-r",
+			name: "DB/rw-r--r--",
 			ok:   true,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_644, itemType: "file"},
 			},
 		},
 		{
-			name: "DB/-w--w--w-",
+			name: "DB/r--r--r--",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_444, itemType: "file"},
 			},
 		},
 		{
-			name: "DB/r--r--r--",
+			name: "DB/-w--w--w-",
 			ok:   false,
 			paths: []pathInfo{
 				{path: "argus.db", perms: 0_222, itemType: "file"},
@@ -328,23 +342,16 @@ func TestAPI_Initialise(t *testing.T) {
 				tc.paths[i].path = filepath.Join(baseDir, p.path)
 				if p.itemType == "file" {
 					dbFile = tc.paths[i].path
-					_, _ = os.Create(tc.paths[i].path)
-					if p.data != "" {
-						_ = os.WriteFile(tc.paths[i].path, []byte(p.data), 0_644)
+					if err := os.WriteFile(dbFile, []byte(p.data), 0_644); err != nil {
+						t.Fatalf("os.WriteFile(%q) failed: %v", dbFile, err)
 					}
-					_ = os.Chmod(tc.paths[i].path, 0_644)
-				} else {
-					_ = os.Mkdir(tc.paths[i].path, 0_755)
+				} else if err := os.Mkdir(tc.paths[i].path, 0_755); err != nil {
+					t.Fatalf("os.Mkdir(%q) failed: %v", tc.paths[i].path, err)
 				}
 			}
-			for i := len(tc.paths) - 1; i >= 0; i-- {
-				if err := os.Chmod(tc.paths[i].path, tc.paths[i].perms); err != nil {
-					if tc.paths[i].itemType == "dir" {
-						t.Fatalf(
-							"%s\npaths chmod on %q failed (%q)\nerror: %s",
-							packageName, tc.paths[i].path, tc.paths[i].perms, err,
-						)
-					}
+			for _, v := range slices.Backward(tc.paths) {
+				if err := os.Chmod(v.path, v.perms); err != nil {
+					t.Fatalf("os.Chmod(%q, %#o) failed: %v", v.path, v.perms, err)
 				}
 			}
 			tAPI.config.Settings.Data.DatabaseFile = dbFile
@@ -356,25 +363,22 @@ func TestAPI_Initialise(t *testing.T) {
 			})
 
 			resultChannel := make(chan bool, 1)
-			// WHEN: the db is initialised with it.
+
 			resultChannel <- tAPI.initialise()
 
-			prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
-
-			// THEN: the function failed if the db was unreadable.
-			if err := test.AssertChannelBool(
+			if testErr := test.AssertChannelBool(
 				t,
 				tc.ok,
 				resultChannel,
 				logx.ExitCodeChannel(),
 				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 			if !tc.ok {
 				return
 			}
-			// THEN: the status table was created in the db.
+
 			rows, err := tAPI.db.Query(`
 				SELECT	id,
 						latest_version,
@@ -385,199 +389,49 @@ func TestAPI_Initialise(t *testing.T) {
 				FROM status;`,
 			)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("DB.Query() failed: %v", err)
 			}
-			t.Cleanup(func() { _ = rows.Close() })
-			for rows.Next() {
-				var (
-					id  string
-					lv  string
-					lvt string
-					dv  string
-					dvt string
-					av  string
-				)
-				err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
-			}
+			_ = rows.Close()
 		})
-	}
-}
-
-func TestAPI_dbHandles(t *testing.T) {
-	// GIVEN: an API with an initialised database.
-	tAPI := testAPI(t)
-	tAPI.initialise()
-
-	// WHEN/THEN: DB() hands back the open handle to the DB.
-	if got := tAPI.DB(); got != tAPI.db {
-		t.Errorf(
-			"%s\napi.DB() should return the open handle\ngot: %v",
-			packageName, got,
-		)
-	}
-
-	// AND: CloseDB() closes it.
-	tAPI.CloseDB()
-	if err := tAPI.db.Ping(); err == nil {
-		t.Errorf("%s\napi.CloseDB() left the handle usable", packageName)
-	}
-
-	// AND: an API that never opened a DB closes without complaint.
-	unopened := &api{}
-	unopened.CloseDB()
-	if got := unopened.DB(); got != nil {
-		t.Errorf(
-			"%s\napi.DB() without a database\ngot:  %v\nwant: nil",
-			packageName, got,
-		)
-	}
-}
-
-// closeFailConn is a connection that cannot be closed.
-type closeFailConn struct {
-	driver.Conn
-}
-
-func (closeFailConn) Close() error { return errors.New("close failed") }
-
-// closeFailConnector hands out connections that cannot be closed.
-type closeFailConnector struct {
-	inner driver.Driver
-}
-
-func (c closeFailConnector) Connect(context.Context) (driver.Conn, error) {
-	conn, err := c.inner.Open(":memory:")
-	if err != nil {
-		return nil, err
-	}
-	return closeFailConn{Conn: conn}, nil
-}
-
-func (c closeFailConnector) Driver() driver.Driver { return c.inner }
-
-func TestAPI_CloseDB__error(t *testing.T) {
-	releaseStdout := test.CaptureLog(t, logx.Default())
-
-	// GIVEN: an API holding a database whose connections fail to close.
-	probe, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf(
-			"%s\nsql.Open() for db driver lookup: %v",
-			packageName, err,
-		)
-	}
-	tAPI := &api{db: sql.OpenDB(closeFailConnector{inner: probe.Driver()})}
-	_ = probe.Close()
-
-	// AND: a connection is established to the DB.
-	if err := tAPI.db.Ping(); err != nil {
-		t.Fatalf(
-			"%s\nping: %v",
-			packageName, err,
-		)
-	}
-
-	// WHEN: the database is closed.
-	tAPI.CloseDB()
-
-	// THEN: the failure is logged rather than returned.
-	stdout := releaseStdout()
-	if !util.RegexCheck(`close failed`, stdout) {
-		t.Errorf(
-			"%s\napi.CloseDB() should log the close failure\ngot: %q",
-			packageName, stdout,
-		)
 	}
 }
 
 func TestAPI_Initialise__chmodError(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// GIVEN: a chmod that fails.
 	original := chmodFile
-	customErr := fmt.Errorf("chmod failed")
+	customErr := errors.New("chmod failed")
 	chmodFile = func(_ string, _ os.FileMode) error {
 		return customErr
 	}
 	t.Cleanup(func() { chmodFile = original })
 	errRegex := `^ERROR: db .*` + customErr.Error()
 
-	// AND: an API.
 	tAPI := testAPI(t)
 
-	// WHEN: the DB is initialised.
-	resultChannel := make(chan bool, 1)
-	resultChannel <- tAPI.initialise()
-
-	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
-
-	// THEN: the failure is logged, but initialisation still succeeds.
-	if err := test.AssertChannelBool(
-		t,
-		true,
-		resultChannel,
-		logx.ExitCodeChannel(),
-		releaseStdout,
-	); err != nil {
-		t.Fatal(prefix + err.Error())
-	}
-
-	// AND: stdout recorded the error rather than the tightened-permissions line.
-	stdout := releaseStdout()
-	if !util.RegexCheck(errRegex, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, errRegex,
-		)
-	}
+	// A failed chmod is logged, not fatal.
+	test.AssertCallLog(t, true, tAPI.initialise, logx.ExitCodeChannel(), releaseStdout, errRegex)
 }
 
 func TestAPI_Initialise__openError(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// GIVEN: a failing database open.
 	original := openDatabase
-	customErr := fmt.Errorf("open failed")
+	customErr := errors.New("open failed")
 	openDatabase = func(driverName, dataSourceName string) (*sql.DB, error) {
 		return nil, customErr
 	}
 	t.Cleanup(func() { openDatabase = original })
 	errRegex := `^FATAL: db .*` + customErr.Error()
 
-	// AND: an API.
 	tAPI := testAPI(t)
 
-	// WHEN: the DB is initialised.
-	resultChannel := make(chan bool, 1)
-	resultChannel <- tAPI.initialise()
-
-	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
-
-	// THEN: initialisation fails with a fatal open error.
-	if err := test.AssertChannelBool(
-		t,
-		false,
-		resultChannel,
-		logx.ExitCodeChannel(),
-		releaseStdout,
-	); err != nil {
-		t.Fatal(prefix + err.Error())
-	}
-
-	// AND: stdout recorded the error.
-	stdout := releaseStdout()
-	if !util.RegexCheck(errRegex, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, errRegex,
-		)
-	}
+	test.AssertCallLog(t, false, tAPI.initialise, logx.ExitCodeChannel(), releaseStdout, errRegex)
 }
 
 func TestAPI_Initialise__pingError(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// GIVEN: an open that succeeds lazily but cannot reach the file.
 	original := openDatabase
 	openDatabase = func(_, _ string) (*sql.DB, error) {
 		// sql.Open is lazy, so this only fails once Ping forces a connection.
@@ -586,48 +440,22 @@ func TestAPI_Initialise__pingError(t *testing.T) {
 	t.Cleanup(func() { openDatabase = original })
 	errRegex := `^FATAL: db .* unable to open database file`
 
-	// AND: an API.
 	tAPI := testAPI(t)
 
-	// WHEN: the DB is initialised.
-	resultChannel := make(chan bool, 1)
-	resultChannel <- tAPI.initialise()
-
-	prefix := fmt.Sprintf("%s\napi.initialise()", packageName)
-
-	// THEN: initialisation fails with a fatal ping error.
-	if err := test.AssertChannelBool(
-		t,
-		false,
-		resultChannel,
-		logx.ExitCodeChannel(),
-		releaseStdout,
-	); err != nil {
-		t.Fatal(prefix + err.Error())
-	}
-
-	// AND: stdout recorded the error.
-	stdout := releaseStdout()
-	if !util.RegexCheck(errRegex, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, errRegex,
-		)
-	}
+	test.AssertCallLog(t, false, tAPI.initialise, logx.ExitCodeChannel(), releaseStdout, errRegex)
 }
 
 func TestAPI_RemoveUnknownServices(t *testing.T) {
-	// GIVEN: a DB with many service status'.
 	tests := []struct {
+		name            string
 		databaseDeleted bool
 	}{
-		{databaseDeleted: false},
-		{databaseDeleted: true},
+		{name: "DB file present", databaseDeleted: false},
+		{name: "DB file deleted", databaseDeleted: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("deleted=%t", tc.databaseDeleted)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			tAPI := testAPI(t)
@@ -643,55 +471,50 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 						approved_version
 					)
 				VALUES`
+			values := make([]string, 0, len(tAPI.config.Service))
 			for id, svc := range tAPI.config.Service {
-				sqlStmt += fmt.Sprintf(
-					" (%q, %q, %q, %q, %q, %q),",
+				values = append(values, fmt.Sprintf(
+					" (%q, %q, %q, %q, %q, %q)",
 					id,
 					svc.Status.LatestVersion(),
 					svc.Status.LatestVersionTimestamp(),
 					svc.Status.DeployedVersion(),
 					svc.Status.DeployedVersionTimestamp(),
 					svc.Status.ApprovedVersion(),
-				)
+				))
 			}
 			if got := len(tAPI.config.Order); got <= 1 {
-				t.Fatalf(
-					"%s\nexpected more services present in the API.Config.Order, have=%d",
-					packageName, got,
-				)
+				t.Fatalf("len(Config.Order) mismatch\ngot:  %d\nwant: > 1", got)
 			}
 			tAPI.config.Order = util.RemoveAt(tAPI.config.Order, 0)
-			_, err := tAPI.db.Exec(sqlStmt[:len(sqlStmt)-1] + ";")
+			_, err := tAPI.db.Exec(sqlStmt + strings.Join(values, ",") + ";")
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("DB.Exec() failed: %v", err)
 			}
-			// Delete the DB file.
 			if tc.databaseDeleted {
-				_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+				if err := os.Remove(tAPI.config.Settings.Data.DatabaseFile); err != nil {
+					t.Fatalf("os.Remove() failed: %v", err)
+				}
 			}
 			wantOk := !tc.databaseDeleted
 
 			resultChannel := make(chan bool, 1)
-			// WHEN: the unknown Services are removed with removeUnknownServices.
+
 			resultChannel <- tAPI.removeUnknownServices()
 
-			prefix := fmt.Sprintf("%s\napi.RemoveUnknownServices()", packageName)
-
-			// THEN: the app panicked if the db was deleted.
-			if err := test.AssertChannelBool(
+			if testErr := test.AssertChannelBool(
 				t,
 				wantOk,
 				resultChannel,
 				logx.ExitCodeChannel(),
 				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 			if !wantOk {
 				return
 			}
 
-			// AND: the rows of Services not in .All are returned.
 			rows, err := tAPI.db.Query(`
 				SELECT	id,
 						latest_version,
@@ -702,7 +525,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 				FROM status;`,
 			)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("DB.Query() failed: %v", err)
 			}
 			count := 0
 			t.Cleanup(func() { _ = rows.Close() })
@@ -716,37 +539,41 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 					dvt string
 					av  string
 				)
-				err = rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
-				svc := tAPI.config.Service[id]
-				if svc == nil || !slices.Contains(tAPI.config.Order, id) {
+				if err := rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av); err != nil {
+					t.Fatalf("Rows.Scan() failed: %v", err)
+				}
+				inService := tAPI.config.Service[id] != nil
+				inOrder := slices.Contains(tAPI.config.Order, id)
+				if !inService || !inOrder {
 					t.Errorf(
-						"%s %q should have been removed from the table",
-						prefix, id,
+						"status row %q: Config.Service/Config.Order mismatch\n"+
+							"got:  Config.Service=%s, Config.Order=%s\n"+
+							"want: Config.Service=present, Config.Order=present",
+						id, test.Presence(inService), test.Presence(inOrder),
 					)
 				}
 			}
-			if got := len(tAPI.config.Order); got != count {
-				t.Errorf(
-					"%s Config.Order length mismatch\ngot:  %d\nwant: %d",
-					prefix, got, count,
-				)
+			if got, want := count, len(tAPI.config.Order); got != want {
+				t.Errorf("status row count mismatch\ngot:  %d\nwant: %d", got, want)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatalf("Rows.Err() failed: %v", err)
 			}
 		})
 	}
 }
 
 func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
-	// GIVEN: an API with no 'id' column in the 'status' table.
 	tests := []struct {
-		name            string
-		errRegex        string
-		tableCreateStmt string
-		insertDataStmt  string
+		name       string
+		errRegex   string
+		statements []string // Run after the 'status' table is dropped.
 	}{
 		{
 			name:     "id missing",
 			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such column: id`,
-			tableCreateStmt: `
+			statements: []string{
+				`
 				CREATE TABLE IF NOT EXISTS status (
 					name TEXT PRIMARY KEY,
 					latest_version TEXT,
@@ -755,7 +582,7 @@ func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
 					deployed_version_timestamp TEXT,
 					approved_version TEXT
 				);`,
-			insertDataStmt: `
+				`
 				INSERT INTO status (
 					name,
 					latest_version,
@@ -771,58 +598,42 @@ func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
 					'0.0.0',
 					'2020-01-01T01:01:01Z',
 					'0.0.1');`,
+			},
+		},
+		{
+			name:     "status table missing",
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such table: status`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
+			// Serial: captures stdout.
 
+			releaseStdout := test.CaptureLog(t, logx.Default())
 			tAPI := testAPI(t)
 			tAPI.initialise()
-			_, _ = tAPI.db.Exec("DROP TABLE IF EXISTS status;")
-			_, _ = tAPI.db.Exec(tc.tableCreateStmt)
-			if tc.insertDataStmt != "'" {
-				_, _ = tAPI.db.Exec(tc.insertDataStmt)
-			}
-
+			test.DropTable(t, tAPI.db, "status")
+			test.ExecSQL(t, tAPI.db, tc.statements...)
 			go tAPI.Handler(t.Context())
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: removeUnknownServices is called.
-			resultChannel <- tAPI.removeUnknownServices()
-
-			prefix := fmt.Sprintf("%s\napi.removeUnknownServices()", packageName)
-
-			// THEN: the Status in the Config is updated.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				false,
-				resultChannel,
+				tAPI.removeUnknownServices,
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
-			}
+				tc.errRegex,
+			)
 		})
 	}
 }
 
 func TestAPI_ExtractServiceStatus(t *testing.T) {
-	// GIVEN: an API on a DB containing at least 1 row.
 	tAPI := testAPI(t)
 	tAPI.initialise()
 	go tAPI.Handler(t.Context())
-	wantStatus := make([]status.Status, len(cfg.Service))
-	// Push a random Status for each Service to the DB.
+	wantStatus := make([]status.Status, len(tAPI.config.Service))
 	index := 0
 	for id, svc := range tAPI.config.Service {
 		wantStatus[index].Init(
@@ -832,29 +643,18 @@ func TestAPI_ExtractServiceStatus(t *testing.T) {
 			},
 			&dashboard.Options{},
 		)
-
-		wantStatus[index].ServiceInfo.ID = id
 		wantStatus[index].SetLatestVersion(
-			fmt.Sprintf(
-				"%d.%d.%d",
-				rand.Intn(10), rand.Intn(10), rand.Intn(10),
-			),
+			fmt.Sprintf("3.%d.0", index),
 			time.Now().UTC().Format(time.RFC3339),
 			false,
 		)
 		wantStatus[index].SetDeployedVersion(
-			fmt.Sprintf(
-				"%d.%d.%d",
-				rand.Intn(10), rand.Intn(10), rand.Intn(10),
-			),
-			"",
+			fmt.Sprintf("2.%d.0", index),
+			time.Now().UTC().Format(time.RFC3339),
 			false,
 		)
 		wantStatus[index].SetApprovedVersion(
-			fmt.Sprintf(
-				"%d.%d.%d",
-				rand.Intn(10), rand.Intn(10), rand.Intn(10),
-			),
+			fmt.Sprintf("1.%d.0", index),
 			false,
 		)
 
@@ -891,43 +691,42 @@ func TestAPI_ExtractServiceStatus(t *testing.T) {
 	}
 	time.Sleep(250 * time.Millisecond)
 
-	// WHEN: extractServiceStatus is called.
-	tAPI.extractServiceStatus()
+	ok := tAPI.extractServiceStatus()
 
-	// THEN: the Status in the Config is updated.
+	if !ok {
+		t.Fatal("ok mismatch\ngot:  false\nwant: true")
+	}
+
 	for i := range wantStatus {
-		row := queryRow(t, tAPI.db, wantStatus[i].ServiceInfo.ID)
 		w := &wantStatus[i]
-		prefix := fmt.Sprintf(
-			"%s\napi.extractServiceStatus() for service %q",
-			packageName, w.ServiceInfo.ID,
-		)
+		t.Run(w.ServiceInfo.ID, func(t *testing.T) {
+			got := &tAPI.config.Service[w.ServiceInfo.ID].Status
 
-		fieldTests := []test.FieldAssertion{
-			{Name: "LatestVersion", Got: row.LatestVersion(), Want: w.LatestVersion(), Mode: test.CompareEqual},
-			{Name: "LatestVersionTimestamp", Got: row.LatestVersionTimestamp(), Want: w.LatestVersionTimestamp(), Mode: test.CompareEqual},
-			{Name: "DeployedVersion", Got: row.DeployedVersion(), Want: w.DeployedVersion(), Mode: test.CompareEqual},
-			{Name: "DeployedVersionTimestamp", Got: row.DeployedVersionTimestamp(), Want: w.DeployedVersionTimestamp(), Mode: test.CompareEqual},
-			{Name: "ApprovedVersion", Got: row.ApprovedVersion(), Want: w.ApprovedVersion(), Mode: test.CompareEqual},
-		}
-		if err := test.AssertFields(t, fieldTests, prefix, "DB"); err != nil {
-			t.Fatal(err)
-		}
+			fieldTests := []test.FieldAssertion{
+				{Name: "LatestVersion()", Got: got.LatestVersion(), Want: w.LatestVersion(), Mode: test.CompareEqual},
+				{Name: "LatestVersionTimestamp()", Got: got.LatestVersionTimestamp(), Want: w.LatestVersionTimestamp(), Mode: test.CompareEqual},
+				{Name: "DeployedVersion()", Got: got.DeployedVersion(), Want: w.DeployedVersion(), Mode: test.CompareEqual},
+				{Name: "DeployedVersionTimestamp()", Got: got.DeployedVersionTimestamp(), Want: w.DeployedVersionTimestamp(), Mode: test.CompareEqual},
+				{Name: "ApprovedVersion()", Got: got.ApprovedVersion(), Want: w.ApprovedVersion(), Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Service.Status"); testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
 	}
 }
 
 func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
-	// GIVEN: an API with different 'status' columns.
 	tests := []struct {
-		name            string
-		errRegex        string
-		tableCreateStmt string
-		insertDataStmt  string
+		name       string
+		errRegex   string
+		statements []string // Run after the 'status' table is dropped.
 	}{
 		{
 			name:     "latest_version missing",
 			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such column: latest_version`,
-			tableCreateStmt: `
+			statements: []string{
+				`
 				CREATE TABLE IF NOT EXISTS status (
 					id TEXT PRIMARY KEY,
 					latest_version_timestamp TEXT,
@@ -935,11 +734,13 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 					deployed_version_timestamp TEXT,
 					approved_version TEXT
 				);`,
+			},
 		},
 		{
 			name:     "latest_version unexpected type",
 			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*converting NULL to string is unsupported`,
-			tableCreateStmt: `
+			statements: []string{
+				`
 				CREATE TABLE IF NOT EXISTS status (
 					id TEXT PRIMARY KEY,
 					latest_version TEXT,
@@ -948,7 +749,7 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 					deployed_version_timestamp TEXT,
 					approved_version TEXT
 				);`,
-			insertDataStmt: `
+				`
 				INSERT OR REPLACE INTO status (
 					id,
 					latest_version,
@@ -965,99 +766,66 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 					'2020-01-01T01:01:01Z',
 					'0.0.0'
 				);`,
+			},
+		},
+		{
+			name:     "status table missing",
+			errRegex: `^(?:INFO: [^\n]*\n)*FATAL: db.*no such table: status`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
-			releaseStdout := test.CaptureLog(t, logx.Default())
+			// Serial: captures stdout.
 
+			releaseStdout := test.CaptureLog(t, logx.Default())
 			tAPI := testAPI(t)
 			tAPI.initialise()
-			_, _ = tAPI.db.Exec("DROP TABLE IF EXISTS status;")
-			_, _ = tAPI.db.Exec(tc.tableCreateStmt)
-			if tc.insertDataStmt != "'" {
-				_, _ = tAPI.db.Exec(tc.insertDataStmt)
-			}
-
+			test.DropTable(t, tAPI.db, "status")
+			test.ExecSQL(t, tAPI.db, tc.statements...)
 			go tAPI.Handler(t.Context())
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: extractServiceStatus is called.
-			resultChannel <- tAPI.extractServiceStatus()
-
-			prefix := fmt.Sprintf("%s\napi.extractServiceStatus()", packageName)
-
-			// THEN: the Status in the Config is updated.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				false,
-				resultChannel,
+				tAPI.extractServiceStatus,
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
-			}
+				tc.errRegex,
+			)
 		})
 	}
 }
 
 func TestAPI_ExtractServiceStatus__rowsErr(t *testing.T) {
-	// GIVEN: a failing rows iteration check.
 	original := serviceStatusRowsErr
-	customErr := fmt.Errorf("rows iteration failed")
+	customErr := errors.New("rows iteration failed")
 	serviceStatusRowsErr = func(rows *sql.Rows) error {
 		return customErr
 	}
 	t.Cleanup(func() { serviceStatusRowsErr = original })
 	errRegex := `^FATAL: db .*` + customErr.Error()
 
-	// AND: an api.
 	tAPI := testAPI(t)
 	tAPI.initialise()
 	go tAPI.Handler(t.Context())
 
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// WHEN: extractServiceStatus is called.
-	resultChannel := make(chan bool, 1)
-	resultChannel <- tAPI.extractServiceStatus()
-
-	prefix := fmt.Sprintf("%s\napi.extractServiceStatus()", packageName)
-
-	// THEN: initialisation fails with a fatal rows error.
-	if err := test.AssertChannelBool(
+	test.AssertCallLog(
 		t,
 		false,
-		resultChannel,
+		tAPI.extractServiceStatus,
 		logx.ExitCodeChannel(),
 		releaseStdout,
-	); err != nil {
-		t.Fatal(prefix + err.Error())
-	}
-	stdout := releaseStdout()
-	if !util.RegexCheck(errRegex, stdout) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, errRegex,
-		)
-	}
+		errRegex,
+	)
 }
 
 func TestDBQueryService(t *testing.T) {
-	// GIVEN: a blank DB.
 	tAPI := testAPI(t)
 	tAPI.initialise()
 
-	// AND: a Service from a Config.
 	var serviceName string
 	for k := range tAPI.config.Service {
 		serviceName = k
@@ -1073,25 +841,18 @@ func TestDBQueryService(t *testing.T) {
 		{Column: "approved_version", Value: svc.Status.ApprovedVersion()},
 	}
 
-	// WHEN: the Service data is written to the DB.
 	tAPI.updateRow(serviceName, cells)
 
-	prefix := fmt.Sprintf(
-		"%s\napi.updateRow(id=%q, cells=%+v)",
-		packageName, serviceName, cells,
-	)
-
-	// THEN: that data can be queried and retrieved.
 	got := queryRow(t, tAPI.db, serviceName)
 	fieldTests := []test.FieldAssertion{
-		{Name: "LatestVersion", Got: got.LatestVersion(), Want: svc.Status.LatestVersion(), Mode: test.CompareEqual},
-		{Name: "LatestVersionTimestamp", Got: got.LatestVersionTimestamp(), Want: svc.Status.LatestVersionTimestamp(), Mode: test.CompareEqual},
-		{Name: "DeployedVersion", Got: got.DeployedVersion(), Want: svc.Status.DeployedVersion(), Mode: test.CompareEqual},
-		{Name: "DeployedVersionTimestamp", Got: got.DeployedVersionTimestamp(), Want: svc.Status.DeployedVersionTimestamp(), Mode: test.CompareEqual},
-		{Name: "ApprovedVersion", Got: got.ApprovedVersion(), Want: svc.Status.ApprovedVersion(), Mode: test.CompareEqual},
+		{Name: "LatestVersion()", Got: got.LatestVersion(), Want: svc.Status.LatestVersion(), Mode: test.CompareEqual},
+		{Name: "LatestVersionTimestamp()", Got: got.LatestVersionTimestamp(), Want: svc.Status.LatestVersionTimestamp(), Mode: test.CompareEqual},
+		{Name: "DeployedVersion()", Got: got.DeployedVersion(), Want: svc.Status.DeployedVersion(), Mode: test.CompareEqual},
+		{Name: "DeployedVersionTimestamp()", Got: got.DeployedVersionTimestamp(), Want: svc.Status.DeployedVersionTimestamp(), Mode: test.CompareEqual},
+		{Name: "ApprovedVersion()", Got: got.ApprovedVersion(), Want: svc.Status.ApprovedVersion(), Mode: test.CompareEqual},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "DB"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Status"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }
 
@@ -1100,23 +861,25 @@ func TestCheckFile(t *testing.T) {
 		path  string
 		perms fs.FileMode
 	}
-	// GIVEN: various paths.
+
 	tests := []struct {
 		name             string
 		createDirBefore  []createOptions
-		dirPerms         []createOptions
 		createFileBefore string
 		path             string
+		ok               bool
 		stdoutRegex      string
 	}{
 		{
 			name:        "file doesn't exist",
 			path:        "something_does_not_exist.db",
+			ok:          true,
 			stdoutRegex: `^$`,
 		},
 		{
 			name:        "dir doesn't exist, so is created",
 			path:        "dir_does_not_exist_1/argus.db",
+			ok:          true,
 			stdoutRegex: `^$`,
 		},
 		{
@@ -1125,6 +888,7 @@ func TestCheckFile(t *testing.T) {
 			createDirBefore: []createOptions{
 				{path: "dir_does_exist_2", perms: 0_750},
 			},
+			ok:          true,
 			stdoutRegex: `^$`,
 		},
 		{
@@ -1170,9 +934,6 @@ func TestCheckFile(t *testing.T) {
 			createDirBefore: []createOptions{
 				{path: "dir_no_exec", perms: 0_666},
 			},
-			dirPerms: []createOptions{
-				{path: "dir_no_exec", perms: 0_666},
-			},
 			createFileBefore: "dir_no_exec/argus.db",
 			stdoutRegex: test.TrimYAML(`
 				stat .*
@@ -1183,22 +944,20 @@ func TestCheckFile(t *testing.T) {
 			name:             "file does exist",
 			path:             "file_does_exist.db",
 			createFileBefore: "file_does_exist.db",
+			ok:               true,
 			stdoutRegex:      `^$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			baseDir := t.TempDir()
-			// Append baseDir to all paths.
 			for i, dir := range tc.createDirBefore {
 				tc.createDirBefore[i].path = filepath.Join(baseDir, dir.path)
-			}
-			for i, dir := range tc.dirPerms {
-				tc.dirPerms[i].path = filepath.Join(baseDir, dir.path)
 			}
 			if tc.createFileBefore != "" {
 				tc.createFileBefore = filepath.Join(baseDir, tc.createFileBefore)
@@ -1216,74 +975,45 @@ func TestCheckFile(t *testing.T) {
 				for _, dir := range tc.createDirBefore {
 					perm := os.FileMode(0_750)
 					if err := os.Mkdir(dir.path, perm); err != nil {
-						t.Fatalf(
-							"%s\ncreateDirBefore mkdir on %q-%q\nerror: %s",
-							packageName, dir.path, perm, err,
-						)
+						t.Fatalf("os.Mkdir(%q, %#o) failed: %v", dir.path, perm, err)
 					}
 				}
 			}
 			if tc.createFileBefore != "" {
 				file, err := os.Create(tc.createFileBefore)
 				if err != nil {
-					t.Fatalf(
-						"%s\ncreateFileBefore on %q\nerror: %s",
-						packageName, tc.createFileBefore, err,
-					)
+					t.Fatalf("os.Create(%q) failed: %v", tc.createFileBefore, err)
 				}
 				_ = file.Close()
 				t.Cleanup(func() { _ = os.Remove(tc.createFileBefore) })
 			}
-			// Set perms (in reverse order).
-			for i := len(tc.createDirBefore) - 1; i >= 0; i-- {
-				if err := os.Chmod(tc.createDirBefore[i].path, tc.createDirBefore[i].perms); err != nil {
-					t.Fatalf(
-						"%s\ncreateDirBefore chmod on %q-%q\nerror: %s",
-						packageName, tc.createDirBefore[i].path, tc.createDirBefore[i].perms, err,
-					)
+			// Innermost first, so a parent's perms cannot block its child's chmod.
+			for _, v := range slices.Backward(tc.createDirBefore) {
+				if err := os.Chmod(v.path, v.perms); err != nil {
+					t.Fatalf("os.Chmod(%q, %#o) failed: %v", v.path, v.perms, err)
 				}
 			}
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: checkFile is called on that same dir.
-			resultChannel <- checkFile(tc.path)
-
-			prefix := fmt.Sprintf(
-				"%s\ncheckFile(%q)",
-				packageName, tc.path,
-			)
-
-			// THEN: if false is returned, the error is logged.
-			wantOk := tc.stdoutRegex == `^$`
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
-				wantOk,
-				resultChannel,
+				tc.ok,
+				func() bool { return checkFile(tc.path) },
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: the stdout matches the expected result.
-			if stdout := releaseStdout(); !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
+				tc.stdoutRegex,
+			)
 		})
 	}
 }
 
 func TestUpdateTypes(t *testing.T) {
-	// GIVEN: a DB with the *_version columns as STRING/TEXT.
 	tests := []struct {
-		name        string
-		columnType  string
-		setupDB     func(t *testing.T, db **sql.DB, dbFile string)
-		ok          bool
-		stdoutRegex string
+		name              string
+		columnType        string
+		setupDB           func(t *testing.T, db **sql.DB, dbFile string)
+		ok                bool
+		wantConversionLog bool
+		stdoutRegex       string
 	}{
 		{
 			name:       "No conversion necessary",
@@ -1291,16 +1021,19 @@ func TestUpdateTypes(t *testing.T) {
 			ok:         true,
 		},
 		{
-			name:       "Conversion wanted",
-			columnType: "STRING",
-			ok:         true,
+			name:              "Conversion wanted",
+			columnType:        "STRING",
+			ok:                true,
+			wantConversionLog: true,
 		},
 		{
-			name:        "DB is deleted",
+			name:        "status table dropped",
 			columnType:  "STRING",
 			stdoutRegex: `no rows in result set`,
 			setupDB: func(t *testing.T, db **sql.DB, _ string) {
-				_, _ = (*db).Exec("DROP TABLE IF EXISTS status;")
+				if _, err := (*db).Exec("DROP TABLE IF EXISTS status;"); err != nil {
+					t.Fatalf("DB.Exec() failed: %v", err)
+				}
 			},
 			ok: false,
 		},
@@ -1309,11 +1042,13 @@ func TestUpdateTypes(t *testing.T) {
 			columnType:  "STRING",
 			stdoutRegex: `copy.*table .* has \d columns but \d values were supplied`,
 			setupDB: func(t *testing.T, db **sql.DB, _ string) {
-				_, _ = (*db).Exec(`
+				if _, err := (*db).Exec(`
 					CREATE TABLE IF NOT EXISTS status_backup (
 						id TEXT NOT NULL PRIMARY KEY
 					);`,
-				)
+				); err != nil {
+					t.Fatalf("DB.Exec() failed: %v", err)
+				}
 			},
 			ok: false,
 		},
@@ -1323,14 +1058,20 @@ func TestUpdateTypes(t *testing.T) {
 			stdoutRegex: `drop.*FOREIGN KEY constraint failed`,
 			setupDB: func(t *testing.T, db **sql.DB, _ string) {
 				fkTable := "status_backup_fk"
-				_, _ = (*db).Exec(`
+				if _, err := (*db).Exec(`
 					CREATE TABLE IF NOT EXISTS ` + fkTable + ` (
 						id INTEGER NOT NULL PRIMARY KEY,
 						fk_id TEXT NOT NULL,
 						FOREIGN KEY(fk_id) REFERENCES status(id)
 					);`,
-				)
-				_, _ = (*db).Exec(`INSERT OR REPLACE INTO ` + fkTable + ` (fk_id) VALUES ('keepMe');`)
+				); err != nil {
+					t.Fatalf("create table: DB.Exec() failed: %v", err)
+				}
+				if _, err := (*db).Exec(
+					`INSERT OR REPLACE INTO ` + fkTable + ` (fk_id) VALUES ('keepMe');`,
+				); err != nil {
+					t.Fatalf("insert: DB.Exec() failed: %v", err)
+				}
 			},
 			ok: false,
 		},
@@ -1340,14 +1081,18 @@ func TestUpdateTypes(t *testing.T) {
 			stdoutRegex: `rename.*no such table`,
 			setupDB: func(t *testing.T, db **sql.DB, _ string) {
 				backupTableName := "status_backup"
-				_ = createStatusTable(*db, backupTableName, "STRING")
-				_, _ = (*db).Exec(`
+				if err := createStatusTable(*db, backupTableName, "STRING"); err != nil {
+					t.Fatalf("createStatusTable() failed: %v", err)
+				}
+				if _, err := (*db).Exec(`
 					CREATE TRIGGER ` + backupTableName + `
 					AFTER INSERT ON status_backup
 					BEGIN
 						INSERT INTO status (id) VALUES ('name');
 					END;`,
-				)
+				); err != nil {
+					t.Fatalf("DB.Exec() failed: %v", err)
+				}
 			},
 			ok: false,
 		},
@@ -1359,10 +1104,7 @@ func TestUpdateTypes(t *testing.T) {
 					ALTER TABLE status
 					DROP COLUMN latest_version;
 				`); err != nil {
-					t.Fatalf(
-						"%s\nfailed to drop column: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.Exec() failed: %v", err)
 				}
 			},
 			ok: false,
@@ -1374,10 +1116,7 @@ func TestUpdateTypes(t *testing.T) {
 				_ = (*db).Close()
 				newDB, err := sql.Open("sqlite", "file:"+dbFile+"?mode=ro")
 				if err != nil {
-					t.Fatalf(
-						"%s\nfailed to open read-only db: %v",
-						packageName, err,
-					)
+					t.Fatalf("sql.Open() failed: %v", err)
 				}
 				*db = newDB
 			},
@@ -1387,30 +1126,27 @@ func TestUpdateTypes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			databaseFile := filepath.Join(t.TempDir(), "test.db")
-			db, _ := sql.Open("sqlite", databaseFile)
+			db, err := sql.Open("sqlite", databaseFile)
+			if err != nil {
+				t.Fatalf("sql.Open() failed: %v", err)
+			}
 			t.Cleanup(func() {
 				_ = db.Close()
 				_ = os.Remove(databaseFile)
 			})
 
-			// Enable foreign key constraint enforcement.
+			// The foreign-key rows rely on enforcement, which is off by default.
 			if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
-				t.Fatalf(
-					"%s\nFailed to enable foreign key constraints: %s",
-					packageName, err,
-				)
+				t.Fatalf("DB.Exec() failed: %v", err)
 			}
 
-			// Create the 'status' table.
 			if err := createStatusTable(db, "status", tc.columnType); err != nil {
-				t.Fatalf(
-					"%s\nfailed to create status table: %v",
-					packageName, err,
-				)
+				t.Fatalf("createStatusTable() failed: %v", err)
 			}
 
 			var (
@@ -1421,7 +1157,6 @@ func TestUpdateTypes(t *testing.T) {
 				deployedVersionTimestamp = "2020-01-01T01:01:01Z"
 				approvedVersion          = "0.0.1"
 			)
-			// Add a row to the table.
 			if err := insertStatusRow(
 				db,
 				id,
@@ -1429,99 +1164,72 @@ func TestUpdateTypes(t *testing.T) {
 				deployedVersion, deployedVersionTimestamp,
 				approvedVersion,
 			); err != nil {
-				t.Fatalf(
-					"%s: failed to insert row: %v",
-					packageName, err,
-				)
+				t.Fatalf("insertStatusRow() failed: %v", err)
 			}
 
-			// Apply test-specific setup.
 			if tc.setupDB != nil {
 				tc.setupDB(t, &db, databaseFile)
 			}
 
 			resultChannel := make(chan bool, 1)
-			// WHEN: updateTable is called.
+
 			resultChannel <- updateTable(db)
 
-			prefix := fmt.Sprintf("%s\nupdateTable()", packageName)
-
-			// THEN: it returns ok only if the update succeeded.
-			if err := test.AssertChannelBool(
+			if testErr := test.AssertChannelBool(
 				t,
 				tc.ok,
 				resultChannel,
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 			if !tc.ok {
 				stdout := releaseStdout()
 				if !util.RegexCheck(tc.stdoutRegex, stdout) {
-					t.Fatalf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, tc.stdoutRegex,
-					)
+					t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 				}
 				return
 			}
 
-			// AND: the ID column and all *_version columns are now TEXT.
 			wantTextColumns := []string{"id", "latest_version", "deployed_version", "approved_version"}
-			for _, row := range wantTextColumns {
-				var columnType string
-				db.QueryRow(`
-					SELECT type
-					FROM pragma_table_info('status')
-					WHERE name = 'latest_version'`,
-				).Scan(&columnType)
-				if columnType != "TEXT" {
-					t.Errorf(
-						"%s column type mismatch on %q\ngot:  %q\nwant: TEXT",
-						prefix, row,
-						columnType,
-					)
-				}
+			for _, column := range wantTextColumns {
+				t.Run(column, func(t *testing.T) {
+					var columnType string
+					if err := db.QueryRow(`
+						SELECT type
+						FROM pragma_table_info('status')
+						WHERE name = ?`,
+						column,
+					).Scan(&columnType); err != nil {
+						t.Fatalf("DB.QueryRow().Scan() failed: %v", err)
+					}
+					if columnType != "TEXT" {
+						t.Errorf("type mismatch\ngot:  %q\nwant: \"TEXT\"", columnType)
+					}
+				})
 			}
 
-			// AND: all rows were carried over.
 			got := queryRow(t, db, id)
-			if got.LatestVersion() != latestVersion || got.LatestVersionTimestamp() != latestVersionTimestamp ||
-				got.DeployedVersion() != deployedVersion || got.DeployedVersionTimestamp() != deployedVersionTimestamp ||
-				got.ApprovedVersion() != approvedVersion {
-				t.Errorf(
-					"%s Row wasn't carried over correctly:\n"+
-						"Got: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q\n"+
-						"Had: lv=%q, lvt=%q, dv=%q, dvt=%q, av=%q",
-					prefix,
-					got.LatestVersion(), got.LatestVersionTimestamp(),
-					got.DeployedVersion(), got.DeployedVersionTimestamp(),
-					got.ApprovedVersion(),
-					latestVersion, latestVersionTimestamp,
-					deployedVersion, deployedVersionTimestamp,
-					approvedVersion,
-				)
+			fieldTests := []test.FieldAssertion{
+				{Name: "LatestVersion()", Got: got.LatestVersion(), Want: latestVersion, Mode: test.CompareEqual},
+				{Name: "LatestVersionTimestamp()", Got: got.LatestVersionTimestamp(), Want: latestVersionTimestamp, Mode: test.CompareEqual},
+				{Name: "DeployedVersion()", Got: got.DeployedVersion(), Want: deployedVersion, Mode: test.CompareEqual},
+				{Name: "DeployedVersionTimestamp()", Got: got.DeployedVersionTimestamp(), Want: deployedVersionTimestamp, Mode: test.CompareEqual},
+				{Name: "ApprovedVersion()", Got: got.ApprovedVersion(), Want: approvedVersion, Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Status"); testErr != nil {
+				t.Error(testErr)
 			}
 
-			// AND: the conversion was printed to stdout.
 			stdout := releaseStdout()
 			want := "Finished updating column types"
 			contains := strings.Contains(stdout, want)
-			if tc.columnType == "TEXT" && contains {
-				t.Errorf(
-					"%s table started as %q:\ngot:  %q\n want: no change",
-					prefix, tc.columnType,
-					stdout,
-				)
-			} else if tc.columnType == "STRING" && !contains {
-				t.Errorf(
-					"%s table started as %q\ngot:  %q\n want: contains %q",
-					prefix, tc.columnType,
-					stdout, want,
-				)
+			if contains && !tc.wantConversionLog {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: NOT %q", stdout, want)
+			} else if !contains && tc.wantConversionLog {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, want)
 			}
-			time.Sleep(100 * time.Millisecond)
 		})
 	}
 }

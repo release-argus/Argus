@@ -18,7 +18,6 @@
 package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -28,28 +27,26 @@ import (
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	svctest "github.com/release-argus/Argus/service/test"
-	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestCommandTest(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Config with a Service containing a Command.
 	tests := []struct {
 		name        string
 		flag        string
 		services    service.Services
-		stdoutRegex *string
+		stdoutRegex string
 		ok          bool
 	}{
 		{
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: new("^$"),
+			stdoutRegex: "^$",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -68,7 +65,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "unknown service",
 			flag:        "something",
 			ok:          false,
-			stdoutRegex: new(" could not be found "),
+			stdoutRegex: " could not be found ",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -87,7 +84,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "known service/successful command",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: new(`Executing 'echo command did run'\s+.*command did run\s+`),
+			stdoutRegex: `Executing "echo command did run"\s+.*command did run\s+`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -105,8 +102,8 @@ func TestCommandTest(t *testing.T) {
 		{
 			name:        "known service/failing command",
 			flag:        "argus",
-			ok:          true,
-			stdoutRegex: new(`.*Executing 'false'\s+.*exit status [1-9]\s+`),
+			ok:          true, // A failing command still returns ok.
+			stdoutRegex: `.*Executing "false"\s+.*exit status [1-9]\s+`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -124,7 +121,7 @@ func TestCommandTest(t *testing.T) {
 			name:        "known service/no commands",
 			flag:        "argus",
 			ok:          false,
-			stdoutRegex: new(" does not have any `command` defined"),
+			stdoutRegex: " does not have any `command` defined",
 			services: service.Services{
 				"argus": {
 					ID: "argus",
@@ -135,7 +132,8 @@ func TestCommandTest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			if tc.services[tc.flag] != nil && tc.services[tc.flag].CommandController != nil {
@@ -147,7 +145,7 @@ func TestCommandTest(t *testing.T) {
 				)
 			}
 
-			order := make([]string, len(tc.services))
+			order := make([]string, 0, len(tc.services))
 			for i := range tc.services {
 				order = append(order, i)
 			}
@@ -156,36 +154,14 @@ func TestCommandTest(t *testing.T) {
 				Order:   order,
 			}
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: CommandTest is called with the test Config.
-			resultChannel <- CommandTest(&tc.flag, &cfg)
-
-			prefix := fmt.Sprintf(
-				"%s\nCommandTest(%q)",
-				packageName, tc.flag,
-			)
-
-			// THEN: it succeeds/fails as expected.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool { return CommandTest(&tc.flag, &cfg) },
 				logx.ExitCodeChannel(),
-				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: we get the expected stdout.
-			stdout := releaseStdout()
-			if tc.stdoutRegex != nil {
-				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, *tc.stdoutRegex,
-					)
-				}
-			}
+				releaseStdout,
+				tc.stdoutRegex,
+			)
 		})
 	}
 }

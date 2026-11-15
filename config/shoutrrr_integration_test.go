@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build integration
 
 package config
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -40,23 +39,31 @@ func TestShoutrrr_Send__EnvTests(t *testing.T) {
 		}
 	}
 	if len(testVars) == 0 {
-		t.Skipf(
-			"%s\nNo %q env vars found for Shoutrrr integration tests",
-			packageName, targetEnvPrefix,
-		)
+		t.Skipf("No %q env vars found for Shoutrrr integration tests", targetEnvPrefix)
 	}
 
-	test.SetEnv(t, testVars)
+	test.IsolateEnv(t, testVars)
 
-	// GIVEN: defaults and regular hardDefaults.
 	var defaults, hardDefaults Defaults
 	hardDefaults.Default()
-	_ = hardDefaults.MapEnvToStruct()
+	if !hardDefaults.MapEnvToStruct() {
+		t.Fatal("Defaults.MapEnvToStruct() failed")
+	}
 	defaults.SetDefaults(&hardDefaults)
 
-	// GIVEN: a Shoutrrr of each type.
 	for _, typ := range shoutrrr.SupportedTypes {
 		t.Run(typ, func(t *testing.T) {
+			typePrefix := "NOTIFY_" + strings.ToUpper(typ) + "_"
+			configured := false
+			for k := range testVars {
+				if strings.HasPrefix(k, newEnvPrefix+typePrefix) {
+					configured = true
+					break
+				}
+			}
+			if !configured {
+				t.Skipf("No %q env vars found", targetEnvPrefix+typePrefix)
+			}
 
 			testShoutrrr := shoutrrr.New(
 				nil,
@@ -77,32 +84,19 @@ func TestShoutrrr_Send__EnvTests(t *testing.T) {
 				hardDefaults.Notify[typ],
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nShoutrrr.Send(type=%s)",
-				packageName, typ,
-			)
-
 			if err, _ := testShoutrrr.CheckValues(); err != nil {
-				t.Skipf(
-					"%s CheckValues() failed:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("Shoutrrr.CheckValues() failed: %v", err)
 			}
 
-			message := fmt.Sprintf("%s message here", prefix)
-
-			// WHEN: send attempted.
-			if err := testShoutrrr.Send(
+			err := testShoutrrr.Send(
 				"TestShoutrrr_Send__EnvTests",
-				message,
+				"message here",
 				svcStatus.ServiceInfo,
 				false,
 				false,
-			); err != nil {
-				t.Errorf(
-					"%s failed unexpectedly\n%v",
-					prefix, err,
-				)
+			)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}

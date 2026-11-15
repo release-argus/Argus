@@ -17,11 +17,11 @@
 package service
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/release-argus/Argus/command"
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/test"
@@ -35,8 +35,8 @@ import (
 )
 
 func TestService_IconURL(t *testing.T) {
-	nilValue := "<nil>"
-	// GIVEN: a Lookup.
+	nilValue := "nil"
+
 	tests := []struct {
 		name          string
 		dashboardIcon string
@@ -124,31 +124,27 @@ func TestService_IconURL(t *testing.T) {
 			svc.Dashboard.Icon = tc.dashboardIcon
 			svc.Notify = tc.notify
 
-			// WHEN: IconURL is called.
 			got := svc.IconURL()
 
-			// THEN: the function returns the correct result.
 			if gotStr := util.DerefOr(got, nilValue); gotStr != tc.want {
-				t.Errorf(
-					"%s\nService.IconURL() value mismatch\ngot:  %q\nwant: %q",
-					packageName, gotStr, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", gotStr, tc.want)
 			}
 		})
 	}
 }
 
 func TestService_Init(t *testing.T) {
-	// GIVEN: defaults.
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// AND: a Service.
 	tests := []struct {
-		name     string
-		svc      *Service
-		wantIcon string
+		name                    string
+		svc                     *Service
+		wantIcon                string
+		wantNotifyFromDefaults  bool
+		wantCommandFromDefaults bool
+		wantWebhookFromDefaults bool
 	}{
 		{
 			name: "bare/Name defaulted to ID",
@@ -192,6 +188,48 @@ func TestService_Init(t *testing.T) {
 								type: discord
 								params:
 									icon: notify-icon
+						dashboard:
+							icon: dashboard-icon
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			wantIcon: "dashboard-icon",
+		},
+		{
+			name: "notify/doesn't set fallback from a non-URL icon",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test:
+								type: discord
+								params:
+									icon: notify-icon
+					`)),
+					"Init",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			wantIcon: "",
+		},
+		{
+			name: "notify/doesn't set fallback from a URL icon when Service has a Dashboard.Icon",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							test:
+								type: discord
+								params:
+									icon: https://example.com/notify-icon
 						dashboard:
 							icon: dashboard-icon
 					`)),
@@ -251,7 +289,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "notify/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -266,11 +304,12 @@ func TestService_Init(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			wantNotifyFromDefaults: true,
 		},
 		{
 			name: "notify/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -291,7 +330,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "command/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Command = command.Commands{
 					{"ls"},
 				}
@@ -306,11 +345,12 @@ func TestService_Init(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			wantCommandFromDefaults: true,
 		},
 		{
 			name: "command/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Command = command.Commands{
 					{"ls"},
 				}
@@ -331,7 +371,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "webhook/from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Webhook = map[string]struct{}{
 					"bar": {},
 				}
@@ -346,11 +386,12 @@ func TestService_Init(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			wantWebhookFromDefaults: true,
 		},
 		{
 			name: "webhook/not from defaults",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Webhook = map[string]struct{}{
 					"bar": {},
 				}
@@ -372,7 +413,7 @@ func TestService_Init(t *testing.T) {
 		{
 			name: "webhook + command - from defaults and notify overridden",
 			svc: test.Must(t, func() (*Service, error) {
-				svcCfg := plainDefaultsConfig(t)
+				svcCfg := plainDefaultsConfig()
 				svcCfg.Soft.Notify = map[string]struct{}{
 					"foo": {},
 				}
@@ -395,6 +436,8 @@ func TestService_Init(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			wantCommandFromDefaults: true,
+			wantWebhookFromDefaults: true,
 		},
 		{
 			name: "DeployedVersionLookup",
@@ -423,12 +466,10 @@ func TestService_Init(t *testing.T) {
 			hadCommand := make(command.Commands, len(s.Command))
 			copy(hadCommand, s.Command)
 
-			// AND: various channels.
 			announceChannel := make(chan []byte, 1)
 			databaseChannel := make(chan dbtype.Message, 1)
 			saveChannel := make(chan bool, 1)
 
-			// WHEN: init is called on it.
 			tc.svc.init(
 				notifyCfg,
 				whCfg,
@@ -437,84 +478,75 @@ func TestService_Init(t *testing.T) {
 				saveChannel,
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nService.Init(notifyDefaults=%v, WebhookDefaults=%v)",
-				packageName, notifyCfg, whCfg,
-			)
+			fieldTests := []test.FieldAssertion{
+				{Name: "NotifyFromDefaults", Got: tc.svc.NotifyFromDefaults, Want: tc.wantNotifyFromDefaults, Mode: test.CompareEqual},
+				{Name: "CommandFromDefaults", Got: tc.svc.CommandFromDefaults, Want: tc.wantCommandFromDefaults, Mode: test.CompareEqual},
+				{Name: "WebhookFromDefaults", Got: tc.svc.WebhookFromDefaults, Want: tc.wantWebhookFromDefaults, Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Service"); testErr != nil {
+				t.Error(testErr)
+			}
 
-			// THEN: Mains/Defaults/HardDefaults are handed to each Webhook.
 			hadNotifyLength := len(hadNotify)
 			gotNotifyLength := len(tc.svc.Notify)
 			if gotNotifyLength != 0 {
 				for i := range tc.svc.Notify {
 					if tc.svc.Notify[i].Main == nil {
-						t.Errorf("%s Notify[%q].Main is nil", prefix, i)
+						t.Errorf("Service.Notify[%q].Main mismatch\ngot:  nil\nwant: non-nil", i)
 					}
 					if tc.svc.Notify[i].Defaults == nil {
-						t.Errorf("%s Notify[%q].Defaults is nil", prefix, i)
+						t.Errorf(
+							"Service.Notify[%q].Defaults mismatch\ngot:  nil\nwant: non-nil",
+							i,
+						)
 					}
 					if tc.svc.Notify[i].HardDefaults == nil {
-						t.Errorf("%s Notify[%q].HardDefaults is nil", prefix, i)
+						t.Errorf(
+							"Service.Notify[%q].HardDefaults mismatch\ngot:  nil\nwant: non-nil",
+							i,
+						)
 					}
 				}
 			}
 
-			// AND: Notifiers are not overridden if non-empty originally.
 			if hadNotifyLength != 0 && gotNotifyLength != hadNotifyLength {
 				t.Fatalf(
-					"%s Notify length mismatch\ngot:  %d (%v)\nwant: %d (%v)",
-					prefix,
+					"Service.Notify length mismatch\ngot:  %d (%q)\nwant: %d (%q)",
 					gotNotifyLength, util.SortedKeys(tc.svc.Notify),
 					hadNotifyLength, hadNotify,
 				)
 			}
 
-			// AND: Notify is set to the default values when empty.
 			wantNotify := hadNotify
 			if defaultNotifiers := tc.svc.Defaults.Notify; defaultNotifiers != nil && hadNotifyLength == 0 {
-				wantNotify = make([]string, len(defaultNotifiers))
 				wantNotify = util.SortedKeys(defaultNotifiers)
 			}
 			for _, i := range wantNotify {
 				if tc.svc.Notify[i] == nil {
-					t.Errorf(
-						"%s Notify[%q] is nil",
-						prefix, i,
-					)
+					t.Errorf("Service.Notify[%q] mismatch\ngot:  nil\nwant: non-nil", i)
 				}
 			}
 
-			// THEN: CommandController is nil'd when we have no Command, non-nil otherwise.
 			hadCommandLength := len(hadCommand)
 			gotCommandLength := len(tc.svc.Command)
 			if gotCommandLength != 0 {
 				if tc.svc.CommandController == nil {
-					t.Errorf(
-						"%s CommandController is still nil with %v Commands present",
-						prefix, tc.svc.Command,
-					)
+					t.Error("Service.CommandController mismatch\ngot:  nil\nwant: non-nil")
 				}
 			} else if tc.svc.CommandController != nil {
-				t.Errorf(
-					"%s CommandController should be nil with %v Commands present",
-					prefix, tc.svc.Command,
-				)
+				t.Error("Service.CommandController mismatch\ngot:  non-nil\nwant: nil")
 			}
 
-			// AND: Commands are not overridden if non-empty originally.
 			if hadCommandLength != 0 && gotCommandLength != hadCommandLength {
 				t.Fatalf(
-					"%s Command length changed unexpectedly\ngot:  %d (%v)\nwant: %d (%v)",
-					prefix,
+					"Service.Command length mismatch\ngot:  %d (%v)\nwant: %d (%v)",
 					gotCommandLength, tc.svc.Command,
 					hadCommandLength, hadCommand,
 				)
 			}
 
-			// AND: Command is set to the default values when empty.
 			wantCommand := hadCommand
 			if defaultCommands := tc.svc.Defaults.Command; defaultCommands != nil && hadCommandLength == 0 {
-				wantCommand = make(command.Commands, len(defaultCommands))
 				wantCommand = defaultCommands
 			}
 			for i := range wantCommand {
@@ -522,70 +554,70 @@ func TestService_Init(t *testing.T) {
 				want := wantCommand[i].String()
 				if got != want {
 					t.Errorf(
-						"%s Command[%d] changed unexpected\ngot:  %q\nwant: %q",
-						prefix, i,
-						got, want,
+						"Service.Command[%d].String() mismatch\ngot:  %q\nwant: %q",
+						i, got, want,
 					)
 				}
 			}
 
-			// THEN: Mains/Defaults/HardDefaults are handed to each Webhook.
 			hadWebhookLength := len(hadWebhook)
 			gotWebhookLength := len(tc.svc.Webhook)
 			if gotWebhookLength != 0 {
 				for i := range tc.svc.Webhook {
 					if tc.svc.Webhook[i].Main == nil {
-						t.Errorf("%s Webhook[%q].Main is nil", prefix, i)
+						t.Errorf("Service.Webhook[%q].Main mismatch\ngot:  nil\nwant: non-nil", i)
 					}
 					if tc.svc.Webhook[i].Defaults == nil {
-						t.Errorf("%s Webhook[%q].Defaults is nil", prefix, i)
+						t.Errorf(
+							"Service.Webhook[%q].Defaults mismatch\ngot:  nil\nwant: non-nil",
+							i,
+						)
 					}
 					if tc.svc.Webhook[i].HardDefaults == nil {
-						t.Errorf("%s Webhook[%q].HardDefaults is nil", prefix, i)
+						t.Errorf(
+							"Service.Webhook[%q].HardDefaults mismatch\ngot:  nil\nwant: non-nil",
+							i,
+						)
 					}
 				}
 			}
 
-			// AND: Webhooks are not overridden if non-empty originally.
 			if hadWebhookLength > 0 && gotWebhookLength != hadWebhookLength {
 				t.Fatalf(
-					"%s Webhook length changed\ngot:  %d (%v)\nwant: %d (%v)",
-					prefix,
+					"Service.Webhook length mismatch\ngot:  %d (%q)\nwant: %d (%q)",
 					gotWebhookLength, util.SortedKeys(tc.svc.Webhook),
 					hadWebhookLength, hadWebhook,
 				)
 			}
 
-			// AND: Webhook is set to the default values when empty.
 			wantWebhook := hadWebhook
 			if defaultWebhooks := tc.svc.Defaults.Webhook; defaultWebhooks != nil && hadWebhookLength == 0 {
-				wantWebhook = make([]string, len(defaultWebhooks))
 				wantWebhook = util.SortedKeys(defaultWebhooks)
 			}
 			for _, i := range wantWebhook {
 				if tc.svc.Webhook[i] == nil {
-					t.Errorf("%s Webhook[%q] is nil", prefix, i)
+					t.Errorf("Service.Webhook[%q] mismatch\ngot:  nil\nwant: non-nil", i)
 				}
 			}
-			// 	Dashboard
+
 			gotIcon := tc.svc.Dashboard.GetIcon()
 			if tc.wantIcon != gotIcon {
 				t.Errorf(
-					"%s Dashboard.GetIcon() value mismatch\ngot:  %q\nwant: %q",
-					prefix, gotIcon, tc.wantIcon,
+					"Service.Dashboard.GetIcon() mismatch\ngot:  %q\nwant: %q",
+					gotIcon, tc.wantIcon,
 				)
 			}
-			// Status - Pointers.
-			fieldTests := []test.FieldAssertion{
+
+			fieldTests = []test.FieldAssertion{
 				{Name: "AnnounceChannel", Got: tc.svc.Status.AnnounceChannel, Want: announceChannel, Mode: test.CompareSamePointer},
 				{Name: "DatabaseChannel", Got: tc.svc.Status.DatabaseChannel, Want: databaseChannel, Mode: test.CompareSamePointer},
 				{Name: "SaveChannel", Got: tc.svc.Status.SaveChannel, Want: saveChannel, Mode: test.CompareSamePointer},
 				{Name: "Dashboard", Got: tc.svc.Status.Dashboard, Want: &tc.svc.Dashboard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Status"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Status"); testErr != nil {
+				t.Fatal(testErr)
 			}
-			// Status - ServiceInfo.
+
 			serviceInfo := tc.svc.Status.GetServiceInfo()
 			wantServiceInfoName := util.ValueOr(tc.svc.Name, tc.svc.ID)
 			fieldTests = []test.FieldAssertion{
@@ -594,34 +626,53 @@ func TestService_Init(t *testing.T) {
 				{Name: "Comment", Got: serviceInfo.Comment, Want: tc.svc.Comment, Mode: test.CompareEqual},
 				{Name: "Icon", Got: serviceInfo.Icon, Want: tc.wantIcon, Mode: test.CompareEqual},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Status.ServiceInfo"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Status.ServiceInfo"); testErr != nil {
+				t.Fatal(testErr)
 			}
 			if !util.AreSlicesEqual(serviceInfo.Tags, tc.svc.Dashboard.Tags) {
 				t.Errorf(
-					"%s Status.ServiceInfo.Tags mismatch\ngot:  %v\nwant: %v",
-					prefix, serviceInfo.Tags, tc.svc.Dashboard.Tags,
+					"Status.ServiceInfo.Tags mismatch\ngot:  %q\nwant: %q",
+					serviceInfo.Tags, tc.svc.Dashboard.Tags,
 				)
 			}
-			// Status - Fails.
+
 			fieldTests = []test.FieldAssertion{
 				{Name: "Command", Got: tc.svc.Status.Fails.Command.Length(), Want: len(tc.svc.Command), Mode: test.CompareEqual},
 				{Name: "Shoutrrr", Got: tc.svc.Status.Fails.Shoutrrr.Length(), Want: len(tc.svc.Notify), Mode: test.CompareEqual},
 				{Name: "Webhook", Got: tc.svc.Status.Fails.Webhook.Length(), Want: len(tc.svc.Webhook), Mode: test.CompareEqual},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Status.ServiceInfo"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Status.Fails"); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			if dvl := tc.svc.DeployedVersionLookup; dvl != nil && dvl.GetStatus() != &tc.svc.Status {
+				t.Errorf(
+					"Service.DeployedVersionLookup.GetStatus() mismatch\ngot:  %p\nwant: %p",
+					dvl.GetStatus(), &tc.svc.Status,
+				)
+			}
+
+			// A Notify icon is kept as a fallback only when Dashboard.Icon is unset.
+			wantFallbackIcon := tc.wantIcon
+			if tc.svc.Dashboard.Icon != "" {
+				wantFallbackIcon = ""
+			}
+			tc.svc.Dashboard.Icon = ""
+			if got := tc.svc.Dashboard.GetIcon(); got != wantFallbackIcon {
+				t.Errorf(
+					"without Icon: Service.Dashboard.GetIcon() mismatch\ngot:  %q\nwant: %q",
+					got, wantFallbackIcon,
+				)
 			}
 		})
 	}
 }
 
-func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+func TestService_InitMetrics_then_DeleteMetrics(t *testing.T) {
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Service.
 	tests := []struct {
 		name               string
 		nilDeployedVersion bool
@@ -659,234 +710,192 @@ func TestService_InitMetrics_then_ResetMetrics_then_DeleteMetrics(t *testing.T) 
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares the LatestVersion and DeployedVersion metrics.
 
 			activeStates := []bool{true, false}
 			for _, active := range activeStates {
-				testCommand := command.Command{"ls"}
-				testNotify := shoutrrrtest.Shoutrrr(t, false, false)
-				testWebhook := whtest.Webhook(t, false, false, false)
-				svc := test.Must(t, func() (s *Service, err error) {
-					return DecodeService(
-						"yaml", []byte(test.TrimYAML(`
-							options:
-								active: `+strconv.FormatBool(active)+`
-							latest_version:
-							`+lvtest.Lookup(t, "github", false).String("  ")+`
-							deployed_version:
-							`+dvtest.Lookup(t, "url", false, "").String("  ")+`
-							command:
-							- `+testCommand.JSON()+`
-							notify:
-								`+testNotify.ID+`:
-							`+testNotify.String("    ")+`
-							webhook:
-								`+testWebhook.ID+`:
-							`+testWebhook.String("    ")+`
-						`)),
-						"TestService_InitMetrics_ResetMetrics_DeleteMetrics--"+tc.name,
-						svcCfg,
-						notifyCfg,
-						whCfg,
+				t.Run("active="+strconv.FormatBool(active), func(t *testing.T) {
+					// Serial: shares metric.ServiceCountCurrent and metric.LatestVersionQueryResultTotal.
+
+					testCommand := command.Command{"ls"}
+					testNotify := shoutrrrtest.Shoutrrr(t, false, false)
+					testWebhook := whtest.Webhook(t, false, false, false)
+					svc := test.Must(t, func() (s *Service, err error) {
+						return DecodeService(
+							"yaml", []byte(test.TrimYAML(`
+								options:
+									active: `+strconv.FormatBool(active)+`
+								latest_version:
+								`+lvtest.Lookup(t, "url", false).String("  ")+`
+								deployed_version:
+								`+dvtest.Lookup(t, "url", false, "").String("  ")+`
+								command:
+								- `+testCommand.JSON()+`
+								notify:
+									`+testNotify.ID+`:
+								`+testNotify.String("    ")+`
+								webhook:
+									`+testWebhook.ID+`:
+								`+testWebhook.String("    ")+`
+							`)),
+							"TestService_InitMetrics_then_DeleteMetrics--"+tc.name,
+							svcCfg,
+							notifyCfg,
+							whCfg,
+						)
+					})
+
+					version := "0.0.2"
+					svc.Status.SetLatestVersion(version, "", false)
+					svc.Status.SetDeployedVersion(version, "", false)
+
+					var deployedVersionType string
+					if tc.nilDeployedVersion {
+						svc.DeployedVersionLookup = nil
+					} else {
+						deployedVersionType = svc.DeployedVersionLookup.GetType()
+					}
+					if tc.nilCommand {
+						svc.Command = nil
+					}
+					if tc.nilNotify {
+						svc.Notify = nil
+					}
+					if tc.nilWebhook {
+						svc.Webhook = nil
+					}
+
+					latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(svc.ID)
+					latestVersionType := svc.LatestVersion.GetType()
+					latestVersionQueryMetric := metric.LatestVersionQueryResultLast.WithLabelValues(
+						svc.ID, latestVersionType,
 					)
+					deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
+						svc.ID, deployedVersionType,
+					)
+					commandMetric := metric.CommandResultTotal.WithLabelValues(
+						testCommand.String(), metric.ActionResultSuccess, svc.ID,
+					)
+					notifyMetric := metric.NotifyResultTotal.WithLabelValues(
+						testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
+					)
+					webhookMetric := metric.WebhookResultTotal.WithLabelValues(
+						testWebhook.ID, metric.ActionResultSuccess, svc.ID,
+					)
+					serviceCountCurrentActive := metric.ServiceCountCurrent.WithLabelValues(
+						metric.ServiceStateActive,
+					)
+					initialServiceCountCurrentActive := testutil.ToFloat64(serviceCountCurrentActive)
+					serviceCountCurrentInactive := metric.ServiceCountCurrent.WithLabelValues(
+						metric.ServiceStateInactive,
+					)
+					initialServiceCountCurrentInactive := testutil.ToFloat64(serviceCountCurrentInactive)
+					initialLatestVersionQueryTotals := testutil.CollectAndCount(
+						metric.LatestVersionQueryResultTotal,
+					)
+
+					svc.initMetrics()
+
+					wantIsDeployed := float64(0)
+					if active {
+						wantIsDeployed = float64(metric.LatestVersionDeployed)
+					}
+					if got := testutil.ToFloat64(latestVersionMetric); got != wantIsDeployed {
+						t.Errorf(
+							"after initMetrics: metric.LatestVersionIsDeployed mismatch\n"+
+								"got:  %f\nwant: %f",
+							got, wantIsDeployed,
+						)
+					}
+					wantLatestVersionQueryTotals := initialLatestVersionQueryTotals
+					if active {
+						wantLatestVersionQueryTotals += 2
+					}
+					test.AssertMetricCount(
+						t, "Service.initMetrics() LatestVersionQueryResultTotal",
+						metric.LatestVersionQueryResultTotal, wantLatestVersionQueryTotals,
+					)
+					fieldTests := []test.FieldAssertion{
+						{Name: "LatestVersionQueryResultLast", Got: testutil.ToFloat64(latestVersionQueryMetric), Want: float64(0), Mode: test.CompareEqual},
+						{Name: "DeployedVersionQueryResultLast", Got: testutil.ToFloat64(deployedVersionMetric), Want: float64(0), Mode: test.CompareEqual},
+						{Name: "CommandResultTotal", Got: testutil.ToFloat64(commandMetric), Want: float64(0), Mode: test.CompareEqual},
+						{Name: "NotifyResultTotal", Got: testutil.ToFloat64(notifyMetric), Want: float64(0), Mode: test.CompareEqual},
+						{Name: "WebhookResultTotal", Got: testutil.ToFloat64(webhookMetric), Want: float64(0), Mode: test.CompareEqual},
+					}
+					if testErr := test.AssertFields(t, fieldTests, "metric"); testErr != nil {
+						t.Errorf("after initMetrics: %v", testErr)
+					}
+					wantActive, wantInactive := initialServiceCountCurrentActive, initialServiceCountCurrentInactive
+					if active {
+						wantActive++
+					} else {
+						wantInactive++
+					}
+					fieldTests = []test.FieldAssertion{
+						{Name: "ServiceCountCurrent(active)", Got: testutil.ToFloat64(serviceCountCurrentActive), Want: wantActive, Mode: test.CompareEqual},
+						{Name: "ServiceCountCurrent(inactive)", Got: testutil.ToFloat64(serviceCountCurrentInactive), Want: wantInactive, Mode: test.CompareEqual},
+					}
+					if testErr := test.AssertFields(t, fieldTests, "metric"); testErr != nil {
+						t.Errorf("after initMetrics: %v", testErr)
+					}
+
+					// Give deleteMetrics values to clear.
+					if active {
+						latestVersionMetric.Set(3)
+						latestVersionQueryMetric.Set(3)
+						if !tc.nilDeployedVersion {
+							deployedVersionMetric.Set(3)
+						}
+						if !tc.nilCommand {
+							commandMetric.Add(3)
+						}
+						if !tc.nilNotify {
+							notifyMetric.Add(3)
+						}
+						if !tc.nilWebhook {
+							webhookMetric.Add(3)
+						}
+					}
+
+					// ------------------------------------
+
+					svc.deleteMetrics()
+
+					latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(svc.ID)
+					latestVersionQueryMetric = metric.LatestVersionQueryResultLast.WithLabelValues(
+						svc.ID, latestVersionType,
+					)
+					deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
+						svc.ID, deployedVersionType,
+					)
+					commandMetric = metric.CommandResultTotal.WithLabelValues(
+						testCommand.String(), metric.ActionResultSuccess, svc.ID,
+					)
+					notifyMetric = metric.NotifyResultTotal.WithLabelValues(
+						testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
+					)
+					webhookMetric = metric.WebhookResultTotal.WithLabelValues(
+						testWebhook.ID, metric.ActionResultSuccess, svc.ID,
+					)
+
+					fieldTests = []test.FieldAssertion{
+						{Name: "ServiceCountCurrent(active)", Got: testutil.ToFloat64(serviceCountCurrentActive), Want: initialServiceCountCurrentActive, Mode: test.CompareEqual},
+						{Name: "ServiceCountCurrent(inactive)", Got: testutil.ToFloat64(serviceCountCurrentInactive), Want: initialServiceCountCurrentInactive, Mode: test.CompareEqual},
+					}
+					if active {
+						fieldTests = append(fieldTests, []test.FieldAssertion{
+							{Name: "LatestVersionIsDeployed", Got: testutil.ToFloat64(latestVersionMetric), Want: float64(0), Mode: test.CompareEqual},
+							{Name: "LatestVersionQueryResultLast", Got: testutil.ToFloat64(latestVersionQueryMetric), Want: float64(0), Mode: test.CompareEqual},
+							{Name: "DeployedVersionQueryResultLast", Got: testutil.ToFloat64(deployedVersionMetric), Want: float64(0), Mode: test.CompareEqual},
+							{Name: "CommandResultTotal", Got: testutil.ToFloat64(commandMetric), Want: float64(0), Mode: test.CompareEqual},
+							{Name: "NotifyResultTotal", Got: testutil.ToFloat64(notifyMetric), Want: float64(0), Mode: test.CompareEqual},
+							{Name: "WebhookResultTotal", Got: testutil.ToFloat64(webhookMetric), Want: float64(0), Mode: test.CompareEqual},
+						}...)
+					}
+					if testErr := test.AssertFields(t, fieldTests, "metric"); testErr != nil {
+						t.Fatalf("after deleteMetrics: %v", testErr)
+					}
 				})
-
-				// Set the versions.
-				svc.Status.SetLatestVersion("0.0.2", "", false)
-				svc.Status.SetDeployedVersion("0.0.2", "", false)
-
-				// nil the vars.
-				var deployedVersionType string
-				if tc.nilDeployedVersion {
-					svc.DeployedVersionLookup = nil
-				} else {
-					deployedVersionType = svc.DeployedVersionLookup.GetType()
-				}
-				if tc.nilCommand {
-					svc.Command = nil
-				}
-				if tc.nilNotify {
-					svc.Notify = nil
-				}
-				if tc.nilWebhook {
-					svc.Webhook = nil
-				}
-
-				// metrics:
-				// 	latest_version_query_result_total.
-				latestVersionMetric := metric.LatestVersionIsDeployed.WithLabelValues(
-					svc.ID,
-				)
-				// 	deployed_version_query_result_last.
-				deployedVersionMetric := metric.DeployedVersionQueryResultLast.WithLabelValues(
-					svc.ID, deployedVersionType,
-				)
-				// 	command_result_total.
-				commandMetric := metric.CommandResultTotal.WithLabelValues(
-					testCommand.String(), metric.ActionResultSuccess, svc.ID,
-				)
-				// 	notify_result_total.
-				notifyMetric := metric.NotifyResultTotal.WithLabelValues(
-					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
-				)
-				// 	webhook_result_total.
-				webhookMetric := metric.WebhookResultTotal.WithLabelValues(
-					testWebhook.ID, metric.ActionResultSuccess, svc.ID,
-				)
-				// 	service_count_current.
-				serviceCountCurrentActive := metric.ServiceCountCurrent.WithLabelValues(
-					metric.ServiceStateActive,
-				)
-				initialServiceCountCurrentActive := testutil.ToFloat64(serviceCountCurrentActive)
-				serviceCountCurrentInactive := metric.ServiceCountCurrent.WithLabelValues(
-					metric.ServiceStateInactive,
-				)
-				initialServiceCountCurrentInactive := testutil.ToFloat64(serviceCountCurrentInactive)
-
-				// WHEN: initMetrics is called on it. #
-				svc.initMetrics()
-
-				prefix := fmt.Sprintf("%s\nService.initMetrics()", packageName)
-
-				// THEN: the metrics are created:
-				want := float64(3)
-				oldWant := want
-				// 	latest_version_is_deployed.
-				if !active {
-					want = 0
-				} else {
-					latestVersionMetric.Set(want)
-				}
-				if got := testutil.ToFloat64(latestVersionMetric); got != want {
-					t.Errorf(
-						"%s latestVersionMetric mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				// 	deployed_version_query_result_last.
-				if tc.nilDeployedVersion || !active {
-					want = 0
-				} else {
-					deployedVersionMetric.Set(want)
-				}
-				if got := testutil.ToFloat64(deployedVersionMetric); got != want {
-					t.Errorf(
-						"%s deployedVersionMetric mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				want = oldWant
-				// 	command_result_total.
-				if tc.nilCommand || !active {
-					want = 0
-				} else {
-					commandMetric.Add(want)
-				}
-				if got := testutil.ToFloat64(commandMetric); got != want {
-					t.Errorf(
-						"%s commandMetric mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				want = oldWant
-				// 	notify_result_total.
-				if tc.nilNotify || !active {
-					want = 0
-				} else {
-					notifyMetric.Add(want)
-				}
-				if got := testutil.ToFloat64(notifyMetric); got != want {
-					t.Errorf(
-						"%s notifyMetric mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				want = oldWant
-				// 	webhook_result_total.
-				if tc.nilWebhook || !active {
-					want = 0
-				} else {
-					webhookMetric.Add(want)
-				}
-				if got := testutil.ToFloat64(webhookMetric); got != want {
-					t.Errorf(
-						"%s webhookMetric mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				// 	service_count_current (active=true).
-				want = initialServiceCountCurrentActive
-				if active {
-					want++
-				}
-				if got := testutil.ToFloat64(serviceCountCurrentActive); got != want {
-					t.Errorf(
-						"%s ServiceCountCurrent (active=true) mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				// 	service_count_current (active=false).
-				want = initialServiceCountCurrentInactive
-				if !active {
-					want++
-				}
-				if got := testutil.ToFloat64(serviceCountCurrentInactive); got != want {
-					t.Errorf(
-						"%s\nServiceCountCurrent (active=false) mismatch\ngot:  %f\nwant: %f",
-						prefix, got, want,
-					)
-				}
-				want = oldWant
-
-				// ------------------------------------
-
-				// WHEN: deleteMetrics is called on it.
-				svc.deleteMetrics()
-
-				// metrics:
-				// 	latest_version_is_deployed.
-				latestVersionMetric = metric.LatestVersionIsDeployed.WithLabelValues(
-					svc.ID,
-				)
-				// 	deployed_version_query_result_last.
-				deployedVersionMetric = metric.DeployedVersionQueryResultLast.WithLabelValues(
-					svc.ID, deployedVersionType,
-				)
-				// 	command_result_total.
-				commandMetric = metric.CommandResultTotal.WithLabelValues(
-					testCommand.String(), metric.ActionResultSuccess, svc.ID,
-				)
-				// 	notify_result_total.
-				notifyMetric = metric.NotifyResultTotal.WithLabelValues(
-					testNotify.ID, metric.ActionResultSuccess, svc.ID, testNotify.GetType(),
-				)
-				// 	webhook_result_total.
-				webhookMetric = metric.WebhookResultTotal.WithLabelValues(
-					testWebhook.ID, metric.ActionResultSuccess, svc.ID,
-				)
-
-				prefix = fmt.Sprintf("%s\nService.deleteMetrics()", packageName)
-
-				// THEN: the metrics are deleted:
-				want = 0
-				fieldTests := []test.FieldAssertion{
-					// 	latest_version_is_deployed.
-					{Name: "latestVersionMetric", Got: testutil.ToFloat64(latestVersionMetric), Want: want, Mode: test.CompareEqual},
-					// 	deployed_version_query_result_last.
-					{Name: "deployedVersionMetric", Got: testutil.ToFloat64(deployedVersionMetric), Want: want, Mode: test.CompareEqual},
-					// 	command_result_total.
-					{Name: "commandMetric", Got: testutil.ToFloat64(commandMetric), Want: want, Mode: test.CompareEqual},
-					// 	notify_result_total.
-					{Name: "notifyMetric", Got: testutil.ToFloat64(notifyMetric), Want: want, Mode: test.CompareEqual},
-					// 	webhook_result_total.
-					{Name: "webhookMetric", Got: testutil.ToFloat64(webhookMetric), Want: want, Mode: test.CompareEqual},
-					// 	service_count_current.
-					{Name: "ServiceCountCurrent (active=true)", Got: testutil.ToFloat64(serviceCountCurrentActive), Want: initialServiceCountCurrentActive, Mode: test.CompareEqual},
-					{Name: "ServiceCountCurrent (active=false)", Got: testutil.ToFloat64(serviceCountCurrentInactive), Want: initialServiceCountCurrentInactive, Mode: test.CompareEqual},
-				}
-				if err := test.AssertFields(t, fieldTests, prefix, ""); err != nil {
-					t.Fatal(err)
-				}
 			}
 		})
 	}

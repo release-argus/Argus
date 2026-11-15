@@ -17,13 +17,14 @@
 package v1
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -48,14 +49,17 @@ import (
 )
 
 func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
-	// GIVEN: an API and a bunch of routes.
-	tests := map[string]struct {
+	// Each route is named by its disabled_routes key, or '-'-prefixed if it has none.
+	type route struct {
+		name               string
 		method, path, body string
 		queryParams        url.Values
 		wantStatus         int
 		wantBody           string
-	}{
-		"-config": {
+	}
+	tests := []route{
+		{
+			name:       "-config",
 			method:     http.MethodGet,
 			path:       "config",
 			wantStatus: http.StatusOK,
@@ -67,7 +71,8 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"service":{.*
 			}`),
 		},
-		"-runtime": {
+		{
+			name:       "-runtime",
 			method:     http.MethodGet,
 			path:       "status/runtime",
 			wantStatus: http.StatusOK,
@@ -78,7 +83,8 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"GOMAXPROCS":\d+
 			}`),
 		},
-		"-version": {
+		{
+			name:       "-version",
 			method:     http.MethodGet,
 			path:       "version",
 			wantStatus: http.StatusOK,
@@ -88,7 +94,8 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"goVersion":"[^"]*"
 			}`),
 		},
-		"-flags": {
+		{
+			name:       "-flags",
 			method:     http.MethodGet,
 			path:       "flags",
 			wantStatus: http.StatusOK,
@@ -100,44 +107,51 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"web.listen-host":"[\d.]+",
 				"web.listen-port":"\d+",
 				"web.cert-file":"",
-				"web.pkey-file":""
-			`),
+				"web.pkey-file":"",
+				"web.route-prefix":"/"
+			}`),
 		},
-		"-order": {
+		{
+			name:       "-order",
 			method:     http.MethodGet,
 			path:       "service/order",
 			wantStatus: http.StatusOK,
 			wantBody:   `{"order":\["test"\]}`,
 		},
-		"order_edit": {
+		{
+			name:       "order_edit",
 			method:     http.MethodPut,
 			path:       "service/order",
 			body:       `{"order":["test"]}`,
 			wantStatus: http.StatusOK,
 			wantBody:   `{"message":"order updated[^"]*"}`,
 		},
-		"-service_summary": {
+		{
+			name:        "-service_summary",
 			method:      http.MethodGet,
 			path:        "service/summary",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"-service_actions - GET": {
+		{
+			name:        "-service_actions/GET",
 			method:      http.MethodGet,
 			path:        "service/actions",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"service_actions": {
+		{
+			name:        "service_actions",
 			method:      http.MethodPost,
 			path:        "service/actions",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"-service_update - GET unspecific": {
+		{
+			name:       "-service_update/GET unspecific",
 			method:     http.MethodGet,
 			path:       "service/defaults",
 			wantStatus: http.StatusOK,
@@ -148,59 +162,68 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 				"webhook":{.*}
 			}`),
 		},
-		"-service_update - GET": {
+		{
+			name:        "-service_update/GET",
 			method:      http.MethodGet,
 			path:        "service/config",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"lv_refresh_new": {
+		{
+			name:       "lv_refresh_new",
 			method:     http.MethodGet,
 			path:       "latest_version/refresh_uncreated",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"overrides: .*required.*"}`,
 		},
-		"dv_refresh_new": {
+		{
+			name:       "dv_refresh_new",
 			method:     http.MethodGet,
 			path:       "deployed_version/refresh_uncreated",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"overrides: .*required.*"}`,
 		},
-		"lv_refresh": {
+		{
+			name:        "lv_refresh",
 			method:      http.MethodGet,
 			path:        "latest_version/refresh",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"dv_refresh": {
+		{
+			name:        "dv_refresh",
 			method:      http.MethodGet,
 			path:        "deployed_version/refresh",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"service \\"[^"]+\\" not found"}`,
 		},
-		"notify_test": {
+		{
+			name:       "notify_test",
 			method:     http.MethodPost,
 			path:       "notify/test",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"body required"}`,
 		},
-		"service_update": {
+		{
+			name:        "service_update",
 			method:      http.MethodPut,
 			path:        "service/config",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
 			wantStatus:  http.StatusNotFound,
 			wantBody:    `{"message":"edit \\"[^"]+\\" failed[^"]*"}`,
 		},
-		"service_create": {
+		{
+			name:       "service_create",
 			method:     http.MethodPut,
 			path:       "service/new",
 			wantStatus: http.StatusBadRequest,
 			wantBody:   `{"message":"create \\"\\" failed[^"]*"}`,
 		},
-		"service_delete": {
+		{
+			name:        "service_delete",
 			method:      http.MethodDelete,
 			path:        "service/delete",
 			queryParams: url.Values{"service_id": {"unknown_service_id"}},
@@ -208,31 +231,33 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 			wantBody:    `{"message":"delete \\"[^"]+\\" failed[^"]*"}`,
 		},
 	}
-	disableCombinations := test.Combinations(util.SortedKeys(tests))
+	names := test.AttributesSorted(tests, func(r route) string { return r.name })
+	disableCombinations := test.Combinations(names)
 
-	// Split tests into groups.
 	groupSize := max(1, len(disableCombinations)/runtime.NumCPU())
-	numGroups := len(disableCombinations) / groupSize
+	numGroups := (len(disableCombinations) + groupSize - 1) / groupSize
 	for i := range numGroups {
 		groupStart := i * groupSize
 		groupEnd := min((i+1)*groupSize, len(disableCombinations))
 		group := disableCombinations[groupStart:groupEnd]
 
-		name := fmt.Sprintf("Group %d", i+1)
-		t.Run(name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
+			sampleEvery := (len(tests) + 1) * 10
 			for j, disabledRoutes := range group {
-				// Insane number of tests, so have to skip some.
-				if j%((len(tests)+1)*10) != 0 {
+				// Too many combinations to run each, so sample them.
+				if j%sampleEvery != 0 {
 					continue
 				}
 				name := strings.Join(disabledRoutes, ";")
 				t.Run(name, func(t *testing.T) {
-					cfg := config_test.BareConfig(t, false)
-					// Give values.
+					// Serial: bounds concurrency to one server per group.
+
+					cfg := config_test.BareConfig(false)
 					cfg.Defaults.Default()
 					cfg.Webhook = make(webhook.WebhooksDefaults)
-					cfg.Webhook["test"], _ = webhook.DecodeDefaults("yaml", nil)
+					whDefaults, _ := webhook.DecodeDefaults("yaml", nil)
+					cfg.Webhook["test"] = whDefaults
 					cfg.Webhook["test"].Default()
 					cfg.Notify = make(map[string]*shoutrrr.Defaults)
 					cfg.Notify["test"] = shoutrrr.NewDefaults(
@@ -246,7 +271,8 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 					cfg.Service = make(service.Services)
 					cfg.Service["test"] = &service.Service{}
 					svcStatus, _ := statustest.New("yaml", nil)
-					cfg.Service["test"].LatestVersion, _ = latestver.Decode(
+					var err error
+					cfg.Service["test"].LatestVersion, err = latestver.Decode(
 						"yaml", []byte(`url: `+test.ArgusGitHubRepo),
 						&option.Options{},
 						svcStatus,
@@ -255,99 +281,84 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 							Hard: &cfg.HardDefaults.Service.LatestVersion,
 						},
 					)
+					if err != nil {
+						t.Fatalf("latestver.Decode() failed: %v", err)
+					}
 					cfg.Order = []string{"test"}
 
 					announceChannel := cfg.HardDefaults.Service.Status.AnnounceChannel
 					saveChannel := cfg.HardDefaults.Service.Status.SaveChannel
 					cfg.Settings.Web.DisabledRoutes = disabledRoutes
-					// Give every other test a route prefix.
+					// Give every other sampled run a route prefix.
 					routePrefix := ""
-					if j%2 == 0 {
+					if (j/sampleEvery)%2 == 0 {
 						routePrefix = "/test"
 						cfg.Settings.Web.RoutePrefix = routePrefix
 					}
 					api, _ := NewAPI(cfg)
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
-					ts.Config.Handler = api.Router
 					t.Cleanup(ts.Close)
 					client := http.Client{}
 
-					// Test each route for this set of disabled routes.
-					for name, tc := range tests {
-						if len(announceChannel) != 0 {
-							<-(announceChannel)
-						}
-						if len(saveChannel) != 0 {
-							<-(saveChannel)
-						}
+					for _, tc := range tests {
+						t.Run(tc.name, func(t *testing.T) {
+							// Serial: shares api.Config.
 
-						if !strings.HasPrefix(name, "-") && slices.Contains(disabledRoutes, name) {
-							tc.wantStatus = http.StatusNotFound
-							tc.wantBody = "route disabled"
-						}
+							for len(announceChannel) != 0 {
+								<-announceChannel
+							}
+							for len(saveChannel) != 0 {
+								<-saveChannel
+							}
 
-						path := fmt.Sprintf(
-							"%s/api/v1/%s",
-							routePrefix, tc.path,
-						)
-						target := ts.URL + path
+							if routePrefix != "" {
+								tc.wantBody = strings.Replace(
+									tc.wantBody,
+									`"web.route-prefix":"/"`,
+									`"web.route-prefix":"`+routePrefix+`"`,
+									1,
+								)
+							}
+							if !strings.HasPrefix(tc.name, "-") && slices.Contains(disabledRoutes, tc.name) {
+								tc.wantStatus = http.StatusNotFound
+								tc.wantBody = "route disabled"
+							}
 
-						reqBody := io.NopCloser(strings.NewReader(tc.body))
-						if tc.body == "" {
-							reqBody = nil
-						}
-						// WHEN: a HTTP request is made to this router.
-						req, err := http.NewRequest(tc.method, target, reqBody)
-						req.URL.RawQuery = tc.queryParams.Encode()
-						if err != nil {
-							t.Fatalf(
-								"%s\n%v",
-								packageName, err,
-							)
-						}
-						resp, err := client.Do(req)
-						if err != nil {
-							t.Fatalf(
-								"%s\n%v",
-								packageName, err,
-							)
-						}
+							target := ts.URL + routePrefix + "/api/v1/" + tc.path
 
-						// Read the response bodyRegex.
-						body, err := io.ReadAll(resp.Body)
-						if err != nil {
-							t.Fatal(err)
-						}
-						_ = resp.Body.Close()
+							reqBody := io.NopCloser(strings.NewReader(tc.body))
+							if tc.body == "" {
+								reqBody = nil
+							}
 
-						fail := false
-						prefix := fmt.Sprintf(
-							"%s\nAPI.SetupRoutesAPI() method=%s, path=%s",
-							packageName, tc.method, path,
-						)
+							req, err := http.NewRequest(tc.method, target, reqBody)
+							if err != nil {
+								t.Fatalf("http.NewRequest() failed: %v", err)
+							}
+							req.URL.RawQuery = tc.queryParams.Encode()
+							resp, err := client.Do(req)
+							if err != nil {
+								t.Fatalf("Client.Do() failed: %v", err)
+							}
 
-						// THEN: the status code is as expected.
-						if got := resp.StatusCode; got != tc.wantStatus {
-							t.Errorf(
-								"%s - status code mismatch\ngot:  %d\nwant: %d",
-								prefix, got, tc.wantStatus,
-							)
-							fail = true
-						}
+							body, err := io.ReadAll(resp.Body)
+							if err != nil {
+								t.Fatalf("io.ReadAll() failed: %v", err)
+							}
+							_ = resp.Body.Close()
 
-						// AND: the body is as expected.
-						if got := string(body); !util.RegexCheck(tc.wantBody, got) {
-							t.Errorf(
-								"%s - body mismatch\ngot:  %q\nwant: %q",
-								prefix, got, tc.wantBody,
-							)
-							fail = true
-						}
+							if got, want := resp.StatusCode, tc.wantStatus; got != want {
+								t.Errorf(
+									"status code mismatch\ngot:  %d - %q\nwant: %d",
+									got, body, want,
+								)
+							}
 
-						if fail {
-							t.FailNow()
-						}
+							if got := string(body); !util.RegexCheck(tc.wantBody, got) {
+								t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wantBody)
+							}
+						})
 					}
 				})
 			}
@@ -359,8 +370,8 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 	tests := []struct {
 		name             string
 		basicAuth        bool
-		staticToken      string // literal '?token=X' value.
-		mintToken        bool   // mint a fresh token from wsTokens and use it.
+		staticToken      string // Literal '?token=X' value.
+		mintToken        bool   // Mint a fresh token from wsTokens and use it.
 		wantUnauthorized bool
 	}{
 		{
@@ -391,7 +402,6 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: an API with/without Basic Auth configured.
 			cfg := config.Config{}
 			if tc.basicAuth {
 				cfg.Settings.Web.BasicAuth = &config.WebSettingsBasicAuth{
@@ -404,7 +414,6 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 			ts := httptest.NewServer(api.BaseRouter)
 			t.Cleanup(ts.Close)
 
-			// AND: a request to the WebSocket endpoint.
 			token := tc.staticToken
 			if tc.mintToken {
 				token = api.wsTokens.New()
@@ -414,50 +423,51 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 				wsURL += "?token=" + token
 			}
 
-			// WHEN: that request is made.
 			resp, err := http.Get(wsURL)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("first request: http.Get() failed: %v", err)
 			}
 			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("first request: io.ReadAll() failed: %v", err)
+			}
 
-			prefix := fmt.Sprintf(
-				"%s\nSetupWebSocket() %s",
-				packageName, tc.name,
-			)
-
-			// THEN: the auth gate behaves as expected.
 			if tc.wantUnauthorized {
-				if resp.StatusCode != http.StatusUnauthorized {
+				if got, want := resp.StatusCode, http.StatusUnauthorized; got != want {
 					t.Errorf(
-						"%s status code mismatch\ngot:  %d\nwant: %d",
-						prefix, resp.StatusCode, http.StatusUnauthorized,
+						"first request: status code mismatch\ngot:  %d - %q\nwant: %d",
+						got, body, want,
 					)
 				}
 			} else if resp.StatusCode == http.StatusUnauthorized {
-				t.Errorf("%s got 401, expected auth to pass", prefix)
+				t.Errorf("first request: status code mismatch\ngot:  401 - %q\nwant: NOT 401", body)
 			}
 
-			// AND: the WWW-Authenticate header is absent (no Basic Auth re-prompt on the WebSocket handshake).
-			if got := resp.Header.Get("WWW-Authenticate"); got != "" {
+			// /ws sits outside the basic-auth subrouter, so nothing re-prompts.
+			if got, want := resp.Header.Get("WWW-Authenticate"), ""; got != want {
 				t.Errorf(
-					"%s\nWWW-Authenticate should not be set, got %q",
-					prefix, got,
+					"first request: WWW-Authenticate header mismatch\ngot:  %q\nwant: %q",
+					got, want,
 				)
 			}
 
-			// AND: a valid token is single-use (a second request with it is rejected).
+			// A token is single-use: Validate() consumes it.
 			if tc.mintToken {
 				resp2, err := http.Get(wsURL)
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("token re-use: http.Get() failed: %v", err)
 				}
 				defer resp2.Body.Close()
+				body2, err := io.ReadAll(resp2.Body)
+				if err != nil {
+					t.Fatalf("token re-use: io.ReadAll() failed: %v", err)
+				}
 
-				if resp2.StatusCode != http.StatusUnauthorized {
+				if got, want := resp2.StatusCode, http.StatusUnauthorized; got != want {
 					t.Errorf(
-						"%s (re-use)\nstatus code mismatch\ngot:  %d\nwant: %d",
-						prefix, resp2.StatusCode, http.StatusUnauthorized,
+						"token re-use: status code mismatch\ngot:  %d - %q\nwant: %d",
+						got, body2, want,
 					)
 				}
 			}
@@ -466,7 +476,6 @@ func TestAPI_SetupWebSocket(t *testing.T) {
 }
 
 func TestAPI_SetupWebSocket__originCheck(t *testing.T) {
-	// GIVEN: an auth-enabled API, and a logged-in admin.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -510,7 +519,6 @@ func TestAPI_SetupWebSocket__originCheck(t *testing.T) {
 				header.Set("Origin", tc.origin)
 			}
 
-			// WHEN: a WebSocket handshake is attempted carrying that Origin.
 			conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 			if conn != nil {
 				t.Cleanup(func() { _ = conn.Close() })
@@ -519,36 +527,30 @@ func TestAPI_SetupWebSocket__originCheck(t *testing.T) {
 				t.Cleanup(func() { _ = resp.Body.Close() })
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nSetupWebSocket() origin=%q",
-				packageName, tc.origin,
-			)
-
-			// THEN: only a same-origin or non-browser handshake is upgraded.
 			if !tc.wantRefused {
 				if err != nil {
-					t.Errorf(
-						"%s should have connected\ngot: %v",
-						prefix, err,
-					)
+					t.Errorf("Dialer.Dial(%q) failed: %v", wsURL, err)
 				}
 				return
 			}
 			if err == nil {
-				t.Fatalf("%s should have been refused, but connected", prefix)
+				t.Fatal("Dialer.Dial() error mismatch\ngot:  nil\nwant: non-nil")
 			}
-			if resp == nil || resp.StatusCode != http.StatusForbidden {
-				t.Errorf(
-					"%s status mismatch\ngot:  %v\nwant: %d",
-					prefix, resp, http.StatusForbidden,
-				)
+			if resp == nil {
+				t.Fatalf("Dialer.Dial() response mismatch\ngot:  nil (err=%v)\nwant: non-nil", err)
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
+			}
+			if got, want := resp.StatusCode, http.StatusForbidden; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 		})
 	}
 }
 
 func TestAPI_SetupWebSocket__originUncheckedWithoutAuth(t *testing.T) {
-	// GIVEN: an API with auth disabled.
 	cfg := config.Config{}
 	api, wsRoute := NewAPI(&cfg)
 	api.SetupWebSocket(NewHub(), wsRoute)
@@ -556,8 +558,7 @@ func TestAPI_SetupWebSocket__originUncheckedWithoutAuth(t *testing.T) {
 	t.Cleanup(server.Close)
 	wsURL := strings.Replace(server.URL, "http:", "ws:", 1) + "/ws"
 
-	// WHEN: a handshake arrives whose Origin does not match the request Host,
-	// as it would behind a reverse proxy that rewrites Host.
+	// An Origin not matching Host, as behind a reverse proxy that rewrites Host.
 	header := http.Header{"Origin": {"http://argus.example.com"}}
 	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if conn != nil {
@@ -567,19 +568,12 @@ func TestAPI_SetupWebSocket__originUncheckedWithoutAuth(t *testing.T) {
 		t.Cleanup(func() { _ = resp.Body.Close() })
 	}
 
-	prefix := fmt.Sprintf("%s\nSetupWebSocket() without auth", packageName)
-
-	// THEN: it still connects since the origin check is gated on auth.
 	if err != nil {
-		t.Errorf(
-			"%s mismatched Origin should still connect\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("Dialer.Dial(%q) failed: %v", wsURL, err)
 	}
 }
 
 func TestAPI_SetupWebSocket__sessionAuth(t *testing.T) {
-	// GIVEN: an auth-enabled API wired for session auth, and a logged-in admin.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -587,93 +581,73 @@ func TestAPI_SetupWebSocket__sessionAuth(t *testing.T) {
 	server := httptest.NewServer(api.BaseRouter)
 	t.Cleanup(server.Close)
 
-	prefix := fmt.Sprintf("%s\nSetupWebSocket() session auth", packageName)
-
-	// WHEN: a WebSocket client connects, carrying the session cookie.
 	wsURL := strings.Replace(server.URL, "http:", "ws:", 1) + "/ws"
 	header := http.Header{"Cookie": {cookie.String()}}
 	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {
-		t.Fatalf(
-			"%s failed to dial WebSocket: %v",
-			prefix, err,
-		)
+		t.Fatalf("Dialer.Dial(%q) failed: %v", wsURL, err)
 	}
 	t.Cleanup(func() { _ = clientConn.Close() })
 
-	// THEN: the registered client carries the logged-in session's identity,
-	// wired through SetupWebSocket's cookie -> authenticateSession -> clientAuth path.
 	var registered *Client
 	for i := 0; i < 100 && registered == nil; i++ {
 		time.Sleep(10 * time.Millisecond)
 		registered = hubClientForTest(t, api.hub)
 	}
 	if registered == nil {
-		t.Fatalf("%s expected a registered client", prefix)
+		t.Fatal("hubClientForTest() mismatch\ngot:  nil\nwant: non-nil")
 	}
-	wantSessionHash := auth.HashToken(cookie.Value)
-	if registered.userID != adminID ||
-		registered.sessionHash != wantSessionHash ||
-		registered.sessionAlive == nil || !registered.sessionAlive() {
-		t.Errorf(
-			"%s client identity mismatch\n"+
-				"got:  userID=%q sessionHash=%q sessionAlive=%t\n"+
-				"want: userID=%q sessionHash=%q sessionAlive=true",
-			prefix,
-			registered.userID, registered.sessionHash, registered.sessionAlive == nil || !registered.sessionAlive(),
-			adminID, wantSessionHash,
-		)
+	gotAlive := registered.sessionAlive != nil && registered.sessionAlive()
+	fieldTests := []test.FieldAssertion{
+		{Name: "userID", Got: registered.userID, Want: adminID, Mode: test.CompareEqual},
+		{Name: "sessionHash", Got: registered.sessionHash, Want: auth.HashToken(cookie.Value), Mode: test.CompareEqual},
+		{Name: "sessionAlive()", Got: gotAlive, Want: true, Mode: test.CompareEqual},
+	}
+	if testErr := test.AssertFields(t, fieldTests, "Client"); testErr != nil {
+		t.Error(testErr)
 	}
 }
 
 func TestHTTP_Version(t *testing.T) {
-	// GIVEN: an API and the Version,BuildDate and GoVersion vars defined.
 	api := API{}
+	version, buildDate := util.Version, util.BuildDate
+	t.Cleanup(func() { util.Version, util.BuildDate = version, buildDate })
 	util.Version = "1.2.3"
 	util.BuildDate = "2022-01-01T01:01:01Z"
 
-	// WHEN: a HTTP request is made to the httpVersion handler.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
 	w := httptest.NewRecorder()
 	api.httpVersion(w, req)
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
+	resp := w.Result()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
-	prefix := fmt.Sprintf("%s\nAPI.httpVersion()", packageName)
-
-	// THEN: the version is returned in JSON format.
-	data, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: nil",
-			prefix, err,
-		)
+		t.Fatalf("io.ReadAll() failed: %v", err)
 	}
 	var got apitype.VersionAPI
-	_ = decode.Unmarshal("json", data, &got)
+	if err := decode.Unmarshal("json", data, &got); err != nil {
+		t.Fatalf("decode.Unmarshal() failed: %v", err)
+	}
 	want := apitype.VersionAPI{
-		Version:   util.Version,
-		BuildDate: util.BuildDate,
+		Version:   "1.2.3",
+		BuildDate: "2022-01-01T01:01:01Z",
 		GoVersion: util.GoVersion,
 	}
 	if got != want {
-		t.Errorf(
-			"%s body mismatch\ngot:  %+v\nwant: %+v",
-			prefix, got, want,
-		)
+		t.Errorf("body mismatch\ngot:  %s\nwant: %s", data, decode.ToJSONString(want))
 	}
 }
 
 func TestFailRequest(t *testing.T) {
-	// GIVEN: an error.
-	testErr := fmt.Errorf("request failed")
+	requestErr := errors.New("request failed")
 	wantBody, err := decode.Marshal(
 		"json", map[string]string{
-			"message": errfmt.FormatError(testErr),
+			"message": errfmt.FormatError(requestErr),
 		},
 	)
 	if err != nil {
-		t.Fatalf("decode.Marshal() = %v, want nil", err)
+		t.Fatalf("decode.Marshal() failed: %v", err)
 	}
 
 	tests := []struct {
@@ -686,16 +660,16 @@ func TestFailRequest(t *testing.T) {
 	}{
 		{
 			name:       "success",
-			err:        testErr,
+			err:        requestErr,
 			statusCode: http.StatusBadRequest,
 			wantBody:   string(wantBody),
 			errRegex:   `^$`,
 		},
 		{
 			name:          "write error",
-			err:           testErr,
+			err:           requestErr,
 			statusCode:    http.StatusInternalServerError,
-			wantBody:      "",
+			wantBody:      string(wantBody),
 			errRegex:      `ERROR: failRequest, write failed`,
 			useFailWriter: true,
 		},
@@ -703,19 +677,16 @@ func TestFailRequest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// AND: a response writer to write this error.
 			var rw http.ResponseWriter = httptest.NewRecorder()
 			if tc.useFailWriter {
 				rw = &failWriter{header: make(http.Header)}
 			}
 
-			// WHEN: failRequest is called.
 			failRequest(&rw, tc.err, tc.statusCode)
-
-			prefix := fmt.Sprintf("%s\nfailRequest(%s)", packageName, tc.name)
 
 			var gotCode int
 			var gotBody string
@@ -726,46 +697,28 @@ func TestFailRequest(t *testing.T) {
 			case *failWriter:
 				gotCode = w.code
 				gotBody = w.body
-			default:
-				t.Fatalf(
-					"%s unexpected ResponseWriter type %T",
-					prefix, rw,
-				)
 			}
 
-			// THEN: the status code is as expected.
-			if gotCode != tc.statusCode {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, gotCode, tc.statusCode,
-				)
+			if got, want := gotCode, tc.statusCode; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, gotBody, want)
 			}
 
-			// AND: the body is as expected.
 			if gotBody != tc.wantBody {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, gotBody, tc.wantBody,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", gotBody, tc.wantBody)
 			}
 
-			// AND: stdout is as expected.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s log mismatch\ngot:  %q\nwant pattern: %q",
-					prefix, stdout, tc.errRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestFailRequest__marshalError(t *testing.T) {
-	// GIVEN: a failing marshal function.
 	original := marshalFailRequestBody
 	marshalFailRequestBody = func(v map[string]string) ([]byte, error) {
-		return nil, fmt.Errorf("marshal failed")
+		return nil, errors.New("marshal failed")
 	}
 	t.Cleanup(func() { marshalFailRequestBody = original })
 
@@ -774,39 +727,25 @@ func TestFailRequest__marshalError(t *testing.T) {
 	w := httptest.NewRecorder()
 	var rw http.ResponseWriter = w
 
-	// WHEN: failRequest is called.
 	failRequest(
 		&rw,
-		fmt.Errorf("original error"),
+		errors.New("original error"),
 		http.StatusBadRequest,
 	)
 
-	prefix := fmt.Sprintf("%s\nfailRequest(marshal error)", packageName)
-
-	// THEN: the status code is unchanged.
-	if got := w.Code; got != http.StatusBadRequest {
-		t.Errorf(
-			"%s status code mismatch\ngot:  %d\nwant: %d",
-			prefix, got, http.StatusBadRequest,
-		)
+	if got, want := w.Code, http.StatusBadRequest; got != want {
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// AND: a fallback JSON body is written.
 	got := w.Body.String()
 	want := `{"message":"failed to encode error response"}`
 	if got != want {
-		t.Errorf(
-			"%s body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: the marshal error is logged.
 	stdout := releaseStdout()
-	if !util.RegexCheck(`ERROR: failRequest, marshal failed`, stdout) {
-		t.Errorf(
-			"%s log mismatch\ngot:  %q\nwant pattern: %q",
-			prefix, stdout, `ERROR: failRequest, marshal failed`,
-		)
+	wantStdout := `ERROR: failRequest, marshal failed`
+	if !util.RegexCheck(wantStdout, stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, wantStdout)
 	}
 }

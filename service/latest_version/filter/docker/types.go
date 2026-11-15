@@ -50,8 +50,8 @@ var RegistryMap = map[string]func() Registry{
 	},
 }
 
-// RegistryMapInheritable is [RegistryMap] wrapped for polymorphic inheritance decoding.
-var RegistryMapInheritable = polymorphic.ToInheritableMap(RegistryMap)
+// registryMapInheritable is [RegistryMap] wrapped for polymorphic inheritance decoding.
+var registryMapInheritable = polymorphic.ToInheritableMap(RegistryMap)
 
 // RegistryDefaultsMap maps a registry type to a RegistryDefaults constructor.
 var RegistryDefaultsMap = map[string]func() RegistryDefaults{

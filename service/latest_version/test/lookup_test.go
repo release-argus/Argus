@@ -18,10 +18,13 @@ package test
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
+	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
@@ -30,119 +33,90 @@ import (
 )
 
 func TestMockLookup_ApplyOverrides(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: ApplyOverrides is called with empty format and data.
+
 	err := fake.ApplyOverrides("", nil)
-	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf(
-			"MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
-			err,
-		)
+		t.Errorf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
 func TestMockLookup_ApplyOverrides__error(t *testing.T) {
-	// GIVEN: a MockLookup with an error override.
 	wantErr := "TestMockLookup_ApplyOverrides_Error"
 	fake := &MockLookup{OverrideErr: wantErr}
-	// WHEN: ApplyOverrides is called with empty format and data.
+
 	err := fake.ApplyOverrides("", nil)
 	e := errfmt.FormatError(err)
 	if e != wantErr {
-		t.Errorf(
-			"MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch with OverrideErr set\ngot:  %q\nwant: %q",
-			e, wantErr,
-		)
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, wantErr)
 	}
 }
 func TestMockLookup_Copy(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: Copy is called with true.
+
 	got := fake.Copy(fake.GetStatus())
-	// THEN: the returned value is always non-nil.
+
 	if got == nil {
-		t.Errorf("MockLookup.Copy() result mismatch\ngot:  %v\nwant: non-nil",
-			got,
-		)
+		t.Error("mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 func TestMockLookup_DecodeSelf(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: DecodeSelf is called with empty format and data.
+
 	err := fake.DecodeSelf("", nil)
-	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf(
-			"MockLookup.DecodeSelf(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
-			err,
-		)
+		t.Errorf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
 func TestMockLookup_Require(t *testing.T) {
-	// GIVEN: a MockLookup and a Require.
 	fake := &MockLookup{}
 	req := &filter.Require{}
-	// WHEN: SetRequire is called with a Require.
+
 	fake.SetRequire(req)
-	// THEN: the Require is set and can be retrieved.
+
 	if req != fake.Require {
-		t.Errorf(
-			"MockLookup.SetRequire(%p) .Require pointer mismatch\ngot:  %p\nwant: %p",
-			req, fake.Require, req,
-		)
+		t.Errorf("MockLookup.Require mismatch\ngot:  %p\nwant: %p", fake.Require, req)
 	}
 	if got := fake.GetRequire(); got != req {
-		t.Errorf(
-			"MockLookup.GetRequire() pointer mismatch\ngot:  %p\nwant: %p",
-			got, req,
-		)
+		t.Errorf("MockLookup.GetRequire() mismatch\ngot:  %p\nwant: %p", got, req)
 	}
 }
 func TestMockLookup_String(t *testing.T) {
-	// GIVEN: a MockLookup with an error override.
 	fake := &MockLookup{OverrideErr: "foo"}
 	want := "lookup: {}\noverride_err: foo\n"
-	// WHEN: String is called with an empty prefix.
+
 	got := fake.String("")
-	// THEN: the returned value is the expected string.
+
 	if got != want {
-		t.Errorf(
-			"MockLookup.String() value mismatch\ngot:  %q\nwant: %q",
-			got, want,
-		)
+		t.Errorf("MockLookup.String() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestLookupBuilder(t *testing.T) {
-	// GIVEN: a lookup type name.
 	tests := []struct {
-		name       string
-		typ        string
-		wantBuild  bool
-		wantFatals []string
+		name        string
+		typ         string
+		wantBuilder func(*testing.T, bool) latestver.Lookup
+		wantFatals  []string
 	}{
 		{
-			name:      "valid/forgejo",
-			typ:       lvforgejo.Type,
-			wantBuild: true,
+			name:        "valid/forgejo",
+			typ:         lvforgejo.Type,
+			wantBuilder: testForgejo,
 		},
 		{
-			name:      "valid/github",
-			typ:       lvgithub.Type,
-			wantBuild: true,
+			name:        "valid/github",
+			typ:         lvgithub.Type,
+			wantBuilder: testGitHub,
 		},
 		{
-			name:      "valid/url",
-			typ:       lvweb.Type,
-			wantBuild: true,
+			name:        "valid/url",
+			typ:         lvweb.Type,
+			wantBuilder: testWeb,
 		},
 		{
 			name:       "invalid/unknown type",
 			typ:        "something",
-			wantFatals: []string{`lvtest.Lookup: unsupported type "something"`},
+			wantFatals: []string{`unsupported lookup type "something"`},
 		},
 	}
 
@@ -150,37 +124,26 @@ func TestLookupBuilder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var fT test.FakeT
+			var fakeT test.FakeT
 
-			// WHEN: lookupBuilder is asked for that type's builder.
-			got := lookupBuilder(&fT, tc.typ)
+			got := lookupBuilder(&fakeT, tc.typ)
 
-			prefix := fmt.Sprintf(
-				"%s\nlookupBuilder(type=%q)",
-				packageName, tc.typ,
-			)
-
-			// THEN: a builder comes back only for a known type.
-			if gotBuild := got != nil; gotBuild != tc.wantBuild {
+			gotPC, wantPC := reflect.ValueOf(got).Pointer(), reflect.ValueOf(tc.wantBuilder).Pointer()
+			if gotPC != wantPC {
 				t.Errorf(
-					"%s builder mismatch\ngot:  %t\nwant: %t",
-					prefix, gotBuild, tc.wantBuild,
+					"lookupBuilder() mismatch\ngot:  %q\nwant: %q",
+					runtime.FuncForPC(gotPC).Name(), runtime.FuncForPC(wantPC).Name(),
 				)
 			}
 
-			// AND: only unsupported types are reported.
-			if !slices.Equal(fT.Fatals, tc.wantFatals) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, fT.Fatals, tc.wantFatals,
-				)
+			if !slices.Equal(fakeT.Fatals, tc.wantFatals) {
+				t.Fatalf("FakeT.Fatals mismatch\ngot:  %q\nwant: %q", fakeT.Fatals, tc.wantFatals)
 			}
 		})
 	}
 }
 
 func TestLookup(t *testing.T) {
-	// GIVEN: a lookup type the fixture builds, and whether it should be built to fail.
 	tests := []struct {
 		name           string
 		typ            string
@@ -233,43 +196,24 @@ func TestLookup(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Lookup is called for that type.
 			lv := Lookup(t, tc.typ, tc.fail)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup(type=%q, fail=%t)",
-				packageName, tc.typ, tc.fail,
-			)
-
-			// THEN: the lookup is of the concrete type that name addresses.
 			if got := fmt.Sprintf("%T", lv); got != tc.wantType {
-				t.Fatalf(
-					"%s type mismatch\ngot:  %s\nwant: %s",
-					prefix, got, tc.wantType,
-				)
+				t.Fatalf("type mismatch\ngot:  %s\nwant: %s", got, tc.wantType)
 			}
 
-			// AND: it reports the type it was asked for.
 			if got := lv.GetType(); got != tc.typ {
-				t.Errorf(
-					"%s GetType() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.typ,
-				)
+				t.Errorf("Lookup.GetType() mismatch\ngot:  %q\nwant: %q", got, tc.typ)
 			}
 
-			// AND: it addresses the source the fixture describes.
 			if got := lv.ServiceURL(); got != tc.wantServiceURL {
-				t.Errorf(
-					"%s ServiceURL() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantServiceURL,
-				)
+				t.Errorf("Lookup.ServiceURL() mismatch\ngot:  %q\nwant: %q", got, tc.wantServiceURL)
 			}
 
-			// AND: the status carries the fixture's service ID, for tests that key on it.
 			if got, want := lv.GetStatus().ServiceInfo.ID, "TEST_LV"; got != want {
 				t.Errorf(
-					"%s service ID mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
+					"Lookup.GetStatus().ServiceInfo.ID mismatch\ngot:  %q\nwant: %q",
+					got, want,
 				)
 			}
 		})

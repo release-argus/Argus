@@ -32,36 +32,28 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-var packageName = "deployedver_web"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
-func testLookup(t *testing.T, failing bool) *Lookup {
+func testLookup(t *testing.T) *Lookup {
 	t.Helper()
 
-	// Defaults.
-	dvCfg := plainDefaultsConfig(t)
-	// Options.
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
-	options, _ := opt.Decode(
-		"yaml", []byte("semantic_versioning: true"),
-		optCfg,
-	)
-	// Status.
+	options, err := opt.Decode("yaml", []byte("semantic_versioning: true"), optCfg)
+	if err != nil {
+		t.Fatalf("opt.Decode() failed: %v", err)
+	}
 	announceChannel := make(chan []byte, 24)
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
@@ -84,7 +76,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		svcDashboard,
 	)
 
-	lookup, _ := Decode(
+	lookup, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			method: GET
 			url:    `+test.LookupJSON.URLInvalid+`
@@ -94,28 +86,22 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		svcStatus,
 		dvCfg,
 	)
-	allowInvalidCerts := !failing
-	lookup.AllowInvalidCerts = &allowInvalidCerts
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
+	lookup.AllowInvalidCerts = new(true)
 
 	return lookup
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+func plainDefaultsConfig() base.DefaultsConfig {
+	hardDefaults := &base.Defaults{Options: &opt.Defaults{}}
 	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.Options.Default()
 
 	return base.DefaultsConfig{
-		Soft: defaults,
+		Soft: &base.Defaults{Options: &opt.Defaults{}},
 		Hard: hardDefaults,
 	}
 }

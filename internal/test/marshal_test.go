@@ -17,16 +17,15 @@
 package test
 
 import (
-	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/goccy/go-yaml"
+
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestUnmarshal(t *testing.T) {
-	// GIVEN: []byte and a format.
 	tests := []struct {
 		name     string
 		data     []byte
@@ -100,37 +99,22 @@ func TestUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Unmarshal is called on it.
 			var target testStruct
 			err := Unmarshal(tc.format, tc.data, &target)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshal(format=%s, data=%v)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the result stringifies as expected.
 			b, err := yaml.Marshal(target)
 			if err != nil {
-				t.Fatalf("%s: marshal error: %v", prefix, err)
+				t.Fatalf("yaml.Marshal() failed: %v", err)
 			}
 			if got := string(b); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("yaml.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -151,7 +135,6 @@ func (c *customUnmarshaler) UnmarshalYAML(data []byte) error {
 }
 
 func TestUnmarshal__customUnmarshaler(t *testing.T) {
-	// GIVEN: a struct implementing json.Unmarshaler and yaml.BytesUnmarshaler.
 	tests := []struct {
 		name   string
 		format string
@@ -173,29 +156,14 @@ func TestUnmarshal__customUnmarshaler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Unmarshal is called with a custom unmarshaler target.
 			target := &customUnmarshaler{}
 			err := Unmarshal(tc.format, tc.data, target)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshal(format=%s, data=%v)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: no error is returned.
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %q",
-					prefix, err,
-				)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// AND: the custom unmarshaler received the raw data.
 			if string(target.got) != string(tc.data) {
-				t.Errorf(
-					"%s custom unmarshaler data mismatch\ngot:  %q\nwant: %q",
-					prefix, target.got, tc.data,
-				)
+				t.Errorf("customUnmarshaler.got mismatch\ngot:  %q\nwant: %q", target.got, tc.data)
 			}
 		})
 	}

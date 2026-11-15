@@ -17,7 +17,6 @@
 package deployedver
 
 import (
-	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -46,7 +45,7 @@ func TestLookup_Refresh(t *testing.T) {
 		version            versions
 	}
 
-	// GIVEN: a Lookup and various JSON strings to override parts of it.
+	headerAuthURL := test.HeaderAuthServer(t, "1.2.3")
 	tests := []struct {
 		name     string
 		args     args
@@ -145,7 +144,7 @@ func TestLookup_Refresh(t *testing.T) {
 			name: "InheritSecrets inherits header secrets",
 			args: args{
 				overrides: []byte(test.TrimJSON(`{
-					"url": "` + test.LookupWithHeaderAuth.URLValid + `",
+					"url": "` + headerAuthURL + `",
 					"headers": [
 						{
 							"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
@@ -160,19 +159,7 @@ func TestLookup_Refresh(t *testing.T) {
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},
-			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, web.Type, false, "")
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.Method = "POST"
-				lTyped.URL = test.LookupWithHeaderAuth.URLValid
-				lTyped.Headers = shared.Headers{
-					{
-						Key:   test.LookupWithHeaderAuth.HeaderKey,
-						Value: test.LookupWithHeaderAuth.HeaderValuePass,
-					},
-				}
-				return lTyped, nil
-			}),
+			previous: headerAuthLookup(t, headerAuthURL),
 			want:     "1.2.3",
 			announce: 0,
 			errRegex: `^$`,
@@ -195,19 +182,7 @@ func TestLookup_Refresh(t *testing.T) {
 					deployedVersionTimestamp: time.Now().UTC().Add(-4 * time.Hour).Format(time.RFC3339),
 				},
 			},
-			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, web.Type, false, "")
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.Method = "POST"
-				lTyped.URL = test.LookupWithHeaderAuth.URLValid
-				lTyped.Headers = shared.Headers{
-					{
-						Key:   test.LookupWithHeaderAuth.HeaderKey,
-						Value: test.LookupWithHeaderAuth.HeaderValuePass,
-					},
-				}
-				return lTyped, nil
-			}),
+			previous: headerAuthLookup(t, headerAuthURL),
 			want:     "",
 			announce: 0,
 			errRegex: `Hook rules were not satisfied\.`,
@@ -218,7 +193,6 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Status we will be working with.
 			var targetStatus *status.Status
 			switch l := tc.previous.(type) {
 			case *web.Lookup:
@@ -227,7 +201,6 @@ func TestLookup_Refresh(t *testing.T) {
 				targetStatus = l.Status
 			}
 
-			// Copy the starting Status.
 			var previousStatus *status.Status
 			if tc.previous != nil {
 				targetStatus.Init(
@@ -237,7 +210,6 @@ func TestLookup_Refresh(t *testing.T) {
 					},
 					&dashboard.Options{},
 				)
-				// Set the latest version.
 				if tc.args.version.latestVersion != nil {
 					targetStatus.SetLatestVersion(
 						*tc.args.version.latestVersion,
@@ -259,93 +231,92 @@ func TestLookup_Refresh(t *testing.T) {
 				previousType = tc.previous.GetType()
 			}
 
-			// AND: resolve the secretRefs
 			var secretRefs shared.VSecretRef
 			if !tc.args.ignoreSecretRefs {
 				if err := decode.Unmarshal("json", tc.args.overrides, &secretRefs); err != nil {
-					t.Fatalf("%s\nfailed to unmarshal secretRefs: %v",
-						packageName, err,
-					)
+					t.Fatalf("decode.Unmarshal() failed: %v", err)
 				}
 			}
 
-			// WHEN: we call Refresh.
 			got, err := Refresh(
 				tc.previous,
 				previousType, tc.args.overrides,
 				tc.args.semanticVersioning,
 				&secretRefs,
 			)
-
-			prefix := fmt.Sprintf("%s\nLookup.Refresh()", packageName)
-
-			// THEN: we get an error if expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if tc.previous == nil {
 				return
 			}
 
-			// AND: announce is only true when expected.
-			gotAnnounces := len(targetStatus.AnnounceChannel)
-			if gotAnnounces != tc.announce {
+			// A preview never announces; overrides on an already-manual lookup commit instead.
+			if gotAnnounces := len(targetStatus.AnnounceChannel); gotAnnounces != tc.announce {
 				t.Errorf(
-					"%s Announce channel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotAnnounces, tc.announce,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotAnnounces, tc.announce,
 				)
 			}
 
-			// AND: we get the expected result otherwise.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch on version returned\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the timestamp only changes if the version changed,
-			// and the possible query-changing overrides are nil.
-			gotDVTS := previousStatus.DeployedVersionTimestamp()
-			targetDVTS := targetStatus.DeployedVersionTimestamp()
+			hadTS := previousStatus.DeployedVersionTimestamp()
+			gotTS := targetStatus.DeployedVersionTimestamp()
 			if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
-				// If the version changed.
 				if previousStatus.DeployedVersion() != targetStatus.DeployedVersion() {
-					// then so should the timestamp.
-					if gotDVTS == targetDVTS {
+					if gotTS == hadTS {
 						t.Errorf(
-							"%s expected .DeployedVersion() to change\ngot:  %q\nhad: %q",
-							prefix, gotDVTS, targetDVTS,
+							"version changed: Status.DeployedVersionTimestamp() mismatch\n"+
+								"got:  %q\nwant: NOT %q",
+							gotTS, hadTS,
 						)
 					}
-					// otherwise, the timestamp should remain unchanged.
-				} else if gotDVTS != targetDVTS {
+				} else if gotTS != hadTS {
 					t.Errorf(
-						"%s expected .DeployedVersionTimestamp() to be unchanged\ngot:  %q\nwant: %q",
-						prefix, gotDVTS, targetDVTS,
+						"version unchanged: Status.DeployedVersionTimestamp() mismatch\n"+
+							"got:  %q\nwant: %q",
+						gotTS, hadTS,
 					)
 				}
-				// If the overrides are not nil.
 			} else {
-				// The timestamp shouldn't change.
-				if gotDVTS != targetDVTS {
+				if gotTS != hadTS {
 					t.Errorf(
-						"%s .DeployedVersionTimestamp() value mismatch\ngot:  %q\nwant: %q",
-						prefix, gotDVTS, targetDVTS,
+						"preview: Status.DeployedVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
+						gotTS, hadTS,
 					)
 				}
-				// AND: neither should the version.
-				if gotDV, targetDV := previousStatus.DeployedVersion(), targetStatus.DeployedVersion(); gotDV != targetDV {
+
+				if gotDV, hadDV := targetStatus.DeployedVersion(), previousStatus.DeployedVersion(); gotDV != hadDV {
 					t.Errorf(
-						"%s a preview changed .DeployedVersion()\ngot:  %q\nwant: %q",
-						prefix, targetDV, gotDV,
+						"preview: Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+						gotDV, hadDV,
 					)
 				}
 			}
 		})
 	}
+}
+
+// headerAuthLookup returns a web Lookup that POSTs to hookURL with the passing header.
+func headerAuthLookup(t *testing.T, hookURL string) Lookup {
+	t.Helper()
+
+	l := testLookup(t, web.Type, false, "")
+	lTyped, ok := l.(*web.Lookup)
+	if !ok {
+		t.Fatalf("testLookup() type mismatch\ngot:  %T\nwant: *web.Lookup", l)
+	}
+	lTyped.Method = "POST"
+	lTyped.URL = hookURL
+	lTyped.Headers = shared.Headers{
+		{
+			Key:   test.LookupWithHeaderAuth.HeaderKey,
+			Value: test.LookupWithHeaderAuth.HeaderValuePass,
+		},
+	}
+	return lTyped
 }

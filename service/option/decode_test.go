@@ -17,7 +17,6 @@
 package option
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -25,7 +24,6 @@ import (
 )
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -103,7 +101,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -113,9 +110,8 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDecode(t *testing.T) {
-	optCfg := plainDefaultsConfig(t)
+	optCfg := plainDefaultsConfig()
 
-	// GIVEN: data in a given format to Decode into Options.
 	tests := []struct {
 		name         string
 		format, data string
@@ -186,7 +182,6 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Decode is called with it.
 			options, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Options, error) {
@@ -199,7 +194,6 @@ func TestDecode(t *testing.T) {
 				func(v *Options) string { return v.String() },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			)
 			if testErr != nil {
@@ -209,26 +203,12 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecode(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: It stringifies as expected.
-			if got := options.String(); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
-			}
-
-			// AND: Pointers are handed out to it correctly.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Defaults", Got: options.Defaults, Want: optCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: options.HardDefaults, Want: optCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Options"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

@@ -25,25 +25,27 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/auth/rbac"
+	storetest "github.com/release-argus/Argus/auth/store/test"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
-// TestStore_FaultInjection drives every repository error branch that only a
+// TestStore__faultInjection drives every repository error branch that only a
 // failing SQL statement can reach, by arming the fault driver against a
 // statement-identifying SQL substring.
 func TestStore__faultInjection(t *testing.T) {
-	// GIVEN: an initialised store whose next matching statement will fail.
 	enabled := true
 	disabled := false
 
 	tests := []struct {
 		name           string
-		setup          func(t *testing.T, store *Store)       // additional setup for the store.
+		setup          func(t *testing.T, store *Store)
 		pattern        string                                 // SQL pattern that will fail.
 		rowsAffected   bool                                   // Fail RowsAffected of pattern rather than the statement.
-		invoke         func(t *testing.T, store *Store) error // function to call that uses pattern.
-		wantRolledBack func(t *testing.T, store *Store)       // assert the aborted call left no partial write behind.
+		invoke         func(t *testing.T, store *Store) error // Called with the fault armed.
+		wantRolledBack func(t *testing.T, store *Store)       // Checks the failed call left no partial write.
 	}{
-		// users.go
 		{
 			name:    "CreateUser/insert fails",
 			pattern: `INSERT INTO users`,
@@ -69,11 +71,8 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			wantRolledBack: func(t *testing.T, store *Store) {
 				// The users row is written before the membership.
-				if got := countRows(t, store, "users"); got != 0 {
-					t.Errorf(
-						"%s\nusers row survived a failed membership insert\ngot:  %d\nwant: 0",
-						packageName, got,
-					)
+				if got, want := test.CountRows(t, store.db, "users"), 0; got != want {
+					t.Errorf("users row count mismatch\ngot:  %d\nwant: %d", got, want)
 				}
 			},
 		},
@@ -92,8 +91,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{Enabled: &disabled})
 				return err
 			},
@@ -105,8 +103,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, display_name = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{DisplayName: new("x")})
 				return err
 			},
@@ -118,8 +115,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, email = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{Email: new("x@example.com")})
 				return err
 			},
@@ -131,9 +127,8 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, enabled = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
 				// Enabling an enabled user skips the rails.
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{Enabled: &enabled})
 				return err
 			},
@@ -145,8 +140,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, password_hash = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{PasswordHash: new("x")})
 				return err
 			},
@@ -158,8 +152,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `DELETE FROM user_groups WHERE user_id`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID,
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"),
 					UserPatch{Groups: new([]string{GroupViewer})})
 				return err
 			},
@@ -171,8 +164,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SET updated_at`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				_, err := store.UpdateUser(t.Context(), user.UserID, UserPatch{})
+				_, err := store.UpdateUser(t.Context(), mustUserID(t, store, "target"), UserPatch{})
 				return err
 			},
 		},
@@ -190,8 +182,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SUM(u.id = ?)`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				return store.DeleteUser(t.Context(), user.UserID)
+				return store.DeleteUser(t.Context(), mustUserID(t, store, "target"))
 			},
 		},
 		{
@@ -201,8 +192,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `DELETE FROM user_groups WHERE user_id`,
 			invoke: func(t *testing.T, store *Store) error {
-				user, _ := store.LocalCredentials(t.Context(), "target")
-				return store.DeleteUser(t.Context(), user.UserID)
+				return store.DeleteUser(t.Context(), mustUserID(t, store, "target"))
 			},
 		},
 		{
@@ -230,11 +220,8 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			wantRolledBack: func(t *testing.T, store *Store) {
 				// The users row is written before the membership.
-				if got := countRows(t, store, "users"); got != 0 {
-					t.Errorf(
-						"%s\nusers row survived a failed membership insert\ngot:  %d\nwant: 0",
-						packageName, got,
-					)
+				if got := test.CountRows(t, store.db, "users"); got != 0 {
+					t.Errorf("users row count mismatch\ngot:  %d\nwant: 0", got)
 				}
 			},
 		},
@@ -276,7 +263,6 @@ func TestStore__faultInjection(t *testing.T) {
 				return err
 			},
 		},
-		// groups.go
 		{
 			name:    "CreateGroup/name check fails",
 			pattern: `SELECT id FROM groups WHERE name`,
@@ -308,7 +294,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SELECT id FROM groups WHERE name`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Name: new("renamed")})
 				return err
@@ -321,7 +307,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, name = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Name: new("renamed")})
 				return err
@@ -334,7 +320,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `, description = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Description: new("x")})
 				return err
@@ -347,7 +333,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `DELETE FROM group_permissions WHERE group_id`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Grants: new([]rbac.Grant{})})
 				return err
@@ -360,7 +346,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SELECT id, resource, action FROM permissions`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Grants: new([]rbac.Grant{
 						globalGrant(rbac.ResourceService, rbac.ActionRead),
@@ -375,7 +361,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `INSERT OR IGNORE INTO group_permissions`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID,
 					GroupPatch{Grants: new([]rbac.Grant{
 						globalGrant(rbac.ResourceService, rbac.ActionRead),
@@ -390,7 +376,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `SET updated_at`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.UpdateGroup(t.Context(), group.ID, GroupPatch{})
 				return err
 			},
@@ -409,7 +395,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `DELETE FROM user_groups WHERE group_id`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				return store.DeleteGroup(t.Context(), group.ID)
 			},
 		},
@@ -465,8 +451,6 @@ func TestStore__faultInjection(t *testing.T) {
 				return err
 			},
 		},
-
-		// sessions.go
 		{
 			name: "TrimSessionsForUser/delete fails",
 			setup: func(t *testing.T, store *Store) {
@@ -478,16 +462,11 @@ func TestStore__faultInjection(t *testing.T) {
 				return err
 			},
 			wantRolledBack: func(t *testing.T, store *Store) {
-				if got, want := countRows(t, store, "sessions"), 2; got != want {
-					t.Errorf(
-						"%s\nsession deleted despite the failure\ngot:  %d\nwant: %d",
-						packageName, got, want,
-					)
+				if got, want := test.CountRows(t, store.db, "sessions"), 2; got != want {
+					t.Errorf("sessions row count mismatch\ngot:  %d\nwant: %d", got, want)
 				}
 			},
 		},
-
-		// tokens.go
 		{
 			name: "CreateAPIToken/insert fails (rowsAffected)",
 			setup: func(t *testing.T, store *Store) {
@@ -511,8 +490,6 @@ func TestStore__faultInjection(t *testing.T) {
 				return err
 			},
 		},
-
-		// preferences.go
 		{
 			name:    "PreferencesForUser/load fails",
 			pattern: `SELECT hide, view, timestamps`,
@@ -557,11 +534,8 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			wantRolledBack: func(t *testing.T, store *Store) {
 				// The cascade runs before the user row is removed.
-				if got := countRows(t, store, "users"); got != 1 {
-					t.Errorf(
-						"%s\nusers row lost to a failed preferences cascade\ngot:  %d\nwant: 1",
-						packageName, got,
-					)
+				if got, want := test.CountRows(t, store.db, "users"), 1; got != want {
+					t.Errorf("users row count mismatch\ngot:  %d\nwant: %d", got, want)
 				}
 			},
 		},
@@ -596,7 +570,7 @@ func TestStore__faultInjection(t *testing.T) {
 			},
 			pattern: `WHERE gp.group_id = ?`,
 			invoke: func(t *testing.T, store *Store) error {
-				group := findGroup(t, store, "custom")
+				group := mustGroupByName(t, store, "custom")
 				_, err := store.GroupByID(t.Context(), group.ID)
 				return err
 			},
@@ -612,7 +586,6 @@ func TestStore__faultInjection(t *testing.T) {
 				tc.setup(t, store)
 			}
 
-			// WHEN: the fault is armed and the method invoked.
 			if tc.rowsAffected {
 				state.SetRowsAffected(tc.pattern)
 			} else {
@@ -621,17 +594,10 @@ func TestStore__faultInjection(t *testing.T) {
 			err := tc.invoke(t, store)
 			state.Set("")
 
-			prefix := fmt.Sprintf("%s\nfault injection", packageName)
-
-			// THEN: the injected failure is surfaced.
 			if !errors.Is(err, errInjected) {
-				t.Errorf(
-					"%s expected the injected fault, got: %v",
-					prefix, err,
-				)
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errInjected)
 			}
 
-			// AND: nothing the transaction wrote before it survives.
 			if tc.wantRolledBack != nil {
 				tc.wantRolledBack(t, store)
 			}
@@ -639,9 +605,8 @@ func TestStore__faultInjection(t *testing.T) {
 	}
 }
 
-// TestNew_FaultInjection drives the initialisation error branches.
+// TestNew__faultInjection drives the initialisation error branches.
 func TestNew__faultInjection(t *testing.T) {
-	// GIVEN: databases whose next matching statement will fail.
 	tests := []struct {
 		name         string
 		setup        func(t *testing.T, db *sql.DB) // Optional pre-initialisation.
@@ -698,12 +663,13 @@ func TestNew__faultInjection(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			db, state := testFaultDB(t)
+			// Serial: swaps seededGroups.
+
+			db, state := storetest.FaultDB(t)
 			if tc.setup != nil {
 				tc.setup(t, db)
 			}
 
-			// WHEN: the fault is armed and New invoked.
 			if tc.rowsAffected {
 				state.SetRowsAffected(tc.pattern)
 			} else {
@@ -712,47 +678,27 @@ func TestNew__faultInjection(t *testing.T) {
 			_, err := New(t.Context(), db)
 			state.Set("")
 
-			prefix := fmt.Sprintf("%s\nNew() fault injection", packageName)
-
-			// THEN: initialisation fails with the injected fault.
 			if !errors.Is(err, errInjected) {
-				t.Errorf(
-					"%s expected the injected fault, got: %v",
-					prefix, err,
-				)
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errInjected)
 			}
 		})
 	}
 }
 
 func TestSeedGroups__newPermissionGrantError(t *testing.T) {
-	// GIVEN: an initialised database missing a catalogue pair (so the next start
-	// treats it as new), with grant inserts armed to fail. The seed order is
-	// reversed so a starter group's insert fires before admin's re-sync.
-	reverseSeedOrder(t, nil)
-
-	db, state := testFaultDB(t)
+	db, state := storetest.FaultDB(t)
 	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf(
-			"%s\nsetup New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
 	removePermission(t, db, rbac.ResourceConfig, rbac.ActionRead)
 
-	prefix := fmt.Sprintf("%s\nNew() with failing starter-group grant insert", packageName)
-
-	// WHEN: New runs again with the fault armed.
 	state.Set(`INSERT OR IGNORE INTO group_permissions`)
 	_, err := New(t.Context(), db)
 	state.Set("")
 
-	// THEN: the injected failure is surfaced.
+	// Admin's re-sync hits the fault: starters are granted only on a fresh install.
 	if !errors.Is(err, errInjected) {
-		t.Errorf(
-			"%s expected the injected fault, got: %v",
-			prefix, err,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errInjected)
 	}
 }
 
@@ -770,16 +716,13 @@ func mustCreateSessions(t *testing.T, store *Store, username string, count int) 
 		)
 		session.LastSeenAt = now.Add(time.Duration(i) * time.Minute)
 		if err := store.InsertSession(t.Context(), session); err != nil {
-			t.Fatalf(
-				"%s\nInsertSession(%d) failed: %v",
-				packageName, i, err,
-			)
+			t.Fatalf("session %d: Store.InsertSession() failed: %v", i, err)
 		}
 	}
 }
 
-// reverseSeedOrder puts a starter group ahead of admin, so its grant insert
-// fires before admin's re-sync.
+// reverseSeedOrder puts a starter group ahead of admin, so on a fresh install its
+// grant insert fires before admin's re-sync.
 func reverseSeedOrder(t *testing.T, _ *sql.DB) {
 	t.Helper()
 
@@ -795,39 +738,30 @@ func presetStalePermission(t *testing.T, db *sql.DB) {
 	t.Helper()
 
 	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf(
-			"%s\nsetup New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
-	for _, statement := range []string{
+	test.ExecSQL(
+		t, db,
 		`INSERT INTO permissions (resource, action) VALUES ('legacy', 'something');`,
 		`INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
 			VALUES (
 				(SELECT id FROM groups WHERE name = 'viewer'),
 				(SELECT id FROM permissions WHERE resource = 'legacy'),
 				'global', '');`,
-	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatalf(
-				"%s\nsetup failed: %v",
-				packageName, err,
-			)
-		}
-	}
+	)
 }
 
 func TestStore__corruptRows(t *testing.T) {
-	// GIVEN: stores holding rows the scanners cannot decode.
 	tests := []struct {
-		name   string
-		setup  func(t *testing.T, store *Store)
-		invoke func(t *testing.T, store *Store) error
+		name     string
+		setup    func(t *testing.T, store *Store)
+		invoke   func(t *testing.T, store *Store) error
+		errRegex string
 	}{
 		{
 			name: "UserByID/corrupt timestamps",
 			setup: func(t *testing.T, store *Store) {
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO users
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
@@ -837,11 +771,15 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.UserByID(t.Context(), "corrupt")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan user:
+					[^\s]+.*name "created_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "Users/corrupt updated_at only",
 			setup: func(t *testing.T, store *Store) {
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO users
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
@@ -852,23 +790,27 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.Users(t.Context())
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan user:
+					[^\s]+.*name "updated_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "UserByID/NULL group name",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
-				dropTable(t, store, "groups")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "groups")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE groups
 						(id TEXT, name TEXT, system INTEGER DEFAULT 0);`,
 				)
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO groups
 						(id, name)
 					VALUES
 						('gid', NULL);`,
 				)
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO user_groups
 						(user_id, group_id)
 					VALUES
@@ -884,11 +826,15 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err = store.UserByID(t.Context(), creds.UserID)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan user's groups:
+					[^\s]+.*name "name":
+						converting NULL to string is unsupported$`),
 		},
 		{
 			name: "Groups/corrupt updated_at only",
 			setup: func(t *testing.T, store *Store) {
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO groups
 						(id, name, created_at, updated_at)
 					VALUES
@@ -900,11 +846,15 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.Groups(t.Context())
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan group:
+					[^\s]+.*name "updated_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "GroupByID/corrupt timestamps",
 			setup: func(t *testing.T, store *Store) {
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO groups
 						(id, name, created_at, updated_at)
 					VALUES
@@ -915,24 +865,27 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.GroupByID(t.Context(), "corrupt")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan group:
+					[^\s]+.*name "created_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "GrantsForUser/NULL scope_ref",
 			setup: func(t *testing.T, store *Store) {
-				user := mustCreateUser(t, store, "target", "", GroupViewer)
-				dropTable(t, store, "group_permissions")
-				mustExec(t, store, `
+				mustCreateUser(t, store, "target", "", GroupViewer)
+				test.DropTable(t, store.db, "group_permissions")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE group_permissions
 						(group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`,
 				)
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO group_permissions
 						(group_id, permission_id, scope_type, scope_ref)
 					SELECT
 						g.id, p.id, 'global', NULL
 					FROM groups g, permissions p
 					WHERE g.name = '%s' LIMIT 1;`, GroupViewer))
-				_ = user
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				creds, err := store.LocalCredentials(t.Context(), "target")
@@ -942,12 +895,17 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err = store.GrantsForUser(t.Context(), creds.UserID)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^list user's grants:
+					scan grant:
+						[^\s]+.*name "scope_ref":
+							converting NULL to string is unsupported$`),
 		},
 		{
 			name: "SessionByTokenHash/corrupt expires_at only",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO sessions
 						(token_hash, user_id, created_at, expires_at, last_seen_at)
 					VALUES
@@ -958,12 +916,16 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.SessionByTokenHash(t.Context(), "corrupt")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^load session:
+					[^\s]+.*name "expires_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "SessionByTokenHash/corrupt last_seen_at only",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "target", "")
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO sessions
 						(token_hash, user_id, created_at, expires_at, last_seen_at)
 					VALUES
@@ -974,17 +936,21 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.SessionByTokenHash(t.Context(), "corrupt")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^load session:
+					[^\s]+.*name "last_seen_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "GroupByID/NULL grant scope_ref",
 			setup: func(t *testing.T, store *Store) {
 				mustCreateGroup(t, store, "custom")
-				dropTable(t, store, "group_permissions")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "group_permissions")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE group_permissions
 						(group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`,
 				)
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO group_permissions
 						(group_id, permission_id, scope_type, scope_ref)
 					SELECT
@@ -996,30 +962,33 @@ func TestStore__corruptRows(t *testing.T) {
 				if err := store.db.QueryRow(
 					`SELECT id FROM groups WHERE name = 'custom';`,
 				).Scan(&id); err != nil {
-					t.Fatalf(
-						"%s\nlookup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.QueryRow().Scan() failed: %v", err)
 				}
 				_, err := store.GroupByID(t.Context(), id)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^list group's grants:
+					scan grant:
+						[^\s]+.*name "scope_ref":
+							converting NULL to string is unsupported$`),
 		},
 		{
 			name: "GroupByID/NULL group name",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "groups")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "groups")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE groups (
 						id TEXT,
 						name TEXT,
 						description TEXT DEFAULT '',
 						system INTEGER DEFAULT 0,
+						seed_key TEXT,
 						created_at DATETIME,
 						updated_at DATETIME
 					);`,
 				)
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO groups
 						(id, name, created_at, updated_at)
 					VALUES
@@ -1030,12 +999,16 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.GroupByID(t.Context(), "gid")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan group:
+					[^\s]+.*name "name":
+						converting NULL to string is unsupported$`),
 		},
 		{
 			name: "UserByID/NULL username",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "users")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "users")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE users (
 						id TEXT,
 						username TEXT,
@@ -1047,7 +1020,7 @@ func TestStore__corruptRows(t *testing.T) {
 						updated_at DATETIME
 					);`,
 				)
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO users
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
@@ -1058,11 +1031,15 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.UserByID(t.Context(), "uid")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan user:
+					[^\s]+.*name "username":
+						converting NULL to string is unsupported$`),
 		},
 		{
 			name: "UserWithGrants/corrupt timestamps",
 			setup: func(t *testing.T, store *Store) {
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO users
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
@@ -1072,12 +1049,16 @@ func TestStore__corruptRows(t *testing.T) {
 				_, _, err := store.UserWithGrants(t.Context(), "corrupt")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan user with grants:
+					[^\s]+.*name "created_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "RenameServiceScopeRefs/NULL grant group_id",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "group_permissions")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "group_permissions")
+				test.ExecSQL(t, store.db, `
 					CREATE TABLE group_permissions (
 						group_id TEXT,
 						permission_id INTEGER,
@@ -1085,7 +1066,7 @@ func TestStore__corruptRows(t *testing.T) {
 						scope_ref TEXT
 					);`,
 				)
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO group_permissions
 						(group_id, permission_id, scope_type, scope_ref)
 					VALUES
@@ -1095,16 +1076,20 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan service-scoped grant:
+					[^\s]+.*name "group_id":
+						converting NULL to string is unsupported$`),
 		},
 		{
 			name: "New/NULL permission row",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "permissions")
-				mustExec(t, store, `
+				test.DropTable(t, store.db, "permissions")
+				test.ExecSQL(t, store.db, `
 				CREATE TABLE permissions
 					(id INTEGER PRIMARY KEY AUTOINCREMENT, resource TEXT, action TEXT);`,
 				)
-				mustExec(t, store, `
+				test.ExecSQL(t, store.db, `
 					INSERT INTO permissions
 						(resource, action)
 					VALUES
@@ -1115,6 +1100,11 @@ func TestStore__corruptRows(t *testing.T) {
 				_, err := New(t.Context(), store.db)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^auth store sync permissions:
+					scan permission:
+						[^\s]+.*name "resource":
+							converting NULL to string is unsupported$`),
 		},
 	}
 
@@ -1123,21 +1113,16 @@ func TestStore__corruptRows(t *testing.T) {
 			store := testStore(t)
 			tc.setup(t, store)
 
-			// WHEN: the method scans the corrupt rows.
 			err := tc.invoke(t, store)
-
-			prefix := fmt.Sprintf("%s\ncorrupt rows", packageName)
-
-			// THEN: the decode failure is surfaced.
-			if err == nil {
-				t.Errorf("%s expected an error, got nil", prefix)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestStore__rowsErrOnSecondPass(t *testing.T) {
-	// GIVEN: methods whose second row iteration fails.
 	tests := []struct {
 		name       string
 		failOnCall int
@@ -1187,10 +1172,7 @@ func TestStore__rowsErrOnSecondPass(t *testing.T) {
 				if err := store.db.QueryRow(
 					`SELECT id FROM groups WHERE name = 'custom';`,
 				).Scan(&id); err != nil {
-					t.Fatalf(
-						"%s\nlookup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.QueryRow().Scan() failed: %v", err)
 				}
 				_, err := store.GroupByID(t.Context(), id)
 				return err
@@ -1264,70 +1246,37 @@ func TestStore__rowsErrOnSecondPass(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: swaps rowsErr.
+
 			store := testStore(t)
 			if tc.setup != nil {
 				tc.setup(t, store)
 			}
 			overrideRowsErrOnCall(t, tc.failOnCall)
 
-			// WHEN: the method iterates rows.
 			err := tc.invoke(t, store)
 
-			prefix := fmt.Sprintf("%s\nsecond-pass iteration", packageName)
-
-			// THEN: the injected iteration failure is surfaced.
 			if !errors.Is(err, errInjected) {
-				t.Errorf(
-					"%s expected the injected fault, got: %v",
-					prefix, err,
-				)
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errInjected)
 			}
 		})
 	}
 }
 
 func TestStore_InTx__beginError(t *testing.T) {
-	// GIVEN: a Store whose database is closed.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nNew() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
 	_ = db.Close()
 
-	prefix := fmt.Sprintf("%s\ninTx() begin error", packageName)
-
-	// WHEN: a transactional method runs.
 	_, err = store.CreateUser(t.Context(), "u", "", "", testPasswordHash, nil)
-
-	// THEN: the begin failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^begin transaction:
+			sql: database is closed$`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
-}
-
-// findGroup returns the named group, failing the test if absent.
-func findGroup(t *testing.T, store *Store, name string) *Group {
-	t.Helper()
-
-	groups, err := store.Groups(t.Context())
-	if err != nil {
-		t.Fatalf(
-			"%s\nGroups() failed: %v",
-			packageName, err,
-		)
-	}
-	for i := range groups {
-		if groups[i].Name == name {
-			return &groups[i]
-		}
-	}
-	t.Fatalf(
-		"%s\ngroup %q not found",
-		packageName, name,
-	)
-	return nil
 }

@@ -18,9 +18,9 @@ package v1
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,112 +28,97 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/release-argus/Argus/auth"
+	"github.com/release-argus/Argus/auth/password"
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestAPI_HTTPUserList(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a logged-in admin and a second user.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
 	authCtx := adminContext(t, api, deps)
 
-	// WHEN: the admin lists users.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/users", "", adminCookie))
+	req := authedRequest(http.MethodGet, "/api/v1/users", "", adminCookie)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpUserList()", packageName)
-
-	// THEN: every user is returned.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin listing users: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var users []auth.User
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &users); err != nil {
-		t.Fatalf(
-			"%s\nparse list: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin listing users: decode.Unmarshal() failed: %v", err)
 	}
-	if len(users) != 2 { // admin, viewer.
-		t.Errorf(
-			"%s\nuser count mismatch\ngot:  %d\nwant: 2",
-			prefix, len(users),
-		)
+	usernames := test.AttributesSorted(users, func(u auth.User) string { return u.Username })
+	if testErr := test.AssertSlicesEqual(
+		t, usernames, []string{"admin", "viewer"}, "User.Username",
+	); testErr != nil {
+		t.Errorf("admin listing users: %v", testErr)
 	}
 
-	// WHEN: the store breaks beneath a direct call.
 	_ = dbConn.Close()
-	recorder := httptest.NewRecorder()
-	api.httpUserList(recorder,
-		withAuthCtx(httptest.NewRequest(http.MethodGet, "/api/v1/users", nil), authCtx),
-	)
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/users", nil)
+	req = withAuthCtx(req, authCtx)
+	api.httpUserList(w, req)
 
-	// THEN: the failure reads as 500.
-	if recorder.Code != http.StatusInternalServerError {
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nbroken store\ngot:  %d\nwant: 500",
-			prefix, recorder.Code,
+			"broken store: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPUserCreate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
-	// AND: a logged-in admin.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 
-	// WHEN: the admin makes a request to create a user.
-	w := serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/users",
-			test.TrimJSON(`{
-				"username": "fresher",
-				"password": "fresher-password",
-				"display_name": "New User",
-				"groups": ["operator"]
-			}`),
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPost, "/api/v1/users",
+		test.TrimJSON(`{
+			"username": "fresher",
+			"password": "fresher-password",
+			"display_name": "New User",
+			"groups": ["operator"]
+		}`),
+		adminCookie,
 	)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpUserCreate()", packageName)
-
-	// THEN: the user is created.
 	if got, want := w.Code, http.StatusCreated; got != want {
 		t.Fatalf(
-			"%s\ncreate status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin creating user: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var created auth.User
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &created); err != nil {
-		t.Fatalf(
-			"%s\nparse create response: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin creating user: decode.Unmarshal() failed: %v", err)
 	}
-	if created.Username != "fresher" ||
-		len(created.Groups) != 1 || created.Groups[0] != store.GroupOperator {
+	wantUsername, wantGroups := "fresher", []string{store.GroupOperator}
+	if created.Username != wantUsername || !slices.Equal(created.Groups, wantGroups) {
 		t.Errorf(
-			"%s\ncreated user mismatch\ngot: %+v",
-			prefix, created,
+			"admin creating user: User mismatch\n"+
+				"got:  Username=%q, Groups=%q\nwant: Username=%q, Groups=%q",
+			created.Username, created.Groups,
+			wantUsername, wantGroups,
 		)
 	}
 
-	// AND: the new user can log in.
 	_ = loginCookie(t, api, "fresher", "fresher-password")
 
-	// WHEN: an invalid create arrives.
 	tests := []struct {
 		name       string
 		body       string
@@ -178,47 +163,40 @@ func TestAPI_HTTPUserCreate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			w := serveAuth(api,
-				authedRequest(http.MethodPost, "/api/v1/users",
-					tc.body,
-					adminCookie,
-				),
-			)
+			// Serial: shares hashPassword, which the parent swaps after the loop.
 
-			// THEN: it is rejected with the expected status code.
+			req := authedRequest(http.MethodPost, "/api/v1/users", tc.body, adminCookie)
+			w := serveAuth(api, req)
+
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\n%s\ngot:  %d - %s\nwant: %d",
-					prefix, tc.name, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
 
-	// WHEN: password hashing fails.
 	hashPasswordHad := hashPassword
 	hashPassword = func(_ string) (string, error) {
 		return "", errors.New("hash broke")
 	}
 	t.Cleanup(func() { hashPassword = hashPasswordHad })
-	w = serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/users",
-			`{"username":"hashless","password":"valid-password"}`,
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPost, "/api/v1/users",
+		`{"username":"hashless","password":"valid-password"}`, adminCookie,
 	)
+	w = serveAuth(api, req)
 
-	// THEN: the failure reads as 500.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nhash failure\ngot:  %d\nwant: 500",
-			prefix, got,
+			"hash failure: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPUserCreate__fieldBounds(t *testing.T) {
-	// GIVEN: an auth-enabled API and an admin session.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -231,7 +209,7 @@ func TestAPI_HTTPUserCreate__fieldBounds(t *testing.T) {
 		name         string
 		body         string
 		wantStatus   int
-		wantUsername string // the username the account is stored under ("" to skip).
+		wantUsername string // The username the account is stored under ("" to skip).
 	}{
 		{
 			name:         "valid/surrounding whitespace is trimmed",
@@ -277,94 +255,69 @@ func TestAPI_HTTPUserCreate__fieldBounds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the user is created.
-			w := serveAuth(api,
-				authedRequest(http.MethodPost, "/api/v1/users", tc.body, adminCookie))
+			req := authedRequest(http.MethodPost, "/api/v1/users", tc.body, adminCookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nuser field bounds", packageName)
-
-			// THEN: the bounds decide the outcome.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Fatalf(
-					"%s\nstatus code mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if tc.wantUsername == "" {
 				return
 			}
 
-			// AND: it is stored under the normalised username.
 			var created auth.User
 			if err := decode.Unmarshal("json", w.Body.Bytes(), &created); err != nil {
-				t.Fatalf(
-					"%s parse create response: %v",
-					prefix, err,
-				)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 			if got, want := created.Username, tc.wantUsername; got != want {
-				t.Errorf(
-					"%s\nstored username mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("User.Username mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
 
 func TestAPI_HTTPUserGet(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin and a target user.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	target := createAuthUser(t, deps, "target", "target-password", store.GroupViewer)
 
-	prefix := fmt.Sprintf("%s\nhttpUserGet()", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/users/"+target.ID, "", adminCookie)
+	w := serveAuth(api, req)
 
-	// WHEN: the admin fetches the user by ID.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/users/"+target.ID, "", adminCookie))
-
-	// THEN: the user is returned.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"get user by ID: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var got auth.User
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &got); err != nil {
-		t.Fatalf(
-			"%s\nparse response: %v",
-			prefix, err,
-		)
+		t.Fatalf("get user by ID: decode.Unmarshal() failed: %v", err)
 	}
-	if got.Username != "target" {
-		t.Errorf(
-			"%s\nuser mismatch\ngot: %+v",
-			prefix, got,
-		)
+	if want := "target"; got.Username != want {
+		t.Errorf("get user by ID: User.Username mismatch\ngot:  %q\nwant: %q", got.Username, want)
 	}
 
-	// WHEN: an unknown ID is fetched.
-	w = serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/users/no-such-id", "", adminCookie))
+	req = authedRequest(http.MethodGet, "/api/v1/users/no-such-id", "", adminCookie)
+	w = serveAuth(api, req)
 
-	// THEN: 404.
 	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\nget unknown\ngot:  %d\nwant: 404",
-			prefix, got,
+			"get unknown user ID: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPUserUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin and logged-in target users.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	rotated := createAuthUser(t, deps, "rotated", "rotated-password", store.GroupOperator)
 	rotatedCookie := loginCookie(t, api, "rotated", "rotated-password")
@@ -372,96 +325,75 @@ func TestAPI_HTTPUserUpdate(t *testing.T) {
 	disabledCookie := loginCookie(t, api, "disabled", "disabled-password")
 	unrevoked := createAuthUser(t, deps, "unrevoked", "unrevoked-password")
 	authCtx := adminContext(t, api, deps)
-	creds, err := deps.Store.LocalCredentials(t.Context(), "admin")
-	if err != nil || creds == nil {
-		t.Fatalf(
-			"%s\nadmin lookup failed: %v",
-			packageName, err,
-		)
-	}
 
-	// WHEN: the admin patches the user's display name and groups.
-	w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+rotated.ID,
-			`{"display_name":"Renamed","groups":["viewer"]}`,
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPatch, "/api/v1/users/"+rotated.ID,
+		`{"display_name":"Renamed","groups":["viewer"]}`, adminCookie,
 	)
+	w := serveAuth(api, req)
 
-	prefix := fmt.Sprintf("%s\nhttpUserUpdate()", packageName)
-
-	// THEN: the patch is applied.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\npatch status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin patching user: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var patched auth.User
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &patched); err != nil {
-		t.Fatalf(
-			"%s\nparse patch response: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin patching user: decode.Unmarshal() failed: %v", err)
 	}
-	if patched.DisplayName != "Renamed" ||
-		len(patched.Groups) != 1 || patched.Groups[0] != store.GroupViewer {
+	wantDisplayName, wantGroups := "Renamed", []string{store.GroupViewer}
+	if patched.DisplayName != wantDisplayName || !slices.Equal(patched.Groups, wantGroups) {
 		t.Errorf(
-			"%s\npatched user mismatch\ngot: %+v",
-			prefix, patched,
+			"admin patching user: User mismatch\n"+
+				"got:  DisplayName=%q, Groups=%q\nwant: DisplayName=%q, Groups=%q",
+			patched.DisplayName, patched.Groups,
+			wantDisplayName, wantGroups,
 		)
 	}
 
-	// WHEN: the admin resets the user's password.
-	w = serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+rotated.ID,
-			`{"password":"rotated-password-2"}`,
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/users/"+rotated.ID,
+		`{"password":"rotated-password-2"}`, adminCookie,
 	)
+	w = serveAuth(api, req)
 
-	// THEN: the patch succeeds and the user's sessions are revoked.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\npassword patch\ngot:  %d\nwant: 200",
-			prefix, got,
+			"password patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	if w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/auth/me", "", rotatedCookie),
-	); w.Code != http.StatusUnauthorized {
+	req = authedRequest(http.MethodGet, "/api/v1/auth/me", "", rotatedCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nsessions should be revoked on password change\ngot:  %d\nwant: 401",
-			prefix, w.Code,
+			"password patch: GET /auth/me: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	_ = loginCookie(t, api, "rotated", "rotated-password-2")
 
-	// WHEN: the admin disables a user.
-	w = serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+disabled.ID,
-			`{"enabled":false}`,
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/users/"+disabled.ID, `{"enabled":false}`, adminCookie,
 	)
+	w = serveAuth(api, req)
 
-	// THEN: the patch succeeds and their sessions are revoked.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ndisable patch\ngot:  %d\nwant: 200",
-			prefix, got,
+			"disable patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	if w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/auth/me", "", disabledCookie),
-	); w.Code != http.StatusUnauthorized {
+	req = authedRequest(http.MethodGet, "/api/v1/auth/me", "", disabledCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nsessions should be revoked on disable\ngot:  %d\nwant: 401",
-			prefix, w.Code,
+			"disable patch: GET /auth/me: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: an invalid patch arrives.
 	tests := []struct {
 		name       string
 		target     string
@@ -488,7 +420,7 @@ func TestAPI_HTTPUserUpdate(t *testing.T) {
 		},
 		{
 			name:       "disable the last admin",
-			target:     creds.UserID,
+			target:     authCtx.User.ID,
 			body:       `{"enabled":false}`,
 			wantStatus: http.StatusConflict,
 		},
@@ -502,70 +434,91 @@ func TestAPI_HTTPUserUpdate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			w := serveAuth(api,
-				authedRequest(http.MethodPatch, "/api/v1/users/"+tc.target,
-					tc.body,
-					adminCookie,
-				),
-			)
+			// Serial: shares deps.Sessions, which the parent swaps after the loop.
 
-			// THEN: it is rejected with the expected status.
+			req := authedRequest(http.MethodPatch, "/api/v1/users/"+tc.target, tc.body, adminCookie)
+			w := serveAuth(api, req)
+
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\n%s\ngot:  %d - %s\nwant: %d",
-					prefix, tc.name, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
 
-	// WHEN: password hashing fails.
 	hashPasswordHad := hashPassword
 	t.Cleanup(func() { hashPassword = hashPasswordHad })
 	hashPassword = func(_ string) (string, error) {
 		return "", errors.New("hash broke")
 	}
-	w = serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+rotated.ID,
-			`{"password":"valid-password"}`,
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/users/"+rotated.ID, `{"password":"valid-password"}`, adminCookie,
 	)
+	w = serveAuth(api, req)
 	hashPassword = hashPasswordHad
 
-	// THEN: the failure reads as 500.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nhash failure\ngot:  %d\nwant: 500",
-			prefix, got,
+			"hash failure: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: a password is rotated but session revocation fails.
 	deps.Sessions = session.New(
 		failingSessionStore{},
 		session.Config{
 			Lifetime: time.Hour, IdleTimeout: time.Hour,
 		},
 	)
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/users/"+unrevoked.ID,
+	req = httptest.NewRequest(
+		http.MethodPatch, "/api/v1/users/"+unrevoked.ID,
 		strings.NewReader(`{"password":"rotated-password"}`),
 	)
 	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": unrevoked.ID})
-	recorder := httptest.NewRecorder()
-	api.httpUserUpdate(recorder, req)
+	w = httptest.NewRecorder()
+	releaseStdout := test.CaptureLog(t, logx.Default())
+	api.httpUserUpdate(w, req)
+	stdout := releaseStdout()
 
-	// THEN: the update still succeeds (revocation failures are only logged).
-	if got, want := recorder.Code, http.StatusOK; got != want {
+	// Revocation failures are only logged.
+	if got, want := w.Code, http.StatusOK; got != want {
 		t.Errorf(
-			"%s\npatch with failing revoke\ngot:  %d\nwant: %d",
-			prefix, got, want,
+			"patch with failing revoke: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
+		)
+	}
+
+	wantStdout := `^ERROR: httpUserUpdate \(.*\), revoke user's sessions:\s+` + errSessionStore.Error()
+	if !util.RegexCheck(wantStdout, stdout) {
+		t.Errorf(
+			"patch with failing revoke: stdout mismatch\ngot:  %q\nwant: %q",
+			stdout, wantStdout,
+		)
+	}
+
+	creds, err := deps.Store.LocalCredentials(t.Context(), "unrevoked")
+	if err != nil {
+		t.Fatalf("patch with failing revoke: Store.LocalCredentials() failed: %v", err)
+	}
+	if creds == nil {
+		t.Fatal(
+			"patch with failing revoke: Store.LocalCredentials() mismatch\n" +
+				"got:  nil\nwant: non-nil",
+		)
+	}
+	match, _, err := password.Verify("rotated-password", creds.PasswordHash)
+	if err != nil || !match {
+		t.Errorf(
+			"patch with failing revoke: password.Verify() mismatch\n"+
+				"got:  match=%t, err=%v\nwant: match=true, err=nil",
+			match, err,
 		)
 	}
 }
 
 func TestAPI_HTTPUserUpdate__kicks(t *testing.T) {
-	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a member.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -575,58 +528,54 @@ func TestAPI_HTTPUserUpdate__kicks(t *testing.T) {
 	adminClient := connect(adminID, "admin-session")
 	memberClient := connect(member.ID, "member-session")
 
-	prefix := fmt.Sprintf("%s\nhttpUserUpdate() kicks", packageName)
-
-	// WHEN: the admin patches only the member's display name.
-	w := serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+member.ID,
-			`{"display_name":"Renamed"}`,
-			adminCookie,
-		),
+	req := authedRequest(
+		http.MethodPatch, "/api/v1/users/"+member.ID, `{"display_name":"Renamed"}`, adminCookie,
 	)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ndisplay-name patch\ngot:  %d - %s\nwant: 200",
-			prefix, got, w.Body.String(),
+			"display-name patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: nobody's grants changed - nobody is kicked.
-	if !api.hub.hasClient(memberClient) || !api.hub.hasClient(adminClient) {
+	// No grants changed, so nobody is kicked.
+	memberKept := api.hub.hasClient(memberClient)
+	adminKept := api.hub.hasClient(adminClient)
+	if !memberKept || !adminKept {
 		t.Errorf(
-			"%s\ndisplay-name-only patch should kick nobody",
-			prefix,
+			"display-name patch: Hub.hasClient() mismatch\n"+
+				"got:  member=%t, admin=%t\nwant: member=true, admin=true",
+			memberKept, adminKept,
 		)
 	}
 
-	// WHEN: the admin patches the member's groups.
-	w = serveAuth(api,
-		authedRequest(http.MethodPatch, "/api/v1/users/"+member.ID,
-			`{"groups":["viewer"]}`,
-			adminCookie,
-		),
+	req = authedRequest(
+		http.MethodPatch, "/api/v1/users/"+member.ID, `{"groups":["viewer"]}`, adminCookie,
 	)
+	w = serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ngroups patch\ngot:  %d - %s\nwant: 200",
-			prefix, got, w.Body.String(),
+			"groups patch: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: only the member's client is kicked, not the editing admin's.
-	if api.hub.hasClient(memberClient) || !api.hub.hasClient(adminClient) {
+	memberKept = api.hub.hasClient(memberClient)
+	adminKept = api.hub.hasClient(adminClient)
+	if memberKept || !adminKept {
 		t.Errorf(
-			"%s\ngroups patch should kick exactly the member's clients",
-			prefix,
+			"groups patch: Hub.hasClient() mismatch\n"+
+				"got:  member=%t, admin=%t\nwant: member=false, admin=true",
+			memberKept, adminKept,
 		)
 	}
 }
 
 func TestAPI_HTTPUserDelete(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin, viewer, and targets.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	_ = createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
 	viewerCookie := loginCookie(t, api, "viewer", "viewer-password")
@@ -634,107 +583,99 @@ func TestAPI_HTTPUserDelete(t *testing.T) {
 	victimCookie := loginCookie(t, api, "victim", "victim-password")
 	unrevoked := createAuthUser(t, deps, "unrevoked", "unrevoked-password")
 	authCtx := adminContext(t, api, deps)
-	creds, err := deps.Store.LocalCredentials(t.Context(), "admin")
-	if err != nil || creds == nil {
-		t.Fatalf(
-			"%s\nadmin lookup failed: %v",
-			packageName, err,
-		)
-	}
 
-	prefix := fmt.Sprintf("%s\nhttpUserDelete()", packageName)
-
-	// WHEN/THEN: a viewer trying to delete a user 403s.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID,
-			"",
-			viewerCookie,
-		),
-	); w.Code != http.StatusForbidden {
+	req := authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", viewerCookie)
+	w := serveAuth(api, req)
+	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nviewer delete\ngot:  %d\nwant: 403",
-			prefix, w.Code,
+			"viewer deleting user: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: deletes of unknown IDs 404.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/no-such-id",
-			"",
-			adminCookie,
-		),
-	); w.Code != http.StatusNotFound {
+	req = authedRequest(http.MethodDelete, "/api/v1/users/no-such-id", "", adminCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\ndelete unknown\ngot:  %d\nwant: 404",
-			prefix, w.Code,
+			"admin deleting unknown user ID: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: deleting the last admin is rejected with 409.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/"+creds.UserID,
-			"",
-			adminCookie,
-		),
-	); w.Code != http.StatusConflict {
+	req = authedRequest(http.MethodDelete, "/api/v1/users/"+authCtx.User.ID, "", adminCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusConflict; got != want {
 		t.Errorf(
-			"%s\ndelete last admin\ngot:  %d\nwant: 409",
-			prefix, w.Code,
+			"admin deleting last admin: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the admin deletes a user.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", adminCookie))
+	req = authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", adminCookie)
+	w = serveAuth(api, req)
 
-	// THEN: the user and their sessions are gone.
 	if got, want := w.Code, http.StatusNoContent; got != want {
 		t.Fatalf(
-			"%s\ndelete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin deleting user: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	if _, err := deps.Store.UserByID(t.Context(), victim.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf(
-			"%s\nuser should be deleted\ngot: %v",
-			prefix, err,
+			"admin deleting user: Store.UserByID() error type mismatch\n"+
+				"got:  %v\nwant: %v (deleted)",
+			err, store.ErrNotFound,
 		)
 	}
-	if w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/auth/me",
-			"",
-			victimCookie,
-		),
-	); w.Code != http.StatusUnauthorized {
+	req = authedRequest(http.MethodGet, "/api/v1/auth/me", "", victimCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nsessions should be revoked on delete\ngot:  %d\nwant: 401",
-			prefix, w.Code,
+			"admin deleting user: GET /auth/me: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: a user is deleted but session revocation fails.
 	deps.Sessions = session.New(
 		failingSessionStore{},
 		session.Config{
 			Lifetime: time.Hour, IdleTimeout: time.Hour,
 		},
 	)
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/users/"+unrevoked.ID, nil)
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/users/"+unrevoked.ID, nil)
 	req = mux.SetURLVars(withAuthCtx(req, authCtx), map[string]string{"id": unrevoked.ID})
-	recorder := httptest.NewRecorder()
-	api.httpUserDelete(recorder, req)
+	w = httptest.NewRecorder()
+	releaseStdout := test.CaptureLog(t, logx.Default())
+	api.httpUserDelete(w, req)
+	stdout := releaseStdout()
 
-	// THEN: the delete still succeeds (revocation failures are only logged).
-	if recorder.Code != http.StatusNoContent {
+	// Revocation failures are only logged.
+	if got, want := w.Code, http.StatusNoContent; got != want {
 		t.Errorf(
-			"%s\ndelete with failing revoke\ngot:  %d\nwant: 204",
-			prefix, recorder.Code,
+			"delete with failing revoke: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
+		)
+	}
+
+	wantStdout := `^ERROR: httpUserDelete \(.*\), revoke user's sessions:\s+` + errSessionStore.Error()
+	if !util.RegexCheck(wantStdout, stdout) {
+		t.Errorf(
+			"delete with failing revoke: stdout mismatch\ngot:  %q\nwant: %q",
+			stdout, wantStdout,
+		)
+	}
+
+	_, err := deps.Store.UserByID(t.Context(), unrevoked.ID)
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Errorf(
+			"delete with failing revoke: Store.UserByID() error type mismatch\n"+
+				"got:  %v\nwant: %v (deleted)",
+			err, store.ErrNotFound,
 		)
 	}
 }
 
 func TestAPI_HTTPUserDelete__kicks(t *testing.T) {
-	// GIVEN: an auth-enabled API with WebSocket clients for the admin and a doomed user.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
@@ -744,53 +685,35 @@ func TestAPI_HTTPUserDelete__kicks(t *testing.T) {
 	adminClient := connect(adminID, "admin-session")
 	doomedClient := connect(doomed.ID, "doomed-session")
 
-	prefix := fmt.Sprintf("%s\nhttpUserDelete() kicks", packageName)
-
-	// WHEN: the admin deletes the user.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/"+doomed.ID, "", adminCookie))
+	req := authedRequest(http.MethodDelete, "/api/v1/users/"+doomed.ID, "", adminCookie)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusNoContent; got != want {
-		t.Fatalf(
-			"%s\ndelete\ngot:  %d - %s\nwant: 204",
-			prefix, got, w.Body.String(),
-		)
+		t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// THEN: only the deleted user's client is kicked, not the editing admin's.
-	if api.hub.hasClient(doomedClient) || !api.hub.hasClient(adminClient) {
+	doomedKept := api.hub.hasClient(doomedClient)
+	adminKept := api.hub.hasClient(adminClient)
+	if doomedKept || !adminKept {
 		t.Errorf(
-			"%s\ndelete should kick exactly the deleted user's clients",
-			prefix,
+			"Hub.hasClient() mismatch\ngot:  doomed=%t, admin=%t\nwant: doomed=false, admin=true",
+			doomedKept, adminKept,
 		)
 	}
 }
 
 func TestAPI_HTTPUserDelete__cascadeFailure(t *testing.T) {
-	// GIVEN: an auth-enabled API with a user to delete.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	victim := createAuthUser(t, deps, "victim", "victim-password")
 
-	prefix := fmt.Sprintf("%s\nhttpUserDelete() cascade", packageName)
+	// A table the delete cascade touches.
+	test.DropTable(t, dbConn, "api_tokens")
 
-	// AND: a table the delete cascade touches is missing.
-	if _, err := dbConn.Exec(`DROP TABLE api_tokens;`); err != nil {
-		t.Fatalf(
-			"%s\nsetup drop failed: %v",
-			prefix, err,
-		)
-	}
+	req := authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", adminCookie)
+	w := serveAuth(api, req)
 
-	// WHEN: the admin deletes the user.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/users/"+victim.ID, "", adminCookie))
-
-	// THEN: the store failure surfaces as 500.
 	if got, want := w.Code, http.StatusInternalServerError; got != want {
-		t.Errorf(
-			"%s\ncascade failure\ngot:  %d\nwant: 500",
-			prefix, got,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }

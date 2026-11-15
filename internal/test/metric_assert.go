@@ -16,4 +16,17 @@
 
 package test
 
-var packageName = "latestver_test"
+import (
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+)
+
+// AssertMetricCount checks that c collects want metrics.
+// subject names what is counted, e.g. "Lookup.InitMetrics() LatestVersionQueryResultTotal".
+func AssertMetricCount(t TB, subject string, c prometheus.Collector, want int) {
+	t.Helper()
+
+	if got := testutil.CollectAndCount(c); got != want {
+		t.Errorf("%s count mismatch\ngot:  %d\nwant: %d", subject, got, want)
+	}
+}

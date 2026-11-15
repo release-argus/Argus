@@ -220,7 +220,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 }
 
 func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *service.Service {
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	// Service.

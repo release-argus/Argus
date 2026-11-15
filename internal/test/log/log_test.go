@@ -17,7 +17,6 @@
 package log
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -25,36 +24,21 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "logtest"
-
 func TestInitLog(t *testing.T) {
-	// GIVEN: the environment variable is not set.
 	envKey := "ARGUS_LOG_LEVEL"
 	env := map[string]string{envKey: ""}
-	test.SetEnv(t, env)
+	test.IsolateEnv(t, env)
 
-	// WHEN: InitLog is called.
 	InitLog()
 
-	prefix := fmt.Sprintf("%s\nInitLog()", packageName)
-
-	// THEN: the environment variable should be set to "DEBUG".
+	// Set in the env, so a later Config.Load() keeps it.
 	got := os.Getenv(envKey)
 	wantLogLevel := "DEBUG"
 	if got != wantLogLevel {
-		t.Errorf(
-			"%s unexpected %s value\ngot:  %q\nwant: %q",
-			prefix, envKey,
-			got, wantLogLevel,
-		)
+		t.Errorf("os.Getenv(envKey) mismatch\ngot:  %q\nwant: %q", got, wantLogLevel)
 	}
 
-	// AND: the log level should be set to DEBUG.
-	logx.SetLevel("DEBUG")
-	if logx.Level() != 4 {
-		t.Errorf(
-			"%s log level mismatch\ngot %d\nwant: %d (DEBUG)",
-			prefix, logx.Level(), 4,
-		)
+	if got, want := logx.Level(), uint32(4); got != want {
+		t.Errorf("logx.Level() mismatch\ngot:  %d\nwant: %d (DEBUG)", got, want)
 	}
 }

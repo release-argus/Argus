@@ -17,7 +17,6 @@
 package service
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -34,78 +33,49 @@ import (
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
-func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
-	if svcI == nil {
-		if svcJ != nil {
-			t.Errorf("%s of nil\ngot:  non-nil\nwant: nil", prefix)
-		}
-		return
-	}
-	if svcJ == nil {
-		t.Errorf("%s of non-nil\ngot:  nil\nwant: non-nil", prefix)
-		return
-	}
+func assertServiceCopyMutate(t *testing.T, svcI, svcJ *Service) {
+	t.Helper()
 
-	// Basic fields.
 	fieldTests := []test.FieldAssertion{
 		{Name: "ID", Got: svcJ.ID, Want: svcI.ID, Mode: test.CompareEqual},
 		{Name: "Name", Got: svcJ.Name, Want: svcI.Name, Mode: test.CompareEqual},
 		{Name: "Comment", Got: svcJ.Comment, Want: svcI.Comment, Mode: test.CompareEqual},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "basic field"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Service"); testErr != nil {
+		t.Fatal(testErr)
 	}
 
-	// Pointers have been copied, not referenced.
 	fieldTests = []test.FieldAssertion{
-		{Name: "Options", Got: &svcJ.Options, Want: &svcI.Options, Mode: test.CompareDifferentPointer},
-		{Name: "Dashboard", Got: &svcJ.Dashboard, Want: &svcI.Dashboard, Mode: test.CompareDifferentPointer},
-		{Name: "Status", Got: &svcJ.Status, Want: &svcI.Status, Mode: test.CompareDifferentPointer},
-		{Name: "LatestVersion", Got: svcJ.LatestVersion, Want: svcI.LatestVersion, Mode: test.CompareDifferentPointer},
-		{Name: "DeployedVersionLookup", Got: svcJ.DeployedVersionLookup, Want: svcI.DeployedVersionLookup, Mode: test.CompareDifferentPointer},
-		{Name: "Notify", Got: &svcJ.Notify, Want: &svcI.Notify, Mode: test.CompareDifferentPointer},
-		{Name: "Command", Got: &svcJ.Command, Want: &svcI.Command, Mode: test.CompareDifferentPointer},
-		{Name: "Webhook", Got: &svcJ.Webhook, Want: &svcI.Webhook, Mode: test.CompareDifferentPointer},
+		{Name: "LatestVersion", Got: svcJ.LatestVersion, Want: svcI.LatestVersion, Mode: test.CopiedPointerMode(svcI.LatestVersion)},
+		{Name: "DeployedVersionLookup", Got: svcJ.DeployedVersionLookup, Want: svcI.DeployedVersionLookup, Mode: test.CopiedPointerMode(svcI.DeployedVersionLookup)},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "pointer"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Service"); testErr != nil {
+		t.Fatal(testErr)
 	}
 
-	// Options.
-	hadOptionsIntervalJ := svcJ.Options.Interval
-	svcI.Options.Interval = "mutated"
-	if gotJ := svcJ.Options.Interval; gotJ != hadOptionsIntervalJ {
-		t.Errorf(
-			"%s Options.Interval mutation mismatch\ngot:  %q\nwant: %q",
-			prefix, gotJ, hadOptionsIntervalJ,
-		)
+	if svcI.Dashboard.AutoApprove != nil {
+		if svcJ.Dashboard.AutoApprove == nil {
+			t.Fatal("Service.Dashboard.AutoApprove mismatch\ngot:  nil\nwant: non-nil")
+		}
+		hadDashboardAutoApproveJ := *svcJ.Dashboard.AutoApprove
+		*svcI.Dashboard.AutoApprove = !*svcI.Dashboard.AutoApprove
+		if gotJ := *svcJ.Dashboard.AutoApprove; gotJ != hadDashboardAutoApproveJ {
+			t.Errorf(
+				"Service.Dashboard.AutoApprove mutation mismatch\ngot:  %t\nwant: %t",
+				gotJ, hadDashboardAutoApproveJ,
+			)
+		}
 	}
 
-	// Dashboard.
-	hadDashboardAutoApproveJ := svcJ.Dashboard.AutoApprove
-	var newAutoApprove bool
-	if hadDashboardAutoApproveJ != nil {
-		newAutoApprove = !*hadDashboardAutoApproveJ
-	}
-	svcI.Dashboard.AutoApprove = &newAutoApprove
-	if gotJ := svcJ.Dashboard.AutoApprove; gotJ != hadDashboardAutoApproveJ {
-		t.Errorf(
-			"%s Dashboard.AutoApprove mutation mismatch\ngot:  %v\nwant: %v",
-			prefix, gotJ, hadDashboardAutoApproveJ,
-		)
-	}
-
-	// Status.
 	hadStatusLatestVersionJ := svcJ.Status.LatestVersion()
 	svcI.Status.SetLatestVersion(hadStatusLatestVersionJ+"-mutated", "", false)
 	if gotJ := svcJ.Status.LatestVersion(); gotJ != hadStatusLatestVersionJ {
 		t.Errorf(
-			"%s Status.LatestVersion mutation mismatch\ngot:  %q\nwant: %q",
-			prefix, gotJ, hadStatusLatestVersionJ,
+			"Service.Status.LatestVersion() mutation mismatch\ngot:  %q\nwant: %q",
+			gotJ, hadStatusLatestVersionJ,
 		)
 	}
 
-	// LatestVersion.
 	if svcI.LatestVersion != nil {
 		var hadLatestVersionValueJ string
 		switch iLV := svcI.LatestVersion.(type) {
@@ -115,15 +85,15 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 				hadLatestVersionValueJ = jLV.URL
 			} else {
 				t.Fatalf(
-					"%s LatestVersion type mismatch\ngot:  %T\nwant: *lvgithub.Lookup",
-					prefix, svcJ.LatestVersion,
+					"Service.LatestVersion type mismatch\ngot:  %T\nwant: *lvgithub.Lookup",
+					svcJ.LatestVersion,
 				)
 			}
 			iLV.URL += "-mutated"
 			if gotJ := jLV.URL; gotJ != hadLatestVersionValueJ {
 				t.Errorf(
-					"%s LatestVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
-					prefix, gotJ, hadLatestVersionValueJ,
+					"Service.LatestVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
+					gotJ, hadLatestVersionValueJ,
 				)
 			}
 		case *lvweb.Lookup:
@@ -132,21 +102,22 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 				hadLatestVersionValueJ = jLV.URL
 			} else {
 				t.Fatalf(
-					"%s LatestVersion type mismatch\ngot:  %T\nwant: *lvweb.Lookup",
-					prefix, svcJ.LatestVersion,
+					"Service.LatestVersion type mismatch\ngot:  %T\nwant: *lvweb.Lookup",
+					svcJ.LatestVersion,
 				)
 			}
 			iLV.URL += "-mutated"
 			if gotJ := jLV.URL; gotJ != hadLatestVersionValueJ {
 				t.Errorf(
-					"%s LatestVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
-					prefix, gotJ, hadLatestVersionValueJ,
+					"Service.LatestVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
+					gotJ, hadLatestVersionValueJ,
 				)
 			}
+		default:
+			t.Fatalf("unhandled Service.LatestVersion type: %T", iLV)
 		}
 	}
 
-	// DeployedVersion.
 	if svcI.DeployedVersionLookup != nil {
 		var hadDeployedVersionValueJ string
 		switch iDV := svcI.DeployedVersionLookup.(type) {
@@ -156,15 +127,15 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 				hadDeployedVersionValueJ = jDV.Version
 			} else {
 				t.Fatalf(
-					"%s DeployedVersion type mismatch\ngot:  %T\nwant: *lvgithub.Lookup",
-					prefix, svcJ.DeployedVersionLookup,
+					"Service.DeployedVersionLookup type mismatch\ngot:  %T\nwant: *dvmanual.Lookup",
+					svcJ.DeployedVersionLookup,
 				)
 			}
 			iDV.Version += "-mutated"
 			if gotJ := jDV.Version; gotJ != hadDeployedVersionValueJ {
 				t.Errorf(
-					"%s DeployedVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
-					prefix, gotJ, hadDeployedVersionValueJ,
+					"Service.DeployedVersionLookup.Version mutation mismatch\ngot:  %q\nwant: %q",
+					gotJ, hadDeployedVersionValueJ,
 				)
 			}
 		case *dvweb.Lookup:
@@ -173,195 +144,137 @@ func assertServiceCopyMutate(t *testing.T, prefix string, svcI, svcJ *Service) {
 				hadDeployedVersionValueJ = jDV.URL
 			} else {
 				t.Fatalf(
-					"%s DeployedVersion type mismatch\ngot:  %T\nwant: *lvweb.Lookup",
-					prefix, svcJ.DeployedVersionLookup,
+					"Service.DeployedVersionLookup type mismatch\ngot:  %T\nwant: *dvweb.Lookup",
+					svcJ.DeployedVersionLookup,
 				)
 			}
 			iDV.URL += "-mutated"
 			if gotJ := jDV.URL; gotJ != hadDeployedVersionValueJ {
 				t.Errorf(
-					"%s DeployedVersion.URL mutation mismatch\ngot:  %q\nwant: %q",
-					prefix, gotJ, hadDeployedVersionValueJ,
+					"Service.DeployedVersionLookup.URL mutation mismatch\ngot:  %q\nwant: %q",
+					gotJ, hadDeployedVersionValueJ,
 				)
 			}
+		default:
+			t.Fatalf("unhandled Service.DeployedVersionLookup type: %T", iDV)
 		}
 	}
 
-	// Notify.
 	notifyKeysI := util.SortedKeys(svcI.Notify)
 	notifyKeysJ := util.SortedKeys(svcJ.Notify)
 	if !util.AreSlicesEqual(notifyKeysI, notifyKeysJ) {
-		t.Fatalf(
-			"%s Notify keys mismatch\ngot:  %v\nwant: %v",
-			prefix, notifyKeysJ, notifyKeysI,
-		)
+		t.Fatalf("Service.Notify keys mismatch\ngot:  %q\nwant: %q", notifyKeysJ, notifyKeysI)
 	}
 	for _, key := range notifyKeysI {
 		hadNotifyValueJ := svcJ.Notify[key].ID
 		svcI.Notify[key].ID += "-mutated"
 		if gotJ := svcJ.Notify[key].ID; gotJ != hadNotifyValueJ {
 			t.Errorf(
-				"%s Notify[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
-				prefix, key, gotJ, hadNotifyValueJ,
+				"Service.Notify[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
+				key, gotJ, hadNotifyValueJ,
 			)
 		}
 	}
 
-	// Command.
-	if err := test.AssertSlicesEqualFunc(
+	if testErr := test.AssertSlicesEqualFunc(
 		t,
 		svcI.Command,
 		svcJ.Command,
 		func(i, j command.Command) bool {
 			return i.JSON() == j.JSON()
 		},
-		prefix,
-		"Command",
-	); err != nil {
-		t.Fatal(err)
+		"Service.Command",
+	); testErr != nil {
+		t.Fatal(testErr)
 	}
 	if len(svcI.Command) > 0 {
 		hadCommandValueJ := svcJ.Command[0][0]
 		svcI.Command[0][0] += "-mutated"
 		if gotJ := svcJ.Command[0][0]; gotJ != hadCommandValueJ {
 			t.Errorf(
-				"%s Command[0][0] mutation mismatch\ngot:  %q\nwant: %q",
-				prefix, gotJ, hadCommandValueJ,
+				"Service.Command[0][0] mutation mismatch\ngot:  %q\nwant: %q",
+				gotJ, hadCommandValueJ,
 			)
 		}
 	}
 
-	// Webhook.
 	webHookKeysI := util.SortedKeys(svcI.Webhook)
 	webHookKeysJ := util.SortedKeys(svcJ.Webhook)
 	if !util.AreSlicesEqual(webHookKeysI, webHookKeysJ) {
-		t.Fatalf(
-			"%s Webhook keys mismatch\ngot:  %v\nwant: %v",
-			prefix, webHookKeysJ, webHookKeysI,
-		)
+		t.Fatalf("Service.Webhook keys mismatch\ngot:  %q\nwant: %q", webHookKeysJ, webHookKeysI)
 	}
 	for _, key := range webHookKeysI {
 		hadWebhookValueJ := svcJ.Webhook[key].ID
 		svcI.Webhook[key].ID += "-mutated"
 		if gotJ := svcJ.Webhook[key].ID; gotJ != hadWebhookValueJ {
 			t.Errorf(
-				"%s Webhook[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
-				prefix, key, gotJ, hadWebhookValueJ,
+				"Service.Webhook[%q].ID mutation mismatch\ngot:  %q\nwant: %q",
+				key, gotJ, hadWebhookValueJ,
 			)
 		}
 	}
 }
 
 func TestService_Copy(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
-	whCfg := whtest.PlainConfig(t)
-
-	// GIVEN: a Service.
 	tests := []struct {
 		name string
-		svc  *Service
+		yaml string
 	}{
 		{
 			name: "nil",
-			svc:  nil,
+			yaml: "", // No YAML: a nil Service.
 		},
 		{
-			name: "LatestVersion",
-			svc: test.Must(t, func() (*Service, error) {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svc, err := DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("    ")+`
-					`)),
-					"LatestVersion",
-					svcCfg, notifyCfg, whCfg,
-				)
-				if err != nil {
-					return nil, err
-				}
-				svc.Status = *svcStatus.Copy(true)
-				return svc, nil
-			}),
+			name: "LatestVersion/github",
+			yaml: `
+				latest_version:
+					type: github
+					url: ` + test.ArgusGitHubRepo + `
+			`,
+		},
+		{
+			name: "LatestVersion/url",
+			yaml: `
+				latest_version:
+				` + lvtest.Lookup(t, "url", false).String("    ") + `
+			`,
 		},
 		{
 			name: "DeployedVersionLookup",
-			svc: test.Must(t, func() (*Service, error) {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svc, err := DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", false, "").String("    ")+`
-					`)),
-					"DeployedVersionLookup",
-					svcCfg, notifyCfg, whCfg,
-				)
-				if err != nil {
-					return nil, err
-				}
-				svc.Status = *svcStatus.Copy(true)
-				return svc, nil
-			}),
+			yaml: `
+				deployed_version:
+				` + dvtest.Lookup(t, "url", false, "").String("    ") + `
+			`,
+		},
+		{
+			name: "Dashboard",
+			yaml: `
+				dashboard:
+					auto_approve: true
+			`,
 		},
 		{
 			name: "Notify",
-			svc: test.Must(t, func() (*Service, error) {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svc, err := DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						notify:
-							test:
-						`+shoutrrrtest.Shoutrrr(t, false, false).String("    ")+`
-					`)),
-					"Notify",
-					svcCfg, notifyCfg, whCfg,
-				)
-				if err != nil {
-					return nil, err
-				}
-				svc.Status = *svcStatus.Copy(true)
-				return svc, nil
-			}),
+			yaml: `
+				notify:
+					test:
+				` + shoutrrrtest.Shoutrrr(t, false, false).String("    ") + `
+			`,
 		},
 		{
 			name: "Command",
-			svc: test.Must(t, func() (*Service, error) {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svc, err := DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						command:
-							- ['echo', 'Hello, World!']
-					`)),
-					"Command",
-					svcCfg, notifyCfg, whCfg,
-				)
-				if err != nil {
-					return nil, err
-				}
-				svc.Status = *svcStatus.Copy(true)
-				return svc, nil
-			}),
+			yaml: `
+				command:
+					- ['echo', 'Hello, World!']
+			`,
 		},
 		{
 			name: "Webhook",
-			svc: test.Must(t, func() (*Service, error) {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svc, err := DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						webhook:
-							test:
-						`+whtest.Webhook(t, false, false, true).String("    ")+`
-					`)),
-					"Webhook",
-					svcCfg, notifyCfg, whCfg,
-				)
-				if err != nil {
-					return nil, err
-				}
-				svc.Status = *svcStatus.Copy(true)
-				return svc, nil
-			}),
+			yaml: `
+				webhook:
+					test:
+				` + whtest.Webhook(t, false, false, true).String("    ") + `
+			`,
 		},
 	}
 
@@ -369,81 +282,91 @@ func TestService_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy is called on it.
-			withChannels := false
-			got := tc.svc.Copy(withChannels)
+			var svc *Service
+			if tc.yaml != "" {
+				svc = decodeWithStatus(t, tc.name, tc.yaml)
+			}
 
-			prefix := fmt.Sprintf(
-				"%s\nService.Copy(withChannels=%t)",
-				packageName, withChannels,
-			)
+			got := svc.Copy(false)
 
-			// THEN: nil is received only when nil was copied.
-			if got == nil {
-				if tc.svc != nil {
-					t.Errorf("%s of nil\ngot:  non-nil\nwant: nil", prefix)
+			if svc == nil {
+				if got != nil {
+					t.Error("without channels: Service.Copy() mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
+			if got == nil {
+				t.Fatal("without channels: Service.Copy() mismatch\ngot:  nil\nwant: non-nil")
+			}
 
-			// AND: the struct stringifies exactly the same.
-			gotStr, wantStr := got.String(""), tc.svc.String("")
+			gotStr, wantStr := got.String(""), svc.String("")
 			if gotStr != wantStr {
 				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
+					"without channels: Service.String() mismatch\ngot:  %q\nwant: %q",
+					gotStr, wantStr,
 				)
 			}
 
-			// AND: the Status channels are not copied over.
 			gotStatus := &got.Status
 			if gotStatus.AnnounceChannel != nil ||
 				gotStatus.DatabaseChannel != nil ||
 				gotStatus.SaveChannel != nil {
 				t.Errorf(
-					"%s .Status channel(s) mismatch\ngot:  %+v\nwant: all nil",
-					prefix, gotStatus,
+					"without channels: Service.Status channels mismatch\n"+
+						"got:  announce=%p, database=%p, save=%p\nwant: all nil",
+					gotStatus.AnnounceChannel, gotStatus.DatabaseChannel, gotStatus.SaveChannel,
 				)
 			}
 
-			// AND: mutating the copy does not mutate the original.
-			assertServiceCopyMutate(t, prefix, tc.svc, got)
+			assertServiceCopyMutate(t, svc, got)
 
-			// GIVEN: withChannels is true.
-			withChannels = true
+			got = svc.Copy(true)
+			if got == nil {
+				t.Fatal("with channels: Service.Copy() mismatch\ngot:  nil\nwant: non-nil")
+			}
 
-			// WHEN: Copy() is called again.
-			got = tc.svc.Copy(withChannels)
-
-			prefix = fmt.Sprintf(
-				"%s\nLookup.Copy(withChannels=%t)",
-				packageName, withChannels,
-			)
-
-			// THEN: the same data is returned.
-			gotStr = tc.svc.String("")
-			wantStr = got.String("")
+			gotStr = got.String("")
+			wantStr = svc.String("")
 			if gotStr != wantStr {
 				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
+					"with channels: Service.String() mismatch\ngot:  %q\nwant: %q",
+					gotStr, wantStr,
 				)
 			}
 
-			// AND: the Status channels are copied over.
-			hadStatus := &tc.svc.Status
+			hadStatus := &svc.Status
 			gotStatus = &got.Status
 			if hadStatus.AnnounceChannel != gotStatus.AnnounceChannel ||
 				hadStatus.DatabaseChannel != gotStatus.DatabaseChannel ||
 				hadStatus.SaveChannel != gotStatus.SaveChannel {
 				t.Errorf(
-					"%s .Status channel(s) mismatch\ngot:  %+v\nwant: %+v",
-					prefix, gotStatus, hadStatus,
+					"with channels: Service.Status channels mismatch\n"+
+						"got:  announce=%p, database=%p, save=%p\n"+
+						"want: announce=%p, database=%p, save=%p",
+					gotStatus.AnnounceChannel, gotStatus.DatabaseChannel, gotStatus.SaveChannel,
+					hadStatus.AnnounceChannel, hadStatus.DatabaseChannel, hadStatus.SaveChannel,
 				)
 			}
 
-			// AND: mutating the copy does not mutate the original.
-			assertServiceCopyMutate(t, prefix, tc.svc, got)
+			assertServiceCopyMutate(t, svc, got)
 		})
 	}
+}
+
+// decodeWithStatus decodes the YAML into a Service with ID id, with a Status that has channels.
+func decodeWithStatus(t *testing.T, id, yaml string) *Service {
+	t.Helper()
+
+	svc, err := DecodeService(
+		"yaml", []byte(test.TrimYAML(yaml)),
+		id,
+		plainDefaultsConfig(), shoutrrrtest.PlainConfig(), whtest.PlainConfig(t),
+	)
+	if err != nil {
+		t.Fatalf("DecodeService(id=%q) failed: %v", id, err)
+	}
+
+	svcStatus, _ := statustest.New("yaml", nil)
+	svc.Status = *svcStatus.Copy(true)
+	return svc
 }

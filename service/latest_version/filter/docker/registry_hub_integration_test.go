@@ -17,7 +17,7 @@
 package docker
 
 import (
-	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -31,7 +31,6 @@ import (
 // #########################
 
 func TestHubRegistry_Check(t *testing.T) {
-	// GIVEN: a HubRegistry, and version to check for.
 	tests := []struct {
 		name     string
 		registry HubRegistry
@@ -68,12 +67,13 @@ func TestHubRegistry_Check(t *testing.T) {
 				Image: test.ArgusDockerHubRepo + "-unknown",
 				Tag:   "{{ version }}",
 				Auth: &HubAuth{
-					Token:      test.GitHubToken(t),
+					Username:   test.DockerHubUsername(t),
+					Token:      test.DockerHubToken(t),
 					queryToken: "123",
 				},
 			},
 			version:  "latest",
-			errRegex: `^` + test.ArgusDockerHubRepo + `-unknown:latest - tag not found$`,
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerHubRepo) + `-unknown:latest - tag not found$`,
 		},
 	}
 
@@ -81,34 +81,19 @@ func TestHubRegistry_Check(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nHubRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if util.RegexCheck(`(?i)rate limit exceeded`, e) {
-				t.Skipf(
-					"%s registry rate-limited:\n%s",
-					prefix, e,
-				)
+				t.Skipf("registry rate-limited:\n%s", e)
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestHubRegistry_Check__errors(t *testing.T) {
-	// GIVEN: a HubRegistry, and version to check for.
 	tests := []struct {
 		name            string
 		hubTokenAddress string
@@ -118,7 +103,7 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 		errRegex        string
 	}{
 		{
-			name:            "GetQueryToken error, no token (no-op token req fails)",
+			name:            "GetQueryToken error, expired query token (token req fails)",
 			hubTokenAddress: "https://	example.com",
 			registry: HubRegistry{
 				Image: test.ArgusDockerHubRepo,
@@ -171,10 +156,10 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				` + test.ArgusDockerHubRepo + `:latest
+				` + regexp.QuoteMeta(test.ArgusDockerHubRepo) + `:latest
 					Get "https://.*
 						dial tcp:
-							lookup .* no such host$`,
+							lookup .*$`,
 			),
 		},
 	}
@@ -183,7 +168,7 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps hubTokenAddress and hubQueryURL.
 
 			if tc.hubTokenAddress != "" {
 				hubTokenAddress = tc.hubTokenAddress
@@ -198,21 +183,10 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 				})
 			}
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nHubRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
@@ -223,7 +197,6 @@ func TestHubRegistry_Check__errors(t *testing.T) {
 // #######################
 
 func TestHubAuth_GetQueryToken__integration(t *testing.T) {
-	// GIVEN: a HubAuth and ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name     string
 		data     *HubAuth
@@ -259,39 +232,23 @@ func TestHubAuth_GetQueryToken__integration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryToken() is called on it.
 			queryToken, err := tc.data.GetQueryToken(tc.detail)
-
-			prefix := fmt.Sprintf(
-				"%s\nHubAuth.GetQueryToken(%+v)",
-				packageName, tc.detail,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s mismatch on queryToken\ngot:  %q\nwant: %q",
-					prefix, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  len=%d\nwant: %q", len(queryToken), tc.want)
 			}
 
-			// AND: the query token expiry time is always valid.
 			if tc.data.queryToken != "" && !isUsable(tc.data.queryToken, tc.data.validUntil) {
 				t.Errorf(
-					"%s returned a queryToken that shouldn't be used\nnow:       %s\nvalidUntil: %s",
-					prefix, time.Now().UTC(), tc.data.validUntil,
+					"isUsable() mismatch\ngot:  false (validUntil=%s, now=%s)\nwant: true",
+					tc.data.validUntil, time.Now().UTC(),
 				)
 			}
 		})
@@ -299,7 +256,6 @@ func TestHubAuth_GetQueryToken__integration(t *testing.T) {
 }
 
 func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
-	// GIVEN: a ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name            string
 		detail          ContainerDetail
@@ -339,10 +295,9 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 			detail: ContainerDetail{
 				Image: test.ArgusDockerHubRepo,
 			},
-			username:        test.DockerHubUsername(t),
-			token:           test.DockerHubToken(t),
-			emptyQueryToken: true,
-			errRegex:        `^$`,
+			username: test.DockerHubUsername(t),
+			token:    test.DockerHubToken(t),
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid/url",
@@ -389,7 +344,7 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps hubTokenAddress.
 
 			if tc.tokenAddress != nil {
 				hubTokenAddress = *tc.tokenAddress
@@ -398,32 +353,22 @@ func TestHubAuth_RefreshQueryToken__integration(t *testing.T) {
 				})
 			}
 
-			// AND: a HubAuth to fetch it with.
 			data := &HubAuth{
 				Username: tc.username,
 				Token:    tc.token,
 			}
 
-			// WHEN: refreshQueryToken() is called on it.
 			queryToken, err := data.refreshQueryToken(tc.detail)
-
-			prefix := fmt.Sprintf(
-				"%s\nHubAuth.refreshQueryToken(%+v)",
-				packageName, tc.detail,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: if we didn't error, then we received a query token.
-			if err == nil && queryToken == "" && tc.emptyQueryToken == false {
-				t.Errorf("%s returned an empty queryToken\nwant: non-empty", prefix)
+			if gotEmpty := queryToken == ""; err == nil && gotEmpty != tc.emptyQueryToken {
+				t.Errorf(
+					"queryToken mismatch\ngot:  empty=%t\nwant: empty=%t",
+					gotEmpty, tc.emptyQueryToken,
+				)
 			}
 		})
 	}

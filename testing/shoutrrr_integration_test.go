@@ -34,7 +34,7 @@ import (
 
 func TestNotifyTest(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	// GIVEN: a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.

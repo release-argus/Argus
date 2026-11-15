@@ -17,9 +17,6 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -37,12 +34,72 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
-	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/webhook"
 )
 
+func TestDefaults_IsZero(t *testing.T) {
+	tests := []struct {
+		name     string
+		defaults *Defaults
+		want     bool
+	}{
+		{
+			name:     "nil",
+			defaults: nil,
+			want:     true,
+		},
+		{
+			name:     "empty",
+			defaults: &Defaults{},
+			want:     true,
+		},
+		{
+			name: "non-empty/Service",
+			defaults: &Defaults{
+				Service: service.Defaults{
+					Options: opt.Defaults{
+						Interval: "1s",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Notify",
+			defaults: &Defaults{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"foo": &shoutrrr.Defaults{
+						Type: "discord",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "non-empty/Webhook",
+			defaults: &Defaults{
+				Webhook: webhook.Defaults{
+					Type: "github",
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tc.defaults.IsZero()
+
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -183,7 +240,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -193,7 +249,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a string in a given format to unmarshal into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -222,7 +277,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 			format:   "yaml",
 			data:     "",
 			want:     "{}\n",
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/filled",
@@ -414,8 +469,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Defaults",
+				"Defaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -423,76 +477,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 	}
 }
 
-func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
-	tests := []struct {
-		name     string
-		defaults *Defaults
-		want     bool
-	}{
-		{
-			name:     "nil",
-			defaults: nil,
-			want:     true,
-		},
-		{
-			name:     "empty",
-			defaults: &Defaults{},
-			want:     true,
-		},
-		{
-			name: "non-empty/Service",
-			defaults: &Defaults{
-				Service: service.Defaults{
-					Options: opt.Defaults{
-						Interval: "1s",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/Notify",
-			defaults: &Defaults{
-				Notify: shoutrrr.ShoutrrrsDefaults{
-					"foo": &shoutrrr.Defaults{
-						Type: "discord",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "non-empty/Webhook",
-			defaults: &Defaults{
-				Webhook: webhook.Defaults{
-					Type: "github",
-				},
-			},
-			want: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: IsZero is called on the Defaults.
-			got := tc.defaults.IsZero()
-
-			// THEN: the result matches the expected value.
-			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -677,7 +662,7 @@ func TestDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Defaults.String",
 				tc.defaults.String,
 				tc.want,
 			)
@@ -686,17 +671,15 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: nil defaults.
 	var defaults Defaults
 
-	// WHEN: Default is called on it.
 	defaults.Default()
 	tests := []struct {
 		name      string
 		got, want string
 	}{
 		{
-			name: "Service.Interval",
+			name: "Service.Options.Interval",
 			got:  defaults.Service.Options.Interval,
 			want: "10m",
 		},
@@ -712,18 +695,12 @@ func TestDefaults_Default(t *testing.T) {
 		},
 	}
 
-	// THEN: the defaults are set correctly.
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			if tc.got != tc.want {
-				t.Log(tc.name)
-				t.Errorf(
-					"%s\nDefaults.Default() %q value mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.name,
-					tc.got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", tc.got, tc.want)
 			}
 		})
 	}
@@ -731,47 +708,28 @@ func TestDefaults_Default(t *testing.T) {
 
 func TestDefaults_Default__fail(t *testing.T) {
 	releaseStdout := test.CaptureLog(t, logx.Default())
-	// GIVEN: Defaults, and an environment variable that will cause MapEnvToStruct to error.
+
 	var defaults Defaults
 	env := map[string]string{"ARGUS_SERVICE_OPTIONS_INTERVAL": "99 something"}
-	test.SetEnv(t, env)
+	test.IsolateEnv(t, env)
 
-	resultChannel := make(chan bool, 1)
-	// WHEN: Default is called on the Defaults.
-	resultChannel <- defaults.Default()
-
-	prefix := fmt.Sprintf("%s\nDefaults.Default()", packageName)
-
-	// THEN: if false is returned, the error is logged.
-	if err := test.AssertChannelBool(
+	test.AssertCallLog(
 		t,
 		false,
-		resultChannel,
+		defaults.Default,
 		logx.ExitCodeChannel(),
 		releaseStdout,
-	); err != nil {
-		t.Fatal(prefix + err.Error())
-	}
-
-	// AND: the stdout matches the expected result.
-	stdout := releaseStdout()
-	wantSubstring := `One or more 'ARGUS_' environment variables are invalid:`
-	if !strings.Contains(stdout, wantSubstring) {
-		t.Errorf(
-			"%s stdout mismatch\ngot:  %q\nwant: %q",
-			prefix, stdout, wantSubstring,
-		)
-	}
+		`One or more 'ARGUS_' environment variables are invalid:`,
+	)
 }
 
 func TestDefaults_MapEnvToStruct(t *testing.T) {
 	var unmodifiedDefaults Defaults
 	unmodifiedDefaults.Default()
-	// GIVEN: Defaults and a bunch of env vars.
+
 	tests := []struct {
 		name        string
 		env         map[string]string
-		envCleanup  []string
 		want        *Defaults
 		stdoutRegex string
 	}{
@@ -809,7 +767,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.options/invalid time.duration - interval",
+			name: "service.options/invalid time.duration/interval",
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99 something",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "true",
@@ -817,7 +775,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			stdoutRegex: `ARGUS_SERVICE_OPTIONS_INTERVAL: "[^"]+" <invalid>`,
 		},
 		{
-			name: "service.options/invalid bool - semantic version",
+			name: "service.options/invalid bool/semantic version",
 			env: map[string]string{
 				"ARGUS_SERVICE_OPTIONS_INTERVAL":            "99",
 				"ARGUS_SERVICE_OPTIONS_SEMANTIC_VERSIONING": "foo",
@@ -911,6 +869,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					LatestVersion: latestver.Defaults{
 						Forgejo: lvforgejo.Defaults{
 							Host: map[string]lvforgejo.HostDefaults{
+								// Values are read only under the upper-cased name.
 								"work": {URL: "https://git.example.com"},
 							},
 						},
@@ -942,11 +901,6 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_SERVICE_LATEST_VERSION_ACCESS_TOKEN":        "ghp_deprecated",
 				"ARGUS_SERVICE_LATEST_VERSION_ALLOW_INVALID_CERTS": "true",
 				"ARGUS_SERVICE_LATEST_VERSION_USE_PRERELEASE":      "true",
-			},
-			envCleanup: []string{
-				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN",
-				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_USE_PRERELEASE",
-				"ARGUS_SERVICE_LATEST_VERSION_URL_ALLOW_INVALID_CERTS",
 			},
 			want: &Defaults{
 				Service: service.Defaults{
@@ -1001,21 +955,12 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 		{
 			name: "service.latest_version.require/valid",
 			env: map[string]string{
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":                        "ghcr",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_IMAGE":                       "imageFallback",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TAG":                         "tagFallback",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_IMAGE":         "imageForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_TAG":           "tagForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":    "tokenForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_USERNAME": "usernameForGHCR",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_IMAGE":          "imageForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_TAG":            "tagForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":     "tokenForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME":  "usernameForHub",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_IMAGE":         "imageForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_TAG":           "tagForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":    "tokenForQuay",
-				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_USERNAME": "usernameForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":                       "ghcr",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TAG":                        "tagFallback",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_TOKEN":   "tokenForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_TOKEN":    "tokenForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_AUTH_USERNAME": "usernameForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_TOKEN":   "tokenForQuay",
 			},
 			want: &Defaults{
 				Service: service.Defaults{
@@ -1041,6 +986,34 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 										`)),
 										nil,
 									)
+								}),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "service.latest_version.require/unmapped registry keys ignored",
+			env: map[string]string{
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_TYPE":                        "ghcr",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_IMAGE":                       "imageFallback",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_IMAGE":         "imageForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_TAG":           "tagForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_GHCR_AUTH_USERNAME": "usernameForGHCR",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_IMAGE":          "imageForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_HUB_TAG":            "tagForHub",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_IMAGE":         "imageForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_TAG":           "tagForQuay",
+				"ARGUS_SERVICE_LATEST_VERSION_COMMON_REQUIRE_DOCKER_REGISTRY_QUAY_AUTH_USERNAME": "usernameForQuay",
+			},
+			want: &Defaults{
+				Service: service.Defaults{
+					LatestVersion: latestver.Defaults{
+						Common: lvbase.Defaults{
+							Require: filter.RequireDefaults{
+								Docker: *test.Must(t, func() (*docker.Defaults, error) {
+									return docker.DecodeDefaults("yaml", []byte("type: ghcr"), nil)
 								}),
 							},
 						},
@@ -1091,7 +1064,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.deployed_version/invalid bool - allow_invalid_certs",
+			name: "service.deployed_version/invalid bool/allow_invalid_certs",
 			env: map[string]string{
 				"ARGUS_SERVICE_DEPLOYED_VERSION_ALLOW_INVALID_CERTS": "bang",
 			},
@@ -1111,7 +1084,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "service.dashboard/invalid bool - auto_approve",
+			name: "service.dashboard/invalid bool/auto_approve",
 			env: map[string]string{
 				"ARGUS_SERVICE_DASHBOARD_AUTO_APPROVE": "zap",
 			},
@@ -1169,17 +1142,6 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 			name: "notify.discord/invalid options.delay",
 			env: map[string]string{
 				"ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY": "foo",
-			},
-			want: &Defaults{
-				Notify: shoutrrr.ShoutrrrsDefaults{
-					"discord": shoutrrr.NewDefaults(
-						"",
-						map[string]string{
-							"delay": "foo",
-						},
-						nil, nil,
-					),
-				},
 			},
 			stdoutRegex: `ARGUS_NOTIFY_DISCORD_OPTIONS_DELAY: "foo" <invalid> .+`,
 		},
@@ -1496,7 +1458,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 				"ARGUS_NOTIFY_PUSHOVER_URL_FIELDS_USER":   "pushoverUser",
 				"ARGUS_NOTIFY_PUSHOVER_PARAMS_DEVICES":    "device1,device2",
 				"ARGUS_NOTIFY_PUSHOVER_PARAMS_PRIORITY":   "0",
-				"ARGUS_NOTIFY_PUSHOVER_PARAMS_TITLE":      "Argus Pushbullet Notification",
+				"ARGUS_NOTIFY_PUSHOVER_PARAMS_TITLE":      "Argus Pushover Notification",
 			},
 			want: &Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
@@ -1514,7 +1476,7 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 						map[string]string{
 							"devices":  "device1,device2",
 							"priority": "0",
-							"title":    "Argus Pushbullet Notification",
+							"title":    "Argus Pushover Notification",
 						},
 					),
 				},
@@ -1851,7 +1813,8 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing some env vars.
+			// Serial: sets env vars and captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			defaults := Defaults{
@@ -1891,61 +1854,30 @@ func TestDefaults_MapEnvToStruct(t *testing.T) {
 					}
 				}
 			}
-			for _, k := range tc.envCleanup {
-				if v, ok := os.LookupEnv(k); ok {
-					os.Unsetenv(k)
-					t.Cleanup(func() { _ = os.Setenv(k, v) })
-				}
-				t.Cleanup(func() { _ = os.Unsetenv(k) })
-			}
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 			wantOk := tc.stdoutRegex == ""
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: MapEnvToStruct is called on it.
-			go func() { resultChannel <- defaults.MapEnvToStruct() }()
-
-			prefix := fmt.Sprintf("%s\nDefaults.MapEnvToStruct()", packageName)
-
-			// THEN: the OK value is as expected.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				wantOk,
-				resultChannel,
+				defaults.MapEnvToStruct,
 				logx.ExitCodeChannel(),
 				releaseStdout,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: any error is as expected.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
+				tc.stdoutRegex,
+			)
 			if !wantOk {
 				return
 			}
 
-			// AND: the defaults are set to the appropriate env vars.
 			wantStr := tc.want.String("")
 			if got := defaults.String(""); got != wantStr {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, wantStr,
-				)
+				t.Errorf("Defaults.String() mismatch\ngot:  %q\nwant: %q", got, wantStr)
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: defaults with a test of invalid vars.
-	var defaults Defaults
-	defaults.Default()
 	tests := []struct {
 		name         string
 		input        *Defaults
@@ -1954,7 +1886,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 		wireDefaults bool
 	}{
 		{
-			name: "Service.Interval",
+			name: "Service.Options.Interval",
 			input: &Defaults{
 				Service: service.Defaults{
 					Options: *test.Must(t, func() (*opt.Defaults, error) {
@@ -2046,7 +1978,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "Service.Interval + Service.DeployedVersionLookup.Regex",
+			name: "Service.Options.Interval + Service.LatestVersion.Require.Docker.Type",
 			input: &Defaults{
 				Service: service.Defaults{
 					Options: *test.Must(t, func() (*opt.Defaults, error) {
@@ -2094,7 +2026,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 					),
 				},
 			},
-			changed: true,
+			changed:  true,
+			errRegex: `^$`,
 		},
 		{
 			name: "Notify.x.Delay",
@@ -2124,13 +2057,13 @@ func TestDefaults_CheckValues(t *testing.T) {
 					Type:   "github",
 					URL:    "example.com",
 					Secret: "Argus",
-					// CustomHeaders -> Headers.
 					CustomHeaders: webhook.Headers{
 						{Key: "foo", Value: "bar"},
 					},
 				},
 			},
-			changed: true,
+			changed:  true, // CheckValues moves CustomHeaders into Headers.
+			errRegex: `^$`,
 		},
 		{
 			name: "Webhook.Delay",
@@ -2159,7 +2092,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -2169,7 +2101,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestDefaults_Print(t *testing.T) {
-	// GIVEN: a set of Defaults.
 	var defaults Defaults
 	defaults.Default()
 	tests := []struct {
@@ -2191,19 +2122,15 @@ func TestDefaults_Print(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureStdout(t)
 
-			// WHEN: Print is called.
 			tc.input.Print("")
 
-			// THEN: the expected number of lines are printed.
 			stdout := releaseStdout()
 			if stdout != tc.want {
-				t.Errorf(
-					"%s\nDefaults.Print() stdout mismatch\ngot:  %q\nwant: %q",
-					packageName, stdout, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}

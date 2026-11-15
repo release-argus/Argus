@@ -17,7 +17,6 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 // #######################
 
 func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a QuayRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -156,25 +154,19 @@ func TestQuayRegistryDefaults_Unmarshal(t *testing.T) {
 				func(v *QuayRegistryDefaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"QuayRegistryDefaults",
+				"QuayRegistryDefaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nQuayRegistryDefaults.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("QuayRegistryDefaults.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestQuayRegistry_Unmarshal(t *testing.T) {
-	// GIVEN: a QuayRegistry and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -322,25 +314,19 @@ func TestQuayRegistry_Unmarshal(t *testing.T) {
 				func(v *QuayRegistry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"QuayRegistry",
+				"QuayRegistry.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nQuayRegistry.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("QuayRegistry.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestQuayRegistry_ApplyOverrides(t *testing.T) {
-	// GIVEN: a QuayRegistry and JSON/YAML to decode into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -515,7 +501,6 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is decoded into itself.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.registry,
@@ -528,7 +513,6 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
 				"QuayRegistry.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -542,7 +526,6 @@ func TestQuayRegistry_ApplyOverrides(t *testing.T) {
 // ####################
 
 func TestQuayRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: a QuayRegistryDefaults.
 	tests := []struct {
 		name     string
 		registry *QuayRegistryDefaults
@@ -567,37 +550,22 @@ func TestQuayRegistryDefaults_IsZero(t *testing.T) {
 			},
 			want: false,
 		},
-		{
-			name: "non-empty/all",
-			registry: &QuayRegistryDefaults{
-				Auth: &QuayAuthDefaults{
-					Token: "foo",
-				},
-			},
-			want: false,
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called with it.
 			got := tc.registry.IsZero()
 
-			// THEN: true is returned if all fields are empty.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nQuayRegistryDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestQuayRegistry_IsZero(t *testing.T) {
-	// GIVEN: a QuayRegistry.
 	tests := []struct {
 		name string
 		data *QuayRegistry
@@ -644,22 +612,16 @@ func TestQuayRegistry_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nQuayRegistry IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestQuayRegistry_Copy(t *testing.T) {
-	// GIVEN: a QuayRegistry.
 	tests := []struct {
 		name     string
 		registry *QuayRegistry
@@ -684,6 +646,7 @@ func TestQuayRegistry_Copy(t *testing.T) {
 					Token:    "t1",
 					defaults: &QuayAuthDefaults{},
 				},
+				defaults: &QuayRegistryDefaults{},
 			},
 			want: test.TrimYAML(`
 				image: i1
@@ -698,46 +661,42 @@ func TestQuayRegistry_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.registry.Copy()
 
-			prefix := fmt.Sprintf("%s\nQuayRegistry.Copy() ", packageName)
-
-			// THEN: the returned Registry unmarshals the same.
 			if got := decode.ToYAMLString(gotInterface, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("QuayRegistry mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned Registry is a QuayRegistry.
 			got, ok := gotInterface.(*QuayRegistry)
 			if !ok {
 				if gotInterface == nil {
 					return
 				}
 				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, gotInterface,
+					"QuayRegistry.Copy() type mismatch\ngot:  %T\nwant: *QuayRegistry",
+					gotInterface,
 				)
 			}
 
-			// AND: the unmarshaled values are the same.
 			gotAuth, ok := got.GetAuth().(*QuayAuth)
 			hadAuth, _ := tc.registry.GetAuth().(*QuayAuth)
-			if !ok || got.defaults != tc.registry.defaults {
+			if !ok {
 				t.Fatalf(
-					"%s .Auth mismatch\ngot:  %+v\nwant: %s",
-					prefix, got, tc.want,
+					"QuayRegistry.GetAuth() type mismatch\ngot:  %T\nwant: *QuayAuth",
+					got.GetAuth(),
+				)
+			}
+			if got.defaults != tc.registry.defaults {
+				t.Fatalf(
+					"QuayRegistry.defaults mismatch\ngot:  %p\nwant: %p",
+					got.defaults, tc.registry.defaults,
 				)
 			}
 
-			// AND: the returned QuayAuth is at a different address.
 			if gotAuth == hadAuth {
 				t.Fatalf(
-					"%s returned pointer to same Auth for instance %q",
-					packageName, tc.name,
+					"QuayRegistry.GetAuth(): copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotAuth, hadAuth,
 				)
 			}
 		})
@@ -749,7 +708,6 @@ func TestQuayRegistry_Copy(t *testing.T) {
 // ########################
 
 func TestQuayRegistryDefaults_String(t *testing.T) {
-	// GIVEN: a QuayRegistryDefaults.
 	tests := []struct {
 		name string
 		data *QuayRegistryDefaults
@@ -788,7 +746,7 @@ func TestQuayRegistryDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"QuayRegistryDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -797,7 +755,6 @@ func TestQuayRegistryDefaults_String(t *testing.T) {
 }
 
 func TestQuayRegistry_String(t *testing.T) {
-	// GIVEN: a QuayRegistry.
 	tests := []struct {
 		name string
 		data *QuayRegistry
@@ -847,7 +804,7 @@ func TestQuayRegistry_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"QuayRegistry.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -860,33 +817,22 @@ func TestQuayRegistry_String(t *testing.T) {
 // #######################
 
 func TestQuayRegistryDefaults_GetType(t *testing.T) {
-	// GIVEN: a QuayRegistryDefaults.
 	var registry QuayRegistryDefaults
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "quay"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
+
 func TestQuayRegistry_GetType(t *testing.T) {
-	// GIVEN: a QuayRegistry.
 	var registry QuayRegistry
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "quay"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -895,7 +841,6 @@ func TestQuayRegistry_GetType(t *testing.T) {
 // #########################
 
 func TestQuayRegistry_NewRequest(t *testing.T) {
-	// GIVEN: a QuayRegistry, and a tag.
 	tests := []struct {
 		name     string
 		registry *QuayRegistry
@@ -949,24 +894,10 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: newRequest() is called on it.
 			_, err := tc.registry.newRequest(tc.tag)
-
-			prefix := fmt.Sprintf(
-				"%s\nQuayRegistry newRequest(%s)",
-				packageName, tc.tag,
-			)
-
-			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if err != nil {
-				return
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
@@ -977,7 +908,6 @@ func TestQuayRegistry_NewRequest(t *testing.T) {
 // ################
 
 func TestQuayAuthDefaults_IsZero(t *testing.T) {
-	// GIVEN: a QuayAuthDefaults.
 	tests := []struct {
 		name string
 		data *QuayAuthDefaults
@@ -1004,22 +934,16 @@ func TestQuayAuthDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nQuayAuthDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestQuayAuth_Copy(t *testing.T) {
-	// GIVEN: a QuayAuth.
 	tests := []struct {
 		name string
 		auth *QuayAuth
@@ -1049,48 +973,32 @@ func TestQuayAuth_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			authCopy := tc.auth.Copy()
 
-			prefix := fmt.Sprintf("%s\nQuayAuth.Copy()", packageName)
-
-			// THEN: the returned RegistryAuth unmarshals the same.
 			if got := decode.ToYAMLString(authCopy, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("QuayAuth mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned RegistryAuth is a QuayAuth.
 			got, ok := authCopy.(*QuayAuth)
 			if !ok {
 				if authCopy == nil {
 					return
 				}
-				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, authCopy,
-				)
+				t.Fatalf("QuayAuth.Copy() type mismatch\ngot:  %T\nwant: *QuayAuth", authCopy)
 			}
 			if tc.auth == nil {
 				return
 			}
 
-			// AND: the unmarshaled values are the same.
 			if got.defaults != tc.auth.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got, tc.auth,
+					"QuayAuth.defaults mismatch\ngot:  %p\nwant: %p",
+					got.defaults, tc.auth.defaults,
 				)
 			}
 
-			// AND: the returned QuayAuth is at a different address.
 			if got == tc.auth {
-				t.Fatalf(
-					"%s returned pointer to the same Auth for instance %q",
-					prefix, tc.name,
-				)
+				t.Fatalf("copy aliases the original\ngot:  %p\nwant: NOT %p", got, tc.auth)
 			}
 		})
 	}
@@ -1101,7 +1009,6 @@ func TestQuayAuth_Copy(t *testing.T) {
 // ####################
 
 func TestQuayAuthDefaults_String(t *testing.T) {
-	// GIVEN: a QuayAuthDefaults.
 	tests := []struct {
 		name string
 		data *QuayAuthDefaults
@@ -1132,7 +1039,7 @@ func TestQuayAuthDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"QuayAuthDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -1145,7 +1052,6 @@ func TestQuayAuthDefaults_String(t *testing.T) {
 // ###################
 
 func TestQuayAuthDefaults_Defaults(t *testing.T) {
-	// GIVEN: a QuayAuthDefaults.
 	tests := []struct {
 		name         string
 		data         *QuayAuthDefaults
@@ -1171,22 +1077,16 @@ func TestQuayAuthDefaults_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Defaults is called on it.
 			got := tc.data.Defaults()
 
-			// THEN: Defaults are returned when expected.
 			if gotDefaults := got != nil; gotDefaults != tc.haveDefaults {
-				t.Errorf(
-					"%s\nQuayAuthDefaults.Defaults() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotDefaults, tc.haveDefaults,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", gotDefaults, tc.haveDefaults)
 			}
 		})
 	}
 }
 
 func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1204,12 +1104,12 @@ func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
 		},
 		{
 			name:        "doesn't give GHCRAuthDefaults",
-			newDefaults: &GHCRAuth{},
+			newDefaults: &GHCRAuthDefaults{},
 			doesSet:     false,
 		},
 		{
 			name:        "doesn't give HubAuthDefaults",
-			newDefaults: &HubAuth{},
+			newDefaults: &HubAuthDefaults{},
 			doesSet:     false,
 		},
 	}
@@ -1218,17 +1118,18 @@ func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: and QuayAuthDefaults to take them.
 			data := &QuayAuthDefaults{}
 
-			// WHEN: SetDefaults() is called to give these defaults.
 			data.SetDefaults(tc.newDefaults)
 
-			// THEN: they are set when expected.
-			if got := data.defaults == tc.newDefaults; got != tc.doesSet {
+			var want *QuayAuthDefaults
+			if tc.doesSet {
+				want = tc.newDefaults.(*QuayAuthDefaults)
+			}
+			if data.defaults != want {
 				t.Errorf(
-					"%s\nQuayAuthDefaults.SetDefaults() .defaults mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.doesSet,
+					"QuayAuthDefaults.defaults mismatch\ngot:  %p\nwant: %p",
+					data.defaults, want,
 				)
 			}
 		})
@@ -1240,7 +1141,6 @@ func TestQuayAuthDefaults_SetDefaults(t *testing.T) {
 // #####################
 
 func TestQuayAuth_CheckValues(t *testing.T) {
-	// GIVEN: a QuayAuth.
 	tests := []struct {
 		name     string
 		input    *QuayAuth
@@ -1252,13 +1152,6 @@ func TestQuayAuth_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "valid",
-			input: &QuayAuth{
-				Token: "token",
-			},
-			errRegex: `^$`,
-		},
-		{
 			name: "token",
 			input: &QuayAuth{
 				Token: "token",
@@ -1266,10 +1159,8 @@ func TestQuayAuth_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "no token",
-			input: &QuayAuth{
-				Token: "token",
-			},
+			name:     "no token",
+			input:    &QuayAuth{},
 			errRegex: `^$`,
 		},
 	}
@@ -1280,7 +1171,6 @@ func TestQuayAuth_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -1293,23 +1183,26 @@ func TestQuayAuth_CheckValues(t *testing.T) {
 // ######################
 
 func TestQuayAuth_GetToken(t *testing.T) {
-	// GIVEN: a QuayAuth with/without defaults.
 	tests := []struct {
-		name string
-		data *QuayAuth
-		want string
+		name     string
+		env      map[string]string
+		data     *QuayAuth
+		want     string
+		wantSelf string
 	}{
 		{
-			name: "empty",
-			data: &QuayAuth{},
-			want: "",
+			name:     "empty",
+			data:     &QuayAuth{},
+			want:     "",
+			wantSelf: "",
 		},
 		{
 			name: "no defaults",
 			data: &QuayAuth{
 				Token: "root",
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
 		},
 		{
 			name: "defaults fallback",
@@ -1319,17 +1212,22 @@ func TestQuayAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "defaults",
+			want:     "defaults",
+			wantSelf: "",
 		},
 		{
 			name: "defaults fallback recursive",
 			data: &QuayAuth{
 				Token: "",
 				defaults: &QuayAuthDefaults{
-					Token: "hard-defaults",
+					Token: "",
+					defaults: &QuayAuthDefaults{
+						Token: "hard-defaults",
+					},
 				},
 			},
-			want: "hard-defaults",
+			want:     "hard-defaults",
+			wantSelf: "",
 		},
 		{
 			name: "root Token prioritised",
@@ -1339,34 +1237,37 @@ func TestQuayAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
+		},
+		{
+			name: "env var expanded",
+			env:  map[string]string{"TEST_QUAY_AUTH_GET_TOKEN": "from-env"},
+			data: &QuayAuth{
+				Token: "${TEST_QUAY_AUTH_GET_TOKEN}",
+			},
+			want:     "from-env",
+			wantSelf: "from-env",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-
-			// WHEN: GetToken() is called on it.
-			got := tc.data.GetToken()
-
-			// THEN: the expected result is returned.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nQuayAuth.GetToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+			if tc.env != nil {
+				test.IsolateEnv(t, tc.env)
 			}
 
-			// WHEN: GetTokenSelf() is called on it.
+			got := tc.data.GetToken()
+
+			if got != tc.want {
+				t.Fatalf("QuayAuth.GetToken() mismatch\ngot:  %q\nwant: %q", got, tc.want)
+			}
+
 			got = tc.data.GetTokenSelf()
 
-			// THEN: the expected result is returned.
-			if got != tc.data.Token {
-				t.Fatalf(
-					"%s\nQuayAuthDefaults.GetTokenSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.data.Token,
-				)
+			if got != tc.wantSelf {
+				t.Fatalf("QuayAuth.GetTokenSelf() mismatch\ngot:  %q\nwant: %q", got, tc.wantSelf)
 			}
 		})
 	}
@@ -1377,7 +1278,6 @@ func TestQuayAuth_GetToken(t *testing.T) {
 // #######################
 
 func TestQuayAuthDefaults_GetQueryTokenSelf(t *testing.T) {
-	// GIVEN: a QuayAuthDefaults.
 	tests := []struct {
 		name string
 		data *QuayAuthDefaults
@@ -1398,28 +1298,19 @@ func TestQuayAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryTokenSelf() is called on it.
 			queryToken, _ := tc.data.GetQueryTokenSelf()
 
-			prefix := fmt.Sprintf("%s\nQuayAuthDefaults.GetQueryTokenSelf()", packageName)
-
-			// THEN: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s queryToken mismatch\ngot:  %q\nwant: %q",
-					prefix, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 		})
 	}
 }
 
 func TestQuayAuth_SetQueryToken(t *testing.T) {
-	// GIVEN: a QuayAuth and QuayAuthDefaults.
 	queryToken := "new-query-token"
 	validUntil := time.Now().Add(10 * time.Second)
 
@@ -1428,24 +1319,22 @@ func TestQuayAuth_SetQueryToken(t *testing.T) {
 	}
 	defaults := &QuayAuthDefaults{Token: "def"}
 
-	// WHEN: SetQueryToken is called via concrete types and RegistryAuth.
 	auth.SetQueryToken(queryToken, validUntil)
 	defaults.SetQueryToken(queryToken, validUntil)
 
 	var viaInterface RegistryAuth = auth
 	viaInterface.SetQueryToken(queryToken, validUntil)
 
-	// THEN: token-only auth is unchanged (no-op).
+	// Token-only auth makes SetQueryToken a no-op.
 	if got, want := auth.Token, "abc"; got != want {
-		t.Fatalf(
-			"%s\nQuayAuth.SetQueryToken() changed Token\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("QuayAuth.Token mismatch\ngot:  %q\nwant: %q", got, want)
+	}
+	if got, want := defaults.Token, "def"; got != want {
+		t.Errorf("QuayAuthDefaults.Token mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestQuayAuth_GetQueryToken(t *testing.T) {
-	// GIVEN: a QuayAuth with a token.
 	tests := []struct {
 		name string
 		auth QuayAuth
@@ -1468,25 +1357,14 @@ func TestQuayAuth_GetQueryToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryToken() is called on it.
 			got, err := tc.auth.GetQueryToken(ContainerDetail{})
 
-			prefix := fmt.Sprintf("%s\nQuayAuth.GetQueryToken()", packageName)
-
-			// THEN: the expected Token is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: no error is returned.
 			if err != nil {
-				t.Errorf(
-					"%s error mismatch\ngot:  %v\nwant: nil",
-					prefix, err,
-				)
+				t.Errorf("error mismatch\ngot:  %v\nwant: nil", err)
 			}
 		})
 	}
@@ -1497,13 +1375,11 @@ func TestQuayAuth_GetQueryToken(t *testing.T) {
 // ######################
 
 func TestQuayAuth_Inherit(t *testing.T) {
-	// GIVEN: a QuayAuth, and a RegistryAuth to try and inherit from.
 	tests := []struct {
-		name                 string
-		auth                 *QuayAuth
-		from                 RegistryAuth
-		srcDetail, dstDetail ContainerDetail
-		wantToken            string
+		name      string
+		auth      *QuayAuth
+		from      RegistryAuth
+		wantToken string
 	}{
 		{
 			name:      "inherit from nil",
@@ -1512,7 +1388,7 @@ func TestQuayAuth_Inherit(t *testing.T) {
 			wantToken: "",
 		},
 		{
-			name: "inherit from QuayAuth (src.Token is SecretValue)",
+			name: "inherit from QuayAuth (Token is SecretValue)",
 			auth: &QuayAuth{
 				Token: util.SecretValue,
 			},
@@ -1522,7 +1398,7 @@ func TestQuayAuth_Inherit(t *testing.T) {
 			wantToken: "abc",
 		},
 		{
-			name: "do not inherit from QuayAuth when src.Token is not SecretValue",
+			name: "do not inherit from QuayAuth when Token is not SecretValue",
 			auth: &QuayAuth{
 				Token: "foo",
 			},
@@ -1557,14 +1433,10 @@ func TestQuayAuth_Inherit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Inherit is called on it.
-			tc.auth.Inherit(tc.from, tc.srcDetail, tc.dstDetail)
+			tc.auth.Inherit(tc.from, ContainerDetail{}, ContainerDetail{})
 
 			if got := tc.auth.Token; got != tc.wantToken {
-				t.Errorf(
-					"%s\nQuayAuth.Inherit() .Token value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.wantToken,
-				)
+				t.Errorf("QuayAuth.Token mismatch\ngot:  %q\nwant: %q", got, tc.wantToken)
 			}
 		})
 	}

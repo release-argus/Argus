@@ -18,11 +18,11 @@ package v1
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,42 +35,38 @@ import (
 
 func TestServeWs(t *testing.T) {
 	tests := []struct {
-		name           string
-		dialHeaders    map[string]string
-		trustPeer      bool
-		wantStatus     int
-		wantRegistered bool
-		wantIP         string
-		wantSendCap    int
+		name        string
+		dialHeaders map[string]string
+		trustPeer   bool
+		wantStatus  int
+		wantIP      string
+		wantSendCap int
 	}{
 		{
-			name:           "upgrades and registers client",
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "127.0.0.1",
-			wantSendCap:    256,
+			name:        "upgrades and registers client",
+			wantStatus:  http.StatusSwitchingProtocols,
+			wantIP:      "127.0.0.1",
+			wantSendCap: 256,
 		},
 		{
 			name: "trusted proxy/uses CF-Connecting-Ip",
 			dialHeaders: map[string]string{
 				"CF-Connecting-IP": "2.2.2.2",
 			},
-			trustPeer:      true,
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "2.2.2.2",
-			wantSendCap:    256,
+			trustPeer:   true,
+			wantStatus:  http.StatusSwitchingProtocols,
+			wantIP:      "2.2.2.2",
+			wantSendCap: 256,
 		},
 		{
 			name: "trusted proxy/uses X-Real-Ip",
 			dialHeaders: map[string]string{
 				"X-Real-Ip": "3.3.3.3",
 			},
-			trustPeer:      true,
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "3.3.3.3",
-			wantSendCap:    256,
+			trustPeer:   true,
+			wantStatus:  http.StatusSwitchingProtocols,
+			wantIP:      "3.3.3.3",
+			wantSendCap: 256,
 		},
 		{
 			name: "untrusted peer/forwarded headers ignored",
@@ -78,10 +74,9 @@ func TestServeWs(t *testing.T) {
 				"CF-Connecting-IP": "2.2.2.2",
 				"X-Real-Ip":        "3.3.3.3",
 			},
-			wantStatus:     http.StatusSwitchingProtocols,
-			wantRegistered: true,
-			wantIP:         "127.0.0.1",
-			wantSendCap:    256,
+			wantStatus:  http.StatusSwitchingProtocols,
+			wantIP:      "127.0.0.1",
+			wantSendCap: 256,
 		},
 	}
 
@@ -89,11 +84,9 @@ func TestServeWs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a Hub.
 			hub := NewHub()
 			go hub.Run(t.Context())
 
-			// AND: a HTTP server with a WebSocket endpoint.
 			middlewareAPI := &API{}
 			if tc.trustPeer {
 				middlewareAPI.trustedProxies = []netip.Prefix{
@@ -108,9 +101,6 @@ func TestServeWs(t *testing.T) {
 			))
 			t.Cleanup(server.Close)
 
-			prefix := fmt.Sprintf("%s\nServeWs()", packageName)
-
-			// WHEN: a WebSocket client connects.
 			wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
 			dialHeader := http.Header{}
 			for key, value := range tc.dialHeaders {
@@ -118,45 +108,23 @@ func TestServeWs(t *testing.T) {
 			}
 			clientConn, resp, err := websocket.DefaultDialer.Dial(wsURL, dialHeader)
 			if err != nil {
-				t.Fatalf(
-					"%s failed to dial WebSocket: %v",
-					prefix, err,
-				)
+				t.Fatalf("Dialer.Dial(%q) failed: %v", wsURL, err)
 			}
 			t.Cleanup(func() { _ = clientConn.Close() })
 
-			// THEN: the upgrade succeeds.
 			if got, want := resp.StatusCode, tc.wantStatus; got != want {
-				t.Errorf(
-					"%s status mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
-				)
-			}
-			time.Sleep(time.Second)
-
-			// AND: the client is registered on the Hub.
-			registered := hubClientForTest(t, hub)
-			if tc.wantRegistered && registered == nil {
-				t.Fatalf("%s expected a registered client", prefix)
-			}
-			if !tc.wantRegistered && registered != nil {
-				t.Fatalf(
-					"%s expected no registered client, got %p",
-					prefix, registered,
-				)
-			}
-			if registered == nil {
-				return
+				t.Errorf("status code mismatch\ngot:  %d\nwant: %d", got, want)
 			}
 
-			// AND: the client's data is filled correctly.
+			registered := waitForHubClient(t, hub)
+
 			fieldTests := []test.FieldAssertion{
-				{Name: "IP", Got: registered.ip, Want: tc.wantIP, Mode: test.CompareEqual},
-				{Name: "Send capacity", Got: cap(registered.send), Want: tc.wantSendCap, Mode: test.CompareEqual},
-				{Name: "Hub", Got: registered.hub, Want: hub, Mode: test.CompareSamePointer},
-				{Name: "Conn", Got: registered.conn, Want: nil, Mode: test.CompareDifferentPointer},
+				{Name: "ip", Got: registered.ip, Want: tc.wantIP, Mode: test.CompareEqual},
+				{Name: "send capacity", Got: cap(registered.send), Want: tc.wantSendCap, Mode: test.CompareEqual},
+				{Name: "hub", Got: registered.hub, Want: hub, Mode: test.CompareSamePointer},
+				{Name: "conn", Got: registered.conn, Mode: test.CompareNotNil},
 			}
-			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Client"); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -164,7 +132,6 @@ func TestServeWs(t *testing.T) {
 }
 
 func TestServeWs__clientAuth(t *testing.T) {
-	// GIVEN: a Hub and a WebSocket endpoint that ties clients to a session.
 	hub := NewHub()
 	go hub.Run(t.Context())
 	auth := &clientAuth{
@@ -179,72 +146,57 @@ func TestServeWs__clientAuth(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	prefix := fmt.Sprintf("%s\nServeWs() clientAuth", packageName)
-
-	// WHEN: a WebSocket client connects.
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
 	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
-		t.Fatalf(
-			"%s failed to dial WebSocket: %v",
-			prefix, err,
-		)
+		t.Fatalf("Dialer.Dial(%q) failed: %v", wsURL, err)
 	}
 	t.Cleanup(func() { _ = clientConn.Close() })
 
-	// THEN: the registered client carries the session identity.
-	var registered *Client
-	for i := 0; i < 100 && registered == nil; i++ {
-		time.Sleep(10 * time.Millisecond)
-		registered = hubClientForTest(t, hub)
+	registered := waitForHubClient(t, hub)
+	fieldTests := []test.FieldAssertion{
+		{Name: "userID", Got: registered.userID, Want: auth.userID, Mode: test.CompareEqual},
+		{Name: "sessionHash", Got: registered.sessionHash, Want: auth.sessionHash, Mode: test.CompareEqual},
+		{Name: `readableServices["svc"]`, Got: registered.readableServices["svc"], Want: true, Mode: test.CompareEqual},
+		{Name: `actionableServices["svc"]`, Got: registered.actionableServices["svc"], Want: true, Mode: test.CompareEqual},
+		{Name: "sessionAlive", Got: registered.sessionAlive, Mode: test.CompareNotNil},
 	}
-	if registered == nil {
-		t.Fatalf("%s expected a registered client", prefix)
-	}
-	if registered.userID != auth.userID ||
-		registered.sessionHash != auth.sessionHash ||
-		!registered.readableServices["svc"] ||
-		!registered.actionableServices["svc"] ||
-		registered.sessionAlive == nil {
-		t.Errorf(
-			"%s client identity mismatch\ngot:  userID=%q sessionHash=%q readableServices=%v actionableServices=%v sessionAlive=%t",
-			prefix, registered.userID, registered.sessionHash,
-			registered.readableServices, registered.actionableServices, registered.sessionAlive != nil,
-		)
+	if testErr := test.AssertFields(t, fieldTests, "Client"); testErr != nil {
+		t.Error(testErr)
 	}
 }
 
 type wsTestClient struct {
 	client *Client
 	conn   *websocket.Conn
-	peer   *websocket.Conn
 	server *httptest.Server
+	pings  *atomic.Int32
 }
 
 func setupWSTestClient(t *testing.T) *wsTestClient {
 	t.Helper()
 
-	// Create an upgrader for the test server.
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	// Create test server.
+	pings := &atomic.Int32{}
 	server := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				ws, err := upgrader.Upgrade(w, r, nil)
 				if err != nil {
-					t.Fatalf(
-						"%s\ncould not upgrade connection: %v",
-						packageName, err,
-					)
+					t.Errorf("Upgrader.Upgrade() failed: %v", err)
 					return
 				}
 
-				// Echo messages back.
+				ws.SetPingHandler(func(data string) error {
+					pings.Add(1)
+					return ws.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
+				})
+
 				for {
 					messageType, message, err := ws.ReadMessage()
 					if err != nil {
@@ -257,17 +209,12 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 			}),
 	)
 
-	// Create a WebSocket connection.
-	url := "ws" + strings.TrimPrefix(server.URL, "http")
-	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncould not open WebSocket connection: %v",
-			packageName, err,
-		)
+		t.Fatalf("Dialer.Dial(%q) failed: %v", wsURL, err)
 	}
 
-	// Create client.
 	hub := NewHub()
 	client := &Client{
 		hub:  hub,
@@ -279,76 +226,51 @@ func setupWSTestClient(t *testing.T) *wsTestClient {
 	return &wsTestClient{
 		client: client,
 		conn:   ws,
-		peer:   ws,
 		server: server,
+		pings:  pings,
 	}
 }
 
-// cleanup closes the [conn], [peer], and [server] channels of the [wsTestClient]
-func (w *wsTestClient) cleanup(t *testing.T) {
-	t.Helper()
-
+// cleanup closes the [wsTestClient.conn] and the [wsTestClient.server].
+func (w *wsTestClient) cleanup() {
 	_ = w.conn.Close()
-	_ = w.peer.Close()
 	w.server.Close()
 }
 
-// closePeer will close the [peer] channel of this [wsTestClient] with the given code.
-func (w *wsTestClient) closePeer(t *testing.T, code int) {
-	t.Helper()
-
+// closePeer sends a close frame with code, or drops the [wsTestClient.conn] when code is 0.
+func (w *wsTestClient) closePeer(code int) {
 	if code == 0 {
-		_ = w.peer.Close()
+		_ = w.conn.Close()
 		return
 	}
 
-	_ = w.peer.WriteMessage(
+	_ = w.conn.WriteMessage(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(code, ""),
 	)
 }
 
 func TestServeWs__plain_HTTP(t *testing.T) {
-	// GIVEN: a Hub.
 	hub := NewHub()
 	go hub.Run(t.Context())
 
-	// AND: a HTTP server with a WebSocket endpoint.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ServeWs(hub, w, r, nil)
-	}))
-	t.Cleanup(server.Close)
-
-	prefix := fmt.Sprintf("%s\nServeWs()", packageName)
-
-	// AND: a plain HTTP request to the WebSocket endpoint.
 	req := httptest.NewRequest(http.MethodGet, "/ws", nil)
 	rec := httptest.NewRecorder()
 
-	// WHEN: a plain HTTP request is served.
 	ServeWs(hub, rec, req, nil)
 
-	// THEN: the upgrade fails.
 	if got, want := rec.Code, http.StatusBadRequest; got != want {
-		t.Errorf(
-			"%s status mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, rec.Body.String(), want)
 	}
 
 	time.Sleep(100 * time.Millisecond)
 
-	// AND: no client is registered.
 	if registered := hubClientForTest(t, hub); registered != nil {
-		t.Errorf(
-			"%s expected no registered client, got %p",
-			prefix, registered,
-		)
+		t.Errorf("hubClientForTest() mismatch\ngot:  ip=%q\nwant: nil", registered.ip)
 	}
 }
 
 func TestGetIP(t *testing.T) {
-	// GIVEN: requests with and without a middleware-resolved IP.
 	tests := []struct {
 		name       string
 		contextIP  *string
@@ -379,27 +301,16 @@ func TestGetIP(t *testing.T) {
 					context.WithValue(req.Context(), clientIPKey{}, *tc.contextIP))
 			}
 
-			// WHEN: getIP is called on this request.
 			got := getIP(req)
 
-			prefix := fmt.Sprintf(
-				"%s\ngetIP(%+v)",
-				packageName, req,
-			)
-
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestAPI_ForwardedIP(t *testing.T) {
-	// GIVEN: a request with proxy headers, and a set of trusted proxies.
 	tests := []struct {
 		name    string
 		trusted []string
@@ -505,15 +416,11 @@ func TestAPI_ForwardedIP(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: an API armed with the trusted proxies.
 			proxies := make([]netip.Prefix, 0, len(tc.trusted))
 			for _, p := range tc.trusted {
 				pfx, err := netip.ParsePrefix(p)
 				if err != nil {
-					t.Fatalf(
-						"%s\nparse trusted proxy %q: %v",
-						packageName, p, err,
-					)
+					t.Fatalf("netip.ParsePrefix(%q) failed: %v", p, err)
 				}
 				proxies = append(proxies, pfx)
 			}
@@ -524,27 +431,16 @@ func TestAPI_ForwardedIP(t *testing.T) {
 				req.Header.Set(header, val)
 			}
 
-			// WHEN: forwardedIP is called on this request.
 			got := api.forwardedIP(req)
 
-			prefix := fmt.Sprintf(
-				"%s\nforwardedIP(%+v)",
-				packageName, req,
-			)
-
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRemoteAddrIP(t *testing.T) {
-	// GIVEN: a request with a RemoteAddr.
 	tests := []struct {
 		name       string
 		remoteAddr string
@@ -579,67 +475,71 @@ func TestRemoteAddrIP(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			req.RemoteAddr = tc.remoteAddr
 
-			// WHEN: remoteAddrIP is called on this request.
 			got := remoteAddrIP(req)
 
-			prefix := fmt.Sprintf(
-				"%s\nremoteAddrIP(%+v)",
-				packageName, req,
-			)
-
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestClient__hubless(t *testing.T) {
-	// GIVEN: a client that never reached a Hub.
 	client := &Client{send: make(chan []byte, 8)}
 
-	prefix := fmt.Sprintf("%s\nClient", packageName)
-
-	// WHEN/THEN: it has no Hub to leave, so unregistering returns.
+	// No Hub to leave, so this returns.
 	client.unregister()
 
-	// AND: no Hub stop to wait on.
 	if got := client.hubDone(); got != nil {
-		t.Errorf(
-			"%s.hubDone() mismatch\ngot:  %v\nwant: nil",
-			prefix, got,
-		)
+		t.Error("Client.hubDone() mismatch\ngot:  non-nil\nwant: nil")
 	}
 }
 
 func TestClient_ReadPump__pongHandler(t *testing.T) {
-	// GIVEN: a Hub with a registered client and a running readPump.
-	wsTest := setupWSHubClient(t)
-	t.Cleanup(func() { wsTest.cleanup(t) })
-	go wsTest.client.readPump()
-
-	prefix := fmt.Sprintf("%s\nClient.readPump()", packageName)
-
-	// WHEN: the client sends a Ping
-	if err := wsTest.client.conn.WriteControl(
-		websocket.PingMessage,
-		[]byte{},
-		time.Now().Add(time.Second),
-	); err != nil {
-		t.Fatalf(
-			"%s failed to write ping: %v",
-			prefix, err,
-		)
+	tests := []struct {
+		name           string
+		ping           bool
+		wantRegistered bool
+	}{
+		{
+			name:           "pongs extend the read deadline",
+			ping:           true,
+			wantRegistered: true,
+		},
+		{
+			name:           "no pongs, so the read deadline expires",
+			ping:           false,
+			wantRegistered: false,
+		},
 	}
-	time.Sleep(100 * time.Millisecond)
 
-	// THEN: the connection remains alive — pong handler ran without error.
-	if !wsTest.client.hub.hasClient(wsTest.client) {
-		t.Errorf("%s client should still be registered to hub after pong", prefix)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			wsTest := setupWSHubClient(t)
+			go wsTest.client.readPump()
+
+			// Runs for three pongWaits, so only pongs can keep the client registered.
+			deadline := time.Now().Add(3 * pongWait)
+			for time.Now().Before(deadline) {
+				if tc.ping {
+					err := wsTest.client.conn.WriteControl(
+						websocket.PingMessage,
+						[]byte{},
+						time.Now().Add(time.Second),
+					)
+					if err != nil {
+						t.Fatalf("Conn.WriteControl() failed: %v", err)
+					}
+				}
+				time.Sleep(pongWait / 10)
+			}
+
+			if got := wsTest.client.hub.hasClient(wsTest.client); got != tc.wantRegistered {
+				t.Errorf("Hub.hasClient() mismatch\ngot:  %t\nwant: %t", got, tc.wantRegistered)
+			}
+		})
 	}
 }
 
@@ -652,7 +552,7 @@ func TestClient_ReadPump__disconnects(t *testing.T) {
 		stdoutRegex     string
 	}{
 		{
-			name: "message exceeds read limit", // [websocket.ErrReadLimit]
+			name: "message exceeds read limit (websocket.ErrReadLimit)",
 			peerMessages: []string{
 				strings.Repeat("a", maxMessageSize+1),
 			},
@@ -674,58 +574,44 @@ func TestClient_ReadPump__disconnects(t *testing.T) {
 			stdoutRegex:   `^$`,
 		},
 		{
-			name:          "unexpected peer close/abnormal closure",
-			peerCloseCode: websocket.CloseAbnormalClosure,
-			stdoutRegex:   `^ERROR: .*WebSocket.*127.0.0.1.*`,
+			name:          "unexpected peer close/internal server error",
+			peerCloseCode: websocket.CloseInternalServerErr,
+			stdoutRegex:   `^ERROR: WebSocket \(127\.0\.0\.1\), websocket: close \d+ .*`,
 		},
 		{
 			name:            "abrupt client close unregisters from hub",
 			closeClientConn: true,
-			stdoutRegex:     `$`,
+			stdoutRegex:     `^$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// GIVEN: a Hub with a registered client.
 			wsTest := setupWSHubClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
 
-			prefix := fmt.Sprintf("%s\nClient.readPump()", packageName)
-
-			// AND: a readPump is running for this client.
 			go wsTest.client.readPump()
 
-			// WHEN: the connection is disrupted.
-			for _, msg := range tc.peerMessages {
-				if err := wsTest.peer.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-					t.Fatalf(
-						"%s failed to write message from peer: %v",
-						prefix, err,
-					)
+			for i, msg := range tc.peerMessages {
+				if err := wsTest.conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+					t.Fatalf("message %d: Conn.WriteMessage() failed: %v", i, err)
 				}
 			}
 			switch {
 			case tc.peerCloseCode != 0:
-				// AND: the peer closes with a given code.
-				wsTest.closePeer(t, tc.peerCloseCode)
+				wsTest.closePeer(tc.peerCloseCode)
 			case tc.closeClientConn:
-				// AND: the connection is closed without a close message.
 				_ = wsTest.conn.Close()
 			}
 
-			// THEN: the client is unregistered and removed from the hub.
 			waitForClientUnregistered(t, wsTest.client.hub, wsTest.client)
-			// AND: stdout matches.
+
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
@@ -800,41 +686,29 @@ func TestClient_WriteServerMessage(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			prefix := fmt.Sprintf("%s\nClient.writeServerMessage()", packageName)
-
-			// GIVEN: a client with a WebSocket connection.
 			wsTest := setupWSTestClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
+			t.Cleanup(wsTest.cleanup)
 
 			if tc.closeConn {
-				// AND: the client connection is closed.
 				if err := wsTest.conn.Close(); err != nil {
-					t.Fatalf(
-						"%s failed to close connection: %v",
-						prefix, err,
-					)
+					t.Fatalf("Conn.Close() failed: %v", err)
 				}
 			}
 
-			// WHEN: writeServerMessage is called for each message.
 			for _, msg := range tc.messages {
 				wsTest.client.writeServerMessage([]byte(msg))
 			}
 
-			// THEN: the expected messages are written to the WebSocket connection.
-			got := readConnMessages(t, wsTest.conn, prefix, len(tc.wantMessages))
-			assertConnMessages(t, prefix, got, tc.wantMessages)
+			got := readConnMessages(t, wsTest.conn, len(tc.wantMessages))
+			assertConnMessages(t, got, tc.wantMessages)
 
-			// AND: stdout matches.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
@@ -895,107 +769,81 @@ func TestClient_DrainSendMessages(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// GIVEN: a client with a WebSocket connection.
 			wsTest := setupWSTestClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
+			t.Cleanup(wsTest.cleanup)
 
-			prefix := fmt.Sprintf("%s\nClient.drainSendMessages()", packageName)
-
-			// AND: messages are queued to send to the client.
 			for _, msg := range tc.queued {
 				wsTest.client.send <- []byte(msg)
 			}
 
-			// AND: the client channel is closed.
 			if tc.closeSend {
 				close(wsTest.client.send)
 			}
 
-			// AND: a message is written to the client.
 			if tc.writeFirst != "" {
 				wsTest.client.writeServerMessage([]byte(tc.writeFirst))
 			}
 
-			// WHEN: drainSendMessages is called.
 			wsTest.client.drainSendMessages()
 
-			// THEN: expected messages are written to the WebSocket connection.
 			time.Sleep(250 * time.Millisecond)
-			got := readConnMessages(t, wsTest.conn, prefix, len(tc.wantMessages))
-			assertConnMessages(t, prefix, got, tc.wantMessages)
+			got := readConnMessages(t, wsTest.conn, len(tc.wantMessages))
+			assertConnMessages(t, got, tc.wantMessages)
 
-			// AND: the queued messages channel is emptied.
-			if got := len(wsTest.client.send); got != 0 {
-				t.Errorf(
-					"%s send channel length mismatch\ngot:  %d\nwant: 0",
-					prefix, got,
-				)
+			if gotLen, wantLen := len(wsTest.client.send), 0; gotLen != wantLen {
+				t.Errorf("Client.send length mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
 			}
 
-			// AND: stdout matches.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
 }
 
-func readConnMessages(t *testing.T, conn *websocket.Conn, prefix string, count int) []string {
+// readConnMessages reads count messages from conn, plus any extra one that arrives shortly after.
+// The extra read times out, which leaves conn unreadable.
+func readConnMessages(t *testing.T, conn *websocket.Conn, count int) []string {
 	t.Helper()
 
-	got, err := tryReadConnMessages(conn, count)
-	if err != nil {
-		t.Fatalf(
-			"%s %v",
-			prefix, err,
-		)
-	}
-	return got
-}
-
-func tryReadConnMessages(conn *websocket.Conn, count int) ([]string, error) {
-	received := make([]string, 0, count)
+	received := make([]string, 0, count+1)
 	for i := range count {
 		if err := conn.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
-			return nil, fmt.Errorf("failed to set read deadline: %w", err)
+			t.Fatalf("message %d: Conn.SetReadDeadline() failed: %v", i, err)
 		}
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to read message [%d] from WebSocket connection: %w",
-				i, err,
-			)
+			t.Fatalf("message %d: Conn.ReadMessage() failed: %v", i, err)
 		}
 		received = append(received, string(message))
 	}
-	return received, nil
+
+	// A closed conn fails to set the deadline, and holds no extra message.
+	if err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err == nil {
+		if _, message, err := conn.ReadMessage(); err == nil {
+			received = append(received, string(message))
+		}
+	}
+	return received
 }
 
-func assertConnMessages(t *testing.T, prefix string, got, want []string) {
+func assertConnMessages(t *testing.T, got, want []string) {
 	t.Helper()
 
 	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
-		t.Errorf(
-			"%s message count mismatch\ngot:  %d\nwant: %d",
-			prefix, gotLen, wantLen,
-		)
+		t.Errorf("message count mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
 	}
 	for i, wantMsg := range want {
 		if i >= len(got) {
 			break
 		}
 		if gotMsg := got[i]; gotMsg != wantMsg {
-			t.Errorf(
-				"%s mismatch on message [%d]\ngot:  %q\nwant: %q",
-				prefix, i, gotMsg, wantMsg,
-			)
+			t.Errorf("message %d: mismatch\ngot:  %q\nwant: %q", i, gotMsg, wantMsg)
 		}
 	}
 }
@@ -1004,9 +852,8 @@ func assertConnMessages(t *testing.T, prefix string, got, want []string) {
 func setupWSHubClient(t *testing.T) *wsTestClient {
 	t.Helper()
 
-	// GIVEN: a test client/hub.
 	wsTest := setupWSTestClient(t)
-	t.Cleanup(func() { wsTest.cleanup(t) })
+	t.Cleanup(wsTest.cleanup)
 	go wsTest.client.hub.Run(t.Context())
 	wsTest.client.hub.register <- wsTest.client
 	time.Sleep(100 * time.Millisecond)
@@ -1014,7 +861,22 @@ func setupWSHubClient(t *testing.T) *wsTestClient {
 	return wsTest
 }
 
-// waitForClientUnregistered fails if the client is not unregistered from the hub quicker than timeout.
+// waitForHubClient returns the hub's one client, failing unless it registers within 1s.
+func waitForHubClient(t *testing.T, hub *Hub) *Client {
+	t.Helper()
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if registered := hubClientForTest(t, hub); registered != nil {
+			return registered
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("hubClientForTest() mismatch\ngot:  nil\nwant: non-nil")
+	return nil
+}
+
+// waitForClientUnregistered fails unless client leaves hub within 2s.
 func waitForClientUnregistered(t *testing.T, hub *Hub, client *Client) {
 	t.Helper()
 
@@ -1025,7 +887,7 @@ func waitForClientUnregistered(t *testing.T, hub *Hub, client *Client) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	t.Fatalf("%s\ntimed out waiting for client to unregister from hub", packageName)
+	t.Fatal("Hub.hasClient() mismatch\ngot:  true after 2s\nwant: false")
 }
 
 func TestClient_WritePump__messages(t *testing.T) {
@@ -1061,35 +923,25 @@ func TestClient_WritePump__messages(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// GIVEN: a Hub with a registered client.
 			wsTest := setupWSHubClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
 
-			prefix := fmt.Sprintf("%s\nClient.writePump()", packageName)
-
-			// AND: a writePump is running for this client.
 			go wsTest.client.writePump()
 
-			// WHEN: messages are sent through the client's send channel.
 			for _, msg := range tc.messages {
 				wsTest.client.send <- []byte(msg)
 			}
 
-			// THEN: messages are written or rejected as expected.
 			time.Sleep(250 * time.Millisecond)
-			got := readConnMessages(t, wsTest.conn, prefix, len(tc.wantMessages))
-			assertConnMessages(t, prefix, got, tc.wantMessages)
+			got := readConnMessages(t, wsTest.conn, len(tc.wantMessages))
+			assertConnMessages(t, got, tc.wantMessages)
 
-			// AND: stdout matches.
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
@@ -1103,16 +955,20 @@ func TestClient_WritePump__connection(t *testing.T) {
 		closeConnBeforePump bool
 		closeConnAfterPump  bool
 		sessionDead         bool
+		wantExit            bool
+		wantPings           bool
 		stdoutRegex         string
 	}{
 		{
 			name:        "closes on empty send channel",
 			closeSend:   true,
+			wantExit:    true,
 			stdoutRegex: `VERBOSE: .*Closing the connection \(writePump\)`,
 		},
 		{
 			name:        "session death closes the connection",
 			sessionDead: true,
+			wantExit:    true,
 			stdoutRegex: `VERBOSE: .*Closing the connection \(session expired\)`,
 		},
 		{
@@ -1121,92 +977,97 @@ func TestClient_WritePump__connection(t *testing.T) {
 				`{"version":null,"type":"VERSION","page":"home"}`,
 			},
 			closeConnBeforePump: true,
+			wantExit:            true,
 			stdoutRegex:         `^ERROR:.*Writing JSON to the WebSocket failed for VERSION`,
 		},
 		{
 			name:        "sends ping frames",
+			wantExit:    false,
+			wantPings:   true,
 			stdoutRegex: `^$`,
 		},
 		{
 			name:               "ping write failure exits writePump",
 			closeConnAfterPump: true,
+			wantExit:           true,
 			stdoutRegex:        `^$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// GIVEN: a Hub with a registered client.
 			wsTest := setupWSHubClient(t)
-			t.Cleanup(func() { wsTest.cleanup(t) })
 
-			prefix := fmt.Sprintf("%s\nClient.writePump()", packageName)
-
-			// AND: the session behind the client is dead, when testing liveness.
 			if tc.sessionDead {
 				wsTest.client.sessionAlive = func() bool { return false }
 			}
 
-			// AND: the client connection is closed before the writePump starts.
 			if tc.closeConnBeforePump {
 				if err := wsTest.conn.Close(); err != nil {
-					t.Fatalf(
-						"%s failed to close connection: %v",
-						prefix, err,
-					)
+					t.Fatalf("before pump: Conn.Close() failed: %v", err)
 				}
 			}
 
-			// AND: the messages are sent by the client.
+			exited := make(chan struct{})
+			startPump := func() {
+				go func() {
+					wsTest.client.writePump()
+					close(exited)
+				}()
+			}
+
 			for _, msg := range tc.messages {
 				wsTest.client.send <- []byte(msg)
 			}
 
 			if tc.closeConnBeforePump {
-				// WHEN: the send channel is closed before the writePump starts.
-				if tc.closeSend {
-					close(wsTest.client.send)
-				}
-
-				// AND: the writePump starts.
-				go wsTest.client.writePump()
+				startPump()
 			} else {
-				// WHEN: the writePump starts.
-				go wsTest.client.writePump()
-
-				// AND: the send channel is closed.
+				startPump()
 				if tc.closeSend {
 					close(wsTest.client.send)
 				}
 
-				// AND: the connection is closed after the writePump starts.
 				if tc.closeConnAfterPump {
 					if err := wsTest.conn.Close(); err != nil {
-						t.Fatalf(
-							"%s failed to close connection: %v",
-							prefix, err,
-						)
+						t.Fatalf("after pump: Conn.Close() failed: %v", err)
 					}
 				}
 			}
 
-			// AND: stdout matches.
 			time.Sleep(300 * time.Millisecond)
+			gotExit := false
+			select {
+			case <-exited:
+				gotExit = true
+			default:
+			}
+			if gotExit != tc.wantExit {
+				t.Errorf(
+					"Client.writePump() exited mismatch\ngot:  %t\nwant: %t",
+					gotExit, tc.wantExit,
+				)
+			}
+
+			if tc.wantPings {
+				if got := wsTest.pings.Load(); got == 0 {
+					t.Errorf("wsTestClient.pings mismatch\ngot:  %d\nwant: >0", got)
+				}
+			}
+
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
 }
 
-// hubClientForTest checks that hub has only 1 Client, and returns it if it does.
+// hubClientForTest returns hub's only Client, nil if it has none, failing if it has more.
 func hubClientForTest(t *testing.T, hub *Hub) *Client {
 	t.Helper()
 
@@ -1216,10 +1077,7 @@ func hubClientForTest(t *testing.T, hub *Hub) *Client {
 	}
 
 	if len(clients) > 1 {
-		t.Fatalf(
-			"%s\nexpected one registered client, got %d",
-			packageName, len(clients),
-		)
+		t.Fatalf("Hub.clientList() length mismatch\ngot:  %d\nwant: 1", len(clients))
 	}
 
 	return clients[0]

@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
 // Package test provides test helpers for the deployed_version package.
 package test
 
 import (
 	"errors"
-	"fmt"
-	"testing"
+	"strconv"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
@@ -34,7 +33,7 @@ import (
 // MockLookup is a configurable deployed version lookup stub for tests.
 type MockLookup struct {
 	base.Lookup
-	OverrideErr string `json:"override_err,omitempty" yaml:"override_err,omitempty"`
+	OverrideErr string `json:"override_err,omitzero" yaml:"override_err,omitzero"`
 }
 
 // ApplyOverrides returns OverrideErr when configured, otherwise nil.
@@ -51,16 +50,18 @@ func (f *MockLookup) String(prefix string) string                 { return decod
 func (f *MockLookup) Track()                                      {}
 
 // Lookup decodes and validates a deployed version lookup of the given type for tests.
-func Lookup(t *testing.T, typ string, fail bool, version string) (dv deployedver.Lookup) {
+func Lookup(t test.TB, typ string, fail bool, version string) (dv deployedver.Lookup) {
 	t.Helper()
 
-	dvCfg := PlainDefaultsConfig(t)
+	dvCfg := PlainDefaultsConfig()
 
 	switch typ {
 	case "manual":
 		dv = testManual(t, version)
 	case "url":
 		dv = testWeb(t, fail)
+	default:
+		t.Fatalf("unsupported lookup type %q", typ)
 	}
 
 	dv.Init(
@@ -70,26 +71,22 @@ func Lookup(t *testing.T, typ string, fail bool, version string) (dv deployedver
 	)
 	dv.GetStatus().ServiceInfo.ID = "TEST_DV"
 
-	// Check the values.
 	if err := dv.CheckValues(); err != nil {
-		t.Fatalf(
-			"dvtest.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
-			dv, fail, err,
-		)
+		t.Fatalf("Lookup(type=%q, fail=%t).CheckValues() failed: %v", typ, fail, err)
 	}
 
 	return dv
 }
 
 // testManual builds a manual deployed version lookup for tests.
-func testManual(t *testing.T, version string) deployedver.Lookup {
+func testManual(t test.TB, version string) deployedver.Lookup {
 	t.Helper()
 
-	dvCfg := PlainDefaultsConfig(t)
+	dvCfg := PlainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
 
-	dv, _ := deployedver.Decode(
+	dv, err := deployedver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: manual
 			version: `+version+`
@@ -98,29 +95,35 @@ func testManual(t *testing.T, version string) deployedver.Lookup {
 		svcStatus,
 		dvCfg,
 	)
+	if err != nil {
+		t.Fatalf("deployedver.Decode(version=%q) failed: %v", version, err)
+	}
 
 	return dv
 }
 
 // testWeb builds a URL deployed version lookup for tests.
-func testWeb(t *testing.T, fail bool) deployedver.Lookup {
+func testWeb(t test.TB, fail bool) deployedver.Lookup {
 	t.Helper()
 
-	dvCfg := PlainDefaultsConfig(t)
+	dvCfg := PlainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
 
-	dv, _ := deployedver.Decode(
+	dv, err := deployedver.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: url
 			method: GET
 			url: `+test.LookupBare.URLInvalid+`/1.2.3
-			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+			allow_invalid_certs: `+strconv.FormatBool(!fail)+`
 		`)),
 		opttest.Options(t),
 		svcStatus,
 		dvCfg,
 	)
+	if err != nil {
+		t.Fatalf("deployedver.Decode(fail=%t) failed: %v", fail, err)
+	}
 
 	return dv
 }

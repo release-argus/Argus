@@ -22,6 +22,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 type Logger interface {
@@ -51,10 +52,7 @@ func CaptureLog(t *testing.T, log Logger) func() string {
 		return buf.String()
 	}
 
-	// Ensure the log is restored when the test ends.
-	t.Cleanup(func() {
-		_ = cleanup()
-	})
+	t.Cleanup(func() { _ = cleanup() })
 
 	return cleanup
 }
@@ -65,10 +63,16 @@ var stdoutMu sync.Mutex // Only one test should write to stdout at a time.
 // and returns a function that, when called, restores the original standard output and
 // returns the captured output as a string.
 func CaptureStdout(t *testing.T) func() string {
-	stdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	t.Helper()
+
 	stdoutMu.Lock()
+	r, w, err := os.Pipe()
+	if err != nil {
+		stdoutMu.Unlock()
+		t.Fatalf("os.Pipe() failed: %v", err)
+	}
+	stdout := os.Stdout
+	os.Stdout = w
 
 	var buf bytes.Buffer
 	done := make(chan struct{})
@@ -86,17 +90,21 @@ func CaptureStdout(t *testing.T) func() string {
 		}
 		released = true
 		_ = w.Close()
-		<-done
+		var out string
+		timeout := 10 * time.Second
+		select {
+		case <-done:
+			out = buf.String()
+		case <-time.After(timeout):
+			t.Errorf("timeout (%s) waiting for the captured stdout to drain", timeout)
+		}
 
 		os.Stdout = stdout
 		stdoutMu.Unlock()
-		return buf.String()
+		return out
 	}
 
-	// Ensure stdout is restored when the test ends.
-	t.Cleanup(func() {
-		_ = cleanup()
-	})
+	t.Cleanup(func() { _ = cleanup() })
 
 	return cleanup
 }

@@ -163,7 +163,7 @@ func (api *api) removeUnknownServices() bool {
 	}
 
 	if _, err := api.db.Exec(sqlStmt, params...); err != nil {
-		logx.Fatal(fmt.Sprintf("removeUnknownServices: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to remove unknown services: %v", err), logFrom)
 		return false
 	}
 
@@ -200,7 +200,7 @@ func (api *api) extractServiceStatus() (ok bool) {
 			av  string
 		)
 		if err := rows.Scan(&id, &lv, &lvt, &dv, &dvt, &av); err != nil {
-			logx.Fatal(fmt.Sprintf("extractServiceStatus row: %s", err), logFrom)
+			logx.Fatal(fmt.Sprintf("failed to scan a status row: %v", err), logFrom)
 			return
 		}
 		svc := api.config.Service[id]
@@ -210,7 +210,7 @@ func (api *api) extractServiceStatus() (ok bool) {
 	}
 	if err := serviceStatusRowsErr(rows); err != nil {
 		logx.Fatal(
-			fmt.Sprintf("extractServiceStatus: %s", err),
+			fmt.Sprintf("failed to read status rows: %v", err),
 			logFrom,
 		)
 		return
@@ -283,7 +283,7 @@ func updateTable(db *sql.DB) bool {
 	// Get the type of the *_version columns.
 	var columnType string
 	if err := db.QueryRow("SELECT type FROM pragma_table_info('status') WHERE name = 'latest_version'").Scan(&columnType); err != nil {
-		logx.Fatal(fmt.Sprintf("updateTable: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to read the status column type: %v", err), logFrom)
 		return false
 	}
 	// Update if the column type is not TEXT.
@@ -310,25 +310,25 @@ func updateColumnTypes(db *sql.DB) (ok bool) {
 			deployed_version_timestamp DATETIME DEFAULT  (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 			approved_version           TEXT     DEFAULT  ''
 		);`); err != nil {
-		logx.Fatal(fmt.Sprintf("updateColumnTypes - create: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to create status_backup: %v", err), logFrom)
 		return
 	}
 
 	// Copy the data from the old table to the new table.
 	if _, err := db.Exec(`INSERT INTO status_backup SELECT * FROM status;`); err != nil {
-		logx.Fatal(fmt.Sprintf("updateColumnTypes - copy: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to copy status into status_backup: %v", err), logFrom)
 		return
 	}
 
 	// Drop the table.
 	if _, err := db.Exec("DROP TABLE status;"); err != nil {
-		logx.Fatal(fmt.Sprintf("updateColumnTypes - drop: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to drop the old status table: %v", err), logFrom)
 		return
 	}
 
 	// Rename the new table to the old table.
 	if _, err := db.Exec("ALTER TABLE status_backup RENAME TO status;"); err != nil {
-		logx.Fatal(fmt.Sprintf("updateColumnTypes - rename: %s", err), logFrom)
+		logx.Fatal(fmt.Sprintf("failed to rename status_backup to status: %v", err), logFrom)
 		return
 	}
 

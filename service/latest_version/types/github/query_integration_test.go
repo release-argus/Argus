@@ -18,7 +18,6 @@ package github
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -32,11 +31,17 @@ import (
 )
 
 func TestLookup_Query__integration(t *testing.T) {
-	tLookup := testLookup(t, false)
+	tLookup := testLookup(t)
 	tLookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 	tLookup.URL = "release-argus/.github"
-	_, _ = tLookup.Query(false, logx.LogFrom{})
+	_, err := tLookup.Query(false, logx.LogFrom{})
 	emptyReleasesETag := tLookup.data.etag
+	if emptyReleasesETag == "" {
+		if err != nil {
+			t.Fatalf("Lookup.Query() failed: %v", err)
+		}
+		t.Fatal("Data.etag mismatch\ngot:  \"\"\nwant: non-empty")
+	}
 
 	type statusVars struct {
 		deployedVersion   string
@@ -47,11 +52,12 @@ func TestLookup_Query__integration(t *testing.T) {
 		stdoutRegex string
 		errRegex    string
 	}
-	// GIVEN: a Lookup.
+
 	tests := []struct {
 		name         string
 		overrides    string
 		overrideETag *string
+		noToken      bool
 		semVer       bool
 		status       statusVars
 		want         want
@@ -164,7 +170,7 @@ func TestLookup_Query__integration(t *testing.T) {
 						type: ghcr
 						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: 0.9.0-beta
-						token: ` + test.DockerHubToken(t) + `
+						token: ` + test.GitHubToken(t) + `
 			`),
 			semVer: true,
 			want: want{
@@ -320,12 +326,14 @@ func TestLookup_Query__integration(t *testing.T) {
 			overrideETag: new(""),
 			semVer:       true,
 			want: want{
+				errRegex:    `^$`,
 				stdoutRegex: `on page 1`,
 			},
 		},
 		{
 			name:      "no access token",
 			overrides: `access_token: null`,
+			noToken:   true,
 			semVer:    true,
 			want: want{
 				errRegex: `^$|rate limit reached for GitHub`,
@@ -335,25 +343,21 @@ func TestLookup_Query__integration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
 
-			try := 0
-			temporaryFailureInNameResolution := true
-			for temporaryFailureInNameResolution != false {
+			const maxAttempts = 3
+			retryOnTimeout := true
+			for attempt := 0; retryOnTimeout; attempt++ {
+				t.Logf("attempt %d", attempt)
 				releaseStdout := test.CaptureLog(t, logx.Default())
-				try++
-				temporaryFailureInNameResolution = false
-				lookup := testLookup(t, false)
-				lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
-				if strings.Contains(tc.overrides, "access_token: null") {
-					lookup.typeHardDefaults.AccessToken = ""
+				retryOnTimeout = false
+				lookup := testLookup(t)
+				if !tc.noToken {
+					lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 				}
 				lookup.Status.ServiceInfo.ID = tc.name
 				if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
-					t.Fatalf(
-						"%s\nfailed to unmarshal Lookup overrides: %v",
-						packageName, err,
-					)
+					t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
 				}
 				lookup.Options.SemanticVersioning = &tc.semVer
 				lookup.Status.SetLatestVersion(tc.status.latestVersion, "", false)
@@ -367,47 +371,32 @@ func TestLookup_Query__integration(t *testing.T) {
 						Hard: lookup.HardDefaults,
 					},
 				)
-				// Clear ETag/Releases if URL changed.
 				if tc.overrideETag != nil {
 					lookup.data.etag = *tc.overrideETag
 				}
 
-				// WHEN: Query is called on it.
 				_, err := lookup.Query(true, logx.LogFrom{})
 
-				prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-				// THEN: any decode is expected.
 				stdout := releaseStdout()
 				e := errfmt.FormatError(err)
 				if !util.RegexCheck(tc.want.errRegex, e) {
-					if strings.Contains(e, "context deadline exceeded") {
-						temporaryFailureInNameResolution = true
-						if try != 3 {
-							time.Sleep(time.Second)
-							continue
-						}
+					if strings.Contains(e, "context deadline exceeded") && attempt < maxAttempts-1 {
+						retryOnTimeout = true
+						time.Sleep(time.Second)
+						continue
 					}
-					t.Fatalf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.want.errRegex,
-					)
+					t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
 				}
 
-				// AND: the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf(
-						"%s stdout mismatch\n%q\nnot found in:\n%q",
-						prefix, tc.want.stdoutRegex, stdout,
-					)
+					t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want.stdoutRegex)
 				}
 
-				// AND: the LatestVersion is as expected.
 				if tc.status.wantLatestVersion != nil &&
 					*tc.status.wantLatestVersion != lookup.Status.LatestVersion() {
 					t.Fatalf(
-						"%s .LatestVersion() mismatch\ngot:  %q\nwant: %q",
-						prefix, *tc.status.wantLatestVersion, lookup.Status.LatestVersion(),
+						"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+						lookup.Status.LatestVersion(), *tc.status.wantLatestVersion,
 					)
 				}
 			}
@@ -416,7 +405,6 @@ func TestLookup_Query__integration(t *testing.T) {
 }
 
 func TestLookup_Query__integration__githubETag(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                               string
 		attempts                           int
@@ -461,10 +449,11 @@ func TestLookup_Query__integration__githubETag(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 			lookup.URL = "release-argus/test-pagination"
 			lookup.UsePreRelease = new(true)
@@ -477,9 +466,7 @@ func TestLookup_Query__integration__githubETag(t *testing.T) {
 			lookup.URLCommands = tc.urlCommands
 
 			attempt := 0
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
 
-			// WHEN: Query is called on it 'attempts' number of times.
 			var errs []error
 			for tc.attempts != attempt {
 				attempt++
@@ -491,33 +478,26 @@ func TestLookup_Query__integration__githubETag(t *testing.T) {
 				if err != nil {
 					errs = append(errs, err)
 				}
-				t.Logf(
-					"%s - attempt %d, ETag: %s",
-					prefix, attempt, lookup.GetGitHubData().ETag(),
-				)
 			}
 
-			// THEN: any decode is expected.
 			stdout := releaseStdout()
 			e := errfmt.FormatError(errors.Join(errs...))
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
+
 			gotETagChanged := strings.Count(stdout, "new ETag")
 			if gotETagChanged != tc.etagChanged {
 				t.Errorf(
-					"%s unexpected ETag produced\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagChanged, tc.etagChanged, stdout,
+					"'new ETag' log count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
+					gotETagChanged, tc.etagChanged, stdout,
 				)
 			}
 			gotETagUnchangedUseCache := strings.Count(stdout, "Using cached releases")
 			if gotETagUnchangedUseCache != tc.etagUnchangedUseCache {
 				t.Errorf(
-					"%s ETag unchanged use cache count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, gotETagUnchangedUseCache, tc.etagUnchangedUseCache, stdout,
+					"'Using cached releases' log count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
+					gotETagUnchangedUseCache, tc.etagUnchangedUseCache, stdout,
 				)
 			}
 		})
@@ -525,7 +505,6 @@ func TestLookup_Query__integration__githubETag(t *testing.T) {
 }
 
 func TestLookup_Query__integration__dockerTag(t *testing.T) {
-	// GIVEN: a require.docker naming a tag that does, and does not, exist.
 	tests := []struct {
 		name             string
 		tag              string
@@ -558,37 +537,25 @@ func TestLookup_Query__integration__dockerTag(t *testing.T) {
 						type: ghcr
 						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: "` + tc.tag + `"
-						token: ` + test.DockerHubToken(t) + `
+						token: ` + test.GitHubToken(t) + `
 			`)
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.typeHardDefaults.AccessToken = test.GitHubToken(t)
 			if err := lookup.ApplyOverrides("yaml", []byte(overrides)); err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal Lookup overrides: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
 			}
 
-			// WHEN: it is queried.
 			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the version reported is as expected.
 			if got := lookup.Status.LatestVersion(); !util.RegexCheck(tc.wantVersionRegex, got) {
 				t.Errorf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantVersionRegex,
+					"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantVersionRegex,
 				)
 			}
 		})

@@ -17,7 +17,6 @@
 package status
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -26,57 +25,43 @@ import (
 )
 
 func TestFailsBase_Init(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
+		name string
 		size int
 	}{
-		{size: 0},
-		{size: 1},
-		{size: 2},
-		{size: 3},
-		{size: 4},
+		{name: "size=0", size: 0},
+		{name: "size=1", size: 1},
+		{name: "size=2", size: 2},
+		{name: "size=3", size: 3},
+		{name: "size=4", size: 4},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("size=%d", tc.size)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			var failsCommand FailsCommand
 			var failsShoutrrr FailsShoutrrr
 			var failsWebhook FailsWebhook
 
-			// WHEN: we Init.
 			failsCommand.Init(tc.size)
 			failsShoutrrr.Init(tc.size)
 			failsWebhook.Init(tc.size)
 
-			// THEN: the size of the map is as expected.
 			if got := len(failsCommand.fails); got != tc.size {
-				t.Errorf(
-					"%s\nFailsCommand.Init(%d) length mismatch\ngot:  %d\nwant: %d",
-					packageName, tc.size,
-					got, tc.size,
-				)
+				t.Errorf("len(FailsCommand.fails) mismatch\ngot:  %d\nwant: %d", got, tc.size)
 			}
 			if failsShoutrrr.fails == nil {
-				t.Errorf(
-					"%s\nFailsShoutrrr.Init(%d) length mismatch\ngot:  nil\nwant: non-nil",
-					packageName, tc.size,
-				)
+				t.Error("FailsShoutrrr.fails mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if failsWebhook.fails == nil {
-				t.Errorf(
-					"%s\nFailsWebhook.Init(%d) length mismatch\ngot:  nil\n\nwant: non-nil",
-					packageName, tc.size,
-				)
+				t.Error("FailsWebhook.fails mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestFailsBase_SetAndGet(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
 		name       string
 		size       int
@@ -117,14 +102,12 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 			failsShoutrrr.Init(tc.size)
 			var failsWebhook FailsWebhook
 			failsWebhook.Init(tc.size)
-			// Ensure they are empty.
 			for i := range tc.setAtArray {
 				got := failsCommand.Get(i)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsCommand, Get(%d) after Init(%d)\ngot:  %v\nwant: nil",
-						packageName, i, tc.size,
-						got,
+						"after Init: FailsCommand.Get(%d) mismatch\ngot:  %s\nwant: nil",
+						i, test.StringifyPtr(got),
 					)
 				}
 			}
@@ -132,22 +115,19 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 				got := failsShoutrrr.Get(k)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsShoutrrr, Get(%q) after Init(%d)\ngot:  %v\nwant: nil",
-						packageName, k, tc.size,
-						got,
+						"after Init: FailsShoutrrr.Get(%q) mismatch\ngot:  %s\nwant: nil",
+						k, test.StringifyPtr(got),
 					)
 				}
 				got = failsWebhook.Get(k)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsWebhook, Get(%q) after Init(%d)\ngot:  %v\nwant: nil",
-						packageName, k, tc.size,
-						got,
+						"after Init: FailsWebhook.Get(%q) mismatch\ngot:  %s\nwant: nil",
+						k, test.StringifyPtr(got),
 					)
 				}
 			}
 
-			// WHEN: we Set.
 			for i, v := range tc.setAtArray {
 				failsCommand.Set(i, *v)
 			}
@@ -156,16 +136,14 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 				failsWebhook.Set(k, v)
 			}
 
-			// THEN: the values can be retrieved with Get.
 			for i, v := range tc.setAtArray {
 				got := failsCommand.Get(i)
 				gotStr := test.StringifyPtr(got)
 				wantStr := test.StringifyPtr(v)
 				if got == nil || *got != *v {
 					t.Errorf(
-						"%s\nFailsCommand, Get(%d) after Set(&%t)\ngot:  %s\nwant: %v",
-						packageName, i, *v,
-						gotStr, wantStr,
+						"after Set: FailsCommand.Get(%d) mismatch\ngot:  %s\nwant: %s",
+						i, gotStr, wantStr,
 					)
 				}
 			}
@@ -175,18 +153,16 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 				wantStr := test.StringifyPtr(v)
 				if got == nil || *got != *v {
 					t.Errorf(
-						"%s\nFailsShoutrrr, Get(%q) after Set(&%v)\ngot:  %v\nwant: %v",
-						packageName, k, v,
-						gotStr, wantStr,
+						"after Set: FailsShoutrrr.Get(%q) mismatch\ngot:  %s\nwant: %s",
+						k, gotStr, wantStr,
 					)
 				}
 				got = failsWebhook.Get(k)
 				gotStr = test.StringifyPtr(got)
 				if got == nil || *got != *v {
 					t.Errorf(
-						"%s\nFailsWebhook, Get(%q) after Set(&%v)\ngot:  %v\nwant: %v",
-						packageName, k, v,
-						gotStr, wantStr,
+						"after Set: FailsWebhook.Get(%q) mismatch\ngot:  %s\nwant: %s",
+						k, gotStr, wantStr,
 					)
 				}
 			}
@@ -195,7 +171,6 @@ func TestFailsBase_SetAndGet(t *testing.T) {
 }
 
 func TestFailsBase_AllPassed(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
 		name  string
 		fails map[int]*bool
@@ -263,36 +238,24 @@ func TestFailsBase_AllPassed(t *testing.T) {
 				failsWebhook.Set(iStr, v)
 			}
 
-			// WHEN: we call AllPassed.
 			gotC := failsCommand.AllPassed()
 			gotS := failsShoutrrr.AllPassed()
 			gotWH := failsWebhook.AllPassed()
 
-			// THEN: the result is as expected.
 			if gotC != tc.want {
-				t.Errorf(
-					"%s\nFailsCommand.AllPassed() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotC, tc.want,
-				)
+				t.Errorf("FailsCommand.AllPassed() mismatch\ngot:  %t\nwant: %t", gotC, tc.want)
 			}
 			if gotS != tc.want {
-				t.Errorf(
-					"%s\nFailsShoutrrr.AllPassed() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotS, tc.want,
-				)
+				t.Errorf("FailsShoutrrr.AllPassed() mismatch\ngot:  %t\nwant: %t", gotS, tc.want)
 			}
 			if gotWH != tc.want {
-				t.Errorf(
-					"%s\nFailsWebhook.AllPassed() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotWH, tc.want,
-				)
+				t.Errorf("FailsWebhook.AllPassed() mismatch\ngot:  %t\nwant: %t", gotWH, tc.want)
 			}
 		})
 	}
 }
 
 func TestFailsBase_Reset(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
 		name  string
 		fails map[int]*bool
@@ -354,33 +317,31 @@ func TestFailsBase_Reset(t *testing.T) {
 				failsWebhook.Set(iStr, v)
 			}
 
-			// WHEN: we call Reset.
 			failsCommand.Reset()
 			failsShoutrrr.Reset()
 			failsWebhook.Reset()
 
-			// THEN: all the indices are reset to nil.
 			for i := range tc.fails {
 				got := failsCommand.Get(i)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsCommand\n\ngot:  %vwant: nil",
-						packageName, got,
+						"FailsCommand.Get(%d) mismatch\ngot:  %s\nwant: nil",
+						i, test.StringifyPtr(got),
 					)
 				}
 				iStr := strconv.Itoa(i)
 				got = failsShoutrrr.Get(iStr)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsShoutrrr\ngot:  %v\nwant: nil",
-						packageName, got,
+						"FailsShoutrrr.Get(%q) mismatch\ngot:  %s\nwant: nil",
+						iStr, test.StringifyPtr(got),
 					)
 				}
 				got = failsWebhook.Get(iStr)
 				if got != nil {
 					t.Errorf(
-						"%s\nFailsWebhook\ngot:  %v\nwant: nil",
-						packageName, got,
+						"FailsWebhook.Get(%q) mismatch\ngot:  %s\nwant: nil",
+						iStr, test.StringifyPtr(got),
 					)
 				}
 			}
@@ -389,7 +350,6 @@ func TestFailsBase_Reset(t *testing.T) {
 }
 
 func TestFailsBase_Length(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
 		name       string
 		size       int
@@ -419,7 +379,7 @@ func TestFailsBase_Length(t *testing.T) {
 			},
 		},
 		{
-			name: "length gives number of elements in map, not make size",
+			name: "map length counts its elements, array length is its make size",
 			size: 3,
 			setAtArray: map[int]*bool{
 				0: new(true),
@@ -442,7 +402,6 @@ func TestFailsBase_Length(t *testing.T) {
 			failsShoutrrr.Init(tc.size)
 			var failsWebhook FailsWebhook
 			failsWebhook.Init(tc.size)
-			// Set the values.
 			for i, v := range tc.setAtArray {
 				if v != nil {
 					failsCommand.Set(i, *v)
@@ -453,36 +412,388 @@ func TestFailsBase_Length(t *testing.T) {
 				failsWebhook.Set(k, v)
 			}
 
-			// WHEN: we call Length.
 			lengthC := failsCommand.Length()
 			lengthS := failsShoutrrr.Length()
 			lengthWH := failsWebhook.Length()
 
-			// THEN: the lengths of the maps are returned.
 			if lengthC != tc.size {
-				t.Errorf(
-					"%s\nFailsCommand\ngot:  %v\nwant: %v",
-					packageName, lengthC, tc.size,
-				)
+				t.Errorf("FailsCommand.Length() mismatch\ngot:  %d\nwant: %d", lengthC, tc.size)
 			}
 			if lengthS != len(tc.setAtMap) {
 				t.Errorf(
-					"%s\nFailsShoutrrr\ngot:  %v\nwant: %v",
-					packageName, lengthS, len(tc.setAtMap),
+					"FailsShoutrrr.Length() mismatch\ngot:  %d\nwant: %d",
+					lengthS, len(tc.setAtMap),
 				)
 			}
 			if lengthWH != len(tc.setAtMap) {
 				t.Errorf(
-					"%s\nFailsWebhook\ngot:  %v\nwant: %v",
-					packageName, lengthWH, len(tc.setAtMap),
+					"FailsWebhook.Length() mismatch\ngot:  %d\nwant: %d",
+					lengthWH, len(tc.setAtMap),
 				)
 			}
 		})
 	}
 }
 
+func TestFailsShoutrrr_Copy(t *testing.T) {
+	tests := []struct {
+		name string
+		// If false, the receiver's fails map is left nil.
+		initOriginal bool
+		original     map[string]*bool
+		// Mutations to verify that Copy doesn't alias the underlying map.
+		mutateOriginal map[string]*bool
+		mutateCopy     map[string]*bool
+	}{
+		{
+			name:           "uninitialised fails map",
+			initOriginal:   false,
+			original:       nil,
+			mutateOriginal: map[string]*bool{"a": new(true)},
+			mutateCopy:     map[string]*bool{"a": new(false)},
+		},
+		{
+			name:           "empty receiver",
+			initOriginal:   true,
+			original:       map[string]*bool{},
+			mutateOriginal: map[string]*bool{"a": new(true)},
+			mutateCopy:     map[string]*bool{"b": new(false)},
+		},
+		{
+			name:         "filled receiver",
+			initOriginal: true,
+			original: map[string]*bool{
+				"foo": new(false),
+				"bar": nil,
+				"baz": new(true),
+			},
+			mutateOriginal: map[string]*bool{
+				"foo": new(true),  // Replace a value.
+				"tap": new(false), // Add a new entry.
+			},
+			mutateCopy: map[string]*bool{
+				"foo": new(false), // Replace a value.
+				"qux": nil,        // Add a nil entry.
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			orig := &FailsShoutrrr{}
+			if tc.initOriginal {
+				orig.Init(len(tc.original))
+				for k, v := range tc.original {
+					orig.Set(k, v)
+				}
+			}
+
+			inputCopy := orig.Copy()
+
+			initialCopyWant := tc.original
+			if !tc.initOriginal {
+				initialCopyWant = map[string]*bool{}
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(initialCopyWant),
+				"FailsShoutrrr.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(orig.fails),
+				failValues(initialCopyWant),
+				"FailsShoutrrr.fails",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			if !tc.initOriginal {
+				orig.Init(len(tc.mutateOriginal))
+			}
+			for k, v := range tc.mutateOriginal {
+				orig.Set(k, v)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(initialCopyWant),
+				"FailsShoutrrr.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after original mutated: %v", testErr)
+			}
+
+			for k, v := range tc.mutateCopy {
+				inputCopy.Set(k, v)
+			}
+
+			wantMutatedInput := mergedMap(tc.original, tc.mutateCopy)
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(wantMutatedInput),
+				"FailsShoutrrr.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after copy mutated: %v", testErr)
+			}
+		})
+	}
+}
+
+func TestFailsWebhook_Copy(t *testing.T) {
+	time2021 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	time2022 := time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC)
+	time2023 := time.Date(2023, 3, 3, 0, 0, 0, 0, time.UTC)
+	time2024 := time.Date(2024, 4, 4, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name string
+		// If false, the receiver's fails map is left nil.
+		initOriginal         bool
+		originalFails        map[string]*bool
+		originalNextRunnable map[string]time.Time
+		// Mutations to verify that Copy doesn't alias the underlying map.
+		mutateOriginalFails        map[string]*bool
+		mutateOriginalNextRunnable map[string]time.Time
+		mutateCopyFails            map[string]*bool
+		mutateCopyNextRunnable     map[string]time.Time
+	}{
+		{
+			name:                       "uninitialised fails map",
+			initOriginal:               false,
+			originalFails:              nil,
+			mutateOriginalFails:        map[string]*bool{"a": new(true)},
+			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
+			mutateCopyFails:            map[string]*bool{"a": new(false)},
+			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
+		},
+		{
+			name:                       "empty receiver",
+			initOriginal:               true,
+			originalFails:              map[string]*bool{},
+			mutateOriginalFails:        map[string]*bool{"a": new(true)},
+			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
+			mutateCopyFails:            map[string]*bool{"b": new(false)},
+			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
+		},
+		{
+			name:         "filled receiver",
+			initOriginal: true,
+			originalFails: map[string]*bool{
+				"foo": new(false),
+				"bar": nil,
+				"baz": new(true),
+			},
+			originalNextRunnable: map[string]time.Time{
+				"foo": time2021,
+				"bar": time2022,
+			},
+			mutateOriginalFails: map[string]*bool{
+				"foo": new(true),  // Replace a value.
+				"tap": new(false), // Add a new entry.
+			},
+			mutateOriginalNextRunnable: map[string]time.Time{
+				"foo": time2023,
+				"baz": time2024,
+			},
+			mutateCopyFails: map[string]*bool{
+				"foo": new(false), // Replace a value.
+				"qux": nil,        // Add a nil entry.
+			},
+			mutateCopyNextRunnable: map[string]time.Time{
+				"foo": time2024,
+				"qux": time2023,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			orig := &FailsWebhook{}
+			if tc.initOriginal {
+				orig.Init(len(tc.originalFails))
+				for k, v := range tc.originalFails {
+					orig.Set(k, v)
+				}
+				for k, v := range tc.originalNextRunnable {
+					orig.SetNextRunnable(k, v)
+				}
+			}
+
+			inputCopy := orig.Copy()
+
+			initialCopyWant := tc.originalFails
+			if !tc.initOriginal {
+				initialCopyWant = map[string]*bool{}
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(initialCopyWant),
+				"FailsWebhook.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			initialNextRunnableWant := tc.originalNextRunnable
+			if !tc.initOriginal {
+				initialNextRunnableWant = map[string]time.Time{}
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				inputCopy.nextRunnable,
+				initialNextRunnableWant,
+				"FailsWebhook.Copy().nextRunnable",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			if !tc.initOriginal {
+				orig.Init(len(tc.mutateOriginalFails))
+			}
+			for k, v := range tc.mutateOriginalFails {
+				orig.Set(k, v)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(initialCopyWant),
+				"FailsWebhook.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after original mutated: %v", testErr)
+			}
+
+			for k, v := range tc.mutateOriginalNextRunnable {
+				orig.SetNextRunnable(k, v)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				inputCopy.nextRunnable,
+				initialNextRunnableWant,
+				"FailsWebhook.Copy().nextRunnable",
+			); testErr != nil {
+				t.Errorf("after original mutated: %v", testErr)
+			}
+
+			for k, v := range tc.mutateCopyFails {
+				inputCopy.Set(k, v)
+			}
+
+			wantMutatedFails := mergedMap(initialCopyWant, tc.mutateCopyFails)
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(inputCopy.fails),
+				failValues(wantMutatedFails),
+				"FailsWebhook.Copy().fails",
+			); testErr != nil {
+				t.Errorf("after copy mutated: %v", testErr)
+			}
+
+			for k, v := range tc.mutateCopyNextRunnable {
+				inputCopy.SetNextRunnable(k, v)
+			}
+
+			wantMutatedNextRunnable := mergedMap(initialNextRunnableWant, tc.mutateCopyNextRunnable)
+			if testErr := test.AssertMapEqual(
+				t,
+				inputCopy.nextRunnable,
+				wantMutatedNextRunnable,
+				"FailsWebhook.Copy().nextRunnable",
+			); testErr != nil {
+				t.Errorf("after copy mutated: %v", testErr)
+			}
+
+			wantOrigFails := mergedMap(initialCopyWant, tc.mutateOriginalFails)
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(orig.fails),
+				failValues(wantOrigFails),
+				"FailsWebhook.fails",
+			); testErr != nil {
+				t.Errorf("after copy mutated: %v", testErr)
+			}
+
+			wantOrigNextRunnable := mergedMap(initialNextRunnableWant, tc.mutateOriginalNextRunnable)
+			if testErr := test.AssertMapEqual(
+				t,
+				orig.nextRunnable,
+				wantOrigNextRunnable,
+				"FailsWebhook.nextRunnable",
+			); testErr != nil {
+				t.Errorf("after copy mutated: %v", testErr)
+			}
+		})
+	}
+}
+
+func TestFailsWebhook_SetAndGetNextRunnable(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int
+		setAtMap map[string]time.Time
+	}{
+		{
+			name: "can add to empty map",
+			size: 0,
+			setAtMap: map[string]time.Time{
+				"test": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+		{
+			name: "can add to non-empty map",
+			size: 3,
+			setAtMap: map[string]time.Time{
+				"bish": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				"bash": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+				"bosh": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var failsWebhook FailsWebhook
+			failsWebhook.Init(tc.size)
+			for k := range tc.setAtMap {
+				if got := failsWebhook.NextRunnable(k); !got.IsZero() {
+					t.Errorf(
+						"after Init: FailsWebhook.NextRunnable(%q) mismatch\ngot:  %s\nwant: %s",
+						k, got, time.Time{},
+					)
+				}
+			}
+
+			for k, v := range tc.setAtMap {
+				failsWebhook.SetNextRunnable(k, v)
+			}
+
+			for k, v := range tc.setAtMap {
+				got := failsWebhook.NextRunnable(k)
+				if !got.Equal(v) {
+					t.Errorf(
+						"after SetNextRunnable: FailsWebhook.NextRunnable(%q) mismatch\ngot:  %s\nwant: %s",
+						k, got, v,
+					)
+				}
+			}
+		})
+	}
+}
+
 func TestFails_String(t *testing.T) {
-	// GIVEN: a Fails.
 	tests := []struct {
 		name                        string
 		commandFails                []*bool
@@ -649,84 +960,16 @@ func TestFails_String(t *testing.T) {
 				fails.Webhook.Set(k, v)
 			}
 
-			// WHEN: the Fails are stringified with String.
 			got := fails.String("")
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nFails.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
-func TestFailsWebhook_SetAndGetNextRunnable(t *testing.T) {
-	// GIVEN: a FailsWebhook.
-	tests := []struct {
-		name     string
-		size     int
-		setAtMap map[string]time.Time
-	}{
-		{
-			name: "can add to empty map",
-			size: 0,
-			setAtMap: map[string]time.Time{
-				"test": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
-		},
-		{
-			name: "can add to non-empty map or edit array",
-			size: 3,
-			setAtMap: map[string]time.Time{
-				"bish": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-				"bash": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-				"bosh": time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			var failsWebhook FailsWebhook
-			failsWebhook.Init(tc.size)
-			// Ensure they are empty.
-			for k := range tc.setAtMap {
-				got := failsWebhook.Get(k)
-				if got != nil {
-					t.Errorf(
-						"%s\nFailsWebhook, NextRunnable after Init\ngot:  %v\nwant: nil",
-						packageName, got,
-					)
-				}
-			}
-
-			// WHEN: we Set.
-			for k, v := range tc.setAtMap {
-				failsWebhook.SetNextRunnable(k, v)
-			}
-
-			// THEN: the values can be retrieved with Get.
-			for k, v := range tc.setAtMap {
-				got := failsWebhook.NextRunnable(k)
-				if got != v {
-					t.Errorf(
-						"%s\nFailsWebhook, NextRunnable(%q) after SetNextRunnable(%q)\ngot:  %s\nwant: %s",
-						packageName, k, v,
-						got, v,
-					)
-				}
+				t.Errorf("Fails.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestFails_Copy(t *testing.T) {
-	// GIVEN: a fails to copy from and a fails to copy to.
 	tests := []struct {
 		name                               string
 		fromCommandFails, toCommandFails   []*bool
@@ -831,7 +1074,6 @@ func TestFails_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// fails to copy from.
 			from := Fails{}
 			from.Command.Init(len(tc.fromCommandFails))
 			for k, v := range tc.fromCommandFails {
@@ -848,7 +1090,6 @@ func TestFails_Copy(t *testing.T) {
 				from.Webhook.Set(k, v)
 			}
 
-			// fails to copy to.
 			to := Fails{}
 			to.Command.Init(len(tc.toCommandFails))
 			for k, v := range tc.toCommandFails {
@@ -865,77 +1106,37 @@ func TestFails_Copy(t *testing.T) {
 				to.Webhook.Set(k, v)
 			}
 
-			// WHEN: we call Copy.
 			to.Copy(&from)
 
-			prefix := fmt.Sprintf("%q\nFails.Copy()", packageName)
-
-			// THEN: the values are copied correctly.
-			// Command.
-			if gotLen, wantLen := len(to.Command.fails), len(from.Command.fails); gotLen > wantLen {
-				t.Errorf(
-					"%s Command, length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
+			if testErr := test.AssertSlicesEqual(
+				t,
+				failSliceValues(to.Command.fails),
+				failSliceValues(from.Command.fails),
+				"Fails.Command",
+			); testErr != nil {
+				t.Error(testErr)
 			}
-			for k, v := range tc.fromCommandFails {
-				got := test.StringifyPtr(to.Command.Get(k))
-				want := test.StringifyPtr(v)
-				if got != want {
-					t.Errorf(
-						"%s Command[%d] mismatch, got:  %s\nwant: %s",
-						prefix, k,
-						got, want,
-					)
-				}
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(to.Shoutrrr.fails),
+				failValues(from.Shoutrrr.fails),
+				"Fails.Shoutrrr",
+			); testErr != nil {
+				t.Error(testErr)
 			}
-			// Shoutrrr.
-			wantLen := len(from.Shoutrrr.fails)
-			gotLen := len(to.Shoutrrr.fails)
-			if gotLen > wantLen {
-				t.Errorf(
-					"%s\nShoutrrr, length mismatch\ngot:  %d\nwant: %d",
-					packageName,
-					gotLen, wantLen,
-				)
-			}
-			for k, v := range tc.fromShoutrrrFails {
-				got := test.StringifyPtr(to.Shoutrrr.Get(k))
-				want := test.StringifyPtr(v)
-				if got != want {
-					t.Errorf(
-						"%s\nShoutrrr[%q]\ngot:  %s\nwant: %s",
-						packageName, k,
-						got, want,
-					)
-				}
-			}
-			// Webhook.
-			wantLen = len(from.Webhook.fails)
-			gotLen = len(to.Webhook.fails)
-			if gotLen > wantLen {
-				t.Errorf(
-					"%s\nWebhook, length mismatch\ngot:  %d\nwant: %d",
-					packageName, gotLen, wantLen,
-				)
-			}
-			for k, v := range tc.fromWebhookFails {
-				got := test.StringifyPtr(to.Webhook.Get(k))
-				want := test.StringifyPtr(v)
-				if got != want {
-					t.Errorf(
-						"%s\nWebhook[%q]\ngot:  %s\nwant: %s",
-						packageName, k,
-						got, want,
-					)
-				}
+			if testErr := test.AssertMapEqual(
+				t,
+				failValues(to.Webhook.fails),
+				failValues(from.Webhook.fails),
+				"Fails.Webhook",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestFails_ResetFails(t *testing.T) {
-	// GIVEN: a Fails struct.
 	tests := []struct {
 		name                        string
 		commandFails                *[]*bool
@@ -1001,24 +1202,33 @@ func TestFails_ResetFails(t *testing.T) {
 			fails := Fails{}
 			if tc.commandFails != nil {
 				fails.Command.Init(len(*tc.commandFails))
+				for i, v := range *tc.commandFails {
+					if v != nil {
+						fails.Command.Set(i, *v)
+					}
+				}
 			}
 			if tc.shoutrrrFails != nil {
 				fails.Shoutrrr.Init(len(*tc.shoutrrrFails))
+				for k, v := range *tc.shoutrrrFails {
+					fails.Shoutrrr.Set(k, v)
+				}
 			}
 			if tc.webhookFails != nil {
 				fails.Webhook.Init(len(*tc.webhookFails))
+				for k, v := range *tc.webhookFails {
+					fails.Webhook.Set(k, v)
+				}
 			}
 
-			// WHEN: resetFails is called on it.
 			fails.resetFails()
 
-			// THEN: all the fails become nil.
 			if tc.shoutrrrFails != nil {
 				for i := range *tc.shoutrrrFails {
 					if got := fails.Shoutrrr.Get(i); got != nil {
 						t.Errorf(
-							"%s\nStatus.Fails.Shoutrrr.Get(%s) not reset with .resetFails()\ngot:  %v\nwant: nil",
-							packageName, i, got,
+							"Fails.Shoutrrr.Get(%q) mismatch\ngot:  %s\nwant: nil (reset)",
+							i, test.StringifyPtr(got),
 						)
 					}
 				}
@@ -1027,8 +1237,8 @@ func TestFails_ResetFails(t *testing.T) {
 				for i := range *tc.commandFails {
 					if got := fails.Command.Get(i); got != nil {
 						t.Errorf(
-							"%s\nStatus.Fails.Command.Get(%d) not reset with .resetFails()\ngot:  %t\nwant: nil",
-							packageName, i, *got,
+							"Fails.Command.Get(%d) mismatch\ngot:  %s\nwant: nil (reset)",
+							i, test.StringifyPtr(got),
 						)
 					}
 				}
@@ -1037,418 +1247,11 @@ func TestFails_ResetFails(t *testing.T) {
 				for i := range *tc.webhookFails {
 					if got := fails.Webhook.Get(i); got != nil {
 						t.Errorf(
-							"%s\nStatus.Fails.Webhook.Get(%s) not reset with .resetFails()\ngot:  %t\nwant: nil",
-							packageName, i, *got,
+							"Fails.Webhook.Get(%q) mismatch\ngot:  %s\nwant: nil (reset)",
+							i, test.StringifyPtr(got),
 						)
 					}
 				}
-			}
-		})
-	}
-}
-
-func TestFailsShoutrrr_Copy(t *testing.T) {
-	tests := []struct {
-		name string
-		// If initOriginal is false, the receiver's fails map is left nil.
-		initOriginal bool
-		original     map[string]*bool
-		// Mutations to verify that Copy doesn't alias the underlying map.
-		mutateOriginal map[string]*bool
-		mutateCopy     map[string]*bool
-	}{
-		{
-			name:           "nil receiver",
-			initOriginal:   false,
-			original:       nil,
-			mutateOriginal: map[string]*bool{"a": new(true)},
-			mutateCopy:     map[string]*bool{"a": new(false)},
-		},
-		{
-			name:           "empty receiver",
-			initOriginal:   true,
-			original:       map[string]*bool{},
-			mutateOriginal: map[string]*bool{"a": new(true)},
-			mutateCopy:     map[string]*bool{"b": new(false)},
-		},
-		{
-			name:         "filled receiver",
-			initOriginal: true,
-			original: map[string]*bool{
-				"foo": new(false),
-				"bar": nil,
-				"baz": new(true),
-			},
-			mutateOriginal: map[string]*bool{
-				"foo": new(true),  // replace value
-				"baz": new(false), // add new key
-			},
-			mutateCopy: map[string]*bool{
-				"foo": new(false), // mutate copy
-				"qux": nil,        // add nil entry
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// GIVEN: a FailsShoutrrr.
-			orig := &FailsShoutrrr{}
-			if tc.initOriginal {
-				orig.Init(len(tc.original))
-				for k, v := range tc.original {
-					orig.Set(k, v)
-				}
-			}
-
-			// WHEN: Copy is called.
-			inputCopy := orig.Copy()
-
-			prefix := fmt.Sprintf("%s\nFailsShoutrrr.Copy()", packageName)
-
-			// THEN: initial state matches.
-			initialCopyWant := tc.original
-			if !tc.initOriginal {
-				initialCopyWant = map[string]*bool{}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				orig.fails,
-				prefix,
-				"result",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// AND: the original should not be mutated.
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				orig.fails,
-				prefix,
-				"original",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// WHEN: the original is mutated.
-			if tc.initOriginal {
-				for k, v := range tc.mutateOriginal {
-					orig.Set(k, v)
-				}
-			} else {
-				orig.Init(len(tc.mutateOriginal))
-				for k, v := range tc.mutateOriginal {
-					orig.Set(k, v)
-				}
-			}
-
-			// THEN: the copy result should be unchanged.
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				initialCopyWant,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"result",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// WHEN: the copy is mutated.
-			for k, v := range tc.mutateCopy {
-				inputCopy.Set(k, v)
-			}
-
-			// THEN: the copy result should be mutated.
-			wantMutatedInput := tc.original
-			if wantMutatedInput == nil {
-				wantMutatedInput = tc.mutateCopy
-			} else {
-				for k, v := range tc.mutateCopy {
-					wantMutatedInput[k] = v
-				}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				wantMutatedInput,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"result",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-		})
-	}
-}
-
-func TestFailsWebhook_Copy(t *testing.T) {
-	time2021 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	time2022 := time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC)
-	time2023 := time.Date(2023, 3, 3, 0, 0, 0, 0, time.UTC)
-	time2024 := time.Date(2024, 4, 4, 0, 0, 0, 0, time.UTC)
-
-	tests := []struct {
-		name string
-		// If initOriginal is false, the receiver's fails map is left nil.
-		initOriginal         bool
-		originalFails        map[string]*bool
-		originalNextRunnable map[string]time.Time
-		// Mutations to verify that Copy doesn't alias the underlying map.
-		mutateOriginalFails        map[string]*bool
-		mutateOriginalNextRunnable map[string]time.Time
-		mutateCopyFails            map[string]*bool
-		mutateCopyNextRunnable     map[string]time.Time
-	}{
-		{
-			name:                       "nil receiver",
-			initOriginal:               false,
-			originalFails:              nil,
-			mutateOriginalFails:        map[string]*bool{"a": new(true)},
-			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
-			mutateCopyFails:            map[string]*bool{"a": new(false)},
-			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
-		},
-		{
-			name:                       "empty receiver",
-			initOriginal:               true,
-			originalFails:              map[string]*bool{},
-			mutateOriginalFails:        map[string]*bool{"a": new(true)},
-			mutateOriginalNextRunnable: map[string]time.Time{"a": time2022},
-			mutateCopyFails:            map[string]*bool{"b": new(false)},
-			mutateCopyNextRunnable:     map[string]time.Time{"b": time2023},
-		},
-		{
-			name:         "filled receiver",
-			initOriginal: true,
-			originalFails: map[string]*bool{
-				"foo": new(false),
-				"bar": nil,
-				"baz": new(true),
-			},
-			originalNextRunnable: map[string]time.Time{
-				"foo": time2021,
-				"bar": time2022,
-			},
-			mutateOriginalFails: map[string]*bool{
-				"foo": new(true),  // replace value
-				"baz": new(false), // add new key
-			},
-			mutateOriginalNextRunnable: map[string]time.Time{
-				"foo": time2023,
-				"baz": time2024,
-			},
-			mutateCopyFails: map[string]*bool{
-				"foo": new(false), // mutate copy
-				"qux": nil,        // add nil entry
-			},
-			mutateCopyNextRunnable: map[string]time.Time{
-				"foo": time2024,
-				"qux": time2023,
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// GIVEN: a FailsWebhook.
-			orig := &FailsWebhook{}
-			if tc.initOriginal {
-				orig.Init(len(tc.originalFails))
-				for k, v := range tc.originalFails {
-					orig.Set(k, v)
-				}
-				for k, v := range tc.originalNextRunnable {
-					orig.SetNextRunnable(k, v)
-				}
-			}
-
-			// WHEN: Copy is called.
-			inputCopy := orig.Copy()
-
-			prefix := fmt.Sprintf("%s\nFailsWebhook.Copy()", packageName)
-
-			// THEN: initial state matches.
-			//   Fails
-			initialCopyWant := tc.originalFails
-			if !tc.initOriginal {
-				initialCopyWant = map[string]*bool{}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				initialCopyWant,
-				prefix,
-				"fails",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// AND: initial state matches.
-			//   NextRunnable.
-			initialNextRunnableWant := tc.originalNextRunnable
-			if !tc.initOriginal {
-				initialNextRunnableWant = map[string]time.Time{}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.nextRunnable,
-				initialNextRunnableWant,
-				prefix,
-				"nextRunnable",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// WHEN: the original is mutated.
-			//   Fails.
-			if !tc.initOriginal {
-				orig.Init(len(tc.mutateOriginalFails))
-			}
-			for k, v := range tc.mutateOriginalFails {
-				orig.Set(k, v)
-			}
-			// THEN: the copy Fails result should be unchanged.
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				initialCopyWant,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"fails",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			// WHEN: the original is mutated.
-			//   NextRunnable.
-			for k, v := range tc.mutateOriginalNextRunnable {
-				orig.SetNextRunnable(k, v)
-			}
-			// THEN: the copy NextRunnable result should be unchanged.
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.nextRunnable,
-				initialNextRunnableWant,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"nextRunnable",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// WHEN: the copy is mutated.
-			//   Fails.
-			for k, v := range tc.mutateCopyFails {
-				inputCopy.Set(k, v)
-			}
-			// THEN: the copy Fails result should be mutated.
-			wantMutatedFails := initialCopyWant
-			if !tc.initOriginal {
-				wantMutatedFails = tc.mutateCopyFails
-			} else {
-				wantMutatedFails = make(map[string]*bool, len(initialCopyWant)+len(tc.mutateCopyFails))
-				for k, v := range initialCopyWant {
-					wantMutatedFails[k] = v
-				}
-				for k, v := range tc.mutateCopyFails {
-					wantMutatedFails[k] = v
-				}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.fails,
-				wantMutatedFails,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"fails",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// WHEN: the copy is mutated.
-			//   NextRunnable.
-			for k, v := range tc.mutateCopyNextRunnable {
-				inputCopy.SetNextRunnable(k, v)
-			}
-			// THEN: the copy NextRunnable result should be mutated.
-			wantMutatedNextRunnable := initialNextRunnableWant
-			if !tc.initOriginal {
-				wantMutatedNextRunnable = tc.mutateCopyNextRunnable
-			} else {
-				wantMutatedNextRunnable = make(
-					map[string]time.Time,
-					len(initialNextRunnableWant)+len(tc.mutateCopyNextRunnable),
-				)
-				for k, v := range initialNextRunnableWant {
-					wantMutatedNextRunnable[k] = v
-				}
-				for k, v := range tc.mutateCopyNextRunnable {
-					wantMutatedNextRunnable[k] = v
-				}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				inputCopy.nextRunnable,
-				wantMutatedNextRunnable,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"nextRunnable",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// AND: the original should not reflect copy mutations.
-			//   Fails.
-			wantOrigFails := initialCopyWant
-			if !tc.initOriginal {
-				wantOrigFails = tc.mutateOriginalFails
-			} else {
-				wantOrigFails = make(
-					map[string]*bool,
-					len(initialCopyWant)+len(tc.mutateOriginalFails),
-				)
-				for k, v := range initialCopyWant {
-					wantOrigFails[k] = v
-				}
-				for k, v := range tc.mutateOriginalFails {
-					wantOrigFails[k] = v
-				}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				orig.fails,
-				wantOrigFails,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original fails",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-
-			// AND: the original should not reflect copy mutations.
-			//   NextRunnable.
-			wantOrigNextRunnable := initialNextRunnableWant
-			if !tc.initOriginal {
-				wantOrigNextRunnable = tc.mutateOriginalNextRunnable
-			} else {
-				wantOrigNextRunnable = make(
-					map[string]time.Time,
-					len(initialNextRunnableWant)+len(tc.mutateOriginalNextRunnable),
-				)
-				for k, v := range initialNextRunnableWant {
-					wantOrigNextRunnable[k] = v
-				}
-				for k, v := range tc.mutateOriginalNextRunnable {
-					wantOrigNextRunnable[k] = v
-				}
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				orig.nextRunnable,
-				wantOrigNextRunnable,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original nextRunnable",
-			); testErr != nil {
-				t.Error(testErr)
 			}
 		})
 	}

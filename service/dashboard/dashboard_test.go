@@ -17,7 +17,6 @@
 package dashboard
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -29,123 +28,7 @@ import (
 // # DECODING #
 // ############
 
-func TestDecode(t *testing.T) {
-	dashCfg := plainDefaultsConfig(t)
-
-	// GIVEN: data in a given format to Decode into Options.
-	tests := []struct {
-		name         string
-		format, data string
-		want         string
-		errRegex     string
-	}{
-		{
-			name:   "JSON/filled",
-			format: "json",
-			data: test.TrimJSON(`{
-				"auto_approve": true,
-				"icon": "icon-url",
-				"icon_link_to": "icon-link",
-				"web_url": "web-url",
-				"tags": [
-					"tag1",
-					"tag2"
-				],
-				"other": "foo"
-			}`),
-			want: test.TrimYAML(`
-				auto_approve: true
-				icon: icon-url
-				icon_link_to: icon-link
-				web_url: web-url
-				tags:
-					- tag1
-					- tag2
-			`),
-			errRegex: `^$`,
-		},
-		{
-			name:   "YAML/filled",
-			format: "yaml",
-			data: test.TrimYAML(`
-				auto_approve: true
-				icon: icon-url
-				icon_link_to: icon-link
-				web_url: web-url
-				tags:
-					- tag1
-					- tag2
-				other: foo
-			`),
-			want: test.TrimYAML(`
-				auto_approve: true
-				icon: icon-url
-				icon_link_to: icon-link
-				web_url: web-url
-				tags:
-					- tag1
-					- tag2
-			`),
-			errRegex: `^$`,
-		},
-		{
-			name:   "YAML/bool type mismatch",
-			format: "yaml",
-			data:   `auto_approve: yah`,
-			errRegex: test.TrimYAML(`
-				^dashboard:
-					[^\s]+ .*unmarshal .*
-					[^\s]+ .*auto_approve: yah
-					\s+\^$`,
-			),
-		},
-		{
-			name:   "JSON/bool type mismatch",
-			format: "json",
-			data:   `{"auto_approve": "true"}`,
-			errRegex: test.TrimYAML(`
-				^dashboard:
-					json:.* unmarshal.*$`,
-			),
-		},
-		{
-			name:   "JSON/invalid (trailing comma)",
-			format: "json",
-			data:   `{"auto_approve": "true",}`,
-			errRegex: test.TrimYAML(`
-				^dashboard:
-					json:.* unmarshal.*$`,
-			),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			if _, _, testErr := test.AssertDecode(
-				t,
-				func(format string, data []byte) (*Options, error) {
-					return Decode(
-						format, data,
-						dashCfg,
-					)
-				},
-				tc.format, tc.data,
-				func(v *Options) string { return decode.ToYAMLString(v, "") },
-				tc.want,
-				tc.errRegex,
-				packageName,
-				"Decode",
-			); testErr != nil {
-				t.Fatal(testErr)
-			}
-		})
-	}
-}
-
 func TestOptions_Unmarshal(t *testing.T) {
-	// GIVEN: a string in a given format to unmarshal into Options.
 	tests := []struct {
 		name         string
 		format, data string
@@ -156,7 +39,6 @@ func TestOptions_Unmarshal(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -181,7 +63,6 @@ func TestOptions_Unmarshal(t *testing.T) {
 			format:   "json",
 			data:     `{invalid: json}`,
 			errRegex: `invalid character`,
-			want:     "",
 		},
 		{
 			name:   "YAML/invalid",
@@ -301,10 +182,122 @@ func TestOptions_Unmarshal(t *testing.T) {
 				func(v *Options) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Options",
+				"Options.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestDecode(t *testing.T) {
+	dashCfg := plainDefaultsConfig(t)
+
+	tests := []struct {
+		name         string
+		format, data string
+		want         string
+		errRegex     string
+	}{
+		{
+			name:   "JSON/filled",
+			format: "json",
+			data: test.TrimJSON(`{
+				"auto_approve": true,
+				"icon": "icon-url",
+				"icon_link_to": "icon-link",
+				"web_url": "web-url",
+				"tags": [
+					"tag1",
+					"tag2"
+				],
+				"other": "foo"
+			}`),
+			want: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+				other: foo
+			`),
+			want: test.TrimYAML(`
+				auto_approve: true
+				icon: icon-url
+				icon_link_to: icon-link
+				web_url: web-url
+				tags:
+					- tag1
+					- tag2
+			`),
+			errRegex: `^$`,
+		},
+		{
+			name:   "YAML/bool type mismatch",
+			format: "yaml",
+			data:   `auto_approve: yah`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					[^\s]+ .*unmarshal .*
+					[^\s]+ .*auto_approve: yah
+					\s+\^$`,
+			),
+		},
+		{
+			name:   "JSON/bool type mismatch",
+			format: "json",
+			data:   `{"auto_approve": "true"}`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					json:.* unmarshal.*$`,
+			),
+		},
+		{
+			name:   "JSON/invalid (trailing comma)",
+			format: "json",
+			data:   `{"auto_approve": "true",}`,
+			errRegex: test.TrimYAML(`
+				^dashboard:
+					json:.* unmarshal.*$`,
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Options, error) {
+					return Decode(
+						format, data,
+						dashCfg,
+					)
+				},
+				tc.format, tc.data,
+				func(v *Options) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				"Decode",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -315,7 +308,6 @@ func TestOptions_Unmarshal(t *testing.T) {
 // #########
 
 func TestOptions_IsZero(t *testing.T) {
-	// GIVEN: Options.
 	tests := []struct {
 		name string
 		opt  *Options
@@ -398,22 +390,16 @@ func TestOptions_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.opt.IsZero()
 
-			// THEN: it should return the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestOptions_Copy(t *testing.T) {
-	// GIVEN: an Options.
 	tests := []struct {
 		name    string
 		options *Options
@@ -470,35 +456,32 @@ func TestOptions_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy is called.
 			result := tc.options.Copy()
 
-			prefix := fmt.Sprintf("%s\nOptions.Copy()", packageName)
-
-			// THEN: nil is returned if the Options are nil.
 			if result == nil {
 				if tc.options != nil {
-					t.Errorf(
-						"%s pointer mismatch\ngot: nil\nwant non-nil",
-						prefix,
-					)
+					t.Error("Options.Copy() mismatch\ngot:  nil\nwant: non-nil")
 				}
 				return
 			}
-			// THEN: the returned struct is at a different address.
+
 			if result == tc.options {
-				t.Errorf(
-					"%s gave the same address\ngot:  %p\nwant: NOT %p",
-					prefix, result, tc.options,
-				)
+				t.Errorf("copy aliases the original\ngot:  %p\nwant: NOT %p", result, tc.options)
 			}
-			// THEN: the copied Options matches the expected result.
+
 			want := decode.ToJSONString(tc.want)
 			if got := decode.ToJSONString(result); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Options mismatch\ngot:  %q\nwant: %q", got, want)
+			}
+
+			fieldTests := []test.FieldAssertion{
+				{Name: "iconExpanded", Got: test.StringifyPtr(result.iconExpanded), Want: test.StringifyPtr(tc.want.iconExpanded), Mode: test.CompareEqual},
+				{Name: "iconNotify", Got: test.StringifyPtr(result.iconNotify), Want: test.StringifyPtr(tc.want.iconNotify), Mode: test.CompareEqual},
+				{Name: "iconLinkToExpanded", Got: test.StringifyPtr(result.iconLinkToExpanded), Want: test.StringifyPtr(tc.want.iconLinkToExpanded), Mode: test.CompareEqual},
+				{Name: "webURLExpanded", Got: test.StringifyPtr(result.webURLExpanded), Want: test.StringifyPtr(tc.want.webURLExpanded), Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Options"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
@@ -509,7 +492,6 @@ func TestOptions_Copy(t *testing.T) {
 // ##########
 
 func TestOptions_GetAutoApprove(t *testing.T) {
-	// GIVEN: a Options.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
@@ -541,29 +523,21 @@ func TestOptions_GetAutoApprove(t *testing.T) {
 
 			dashboard := Options{}
 			dashboard.AutoApprove = tc.rootValue
-			defaults, _ := DecodeDefaults("yaml", nil)
-			defaults.AutoApprove = tc.defaultValue
-			dashboard.Defaults = defaults
-			hardDefaults, _ := DecodeDefaults("yaml", nil)
-			hardDefaults.AutoApprove = tc.hardDefaultValue
-			dashboard.HardDefaults = hardDefaults
+			dashboard.Defaults = &Defaults{}
+			dashboard.Defaults.AutoApprove = tc.defaultValue
+			dashboard.HardDefaults = &Defaults{}
+			dashboard.HardDefaults.AutoApprove = tc.hardDefaultValue
 
-			// WHEN: GetAutoApprove is called.
 			got := dashboard.GetAutoApprove()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nOptions.GetAutoApprove() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestOptions_SetFallbackIcon(t *testing.T) {
-	// GIVEN: an Options and a fallback icon URL.
 	tests := []struct {
 		name              string
 		initialIconNotify *string
@@ -592,14 +566,12 @@ func TestOptions_SetFallbackIcon(t *testing.T) {
 				iconNotify: tc.initialIconNotify,
 			}
 
-			// WHEN: SetFallbackIcon is called with a new icon URL.
 			options.SetFallbackIcon(tc.newIconNotify)
 
-			// THEN: the fallback icon is updated as expected.
 			if options.iconNotify == nil || *options.iconNotify != *tc.want {
 				t.Errorf(
-					"%s\nOptions.SetFallbackIcon(%q) value mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.newIconNotify, util.DerefOrZero(options.iconNotify), *tc.want,
+					"Options.iconNotify mismatch\ngot:  %q\nwant: %q",
+					util.DerefOrZero(options.iconNotify), *tc.want,
 				)
 			}
 		})
@@ -607,7 +579,6 @@ func TestOptions_SetFallbackIcon(t *testing.T) {
 }
 
 func TestOptions_GetIcon(t *testing.T) {
-	// GIVEN: an Options with various icon-related fields set.
 	tests := []struct {
 		name         string
 		iconExpanded *string
@@ -655,22 +626,16 @@ func TestOptions_GetIcon(t *testing.T) {
 				iconNotify:   tc.iconNotify,
 			}
 
-			// WHEN: GetIcon is called.
 			got := options.GetIcon()
 
-			// THEN: the returned icon matches the expected result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nOptions.GetIcon() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestOptions_GetIconLinkTo(t *testing.T) {
-	// GIVEN: an Options with various iconLinkTo-related fields set.
 	tests := []struct {
 		name               string
 		iconLinkToExpanded *string
@@ -706,22 +671,16 @@ func TestOptions_GetIconLinkTo(t *testing.T) {
 				iconLinkToExpanded: tc.iconLinkToExpanded,
 			}
 
-			// WHEN: GetIconLinkTo is called.
 			got := options.GetIconLinkTo()
 
-			// THEN: the returned icon link matches the expected result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nOptions.GetIconLinkTo() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestOptions_GetWebURL(t *testing.T) {
-	// GIVEN: an Options with various webURL-related fields set.
 	tests := []struct {
 		name           string
 		webURLExpanded *string
@@ -757,15 +716,10 @@ func TestOptions_GetWebURL(t *testing.T) {
 				webURLExpanded: tc.webURLExpanded,
 			}
 
-			// WHEN: GetWebURL is called.
 			got := options.GetWebURL()
 
-			// THEN: the returned icon link matches the expected result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nOptions.GetWebURL() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -776,7 +730,6 @@ func TestOptions_GetWebURL(t *testing.T) {
 // ############
 
 func TestOptions_SetDefaults(t *testing.T) {
-	// GIVEN: Options.
 	tests := []struct {
 		name    string
 		options *Options
@@ -786,7 +739,7 @@ func TestOptions_SetDefaults(t *testing.T) {
 			options: &Options{},
 		},
 		{
-			name: "existing defaults - hardDefaults overwritten",
+			name: "existing defaults, hardDefaults overwritten",
 			options: &Options{
 				Defaults:     &Defaults{},
 				HardDefaults: &Defaults{},
@@ -798,33 +751,21 @@ func TestOptions_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: two sets of Defaults.
-			var defaults, hardDefaults *Defaults
+			defaults, hardDefaults := &Defaults{}, &Defaults{}
 
-			// WHEN: SetDefaults is called.
-			tc.options.SetDefaults(
-				defaults,
-				hardDefaults,
-			)
+			tc.options.SetDefaults(defaults, hardDefaults)
 
-			prefix := fmt.Sprintf(
-				"%s\nOptions SetDefaults(defaults=%p, hardDefaults=%p)",
-				packageName, defaults, hardDefaults,
-			)
-
-			// THEN: the defaults are set as expected.
 			if tc.options.Defaults != defaults {
 				t.Errorf(
-					"%s .Defaults pointer mismatch\ngot:  %v\nwant: %v",
-					prefix, tc.options.Defaults, defaults,
+					"Options.Defaults mismatch\ngot:  %p\nwant: %p",
+					tc.options.Defaults, defaults,
 				)
 			}
 
-			// AND: the hardDefaults are set as expected.
 			if tc.options.HardDefaults != hardDefaults {
 				t.Errorf(
-					"%s .HardDefaults pointer mismatch\ngot:  %v\nwant: %v",
-					prefix, tc.options.HardDefaults, hardDefaults,
+					"Options.HardDefaults mismatch\ngot:  %p\nwant: %p",
+					tc.options.HardDefaults, hardDefaults,
 				)
 			}
 		})
@@ -836,7 +777,6 @@ func TestOptions_SetDefaults(t *testing.T) {
 // ##############
 
 func TestOptions_CheckValues(t *testing.T) {
-	// GIVEN: Options.
 	tests := []struct {
 		name     string
 		input    *Options
@@ -869,7 +809,6 @@ func TestOptions_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)

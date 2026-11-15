@@ -19,14 +19,11 @@ package test
 // AssertStringWithPrefixes tests String(prefix) output against an expected
 // multiline string across a standard set of prefixes.
 //
-// GIVEN: a function that takes a prefix and returns a string with that prefix applied.
-//
-// WHEN: String(prefix) is called with each prefix.
-//
-// THEN: the rendered output must match exactly for each prefix.
+// For each prefix, stringify(prefix) must equal want with that prefix applied.
+// call names stringify in the failure message, e.g. "Defaults.String".
 func AssertStringWithPrefixes(
 	t TB,
-	packageName string,
+	call string,
 	stringify func(prefix string) string,
 	want string,
 ) {
@@ -37,16 +34,10 @@ func AssertStringWithPrefixes(
 	for _, prefix := range prefixes {
 		expected := addPrefix(want, prefix)
 
-		// WHEN: the value is stringified with the given prefix.
 		got := stringify(prefix)
 
-		// THEN: the output matches exactly.
 		if got != expected {
-			t.Fatalf(
-				"%s\nStringified mismatch (prefix=%q)\ngot:  %q\nwant: %q",
-				packageName, prefix,
-				got, expected,
-			)
+			t.Fatalf("%s(prefix=%q) mismatch\ngot:  %q\nwant: %q", call, prefix, got, expected)
 		}
 	}
 }

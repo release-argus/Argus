@@ -50,7 +50,7 @@ func (api *API) httpServiceGetActions(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMu.RUnlock()
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -128,7 +128,7 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	defer api.Config.OrderMu.RUnlock()
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -138,19 +138,19 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	var payload RunActionsPayload
 	if err := json.UnmarshalRead(payloadBytes, &payload); err != nil {
 		err = fmt.Errorf("invalid payload: %w", err)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	if payload.Target == "" {
 		err := errors.New("invalid payload, target service not provided")
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	if !svc.Options.GetActive() {
 		err := errors.New("service is inactive, actions can't be run for it")
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}

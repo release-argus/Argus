@@ -33,7 +33,6 @@ import (
 
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
@@ -53,7 +52,6 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request to refresh the latest_version of a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
@@ -145,7 +143,6 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 				params.Set(k, v)
 			}
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -153,29 +150,19 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpLatestVersionRefreshUncreated()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 		})
 	}
@@ -187,7 +174,6 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request to refresh the deployed_version of a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
@@ -279,7 +265,6 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 				params.Set(k, v)
 			}
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -287,36 +272,26 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpDeployedVersionRefreshUncreated()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 		})
 	}
 }
 
 func TestHTTP_LatestVersionRefresh(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
@@ -326,10 +301,10 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 		announce                       bool
 	}
 
-	// GIVEN: an API and a request to refresh the latest_version of a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
+	headerAuthURL := test.HeaderAuthServer(t, "1.2.3")
 
 	tests := []struct {
 		name      string
@@ -540,7 +515,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupWithHeaderAuth.URLValid+`
+							url: `+headerAuthURL+`
 							headers:
 								- key: `+test.LookupWithHeaderAuth.HeaderKey+`
 									value: `+test.LookupWithHeaderAuth.HeaderValuePass+`
@@ -577,7 +552,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 							semantic_versioning: false
 						latest_version:
 							type: url
-							url: `+test.LookupWithHeaderAuth.URLValid+`
+							url: `+headerAuthURL+`
 							headers:
 								- key: `+test.LookupWithHeaderAuth.HeaderKey+`
 									value: `+test.LookupWithHeaderAuth.HeaderValuePass+`
@@ -612,16 +587,13 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			apiMu.Unlock()
 
 			target := "/api/v1/latest_version/refresh"
-			// Add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
-			// Set service_id.
 			serviceID := util.DerefOr(tc.serviceID, svc.ID)
 			params.Set("service_id", serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -631,60 +603,43 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpLatestVersionRefresh()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 
-			// AND: the LatestVersion is expected.
+			// Moves only on an override-free refresh matching the service's semantic_versioning.
 			gotLV := svc.Status.LatestVersion()
 			wantLV := tc.wants.latestVersion
 			if gotLV != wantLV {
-				t.Errorf(
-					"%s LatestVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotLV, wantLV,
-				)
+				t.Errorf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", gotLV, wantLV)
 			}
 
-			// AND: the DeployedVersion is expected.
+			// With no deployed_version, webhook or command, a changed version also sets this.
 			gotDV := svc.Status.DeployedVersion()
 			wantDV := tc.wants.deployedVersion
 			if gotDV != wantDV {
-				t.Errorf(
-					"%s DeployedVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotDV, wantDV,
-				)
+				t.Errorf("Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q", gotDV, wantDV)
 			}
 
-			// AND: the expected announcement is made.
 			wantAnnounces := 0
 			if tc.wants.announce {
 				wantAnnounces = 1
 			}
 			if gotAnnounces := len(svc.Status.AnnounceChannel); gotAnnounces != wantAnnounces {
 				t.Errorf(
-					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotAnnounces, wantAnnounces,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotAnnounces, wantAnnounces,
 				)
 			}
 		})
@@ -692,7 +647,7 @@ func TestHTTP_LatestVersionRefresh(t *testing.T) {
 }
 
 func TestHTTP_DeployedVersionRefresh(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
@@ -701,10 +656,10 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		deployedVersion string
 	}
 
-	// GIVEN: an API and a request to refresh the deployed_version of a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
+	headerAuthURL := test.HeaderAuthServer(t, "1.2.3")
 
 	tests := []struct {
 		name               string
@@ -905,12 +860,17 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		{
 			name: "secretRefs/used",
 			svc: test.Must(t, func() (*service.Service, error) {
-				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
-				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
-					dv.URL = test.LookupWithHeaderAuth.URLValid
-					dv.Headers = shared.Headers{
-						{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
-					}
+				base := testService(t, "__name__", "url", "url", false)
+				dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup)
+				if !ok {
+					return nil, fmt.Errorf(
+						"Service.DeployedVersionLookup type mismatch\ngot:  %T\nwant: *web.Lookup",
+						base.DeployedVersionLookup,
+					)
+				}
+				dv.URL = headerAuthURL
+				dv.Headers = shared.Headers{
+					{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
 				}
 				return base, nil
 			}),
@@ -934,12 +894,17 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 		{
 			name: "secretRefs/invalid",
 			svc: test.Must(t, func() (*service.Service, error) {
-				base := testService(t, "TestHTTP_LatestVersionRefresh", "url", "url", false)
-				if dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup); ok {
-					dv.URL = test.LookupWithHeaderAuth.URLValid
-					dv.Headers = shared.Headers{
-						{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
-					}
+				base := testService(t, "__name__", "url", "url", false)
+				dv, ok := base.DeployedVersionLookup.(*dvweb.Lookup)
+				if !ok {
+					return nil, fmt.Errorf(
+						"Service.DeployedVersionLookup type mismatch\ngot:  %T\nwant: *web.Lookup",
+						base.DeployedVersionLookup,
+					)
+				}
+				dv.URL = headerAuthURL
+				dv.Headers = shared.Headers{
+					{Key: test.LookupWithHeaderAuth.HeaderKey, Value: test.LookupWithHeaderAuth.HeaderValuePass},
 				}
 				return base, nil
 			}),
@@ -984,16 +949,13 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 
 			initialLatestVersion := svc.Status.LatestVersion()
 			target := "/api/v1/deployed_version/refresh"
-			// add the params to the URL.
 			params := url.Values{}
 			for k, v := range tc.params {
 				params.Set(k, v)
 			}
-			// Set service_id.
 			serviceID := util.DerefOr(tc.serviceID, svc.ID)
 			params.Set("service_id", serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -1003,45 +965,28 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpDeployedVersionRefresh()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 
-			// AND: the LatestVersion is unchanged.
-			if gotLatestVersion := svc.Status.LatestVersion(); gotLatestVersion != initialLatestVersion {
-				t.Errorf(
-					"%s LatestVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotLatestVersion, initialLatestVersion,
-				)
+			if got, want := svc.Status.LatestVersion(), initialLatestVersion; got != want {
+				t.Errorf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the DeployedVersion is expected.
-			if gotDeployedVersion := svc.Status.DeployedVersion(); gotDeployedVersion != tc.wants.deployedVersion {
-				t.Errorf(
-					"%s DeployedVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotDeployedVersion, tc.wants.deployedVersion,
-				)
+			// Only a refresh without overrides moves it.
+			if got, want := svc.Status.DeployedVersion(), tc.wants.deployedVersion; got != want {
+				t.Errorf("Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -1049,7 +994,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 
 func TestHTTP_ServiceDetail(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
@@ -1057,7 +1002,6 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request for detail of a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
@@ -1143,11 +1087,9 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			apiMu.Unlock()
 			target := "/api/v1/service/config"
 			params := url.Values{}
-			// Set service_id.
 			serviceID := util.DerefOr(tc.serviceID, svc.ID)
 			params.Set("service_id", serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -1157,36 +1099,25 @@ func TestHTTP_ServiceDetail(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceDetail()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 		})
 	}
 }
 
 func TestHTTP_OtherServiceDetails(t *testing.T) {
-	// GIVEN: an API and a request for detail of a service.
 	tests := []struct {
 		name           string
 		wantBody       string
@@ -1218,41 +1149,28 @@ func TestHTTP_OtherServiceDetails(t *testing.T) {
 
 			path := filepath.Join(t.TempDir(), tc.name+".yaml")
 			api := testAPI(t, path)
-			svc := testService(t, tc.name, "url", "url", true)
-			api.Config.Service[svc.ID] = svc
 			target := "/api/v1/service/defaults"
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			w := httptest.NewRecorder()
 			api.httpOtherServiceDetails(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpOtherServiceDetails()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wantStatusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			got := string(data)
 			if !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantBody,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wantBody)
 			}
 		})
 	}
@@ -1264,7 +1182,6 @@ func TestHTTP_TemplateParse(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request to parse a template.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
@@ -1280,7 +1197,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 		wants       wants
 	}{
 		{
-			name:        "missing required parameters",
+			name:        "missing required parameters/both",
 			queryParams: map[string]string{},
 			wants: wants{
 				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
@@ -1342,7 +1259,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			wants: wants{
 				bodyRegex: fmt.Sprintf(
 					`{"parsed":"%s - %s"}`,
-					testSVC.GetName(), testSVC.Status.LatestVersion(),
+					regexp.QuoteMeta(testSVC.GetName()), regexp.QuoteMeta(testSVC.Status.LatestVersion()),
 				),
 				statusCode: http.StatusOK,
 			},
@@ -1369,6 +1286,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				"template":   "{{ service_name }}",
 			},
 			wants: wants{
+				// An unknown service parses with empty defaults, not a 404.
 				bodyRegex:  `{"parsed":""}`,
 				statusCode: http.StatusOK,
 			},
@@ -1385,7 +1303,6 @@ func TestHTTP_TemplateParse(t *testing.T) {
 				params.Set(k, v)
 			}
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -1393,40 +1310,28 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpTemplateParse()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 		})
 	}
 }
 
 func TestHTTP_ServiceEdit__routeValidation(t *testing.T) {
-	// GIVEN: an API.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
-	// AND: requests to a handler with invalid serviceID query params.
 	tests := []struct {
 		name          string
 		handler       func(http.ResponseWriter, *http.Request)
@@ -1458,41 +1363,29 @@ func TestHTTP_ServiceEdit__routeValidation(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPut, target, strings.NewReader(`{}`))
 			w := httptest.NewRecorder()
 
-			// WHEN: the handler is called.
 			tc.handler(w, req)
 
-			prefix := fmt.Sprintf("%s\nroute binding", packageName)
-
-			// THEN: the request is rejected with 400 before any create/edit work.
 			if got, want := w.Code, http.StatusBadRequest; got != want {
 				t.Fatalf(
-					"%s status mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if got := w.Body.String(); !util.RegexCheck(tc.wantBodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant match: %q",
-					prefix, got, tc.wantBodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wantBodyRegex)
 			}
 		})
 	}
 }
 
 func TestHTTP_ServiceEdit__create(t *testing.T) {
-	testSVC := testService(t, "TestHTTP_ServiceEdit_Create", "url", "url", true)
-	testSVC.LatestVersion.GetStatus().SetLatestVersion("1.0.0", "", false)
-	_, _ = testSVC.LatestVersion.Query(true, logx.LogFrom{})
-	_ = testSVC.DeployedVersionLookup.Query(true, logx.LogFrom{})
 	type wants struct {
-		bodyRegex                      string
-		statusCode                     int
-		latestVersion, deployedVersion string
-		serviceYAML                    string
+		bodyRegex                                string
+		statusCode                               int
+		latestVersionRegex, deployedVersionRegex string
+		serviceYAML                              string
 	}
 
-	// GIVEN: an API and a request to create a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
@@ -1577,8 +1470,11 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			}`),
 			serviceID: "__name__-new",
 			wants: wants{
-				statusCode: http.StatusOK,
-				bodyRegex:  `^{"message":"created service[^}]+"}`,
+				statusCode:           http.StatusOK,
+				bodyRegex:            `^{"message":"created service[^}]+"}`,
+				latestVersionRegex:   `^[0-9.]+$`,
+				deployedVersionRegex: `^[0-9.]+$`,
+				// GitHub has no allow_invalid_certs, so it is dropped.
 				serviceYAML: test.TrimYAML(`
 					name: __name__-foo
 					comment: hello
@@ -1622,9 +1518,10 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			}`),
 			serviceID: "__name__-new",
 			wants: wants{
-				statusCode:    http.StatusOK,
-				bodyRegex:     `{"message":"created service[^}]+"}`,
-				latestVersion: "1.2.3",
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"created service[^}]+"}`,
+				latestVersionRegex:   `^1\.2\.3$`,
+				deployedVersionRegex: `^1\.2\.3$`,
 				serviceYAML: test.TrimYAML(`
 					comment: goodbye
 					options:
@@ -1658,9 +1555,10 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			}`),
 			serviceID: "__name__-new",
 			wants: wants{
-				statusCode:      http.StatusOK,
-				bodyRegex:       `{"message":"created service[^}]+"}`,
-				deployedVersion: "1.2.3",
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"created service[^}]+"}`,
+				latestVersionRegex:   `^$`,
+				deployedVersionRegex: `^1\.2\.3$`,
 				serviceYAML: test.TrimYAML(`
 					name: __name__-foo
 					comment: hi
@@ -1691,9 +1589,10 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 				}`),
 			serviceID: "__name__-new",
 			wants: wants{
-				statusCode:      http.StatusOK,
-				bodyRegex:       `{"message":"created service[^}]+"}`,
-				deployedVersion: "3.2.1",
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"created service[^}]+"}`,
+				latestVersionRegex:   `^$`,
+				deployedVersionRegex: `^3\.2\.1$`,
 				serviceYAML: test.TrimYAML(`
 					comment: bye
 					options:
@@ -1765,7 +1664,6 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a service with ID: 'test name' already exists.
 			svc := testService(t, tc.name, "url", "url", true)
 			svc.Name = svc.ID
 			tc.wants.serviceYAML = strings.ReplaceAll(tc.wants.serviceYAML, "__name__", tc.name)
@@ -1776,12 +1674,8 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", tc.name)
 			payload := bytes.NewReader([]byte(tc.payload))
-			var req *http.Request
-			// CREATE.
-			target := "/api/v1/service/new"
-			req = httptest.NewRequest(http.MethodPost, target, payload)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/new", payload)
 
-			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
 			api.httpServiceEdit(w, req, actionCreate)
@@ -1789,35 +1683,24 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (create)", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 			if tc.wants.statusCode != http.StatusOK {
 				return
 			}
 
-			// AND: the service was created.
 			serviceID := tc.name
 			if tc.serviceID != "" {
 				serviceID = strings.ReplaceAll(tc.serviceID, "__name__", tc.name)
@@ -1826,50 +1709,30 @@ func TestHTTP_ServiceEdit__create(t *testing.T) {
 			svc = api.Config.Service[serviceID]
 			api.Config.OrderMu.RUnlock()
 			if svc == nil {
-				if tc.wants.latestVersion != tc.wants.deployedVersion &&
-					tc.wants.latestVersion != "" {
-					t.Fatalf(
-						"%s service %q not created",
-						prefix, serviceID,
-					)
-				}
-				return
+				t.Fatalf("Config.Service[%q] mismatch\ngot:  nil\nwant: non-nil", serviceID)
 			}
 
-			// AND: the service stringifies as expected.
 			if got, want := svc.String(""), tc.wants.serviceYAML; got != want {
-				t.Errorf(
-					"%s stringified service mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the LatestVersion is expected.
 			gotLV := svc.Status.LatestVersion()
-			wantLV := tc.wants.latestVersion
+			wantLV := tc.wants.latestVersionRegex
 			if !util.RegexCheck(wantLV, gotLV) {
-				t.Errorf(
-					"%s LatestVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotLV, tc.wants.latestVersion,
-				)
+				t.Errorf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", gotLV, wantLV)
 			}
 
-			// AND: the DeployedVersion is expected.
+			// Without a deployed_version, it copies LatestVersion().
 			gotDV := svc.Status.DeployedVersion()
-			wantDV := tc.wants.deployedVersion
+			wantDV := tc.wants.deployedVersionRegex
 			if !util.RegexCheck(wantDV, gotDV) {
-				t.Errorf(
-					"%s DeployedVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotDV, tc.wants.deployedVersion,
-				)
+				t.Errorf("Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q", gotDV, wantDV)
 			}
 		})
 	}
 }
 
 func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
-	// GIVEN: an API where the op lock for a not-yet-created service ID is already
-	// held by an in-flight operation (e.g. a concurrent create of the same ID).
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_createConflict"
@@ -1881,7 +1744,6 @@ func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 		api.releaseServiceOp(serviceID, held)
 	})
 
-	// WHEN: a create request for a service with that ID is sent.
 	payload := bytes.NewReader([]byte(test.TrimJSON(`{
 		"id": "` + serviceID + `",
 		"options": {
@@ -1898,38 +1760,28 @@ func TestHTTP_ServiceEdit__create__concurrentConflict(t *testing.T) {
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (create)", packageName)
-
-	// THEN: the create is rejected with 409 rather than racing the in-flight op.
+	// 409, rather than racing the in-flight op.
 	if got, want := res.StatusCode, http.StatusConflict; got != want {
-		t.Errorf(
-			"%s status code mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
-	// AND: the body explains the conflict.
-	body, _ := io.ReadAll(res.Body)
-	if got, want := string(body), `another operation is in progress`; !util.RegexCheck(want, got) {
-		t.Errorf(
-			"%s body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+
+	if got, want := w.Body.String(), `another operation is in progress`; !util.RegexCheck(want, got) {
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type wants struct {
-		bodyRegex                      string
-		statusCode                     int
-		latestVersion, deployedVersion string
-		serviceYAML                    string
+		bodyRegex                                string
+		statusCode                               int
+		latestVersionRegex, deployedVersionRegex string
+		serviceYAML                              string
 	}
 
-	// GIVEN: an API and a request to edit a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
@@ -2010,10 +1862,10 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					}
 				}`,
 			wants: wants{
-				statusCode:      http.StatusOK,
-				bodyRegex:       `{"message":"edited service[^}]+"}`,
-				latestVersion:   `1\.2\.3`,
-				deployedVersion: "",
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"edited service[^}]+"}`,
+				latestVersionRegex:   `^1\.2\.3$`,
+				deployedVersionRegex: `^1\.2\.3$`,
 				serviceYAML: test.TrimYAML(`
 					options:
 						interval: 99m
@@ -2059,7 +1911,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 						dashboard:
 							icon: https://example.com/icon.png
 					`)),
-					"successful lv edit",
+					"successful dv edit",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -2077,10 +1929,10 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 					}
 				}`,
 			wants: wants{
-				statusCode:      http.StatusOK,
-				bodyRegex:       `{"message":"edited service[^}]+"}`,
-				latestVersion:   "",
-				deployedVersion: `1\.2\.3`,
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"edited service[^}]+"}`,
+				latestVersionRegex:   `^$`,
+				deployedVersionRegex: `^1\.2\.3$`,
 				serviceYAML: test.TrimYAML(`
 					options:
 						interval: 99m
@@ -2105,7 +1957,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 								"type": "regex",
 								"regex": "stable version: \"v?([0-9.]+)\""
 							}
-						],
+						]
 					},
 					"options": {
 						"interval": "99m"
@@ -2118,7 +1970,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 		},
 		{
 			name: "edit that doesn't query (lv) successfully",
-			svc:  testService(t, "invalid JSON", "url", "url", false),
+			svc:  testService(t, "edit that doesn't query (lv) successfully", "url", "url", false),
 			payload: `
 				{
 					"id": "__name__",
@@ -2147,7 +1999,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 		},
 		{
 			name: "edit that doesn't query (dv) successfully",
-			svc:  testService(t, "invalid JSON", "url", "url", false),
+			svc:  testService(t, "edit that doesn't query (dv) successfully", "url", "url", false),
 			payload: `
 				{
 					"id": "__name__",
@@ -2186,15 +2038,12 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", serviceID)
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
-			// EDIT.
 			target := "/api/v1/service/config"
 			params := url.Values{}
-			// Set service_id.
 			params.Set("service_id", serviceID)
 			req := httptest.NewRequest(http.MethodPut, target, payload)
 			req.URL.RawQuery = params.Encode()
 
-			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
 			api.httpServiceEdit(w, req, actionEdit)
@@ -2202,82 +2051,53 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 			if tc.wants.statusCode != http.StatusOK {
 				return
 			}
 
-			// AND: the service was created.
 			api.Config.OrderMu.RLock()
 			svc := api.Config.Service[serviceID]
 			api.Config.OrderMu.RUnlock()
 			if svc == nil {
-				if tc.wants.latestVersion != tc.wants.deployedVersion &&
-					tc.wants.latestVersion != "" {
-					t.Errorf(
-						"%s service %q not created",
-						prefix, serviceID,
-					)
-				}
-				return
+				t.Fatalf("Config.Service[%q] mismatch\ngot:  nil\nwant: non-nil", serviceID)
 			}
 
-			// AND: the stringified service is expected.
+			// An edit replaces rather than merges.
 			if got := svc.String(""); got != tc.wants.serviceYAML {
-				t.Errorf(
-					"%s stringified Service mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.serviceYAML,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, tc.wants.serviceYAML)
 			}
 
-			// AND: the LatestVersion is expected.
 			gotLV := svc.Status.LatestVersion()
-			wantLV := tc.wants.latestVersion
+			wantLV := tc.wants.latestVersionRegex
 			if !util.RegexCheck(wantLV, gotLV) {
-				t.Errorf(
-					"%s LatestVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotLV, tc.wants.latestVersion,
-				)
+				t.Errorf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", gotLV, wantLV)
 			}
 
-			// AND: the DeployedVersion is expected.
+			// Without a deployed_version, it copies LatestVersion().
 			gotDV := svc.Status.DeployedVersion()
-			wantDV := tc.wants.deployedVersion
+			wantDV := tc.wants.deployedVersionRegex
 			if !util.RegexCheck(wantDV, gotDV) {
-				t.Errorf(
-					"%s DeployedVersion mismatch\ngot:  %q\nwant: %q",
-					prefix, gotDV, tc.wants.deployedVersion,
-				)
+				t.Errorf("Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q", gotDV, wantDV)
 			}
 		})
 	}
 }
 
 func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
-	// GIVEN: an API with a service to edit.
 	file := filepath.Join(t.TempDir(), "config.yml")
 	api := testAPI(t, file)
 
@@ -2287,7 +2107,6 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 	wantOrder := []string{"before", editID, "after"}
 	api.Config.Order = slices.Clone(wantOrder)
 
-	// WHEN: an edit is sent with a payload that omits `id`.
 	payload := bytes.NewReader([]byte(test.TrimJSON(`{
 		"options": {
 			"active": false
@@ -2306,168 +2125,102 @@ func TestHTTP_ServiceEdit__edit__missingID(t *testing.T) {
 	res := w.Result()
 	t.Cleanup(func() { _ = res.Body.Close() })
 
-	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-	// THEN: the edit fails with 400.
 	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
-		t.Errorf(
-			"%s status code mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
-	}
-	// AND: the body says the `id` is required.
-	body, _ := io.ReadAll(res.Body)
-	if got, want := string(body), `failed:\\n  id: <required>"}$`; !util.RegexCheck(want, got) {
-		t.Errorf(
-			"%s body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// AND: the service being edited is left untouched.
-	if api.Config.Service[editID] != svc {
-		t.Errorf(
-			"%s service %q was modified/removed by a failed edit",
-			prefix, editID,
-		)
+	if got, want := w.Body.String(), `failed:\\n  id: <required>"}$`; !util.RegexCheck(want, got) {
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: no service was created under the empty ID.
+	if got := api.Config.Service[editID]; got != svc {
+		t.Errorf("Config.Service[%q] mismatch\ngot:  %p\nwant: %p", editID, got, svc)
+	}
+
 	if got := api.Config.Service[""]; got != nil {
-		t.Errorf(
-			"%s a service was created with an empty ID:\n%s",
-			prefix, got.String(""),
-		)
+		t.Errorf("Config.Service[\"\"] mismatch\ngot:  %q\nwant: nil", got.String(""))
 	}
 
-	// AND: the Order keeps its entries, with no empty slot.
 	if got := api.Config.Order; !slices.Equal(got, wantOrder) {
-		t.Errorf(
-			"%s Order mismatch\ngot:  %q\nwant: %q",
-			prefix, got, wantOrder,
-		)
+		t.Errorf("Config.Order mismatch\ngot:  %q\nwant: %q", got, wantOrder)
 	}
 }
 
-func TestHTTP_ServiceEdit__edit__renameToExistingID(t *testing.T) {
-	// GIVEN: an API with two services - one to edit, and one whose ID we rename to.
-	file := t.Name() + ".yml"
-	api := testAPI(t, file)
-
+func TestHTTP_ServiceEdit__edit__renameToExisting(t *testing.T) {
 	const (
-		editID   = "TestHTTP_ServiceEdit_rename-source"
-		targetID = "TestHTTP_ServiceEdit_rename-target"
+		editID  = "rename-source"
+		otherID = "rename-other"
 	)
-	source := testService(t, editID, "url", "url", true)
-	source.Name = "rename-source-name"
-	target := testService(t, targetID, "url", "url", true)
-	target.Name = "rename-target-name"
-	api.Config.Service[source.ID] = source
-	api.Config.Service[target.ID] = target
-	api.Config.Order = append(api.Config.Order, source.ID, target.ID)
-
-	// WHEN: an edit renames the source service onto the target's existing ID,
-	// using a unique name so the name pre-check does not catch it first.
-	payload := bytes.NewReader([]byte(test.TrimJSON(`{
-		"id": "` + targetID + `",
-		"name": "rename-source-renamed",
-		"options": {
-			"active": false
+	tests := []struct {
+		name      string
+		otherName string
+		newID     string
+	}{
+		{
+			name:      "ID",
+			otherName: "rename-other-name",
+			newID:     otherID,
 		},
-		"latest_version": {
-			"type": "github",
-			"url": "` + test.ArgusGitHubRepo + `"
-		}
-	}`)))
-	params := url.Values{}
-	params.Set("service_id", editID)
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
-	req.URL.RawQuery = params.Encode()
-	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req, actionEdit)
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
-
-	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-	// THEN: AddService rejects the collision and the edit fails with 400.
-	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
-		t.Errorf(
-			"%s status code mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
-	}
-	// AND: the body reports the existing service.
-	body, _ := io.ReadAll(res.Body)
-	if got, want := string(body), `already exists`; !util.RegexCheck(want, got) {
-		t.Errorf(
-			"%s body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
-	}
-}
-
-func TestHTTP_ServiceEdit__edit__renameToExistingName(t *testing.T) {
-	// GIVEN: an API with two services - one to edit, and one whose Name we rename another ID to.
-	file := t.Name() + ".yml"
-	api := testAPI(t, file)
-
-	const (
-		editID    = "TestHTTP_ServiceEdit_rename-to-name-source"
-		holderID  = "TestHTTP_ServiceEdit_rename-to-name-holder"
-		takenName = "TestHTTP_ServiceEdit_rename-to-name-taken"
-	)
-	source := testService(t, editID, "url", "url", true)
-	source.Name = "rename-to-name-source"
-	holder := testService(t, holderID, "url", "url", true)
-	holder.Name = takenName
-	api.Config.Service[source.ID] = source
-	api.Config.Service[holder.ID] = holder
-	api.Config.Order = append(api.Config.Order, source.ID, holder.ID)
-
-	// WHEN: the source takes an ID matching the other service's name, under a
-	// name of its own.
-	payload := bytes.NewReader([]byte(test.TrimJSON(`{
-		"id": "` + takenName + `",
-		"name": "rename-to-name-renamed",
-		"options": {
-			"active": false
+		{
+			name:      "Name",
+			otherName: "rename-taken-name",
+			newID:     "rename-taken-name",
 		},
-		"latest_version": {
-			"type": "github",
-			"url": "` + test.ArgusGitHubRepo + `"
-		}
-	}`)))
-	params := url.Values{}
-	params.Set("service_id", editID)
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
-	req.URL.RawQuery = params.Encode()
-	w := httptest.NewRecorder()
-	api.httpServiceEdit(w, req, actionEdit)
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
-
-	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-	// THEN: the request is rejected and the edit fails with 400.
-	if got, want := res.StatusCode, http.StatusBadRequest; got != want {
-		t.Errorf(
-			"%s status code mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
 	}
-	body, _ := io.ReadAll(res.Body)
-	if got, want := string(body), `already exists`; !util.RegexCheck(want, got) {
-		t.Errorf(
-			"%s body mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: writes the package-level flag vars via testAPI's Config.Load.
+
+			api := testAPI(t, filepath.Join(t.TempDir(), "argus.yml"))
+			source := testService(t, editID, "url", "url", true)
+			source.Name = "rename-source-name"
+			other := testService(t, otherID, "url", "url", true)
+			other.Name = tc.otherName
+			api.Config.Service[source.ID] = source
+			api.Config.Service[other.ID] = other
+			api.Config.Order = append(api.Config.Order, source.ID, other.ID)
+
+			// A unique name of its own, so only the ID collides.
+			payload := bytes.NewReader([]byte(test.TrimJSON(`{
+				"id": "` + tc.newID + `",
+				"name": "rename-source-renamed",
+				"options": {
+					"active": false
+				},
+				"latest_version": {
+					"type": "github",
+					"url": "` + test.ArgusGitHubRepo + `"
+				}
+			}`)))
+			params := url.Values{}
+			params.Set("service_id", editID)
+			req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", payload)
+			req.URL.RawQuery = params.Encode()
+			w := httptest.NewRecorder()
+			api.httpServiceEdit(w, req, actionEdit)
+			res := w.Result()
+			t.Cleanup(func() { _ = res.Body.Close() })
+
+			if got, want := res.StatusCode, http.StatusBadRequest; got != want {
+				t.Errorf(
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
+				)
+			}
+
+			if got, want := w.Body.String(), `already exists`; !util.RegexCheck(want, got) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
+			}
+
+			if _, ok := api.Config.Service[editID]; !ok {
+				t.Errorf("Config.Service[%q] mismatch\ngot:  absent\nwant: present", editID)
+			}
+		})
 	}
 }
 
 func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.T) {
-	// GIVEN: an auth-enabled API, a group holding a service-scoped grant, and a
-	// second service named after the ID the first is about to take.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
@@ -2484,20 +2237,11 @@ func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.
 	api.Config.Service[holder.ID] = holder
 	api.Config.Order = append(api.Config.Order, source.ID, holder.ID)
 
-	group, err := deps.Store.CreateGroup(t.Context(), "scoped", "", []rbac.Grant{{
-		Resource: rbac.ResourceService,
-		Action:   rbac.ActionRead,
-		Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: editID},
-	}})
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate scoped group: %v",
-			packageName, err,
-		)
-	}
+	group := createAuthGroup(t, deps, "scoped", "", []rbac.Grant{
+		{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: editID}},
+	})
 
-	// WHEN: the edit takes an ID matching the other service's name - the guard
-	// AddService applies, which the handler now shares.
+	// An ID matching another service's name trips the guard AddService applies.
 	payload := bytes.NewReader([]byte(test.TrimJSON(`{
 		"id": "` + takenName + `",
 		"name": "restore-grants-renamed",
@@ -2517,43 +2261,30 @@ func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.
 	w := httptest.NewRecorder()
 	api.httpServiceEdit(w, req, actionEdit)
 
-	prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-	// THEN: the edit is rejected.
 	if got, want := w.Code, http.StatusBadRequest; got != want {
-		t.Fatalf(
-			"%s status code mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
-		)
+		t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 
-	// AND: it is the handler's pre-check that refused it, so no grant was moved.
+	// The handler's pre-check refused it, so no grant was moved.
 	if got, want := w.Body.String(), "a service with this id or name already exists"; !strings.Contains(got, want) {
-		t.Errorf(
-			"%s should be refused before any grant moves\ngot:  %s\nwant it to contain: %q",
-			prefix, got, want,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: the service kept its ID, so its grants must point at it still.
 	if _, ok := api.Config.Service[editID]; !ok {
-		t.Fatalf(
-			"%s the service should still be under %q",
-			prefix, editID,
-		)
+		t.Fatalf("Config.Service[%q] mismatch\ngot:  absent\nwant: present", editID)
 	}
 	got, err := deps.Store.GroupByID(t.Context(), group.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s\nload group: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.GroupByID() failed: %v", err)
 	}
-	for _, grant := range got.Grants {
+	if gotLen, want := len(got.Grants), 1; gotLen != want {
+		t.Fatalf("Group.Grants length mismatch\ngot:  %d\nwant: %d", gotLen, want)
+	}
+	for i, grant := range got.Grants {
 		if grant.Scope.Ref != editID {
 			t.Errorf(
-				"%s grant left pointing at a service that does not exist\ngot:  %q\nwant: %q",
-				prefix, grant.Scope.Ref, editID,
+				"Group.Grants[%d].Scope.Ref mismatch\ngot:  %q\nwant: %q",
+				i, grant.Scope.Ref, editID,
 			)
 		}
 	}
@@ -2561,14 +2292,13 @@ func TestHTTP_ServiceEdit__edit__rejectsAnIDHeldAsAnotherServiceName(t *testing.
 
 func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 	type wants struct {
 		statusCode  int
 		serviceYAML string
 	}
 
-	// GIVEN: an API and a request to edit a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
@@ -2910,15 +2640,12 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			tc.payload = strings.ReplaceAll(tc.payload, "__name__", serviceID)
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
-			// EDIT.
 			target := "/api/v1/service/config"
 			params := url.Values{}
-			// Set service_id.
 			params.Set("service_id", serviceID)
 			req := httptest.NewRequest(http.MethodPut, target, payload)
 			req.URL.RawQuery = params.Encode()
 
-			// WHEN: that HTTP request is sent.
 			w := httptest.NewRecorder()
 			apiMu.Lock()
 			api.httpServiceEdit(w, req, actionEdit)
@@ -2926,104 +2653,111 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceEdit() (edit)", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
-				data, _ := io.ReadAll(res.Body)
 				t.Fatalf(
-					"%s status code mismatch\ngot:  %d\nwant: %d\n%q",
-					prefix, got, want, string(data),
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the service was created.
 			api.Config.OrderMu.RLock()
 			svc := api.Config.Service[serviceID]
 			api.Config.OrderMu.RUnlock()
 			if svc == nil {
-				t.Fatalf(
-					"%s service %q not created",
-					prefix, serviceID,
-				)
+				t.Fatalf("Config.Service[%q] mismatch\ngot:  nil\nwant: non-nil", serviceID)
 			}
 
-			// AND: the stringified service is expected.
+			// Each <secret> takes the old value, matched by old_index where given.
 			got := svc.String("")
 			if got != tc.wants.serviceYAML {
 				tokenReplacer := regexp.MustCompile(`(access_token|secret|token): [^\s<]+`)
 				tokenReplacement := "$1: SECRET"
 				got = tokenReplacer.ReplaceAllString(got, tokenReplacement)
-				tc.wants.serviceYAML = tokenReplacer.ReplaceAllString(tc.wants.serviceYAML, tokenReplacement)
-
-				t.Errorf(
-					"%s stringified Service mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.serviceYAML,
-				)
+				want := tokenReplacer.ReplaceAllString(tc.wants.serviceYAML, tokenReplacement)
+				if got == want {
+					t.Errorf(
+						"Service.String() mismatch: only the redacted secret values differ\n"+
+							"got:  %q\nwant: %q",
+						got, want,
+					)
+				} else {
+					t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, want)
+				}
 			}
 		})
 	}
 }
 
 func TestHTTP_ServiceEdit__edit__waitsForInFlightOp(t *testing.T) {
-	// GIVEN: an API and an absent service whose op lock is held by an in-flight
-	// operation (a refresh, or another edit/delete).
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	const serviceID = "TestHTTP_ServiceEdit_waits-absent"
 
-	held := api.acquireServiceOp(serviceID)
-	held.mu.Lock() // In-flight operation holds the lock.
-
-	// WHEN: an edit request for that service is sent while the lock is held.
 	params := url.Values{}
 	params.Set("service_id", serviceID)
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/service/update", nil)
 	req.URL.RawQuery = params.Encode()
 
-	done := make(chan int, 1)
+	// The service is absent, so it 404s once the lock is released.
+	assertWaitsForOpLock(
+		t, &api, serviceID,
+		func(w http.ResponseWriter) { api.httpServiceEdit(w, req, actionEdit) },
+		http.StatusNotFound,
+	)
+}
+
+// assertWaitsForOpLock asserts that serve blocks while serviceID's op lock is held,
+// rather than failing fast with 409 as a create does, and responds wantStatus once
+// it is released.
+func assertWaitsForOpLock(
+	t *testing.T,
+	api *API,
+	serviceID string,
+	serve func(http.ResponseWriter),
+	wantStatus int,
+) {
+	t.Helper()
+
+	held := api.acquireServiceOp(serviceID)
+	held.mu.Lock() // In-flight operation holds the lock.
+
+	done := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
 		w := httptest.NewRecorder()
-		api.httpServiceEdit(w, req, actionEdit)
-		done <- w.Result().StatusCode
+		serve(w)
+		done <- w
 	}()
 
-	prefix := fmt.Sprintf(
-		"%s\n%s",
-		packageName, req.URL.RawPath,
-	)
-
-	// THEN: the edit blocks rather than failing fast with 409.
 	select {
-	case code := <-done:
+	case w := <-done:
 		t.Fatalf(
-			"%s completed (status %d) while the op lock was held; want it to block",
-			prefix, code,
+			"held lock: request mismatch\ngot:  completed with %d - %q\nwant: blocked",
+			w.Code, w.Body.String(),
 		)
 	case <-time.After(1 * time.Second):
-		// Still blocked, as expected.
 	}
 
-	// WHEN: the in-flight operation releases the lock.
+	// The in-flight operation releases the lock.
 	held.mu.Unlock()
 	api.releaseServiceOp(serviceID, held)
 
-	// THEN: the edit proceeds past the lock; the service is absent, so it 404s.
 	select {
-	case code := <-done:
-		if code != http.StatusNotFound {
+	case w := <-done:
+		if w.Code != wantStatus {
 			t.Errorf(
-				"%s status mismatch\ngot:  %d\nwant: %d",
-				prefix, code, http.StatusNotFound,
+				"released lock: status code mismatch\ngot:  %d - %q\nwant: %d",
+				w.Code, w.Body.String(), wantStatus,
 			)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatalf("%s did not complete after the op lock was released", prefix)
+		t.Fatalf(
+			"released lock: status code mismatch\ngot:  timeout after 5s\nwant: %d",
+			wantStatus,
+		)
 	}
 }
 
 func TestServiceEditAffectsVisibility(t *testing.T) {
-	// GIVEN: old/new service pairs for the kinds of create/edit.
 	summaryFor := func(id string, tags []string) *apitype.ServiceSummary {
 		summary := &apitype.ServiceSummary{ID: id}
 		if len(tags) != 0 {
@@ -3075,13 +2809,13 @@ func TestServiceEditAffectsVisibility(t *testing.T) {
 			want:       true,
 		},
 		{
-			name:       "edit/plain - same ID, no tags",
+			name:       "edit/plain/same ID, no tags",
 			oldService: summaryFor("svc", nil),
 			newService: serviceFor("svc", nil),
 			want:       false,
 		},
 		{
-			name:       "edit/plain - same ID, same tags",
+			name:       "edit/plain/same ID, same tags",
 			oldService: summaryFor("svc", []string{"prod", "web"}),
 			newService: serviceFor("svc", []string{"prod", "web"}),
 			want:       false,
@@ -3092,20 +2826,10 @@ func TestServiceEditAffectsVisibility(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: visibility impact is checked.
 			got := serviceEditAffectsVisibility(tc.oldService, tc.newService)
 
-			prefix := fmt.Sprintf(
-				"%s\nserviceEditAffectsVisibility()",
-				packageName,
-			)
-
-			// THEN: only creates, renames and tag-set changes report true.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -3117,14 +2841,19 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request to delete a service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	svc := testService(t, t.Name(), "url", "url", true)
 	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
-	_ = api.Config.AddService("", svc)
-	// Drain db from the Service addition.
-	<-api.Config.DatabaseChannel
+	if err := api.Config.AddService("", svc); err != nil {
+		t.Fatalf("Config.AddService() failed: %v", err)
+	}
+	// Drain the addition's database message.
+	select {
+	case <-api.Config.DatabaseChannel:
+	case <-time.After(time.Second):
+		t.Fatal("Config.DatabaseChannel message count mismatch\ngot:  0\nwant: 1")
+	}
 	tests := []struct {
 		name      string
 		serviceID string
@@ -3166,14 +2895,12 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() -- Cannot run in parallel since we're sharing the API.
+			// Serial: shares api.Config.
 
 			target := "/api/v1/service/delete"
 			params := url.Values{}
-			// Set service_id.
 			params.Set("service_id", tc.serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
@@ -3181,64 +2908,83 @@ func TestHTTP_ServiceDelete(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceDelete()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 
-			// AND: the service is removed from the config.
 			if api.Config.Service[tc.serviceID] != nil {
 				t.Errorf(
-					"%s\nservice %q not removed from Config.Service[]",
-					packageName, tc.serviceID,
+					"Config.Service[%q] mismatch\ngot:  present\nwant: absent (deleted)",
+					tc.serviceID,
 				)
 			}
 			if slices.Contains(api.Config.Order, tc.serviceID) {
 				t.Errorf(
-					"%s\nservice %q not removed from Order",
-					packageName, tc.serviceID,
+					"Config.Order mismatch\ngot:  %q\nwant: NOT %q",
+					api.Config.Order, tc.serviceID,
 				)
 			}
 
-			// AND: the service is removed from the database (if the req was OK).
 			if tc.wants.statusCode == http.StatusOK {
-				time.Sleep(time.Second)
-				if len(api.Config.DatabaseChannel) == 0 {
-					t.Errorf(
-						"%s service %q not removed from database",
-						prefix, tc.serviceID,
-					)
-				} else {
-					msg := <-api.Config.DatabaseChannel
-					if msg.Delete != true {
+				select {
+				case msg := <-api.Config.DatabaseChannel:
+					if !msg.Delete {
 						t.Errorf(
-							"%s should have sent a deletion to the db, not\n%+v",
-							prefix, msg,
+							"Message.Delete mismatch\n"+
+								"got:  false (ServiceID=%q, %d cells)\nwant: true",
+							msg.ServiceID, len(msg.Cells),
 						)
 					}
+				case <-time.After(time.Second):
+					t.Error("Config.DatabaseChannel message count mismatch\ngot:  0\nwant: 1")
 				}
 			}
 		})
+	}
+}
+
+func TestHTTP_ServiceDelete__waitsForInFlightOp(t *testing.T) {
+	file := t.Name() + ".yml"
+	api := testAPI(t, file)
+	svc := testService(t, "TestHTTP_ServiceDelete_waits", "url", "url", true)
+	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
+	if err := api.Config.AddService("", svc); err != nil {
+		t.Fatalf("Config.AddService() failed: %v", err)
+	}
+	// Drain the addition's database message.
+	select {
+	case <-api.Config.DatabaseChannel:
+	case <-time.After(time.Second):
+		t.Fatal("Config.DatabaseChannel message count mismatch\ngot:  0\nwant: 1")
+	}
+
+	params := url.Values{}
+	params.Set("service_id", svc.ID)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/service/delete", nil)
+	req.URL.RawQuery = params.Encode()
+
+	assertWaitsForOpLock(
+		t, &api, svc.ID,
+		func(w http.ResponseWriter) { api.httpServiceDelete(w, req) },
+		http.StatusOK,
+	)
+
+	api.serviceOpMu.Lock()
+	_, leaked := api.serviceOps[svc.ID]
+	api.serviceOpMu.Unlock()
+	if leaked {
+		t.Errorf("API.serviceOps[%q] mismatch\ngot:  present\nwant: absent (released)", svc.ID)
 	}
 }
 
@@ -3248,7 +2994,6 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		statusCode int
 	}
 
-	// GIVEN: an API and a request to test a notify.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
@@ -3266,10 +3011,9 @@ func TestHTTP_NotifyTest(t *testing.T) {
 		"no_main": shoutrrrtest.Shoutrrr(t, false, false),
 	}
 	tests := []struct {
-		name        string
-		queryParams map[string]string
-		payload     string
-		wants       wants
+		name    string
+		payload string
+		wants   wants
 	}{
 		{
 			name: "no body",
@@ -3571,7 +3315,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				bodyRegex:  `invalid type "new_notify"`,
+				// With nothing to inherit, the name is taken as the type.
+				bodyRegex: `invalid type "new_notify"`,
 			},
 		},
 		{
@@ -3589,7 +3334,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				bodyRegex:  `invalid type "new_notify"`,
+				// With nothing to inherit, the name is taken as the type.
+				bodyRegex: `invalid type "new_notify"`,
 			},
 		},
 		{
@@ -3607,7 +3353,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				bodyRegex:  `invalid type "new_notify"`,
+				// With nothing to inherit, the name is taken as the type.
+				bodyRegex: `invalid type "new_notify"`,
 			},
 		},
 	}
@@ -3620,39 +3367,29 @@ func TestHTTP_NotifyTest(t *testing.T) {
 			tc.payload = test.TrimJSON(tc.payload)
 			payload := bytes.NewReader([]byte(tc.payload))
 
-			// WHEN: that request is sent.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/notify/test", payload)
 			w := httptest.NewRecorder()
 			api.httpNotifyTest(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpNotifyTest()", packageName)
-
-			// THEN: the expected status code is returned.
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected message is contained in the bodyRegex.
 			data, err := io.ReadAll(res.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					packageName, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
-			// Marshal message out of JSON data {"message": text}.
 			var body map[string]string
-			_ = decode.Unmarshal("json", data, &body)
+			if err := decode.Unmarshal("json", data, &body); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
 			if got := body["message"]; !util.RegexCheck(tc.wants.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
 			}
 		})
 	}
@@ -3667,7 +3404,6 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 		holdRead       // Simulate an in-flight refresh (shared).
 	)
 
-	// GIVEN: an API.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
@@ -3678,6 +3414,13 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 		statusCode int
 		bodyRegex  string
 	}{
+		{
+			name:       "latest-version refresh allowed with no op in flight",
+			handler:    api.httpLatestVersionRefresh,
+			hold:       holdNone,
+			statusCode: http.StatusNotFound, // Past the lock, then the absent service.
+			bodyRegex:  `not found`,
+		},
 		{
 			name:       "latest-version refresh rejected while an exclusive op is in flight",
 			handler:    api.httpLatestVersionRefresh,
@@ -3703,7 +3446,7 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 			name:       "deployed-version refresh allowed alongside another refresh (shared)",
 			handler:    api.httpDeployedVersionRefresh,
 			hold:       holdRead,
-			statusCode: http.StatusNotFound,
+			statusCode: http.StatusNotFound, // Past the lock, then the absent service.
 			bodyRegex:  `not found`,
 		},
 	}
@@ -3714,7 +3457,6 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 
 			serviceID := tc.name
 
-			// GIVEN: the service's op lock is held as described.
 			held := api.acquireServiceOp(serviceID)
 			switch tc.hold {
 			case holdWrite:
@@ -3732,7 +3474,6 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 				api.releaseServiceOp(serviceID, held)
 			})
 
-			// WHEN: the handler is called for that service.
 			params := url.Values{}
 			params.Set("service_id", serviceID)
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/service", nil)
@@ -3742,96 +3483,16 @@ func TestHTTP_ServiceOpLock__conflict(t *testing.T) {
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
 
-			prefix := fmt.Sprintf(
-				"%s\n%s",
-				packageName, req.URL.RawPath,
-			)
-
-			// THEN: the expected status code is returned.
-			if got := res.StatusCode; got != tc.statusCode {
+			if got, want := res.StatusCode, tc.statusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.statusCode,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
-			// AND: the body matches.
-			body, _ := io.ReadAll(res.Body)
-			if got := string(body); !util.RegexCheck(tc.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.bodyRegex,
-				)
+
+			if got := w.Body.String(); !util.RegexCheck(tc.bodyRegex, got) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.bodyRegex)
 			}
 		})
-	}
-}
-
-func TestHTTP_ServiceDelete__waitsForInFlightOp(t *testing.T) {
-	// GIVEN: an API with a service whose op lock is held by an in-flight operation.
-	file := t.Name() + ".yml"
-	api := testAPI(t, file)
-	svc := testService(t, "TestHTTP_ServiceDelete_waits", "url", "url", true)
-	svc.HardDefaults.Status.DatabaseChannel = api.Config.DatabaseChannel
-	_ = api.Config.AddService("", svc)
-	<-api.Config.DatabaseChannel // Drain the addition.
-
-	held := api.acquireServiceOp(svc.ID)
-	held.mu.Lock() // In-flight edit/refresh holds the lock.
-
-	// WHEN: a delete request is sent while the lock is held.
-	params := url.Values{}
-	params.Set("service_id", svc.ID)
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/service/delete", nil)
-	req.URL.RawQuery = params.Encode()
-
-	done := make(chan int, 1)
-	go func() {
-		w := httptest.NewRecorder()
-		api.httpServiceDelete(w, req)
-		done <- w.Result().StatusCode
-	}()
-
-	prefix := fmt.Sprintf(
-		"%s\n%s",
-		packageName, req.URL.RawPath,
-	)
-
-	// THEN: the delete blocks rather than failing fast.
-	select {
-	case code := <-done:
-		t.Fatalf(
-			"%s delete completed (status %d) while the op lock was held; want it to block",
-			prefix, code,
-		)
-	case <-time.After(1 * time.Second):
-		// Still blocked, as expected.
-	}
-
-	// WHEN: the in-flight operation releases the lock.
-	held.mu.Unlock()
-	api.releaseServiceOp(svc.ID, held)
-
-	// THEN: the delete proceeds and succeeds.
-	select {
-	case code := <-done:
-		if code != http.StatusOK {
-			t.Errorf(
-				"%s delete status mismatch\ngot:  %d\nwant: %d",
-				prefix, code, http.StatusOK,
-			)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatalf("%s delete did not complete after the op lock was released", prefix)
-	}
-
-	// AND: the op lock entry is cleaned up once idle.
-	api.serviceOpMu.Lock()
-	_, leaked := api.serviceOps[svc.ID]
-	api.serviceOpMu.Unlock()
-	if leaked {
-		t.Errorf(
-			"%s serviceOps[%q] leaked after the delete completed",
-			prefix, svc.ID,
-		)
 	}
 }

@@ -17,7 +17,6 @@
 package latestver
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -33,12 +32,15 @@ import (
 )
 
 func TestLookup_Refresh(t *testing.T) {
-	testURL := testLookup(t, "url", false).(*web.Lookup)
-	_, _ = testURL.Query(true, logx.LogFrom{})
-	testVersionURL := testURL.Status.LatestVersion()
-	testGitHub := testLookup(t, "github", false).(*github.Lookup)
-	_, _ = testGitHub.Query(true, logx.LogFrom{})
-	testVersionGitHub := testGitHub.Status.LatestVersion()
+	l := testLookup(t, "github", false)
+	githubLookup, ok := l.(*github.Lookup)
+	if !ok {
+		t.Fatalf("testLookup() type mismatch\ngot:  %T\nwant: *github.Lookup", l)
+	}
+	if _, err := githubLookup.Query(true, logx.LogFrom{}); err != nil {
+		t.Fatalf("Lookup.Query() failed: %v", err)
+	}
+	testVersionGitHub := githubLookup.Status.LatestVersion()
 
 	type args struct {
 		overrides          []byte
@@ -47,7 +49,8 @@ func TestLookup_Refresh(t *testing.T) {
 		latestVersion      string
 	}
 
-	// GIVEN: a Lookup and a possible YAML string to override parts of it.
+	headerAuthVersion := "4.5.6"
+	headerAuthURL := test.HeaderAuthServer(t, headerAuthVersion)
 	tests := []struct {
 		name     string
 		args     args
@@ -142,7 +145,7 @@ func TestLookup_Refresh(t *testing.T) {
 			},
 			previous: testLookup(t, "url", false),
 			errRegex: `^$`,
-			want:     testVersionURL,
+			want:     testWebVersion,
 			announce: true,
 		},
 		{
@@ -183,7 +186,7 @@ func TestLookup_Refresh(t *testing.T) {
 			name: "InheritSecrets inherits header secrets",
 			args: args{
 				overrides: []byte(test.TrimJSON(`{
-					"url": "` + test.LookupWithHeaderAuth.URLValid + `",
+					"url": "` + headerAuthURL + `",
 					"headers": [
 						{
 							"key": "` + test.LookupWithHeaderAuth.HeaderKey + `",
@@ -192,20 +195,10 @@ func TestLookup_Refresh(t *testing.T) {
 						}
 					]
 				}`)),
-				latestVersion: testVersionURL,
+				latestVersion: testWebVersion,
 			},
-			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, "url", false)
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.Headers = shared.Headers{
-					{
-						Key:   test.LookupWithHeaderAuth.HeaderKey,
-						Value: test.LookupWithHeaderAuth.HeaderValuePass,
-					},
-				}
-				return lTyped, nil
-			}),
-			want:     testVersionURL,
+			previous: headerAuthLookup(t, test.LookupBare.URLInvalid+"/"+testWebVersion),
+			want:     headerAuthVersion,
 			announce: false,
 			errRegex: `^$`,
 		},
@@ -223,18 +216,7 @@ func TestLookup_Refresh(t *testing.T) {
 				}`)),
 				latestVersion: "",
 			},
-			previous: test.Must(t, func() (Lookup, error) {
-				l := testLookup(t, "url", false)
-				lTyped, _ := l.(*web.Lookup)
-				lTyped.URL = test.LookupWithHeaderAuth.URLValid
-				lTyped.Headers = shared.Headers{
-					{
-						Key:   test.LookupWithHeaderAuth.HeaderKey,
-						Value: test.LookupWithHeaderAuth.HeaderValuePass,
-					},
-				}
-				return lTyped, nil
-			}),
+			previous: headerAuthLookup(t, headerAuthURL),
 			want:     "",
 			announce: false,
 			errRegex: `Hook rules were not satisfied\.`,
@@ -245,7 +227,6 @@ func TestLookup_Refresh(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Status we will be working with.
 			var targetStatus *status.Status
 			switch l := tc.previous.(type) {
 			case *github.Lookup:
@@ -254,7 +235,6 @@ func TestLookup_Refresh(t *testing.T) {
 				targetStatus = l.Status
 			}
 
-			// Copy the starting Status.
 			var previousStatus *status.Status
 			if tc.previous != nil {
 				targetStatus.Init(
@@ -264,24 +244,20 @@ func TestLookup_Refresh(t *testing.T) {
 					},
 					&dashboard.Options{},
 				)
-				// Set the latest version.
+				// Set the latest version, with a timestamp that a query would replace.
 				if tc.args.latestVersion != "" {
-					targetStatus.SetLatestVersion(tc.args.latestVersion, "", false)
+					targetStatus.SetLatestVersion(tc.args.latestVersion, "2020-01-01T00:00:00Z", false)
 				}
 				previousStatus = targetStatus.Copy(true)
 			}
 
-			// AND: resolve the secretRefs
 			var secretRefs shared.VSecretRef
 			if !tc.args.ignoreSecretRefs {
 				if err := decode.Unmarshal("json", tc.args.overrides, &secretRefs); err != nil {
-					t.Fatalf("%s\nfailed to unmarshal secretRefs: %v",
-						packageName, err,
-					)
+					t.Fatalf("decode.Unmarshal() failed: %v", err)
 				}
 			}
 
-			// WHEN: we call Refresh.
 			got, gotAnnounce, err := Refresh(
 				tc.previous,
 				tc.args.overrides,
@@ -289,68 +265,60 @@ func TestLookup_Refresh(t *testing.T) {
 				&secretRefs,
 				plainDefaultsConfig(t),
 			)
-
-			prefix := fmt.Sprintf("%s\nRefresh()", packageName)
-
-			// THEN: we get an error if expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: announce is only true when expected.
+			// Only a version change with no overrides (incl. semantic_versioning) announces.
 			if tc.announce != gotAnnounce {
-				t.Errorf(
-					"%s got announce %t, want%t",
-					prefix, gotAnnounce, tc.announce,
-				)
+				t.Errorf("announce mismatch\ngot:  %t\nwant: %t", gotAnnounce, tc.announce)
 			}
 
-			// AND: we get the expected result otherwise.
 			if tc.want != got {
-				t.Errorf(
-					"%s expected version %q, not %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the timestamp only changes if the version changed.
 			gotTimestamp := targetStatus.LatestVersionTimestamp()
 			hadTimestamp := previousStatus.LatestVersionTimestamp()
-			if previousStatus.LatestVersionTimestamp() != "" {
-				// If the possible query-changing overrides are nil.
-				if tc.args.overrides == nil && tc.args.semanticVersioning == nil {
-					// The timestamp should change only if the version changed.
-					if previousStatus.LatestVersion() != targetStatus.LatestVersion() &&
-						gotTimestamp == hadTimestamp {
-						t.Errorf(
-							"%s .LatestVersionTimestamp() should have changed from %q when version changed\nwant: %q",
-							prefix, gotTimestamp, hadTimestamp,
-						)
-						// The timestamp shouldn't change as the version didn't change.
-					} else if gotTimestamp != hadTimestamp {
-						t.Errorf(
-							"%s\n .LatestVersionTimestamp() value mismatch\ngot:  %q\nwant: %q",
-							prefix, gotTimestamp, hadTimestamp,
-						)
-					}
-					// If the overrides are not nil.
-				} else {
-					// The timestamp shouldn't change.
-					if gotTimestamp != hadTimestamp {
-						t.Errorf(
-							"%s .LatestVersionTimestamp() = %q (changed) after non-nil overrides\nwant: %q",
-							prefix, gotTimestamp, hadTimestamp,
-						)
-					}
+			versionChanged := previousStatus.LatestVersion() != targetStatus.LatestVersion()
+			// Overrides that may change the query leave the timestamp alone.
+			noOverrides := tc.args.overrides == nil && tc.args.semanticVersioning == nil
+			if noOverrides && versionChanged {
+				if gotTimestamp == hadTimestamp {
+					t.Errorf(
+						"Status.LatestVersionTimestamp() mismatch\ngot:  %q\nwant: NOT %q",
+						gotTimestamp, hadTimestamp,
+					)
 				}
+			} else if gotTimestamp != hadTimestamp {
+				t.Errorf(
+					"Status.LatestVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
+					gotTimestamp, hadTimestamp,
+				)
 			}
 		})
 	}
+}
+
+// headerAuthLookup returns a url Lookup on hookURL that sends the header-auth hook's passing header.
+func headerAuthLookup(t *testing.T, hookURL string) Lookup {
+	t.Helper()
+
+	l := testLookup(t, "url", false)
+	lTyped, ok := l.(*web.Lookup)
+	if !ok {
+		t.Fatalf("testLookup() type mismatch\ngot:  %T\nwant: *web.Lookup", l)
+	}
+	lTyped.URL = hookURL
+	lTyped.Headers = shared.Headers{
+		{
+			Key:   test.LookupWithHeaderAuth.HeaderKey,
+			Value: test.LookupWithHeaderAuth.HeaderValuePass,
+		},
+	}
+	return lTyped
 }

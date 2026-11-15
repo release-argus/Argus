@@ -17,7 +17,6 @@
 package shoutrrr
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -43,7 +42,6 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 	}
 	typeOther := "slack"
 
-	// GIVEN: a bunch of 'service' notifiers.
 	serviceNotifiers := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
 		"no_main_with_type_and_defaults": &Shoutrrr{
@@ -86,14 +84,11 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		typeOther:          &Defaults{},
 	}
 
-	// AND: a payload for a Shoutrrr.
 	tests := []struct {
-		name                                     string
-		payload                                  TestPayload
-		want                                     *Shoutrrr
-		wantMain, wantDefaults, wantHardDefaults string
-		wantServiceURL                           string
-		errRegex                                 string
+		name     string
+		payload  TestPayload
+		want     *Shoutrrr
+		errRegex string
 	}{
 		{
 			name:     "empty",
@@ -113,6 +108,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				ServiceIDPrevious: "test",
 				NamePrevious:      "test",
 			},
+			// No notifier is named "test", so the name is taken as the type.
 			errRegex: `^invalid type "[^"]+"$`,
 		},
 		{
@@ -302,35 +298,11 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.want != nil {
-				vars := []struct {
-					Target string
-					Var    any
-				}{
-					{Target: tc.wantMain, Var: tc.want.Main},
-					{Target: tc.wantDefaults, Var: tc.want.Defaults},
-					{Target: tc.wantHardDefaults, Var: tc.want.HardDefaults},
-				}
-				for _, v := range vars {
-					switch v.Target {
-					case "main":
-						v.Var = tc.want.Main
-					case "defaults":
-						v.Var = tc.want.Defaults
-					case "hardDefaults":
-						v.Var = tc.want.HardDefaults
-					}
-				}
-			}
-
 			var testServiceNotify *Shoutrrr
 			if tc.payload.NamePrevious != "" {
 				testServiceNotify = (*serviceNotifiers)[tc.payload.NamePrevious]
 			}
-			dash, _ := dashboard.Decode(
-				"yaml", nil,
-				dashCfg,
-			)
+			dash, _ := dashboard.Decode("yaml", nil, dashCfg)
 			testServiceStatus := status.New(
 				nil, nil, nil,
 				"",
@@ -349,8 +321,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				testServiceStatus.Dashboard,
 			)
 
-			// WHEN: using the payload.
-			result, errRegex := FromPayload(
+			result, err := FromPayload(
 				tc.payload,
 				testServiceNotify, testServiceStatus,
 				Config{
@@ -359,52 +330,25 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 					HardDefaults: hardDefaults,
 				},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nFromPayload(%+v)",
-				packageName, tc.payload,
-			)
-
-			// THEN: it errors when expected.
-			e := errfmt.FormatError(errRegex)
+			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 				return
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the Shoutrrr is as expected.
 			got := result.String("")
 			want := tc.want.String("")
 			if got != want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Shoutrrr.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the serviceName is as expected.
-			got = result.ServiceStatus.ServiceInfo.ID
-			want = tc.payload.ServiceID
-			if got != want {
+			if result.ServiceStatus != testServiceStatus {
 				t.Errorf(
-					"%s .ServiceStatus.ServiceInfo.ID mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
-			}
-
-			// AND: the serviceURL is as expected.
-			got = tc.payload.ServiceURL
-			want = tc.wantServiceURL
-			if got != want {
-				t.Errorf(
-					"%s .ServiceURL mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
+					"Shoutrrr.ServiceStatus mismatch\ngot:  %p\nwant: %p",
+					result.ServiceStatus, testServiceStatus,
 				)
 			}
 		})
@@ -412,7 +356,6 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 }
 
 func TestResolveDefaults(t *testing.T) {
-	// GIVEN: a set of values for a Notify.
 	tests := []struct {
 		name                             string
 		notifyName, nType                string
@@ -514,62 +457,48 @@ func TestResolveDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: resolveDefaults is called.
 			gotType, gotMain, gotDefaults, gotHardDefaults, err := resolveDefaults(
 				tc.notifyName,
 				tc.nType,
 				tc.main,
 				tc.defaults, tc.hardDefaults,
 			)
-
-			prefix := fmt.Sprintf("%s\nresolveDefaults()", packageName)
-
-			// THEN: the decode is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch on \ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+				return
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the values are as expected.
 			fieldTests := []test.FieldAssertion{
-				{Name: "Type", Got: gotType, Want: tc.wantType},
+				{Name: "Type", Got: gotType, Want: tc.wantType, Mode: test.CompareEqual},
 			}
 
-			// 	Main ref.
-			if tc.wantMain == "defaults" || tc.wantMain == "hardDefaults" {
-				wantMain := tc.defaults[gotType]
-				if tc.wantMain == "hardDefaults" {
-					wantMain = tc.hardDefaults[gotType]
-				}
-				fieldTests = append(
-					fieldTests,
-					test.FieldAssertion{Name: "Main", Got: gotMain, Want: wantMain, Mode: test.CompareSamePointer},
-				)
-			} else {
-				fieldTests = append(
-					fieldTests,
-					test.FieldAssertion{Name: "Main", Got: gotMain, Want: tc.defaults[gotType], Mode: test.CompareDifferentPointer},
-					test.FieldAssertion{Name: "Main", Got: gotMain, Want: tc.hardDefaults[gotType], Mode: test.CompareDifferentPointer},
-				)
+			wantMain := tc.main
+			switch tc.wantMain {
+			case "defaults":
+				wantMain = tc.defaults[tc.wantType]
+			case "hardDefaults":
+				wantMain = tc.hardDefaults[tc.wantType]
 			}
-			// 	Defaults/HardDefaults refs.
-			wantDefaults := tc.defaults[gotType]
+			fieldTests = append(
+				fieldTests,
+				test.FieldAssertion{Name: "Main", Got: gotMain, Want: wantMain, Mode: test.CompareSamePointer},
+			)
+
+			wantDefaults := tc.defaults[tc.wantType]
 			if tc.wantDefaults == "hardDefaults" {
-				wantDefaults = tc.hardDefaults[gotType]
+				wantDefaults = tc.hardDefaults[tc.wantType]
 			}
 			fieldTests = append(
 				fieldTests,
 				test.FieldAssertion{Name: "Defaults", Got: gotDefaults, Want: wantDefaults, Mode: test.CompareSamePointer},
-				test.FieldAssertion{Name: "HardDefaults", Got: gotHardDefaults, Want: tc.hardDefaults[gotType], Mode: test.CompareSamePointer},
+				test.FieldAssertion{Name: "HardDefaults", Got: gotHardDefaults, Want: tc.hardDefaults[tc.wantType], Mode: test.CompareSamePointer},
 			)
 
-			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

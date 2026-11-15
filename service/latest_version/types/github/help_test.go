@@ -28,16 +28,14 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
-	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "latestver_github"
 var testBody = []byte(
 	test.TrimJSON(`[
 		{
@@ -65,21 +63,20 @@ var testBody = []byte(
 var testBodyObject []forgetypes.Release
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Unmarshal testBody.
-	_ = decode.Unmarshal("json", testBody, &testBodyObject)
+	if err := decode.Unmarshal("json", testBody, &testBodyObject); err != nil {
+		fmt.Println("decode.Unmarshal() failed:", err)
+		os.Exit(1)
+	}
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -92,7 +89,7 @@ func newData(
 	if etag == "" {
 		etag = getEmptyListETag()
 	}
-	// Releases.
+
 	var releasesDeref []forgetypes.Release
 	if releases != nil {
 		releasesDeref = *releases
@@ -104,16 +101,17 @@ func newData(
 	}
 }
 
-func testLookup(t *testing.T, failing bool) *Lookup {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+// releaseEqual reports whether a and b render the same String().
+func releaseEqual(a, b forgetypes.Release) bool {
+	return a.String() == b.String()
+}
 
-	// Options.
-	options, _ := opt.Decode(
-		"yaml", nil,
-		optCfg,
-	)
-	// Status.
+func testLookup(t *testing.T) *Lookup {
+	t.Helper()
+
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+
+	options := opttest.PlainOptions(t, opttest.PlainDefaultsConfig(t))
 	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Init(
 		0, 0, 0,
@@ -125,7 +123,7 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		},
 	)
 
-	lookup, _ := Decode(
+	lookup, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			url: `+test.ArgusGitHubRepo+`
 			url_commands:
@@ -136,38 +134,15 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
 
 	typeHardDefaults := &Defaults{}
 	typeHardDefaults.Default()
 	lookup.SetTypeDefaults(&Defaults{}, typeHardDefaults)
 
-	if failing {
-		lookup.AccessToken = "invalid"
-	}
-
 	return lookup
-}
-
-// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
-	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
-
-	defaults.Require.SetDefaults(&hardDefaults.Require)
-
-	return base.DefaultsConfig{
-		Soft: defaults,
-		Hard: hardDefaults,
-	}
 }
 
 // githubEndpoint is one endpoint's reply, shared with the other forges.
@@ -176,14 +151,14 @@ type githubEndpoint = forgetest.Endpoint
 // githubServer is a fixture standing in for the GitHub API.
 type githubServer = forgetest.Server
 
-// newGitHubServer starts a fixture serving `endpoints`.
+// newGitHubServer starts a fixture serving endpoints.
 func newGitHubServer(t *testing.T, endpoints map[string]githubEndpoint) *githubServer {
 	t.Helper()
 
 	return startGitHubServer(t, &githubServer{Endpoints: endpoints})
 }
 
-// startGitHubServer starts `server`, giving it the replies the GitHub API gives.
+// startGitHubServer starts server, giving it the replies the GitHub API gives.
 func startGitHubServer(t *testing.T, server *githubServer) *githubServer {
 	t.Helper()
 

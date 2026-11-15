@@ -120,7 +120,7 @@ func (w *Webhook) SetNextRunnable(time time.Time) {
 }
 
 // SetExecuting sets the next-runnable time based on the outcome, optionally adding the send delay or blocking for a pending response.
-func (w *Webhook) SetExecuting(addDelay bool, received bool) {
+func (w *Webhook) SetExecuting(addDelay bool, waitingForResponse bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -142,7 +142,7 @@ func (w *Webhook) SetExecuting(addDelay bool, received bool) {
 	}
 
 	// Block reruns whilst waiting for a response.
-	if received {
+	if waitingForResponse {
 		nextRunnable = nextRunnable.Add(time.Hour)
 	}
 	w.SetNextRunnable(nextRunnable)

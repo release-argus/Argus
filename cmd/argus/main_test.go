@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -46,25 +47,24 @@ func resetFlags() {
 }
 
 func TestRun(t *testing.T) {
-	// GIVEN: different Configs to test.
 	tests := []struct {
 		name           string
-		file           func(path string)
-		preStartFunc   func(baseDir string)
+		file           func(t *testing.T, path string)
+		preStartFunc   func(t *testing.T, baseDir string)
 		resetPassword  string // Username for -auth.reset-password.
 		serverStarts   bool   // The web server comes up.
 		awaitService   string // Wait for this service's first query before shutting down.
-		outputContains *[]string
-		outputExcludes *[]string
+		outputContains []string
+		outputExcludes []string
 		exitCode       *int
 	}{
 		{
 			name: "config fails to load - exits immediately without starting the server",
 			file: testYAML_Invalid,
-			outputContains: &[]string{
-				"Unmarshal of",
+			outputContains: []string{
+				"failed to decode",
 			},
-			outputExcludes: &[]string{
+			outputExcludes: []string{
 				"services to monitor",
 				"Listening on ",
 			},
@@ -73,12 +73,13 @@ func TestRun(t *testing.T) {
 		{
 			name: "config with services, db invalid format",
 			file: testYAML_Argus,
-			preStartFunc: func(baseDir string) {
-				// Create an invalid database file.
+			preStartFunc: func(t *testing.T, baseDir string) {
 				dbFile := filepath.Join(baseDir, "argus.db")
-				_ = os.WriteFile(dbFile, []byte("invalid format"), 0644)
+				if err := os.WriteFile(dbFile, []byte("invalid format"), 0644); err != nil {
+					t.Fatalf("os.WriteFile() failed: %v", err)
+				}
 			},
-			outputContains: &[]string{
+			outputContains: []string{
 				"file is not a database",
 			},
 			exitCode: new(1),
@@ -87,10 +88,10 @@ func TestRun(t *testing.T) {
 			name:          "auth setup fails - exits without starting the server",
 			file:          testYAML_AuthEnabled,
 			resetPassword: "ghost",
-			outputContains: &[]string{
+			outputContains: []string{
 				`not found: user "ghost"`,
 			},
-			outputExcludes: &[]string{
+			outputExcludes: []string{
 				"Listening on ",
 			},
 			exitCode: new(1),
@@ -99,7 +100,7 @@ func TestRun(t *testing.T) {
 			name:         "config with no services",
 			file:         testYAML_NoServices,
 			serverStarts: true,
-			outputContains: &[]string{
+			outputContains: []string{
 				"Found 0 services to monitor",
 				"Listening on ",
 				"Shutdown complete",
@@ -111,7 +112,7 @@ func TestRun(t *testing.T) {
 			file:         testYAML_Argus,
 			serverStarts: true,
 			awaitService: "SERVICE_NAME",
-			outputContains: &[]string{
+			outputContains: []string{
 				"services to monitor:",
 				"SERVICE_NAME, Latest Release - ",
 				"Listening on ",
@@ -123,7 +124,7 @@ func TestRun(t *testing.T) {
 			name:         "config with services and some !active",
 			file:         testYAML_Argus_SomeInactive,
 			serverStarts: true,
-			outputContains: &[]string{
+			outputContains: []string{
 				"Found 1 services to monitor:",
 				"Shutdown complete",
 			},
@@ -133,33 +134,32 @@ func TestRun(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout and sharing log resultChannel.
+			// Serial: sets env vars, captures stdout and shares the flag vars.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tempDir := t.TempDir()
 			file := filepath.Join(tempDir, "config.yml")
-			tc.file(file)
+			tc.file(t, file)
 			resetFlags()
 			configFile = &file
 			if tc.resetPassword != "" {
 				config.AuthResetPassword = new(tc.resetPassword)
 				if err := flag.Set("auth.reset-password", tc.resetPassword); err != nil {
-					t.Fatalf(
-						"%s\nset auth.reset-password: %v",
-						packageName, err,
-					)
+					t.Fatalf("flag.Set() failed: %v", err)
 				}
 				t.Cleanup(func() { _ = flag.Set("auth.reset-password", "") })
 			}
 			env := map[string]string{
 				"ARGUS_SERVICE_LATEST_VERSION_GITHUB_ACCESS_TOKEN": test.GitHubToken(t),
 				"ARGUS_DATA_DATABASE_FILE":                         filepath.Join(tempDir, "argus.db"),
+				"ARGUS_LOG_LEVEL":                                  "DEBUG",
 			}
 			port := freePort(t)
 			env["ARGUS_WEB_LISTEN_PORT"] = strconv.Itoa(port)
-			test.SetEnv(t, env)
+			test.IsolateEnv(t, env)
 			if tc.preStartFunc != nil {
-				tc.preStartFunc(tempDir)
+				tc.preStartFunc(t, tempDir)
 			}
 
 			if tc.awaitService != "" {
@@ -167,11 +167,33 @@ func TestRun(t *testing.T) {
 				metric.LatestVersionQueryResultLast.Reset()
 			}
 
-			resultChannel := make(chan int)
-			// WHEN: run is called.
+			resultChannel := make(chan int, 1)
+			var exitCode *int
+
 			go func() {
 				resultChannel <- run()
 			}()
+
+			// Covers a wait below failing, or run() not exiting.
+			t.Cleanup(func() {
+				if exitCode != nil {
+					return
+				}
+				select {
+				case <-resultChannel:
+					return
+				default:
+				}
+				// Keeps the SIGTERM from killing the test binary should run() return first.
+				sink := make(chan os.Signal, 1)
+				signal.Notify(sink, syscall.SIGTERM)
+				defer signal.Stop(sink)
+				_ = syscall.Kill(os.Getpid(), syscall.SIGTERM)
+				select {
+				case <-resultChannel:
+				case <-time.After(15 * time.Second):
+				}
+			})
 
 			// Shut the run down once it is serving, rather than leaking it.
 			if tc.serverStarts {
@@ -180,58 +202,84 @@ func TestRun(t *testing.T) {
 					waitForServiceQuery(t, port, tc.awaitService)
 				}
 				if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {
-					t.Fatalf(
-						"%s\nSIGTERM failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("syscall.Kill() failed: %v", err)
 				}
 			}
 
-			var exitCode *int
 			select {
 			case code := <-resultChannel:
 				exitCode = &code
 			case <-time.After(15 * time.Second):
-				t.Errorf("%s\nrun timed out waiting for exit code", packageName)
+				t.Error("run timed out waiting for exit code")
 			}
 
-			// THEN: the program will have printed everything expected.
 			stdout := releaseStdout()
-			t.Logf(
-				"%s\nstdout: %q",
-				packageName, stdout,
-			)
-			if tc.outputContains != nil {
-				for _, text := range *tc.outputContains {
-					if !strings.Contains(stdout, text) {
-						t.Errorf(
-							"%s\n%q couldn't be found in stdout:\n%s",
-							packageName, text, stdout,
-						)
-					}
+			for _, text := range tc.outputContains {
+				if !strings.Contains(stdout, text) {
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, text)
 				}
 			}
 
-			// AND: the program will not have printed anything unexpected.
-			if tc.outputExcludes != nil {
-				for _, text := range *tc.outputExcludes {
-					if strings.Contains(stdout, text) {
-						t.Errorf(
-							"%s\n%q unexpectedly found in stdout:\n%s",
-							packageName, text, stdout,
-						)
-					}
+			for _, text := range tc.outputExcludes {
+				if strings.Contains(stdout, text) {
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: NOT %q", stdout, text)
 				}
 			}
 
-			// AND: the exit code is as expected.
 			wantCode := test.StringifyPtr(tc.exitCode)
 			gotCode := test.StringifyPtr(exitCode)
 			if wantCode != gotCode {
-				t.Errorf(
-					"%s\nexit code mismatch\ngot:  %s\nwant: %s",
-					packageName, gotCode, wantCode,
-				)
+				t.Errorf("exit code mismatch\ngot:  %s\nwant: %s", gotCode, wantCode)
+			}
+		})
+	}
+}
+
+func TestAwaitShutdown(t *testing.T) {
+	tests := []struct {
+		name     string
+		blocks   bool
+		timeout  time.Duration
+		wantLog  string
+		wantCode int
+	}{
+		{
+			name:     "wait returns in time",
+			timeout:  10 * time.Second,
+			wantLog:  "Shutdown complete",
+			wantCode: 0,
+		},
+		{
+			name:     "wait outlasts the timeout",
+			blocks:   true,
+			timeout:  time.Millisecond,
+			wantLog:  "shutdown timed out",
+			wantCode: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
+			releaseStdout := test.CaptureLog(t, logx.Default())
+			release := make(chan struct{})
+			t.Cleanup(func() { close(release) })
+			wait := func() error {
+				if tc.blocks {
+					<-release
+				}
+				return nil
+			}
+
+			got := awaitShutdown(wait, tc.timeout)
+
+			stdout := releaseStdout()
+			if got != tc.wantCode {
+				t.Errorf("exit code mismatch\ngot:  %d\nwant: %d", got, tc.wantCode)
+			}
+			if !strings.Contains(stdout, tc.wantLog) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.wantLog)
 			}
 		})
 	}
@@ -243,10 +291,7 @@ func freePort(t *testing.T) int {
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatalf(
-			"%s\nreserve a port: %v",
-			packageName, err,
-		)
+		t.Fatalf("net.Listen() failed: %v", err)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	_ = listener.Close()
@@ -259,18 +304,17 @@ func waitForListener(t *testing.T, port int) {
 
 	address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 	deadline := time.Now().Add(10 * time.Second)
+	var err error
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", address, time.Second)
+		var conn net.Conn
+		conn, err = net.DialTimeout("tcp", address, time.Second)
 		if err == nil {
 			_ = conn.Close()
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf(
-		"%s\nnothing listening on %s within the deadline",
-		packageName, address,
-	)
+	t.Fatalf("timed out: net.DialTimeout(%q) failed: %v", address, err)
 }
 
 // waitForServiceQuery blocks until the running instance has completed a
@@ -279,26 +323,29 @@ func waitForServiceQuery(t *testing.T, port int, serviceID string) {
 	t.Helper()
 
 	want := fmt.Sprintf(`latest_version_query_result_last{id="%s"`, serviceID)
-	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", port)
+	metricsURL := fmt.Sprintf("http://127.0.0.1:%d/metrics", port)
 	deadline := time.Now().Add(15 * time.Second)
+	var body string
 	for time.Now().Before(deadline) {
-		if strings.Contains(fetch(t, url), want) {
+		body = fetch(metricsURL)
+		if strings.Contains(body, want) {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf(
-		"%s\n%s never reported a query at %s",
-		packageName, serviceID, url,
-	)
+	var got []string
+	for line := range strings.Lines(body) {
+		if strings.HasPrefix(line, "latest_version_query_result_last") {
+			got = append(got, strings.TrimSpace(line))
+		}
+	}
+	t.Fatalf("timed out: /metrics mismatch\ngot:  %q\nwant: %q", got, want)
 }
 
-// fetch GETs url, returning an empty body on any failure.
-func fetch(t *testing.T, url string) string {
-	t.Helper()
-
+// fetch GETs target, returning an empty body on any failure.
+func fetch(target string) string {
 	//#nosec G107 -- the URL is the test's own listener.
-	resp, err := http.Get(url)
+	resp, err := http.Get(target)
 	if err != nil {
 		return ""
 	}

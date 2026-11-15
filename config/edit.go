@@ -31,9 +31,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 	logFrom := logx.LogFrom{Primary: "AddService"}
 
 	if newService.ID == "" {
-		err := &decode.ErrField{Key: "id"}
-		logx.Error(err, logFrom, true)
-		return err
+		return &decode.ErrField{Key: "id"}
 	}
 
 	c.OrderMu.Lock()
@@ -41,9 +39,7 @@ func (c *Config) AddService(oldServiceID string, newService *service.Service) er
 
 	// Check a service does not already exist with the new ID or name.
 	if c.serviceIDTaken(oldServiceID, newService) {
-		err := fmt.Errorf("service %q already exists", newService.ID)
-		logx.Error(err, logFrom, true)
-		return err
+		return fmt.Errorf("service %q already exists", newService.ID)
 	}
 
 	logFrom.Secondary = newService.ID

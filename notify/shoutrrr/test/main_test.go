@@ -17,16 +17,12 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
-var packageName = "shoutrrrtest"
-
 func TestShoutrrr(t *testing.T) {
-	// GIVEN: the failing and self-signed certificate flags.
 	tests := []struct {
 		name                    string
 		failing, selfSignedCert bool
@@ -66,63 +62,22 @@ func TestShoutrrr(t *testing.T) {
 				wantHost = test.NotifyGotify.HostInvalid
 			}
 
-			// WHEN: Shoutrrr is called.
 			got := Shoutrrr(t, tc.failing, tc.selfSignedCert)
 
-			prefix := fmt.Sprintf(
-				"%s\nTestShoutrrr(failing: %t, selfSigned: %t)",
-				packageName, tc.failing, tc.selfSignedCert,
-			)
-
-			// THEN: the token should be as expected.
-			key := "token"
-			if got.URLFields[key] != wantToken {
-				t.Errorf(
-					"%s got a mismatch on url_fields[%q]\ngot:  %q\nwant: %q",
-					prefix, key,
-					got.URLFields["token"], wantToken,
-				)
+			fieldTests := []test.FieldAssertion{
+				{Name: "URLFields", Got: got.URLFields, Mode: test.CompareNotNil},
+				{Name: `URLFields["token"]`, Got: got.URLFields["token"], Want: wantToken, Mode: test.CompareEqual},
+				{Name: `URLFields["host"]`, Got: got.URLFields["host"], Want: wantHost, Mode: test.CompareEqual},
+				{Name: "Options", Got: got.Options, Mode: test.CompareNotNil},
+				{Name: "Params", Got: got.Params, Mode: test.CompareNotNil},
+				{Name: "Main", Got: got.Main, Mode: test.CompareNotNil},
+				{Name: "Defaults", Got: got.Defaults, Mode: test.CompareNotNil},
+				{Name: "HardDefaults", Got: got.HardDefaults, Mode: test.CompareNotNil},
+				{Name: "ServiceStatus", Got: got.ServiceStatus, Mode: test.CompareNotNil},
+				{Name: "Failed", Got: got.Failed, Mode: test.CompareNotNil},
 			}
-
-			// AND: the host should be as expected.
-			key = "host"
-			if got.URLFields[key] != wantHost {
-				t.Errorf(
-					"%s got a mismatch on url_fields[%q]\ngot:  %q\nwant: %q",
-					prefix, key,
-					got.URLFields["host"], wantHost,
-				)
-			}
-
-			// AND: the maps should be initialised.
-			if got.Options == nil {
-				t.Errorf("%s Options not initialised. got nil", prefix)
-			}
-			if got.URLFields == nil {
-				t.Errorf("%s URLFields not initialised. got nil", prefix)
-			}
-			if got.Params == nil {
-				t.Errorf("%s Params not initialised. got nil", prefix)
-			}
-
-			// AND: the defaults should be set.
-			if got.Main == nil {
-				t.Errorf("%s Main not set", prefix)
-			}
-			if got.Defaults == nil {
-				t.Errorf("%s Defaults not set", prefix)
-			}
-			if got.HardDefaults == nil {
-				t.Errorf("%s HardDefaults not set", prefix)
-			}
-
-			// AND: the fails are initialised and set.
-			if got.ServiceStatus == nil || got.Failed == nil {
-				if got.ServiceStatus == nil {
-					t.Errorf("%s ServiceStatus not set", prefix)
-				} else {
-					t.Errorf("%s ServiceStatus.Failed not set", prefix)
-				}
+			if testErr := test.AssertFields(t, fieldTests, "Shoutrrr"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}

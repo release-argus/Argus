@@ -26,65 +26,98 @@ import (
 )
 
 func TestFormatError(t *testing.T) {
-	// GIVEN: an error.
 	tests := []struct {
 		name     string
 		err      error
 		expected string
 	}{
-		// Base cases.
 		{
-			name:     "nil error",
+			name:     "base/nil error",
 			err:      nil,
 			expected: "",
 		},
 		{
-			name:     "joined nil errors",
+			name:     "base/joined nil errors",
 			err:      errors.Join(nil, nil),
 			expected: "",
 		},
 		{
-			name:     "single flat error",
-			err:      fmt.Errorf("root"),
+			name:     "base/single flat error",
+			err:      errors.New("root"),
 			expected: "root",
 		},
-
-		// Single unwrap.
 		{
 			name: "single unwrap/simple",
 			err: fmt.Errorf(
 				"outer: %w",
-				fmt.Errorf("inner"),
+				errors.New("inner"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer:
-  inner`, "\n"),
+  inner`,
 		},
 		{
 			name: "single unwrap/no colon",
 			err: fmt.Errorf(
 				"outer message %w",
-				fmt.Errorf("inner"),
+				errors.New("inner"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer message
-  inner`, "\n"),
+  inner`,
 		},
-
-		// Deep unwrap chains.
 		{
-			name: "two level unwrap chain",
+			name: "single unwrap/wrapped error at beginning",
+			err: fmt.Errorf(
+				"%w: test:read @ global",
+				errors.New("invalid grant"),
+			),
+			expected: `
+invalid grant: test:read @ global`,
+		},
+		{
+			name: "single unwrap/wrapped error at beginning without colon",
+			err: fmt.Errorf(
+				"%w test:read @ global",
+				errors.New("invalid grant"),
+			),
+			expected: `
+invalid grant test:read @ global`,
+		},
+		{
+			name: "single unwrap/wrapped error at beginning with trailing newline",
+			err: fmt.Errorf(
+				"%w: context\n",
+				errors.New("invalid grant"),
+			),
+			expected: `
+invalid grant: context`,
+		},
+		{
+			name: "two level unwrap chain/wrapped errors at end",
 			err: fmt.Errorf(
 				"a: %w",
 				fmt.Errorf(
 					"b: %w",
-					fmt.Errorf("c"),
+					errors.New("c"),
 				),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 a:
   b:
-    c`, "\n"),
+    c`,
+		},
+		{
+			name: "two level unwrap chain/wrapped errors at beginning",
+			err: fmt.Errorf(
+				"%w: context A",
+				fmt.Errorf(
+					"%w: context B",
+					errors.New("root"),
+				),
+			),
+			expected: `
+root: context B: context A`,
 		},
 		{
 			name: "three level unwrap chain",
@@ -94,120 +127,124 @@ a:
 					"b: %w",
 					fmt.Errorf(
 						"c: %w",
-						fmt.Errorf("d"),
+						errors.New("d"),
 					),
 				),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 a:
   b:
     c:
-      d`, "\n"),
+      d`,
 		},
-
-		// Multi-line error messages.
 		{
-			name: "multi-line parent error",
+			name: "multi-line/parent error",
 			err: fmt.Errorf(
 				"outer\nline2: %w",
-				fmt.Errorf("inner"),
+				errors.New("inner"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer
 line2:
-  inner`, "\n"),
+  inner`,
 		},
 		{
-			name: "multi-line child error",
+			name: "multi-line/child error",
 			err: fmt.Errorf(
 				"outer: %w",
-				fmt.Errorf("inner\nline2"),
+				errors.New("inner\nline2"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer:
   inner
-  line2`, "\n"),
+  line2`,
 		},
 		{
-			name: "multi-line both parent and child",
+			name: "multi-line/parent and child errors",
 			err: fmt.Errorf(
 				"outer\nlineB: %w",
-				fmt.Errorf("inner\nlineC"),
+				errors.New("inner\nlineC"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer
 lineB:
   inner
-  lineC`, "\n"),
+  lineC`,
 		},
-
-		// Whitespace normalisation cases.
 		{
-			name:     "trailing newline trimmed",
-			err:      fmt.Errorf("error\n"),
+			name: "multi-line/wrapped error",
+			err: fmt.Errorf(
+				"%w: context line1\ncontext line2",
+				errors.New("invalid grant"),
+			),
+			expected: `
+invalid grant: context line1
+context line2`,
+		},
+		{
+			name:     "whitespace/trailing newline trimmed",
+			err:      errors.New("error\n"),
 			expected: "error",
 		},
 		{
-			name: "inner trailing newline trimmed",
+			name: "whitespace/inner trailing newline trimmed",
 			err: fmt.Errorf(
 				"outer: %w",
-				fmt.Errorf("inner\n"),
+				errors.New("inner\n"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 outer:
-  inner`, "\n"),
+  inner`,
 		},
-
-		// Joined errors.
 		{
-			name: "joined errors",
+			name: "joined errors/simple",
 			err: errors.Join(
-				fmt.Errorf("first"),
-				fmt.Errorf("second"),
+				errors.New("first"),
+				errors.New("second"),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 first
-second`, "\n"),
+second`,
 		},
 		{
-			name: "joined errors with single wrap",
+			name: "joined errors/single wrap",
 			err: errors.Join(
 				fmt.Errorf(
 					"first: %w",
-					fmt.Errorf("child"),
+					errors.New("child"),
 				),
 				fmt.Errorf(
 					"second: %w",
-					fmt.Errorf("child"),
+					errors.New("child"),
 				),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 first:
   child
 second:
-  child`, "\n"),
+  child`,
 		},
 		{
-			name: "joined errors with multiple wraps and joins",
+			name: "joined errors/multiple wraps and joins",
 			err: errors.Join(
-				fmt.Errorf("hello"),
+				errors.New("hello"),
 				fmt.Errorf(
 					"a: %w",
-					fmt.Errorf("1"),
+					errors.New("1"),
 				),
 				fmt.Errorf(
 					"b: %w",
 					errors.Join(
-						fmt.Errorf("b.1"),
-						fmt.Errorf("b.2"),
+						errors.New("b.1"),
+						errors.New("b.2"),
 						fmt.Errorf(
 							"what: %w",
-							fmt.Errorf("bye"),
+							errors.New("bye"),
 						),
 					),
 				),
 			),
-			expected: strings.TrimPrefix(`
+			expected: `
 hello
 a:
   1
@@ -215,29 +252,52 @@ b:
   b.1
   b.2
   what:
-    bye`, "\n"),
+    bye`,
+		},
+		{
+			name: "joined errors/wrapped errors at beginning",
+			err: errors.Join(
+				fmt.Errorf(
+					"%w: first context",
+					errors.New("first"),
+				),
+				fmt.Errorf(
+					"%w trailing context",
+					errors.New("second"),
+				),
+			),
+			expected: `
+first: first context
+second trailing context`,
+		},
+		{
+			name: "mixed prefix and suffix wrapping",
+			err: fmt.Errorf(
+				"outer: %w",
+				fmt.Errorf(
+					"%w: context",
+					errors.New("inner"),
+				),
+			),
+			expected: `
+outer:
+  inner: context`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			// WHEN: FormatError is called on it.
 			got := FormatError(tc.err)
 
-			// THEN: the error is formatted as expected.
+			tc.expected = strings.TrimPrefix(tc.expected, "\n")
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nFormatError() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestAppendFormattedErrorLines(t *testing.T) {
-	// GIVEN: an error.
 	tests := []struct {
 		name string
 		err  error
@@ -250,14 +310,14 @@ func TestAppendFormattedErrorLines(t *testing.T) {
 		},
 		{
 			name: "single error",
-			err:  fmt.Errorf("error"),
+			err:  errors.New("error"),
 			want: []string{"error"},
 		},
 		{
 			name: "multiple errors",
 			err: errors.Join(
-				fmt.Errorf("first"),
-				fmt.Errorf("second"),
+				errors.New("first"),
+				errors.New("second"),
 			),
 			want: []string{
 				"first",
@@ -265,10 +325,10 @@ func TestAppendFormattedErrorLines(t *testing.T) {
 			},
 		},
 		{
-			name: "wrapped error",
+			name: "wrapped error/simple",
 			err: fmt.Errorf(
 				"key: %w",
-				fmt.Errorf("error"),
+				errors.New("error"),
 			),
 			want: []string{
 				"key:",
@@ -276,14 +336,33 @@ func TestAppendFormattedErrorLines(t *testing.T) {
 			},
 		},
 		{
-			name: "wrapped custom error",
+			name: "wrapped error/custom",
 			err: &decode.ErrKeyField{
 				Key: "key",
-				Err: fmt.Errorf("error"),
+				Err: errors.New("error"),
 			},
 			want: []string{
 				"key:",
 				"  error",
+			},
+		}, {
+			name: "wrapped error/at beginning",
+			err: fmt.Errorf(
+				"%w: context",
+				errors.New("error"),
+			),
+			want: []string{
+				"error: context",
+			},
+		},
+		{
+			name: "wrapped error/at beginning with multiline context",
+			err: fmt.Errorf(
+				"%w: context line1\ncontext line2",
+				errors.New("error"),
+			),
+			want: []string{
+				"error: context line1\ncontext line2",
 			},
 		},
 	}
@@ -292,26 +371,23 @@ func TestAppendFormattedErrorLines(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var lines []string
+			lines := appendFormattedErrorLines(tc.err, nil, 0)
 
-			// WHEN: appendFormattedErrorLines is called.
-			lines = appendFormattedErrorLines(tc.err, lines, 0)
-
-			// THEN: the number of lines is as expected.
 			if got, want := len(lines), len(tc.want); got != want {
 				t.Fatalf(
-					"%s\nappendFormattedErrorLines() length mismatch\ngot:  %d\nwant: %d",
-					packageName, got, want,
+					"len(lines) mismatch\ngot:  %d (%q)\nwant: %d (%q)",
+					got, lines,
+					want, tc.want,
 				)
 			}
 
-			// AND: the lines are as expected.
 			for i, wantLine := range tc.want {
 				if lines[i] != wantLine {
 					t.Fatalf(
-						"%s\nappendFormattedErrorLines() mismatch at index %d\ngot:  %v\nwant: %v",
-						packageName, i,
-						lines, tc.want,
+						"lines[%d] mismatch\ngot:  %q (%q)\nwant: %q (%q)",
+						i,
+						lines[i], lines,
+						wantLine, tc.want,
 					)
 				}
 			}

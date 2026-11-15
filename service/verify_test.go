@@ -17,8 +17,6 @@
 package service
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -33,7 +31,6 @@ import (
 )
 
 func TestServices_Print(t *testing.T) {
-	// GIVEN: a Services.
 	tests := []struct {
 		name     string
 		services *Services
@@ -97,36 +94,25 @@ func TestServices_Print(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureStdout(t)
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
-			tc.want = strings.ReplaceAll(tc.want, "\t", "")
 
-			// WHEN: Print is called.
 			tc.services.Print("", tc.ordering)
 
-			prefix := fmt.Sprintf(
-				"%s\nServices.Print(prefix=\"\", order=%v)",
-				packageName, tc.ordering,
-			)
-
-			// THEN: it prints the want stdout.
 			stdout := releaseStdout()
 			if stdout != tc.want {
-				t.Errorf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name          string
 		options       opt.Defaults
@@ -150,6 +136,7 @@ func TestDefaults_CheckValues(t *testing.T) {
 					},
 				},
 			},
+			errRegex: `^$`,
 		},
 		{
 			name: "options with decode",
@@ -226,7 +213,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
@@ -235,11 +221,10 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestServices_CheckValues(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Services.
 	tests := []struct {
 		name     string
 		input    Services
@@ -277,7 +262,7 @@ func TestServices_CheckValues(t *testing.T) {
 				return DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
 						first:
-							comment: foo_comment",
+							comment: foo_comment
 							options:
 								interval: 10s
 							latest_version:
@@ -429,7 +414,6 @@ func TestServices_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -439,13 +423,10 @@ func TestServices_CheckValues(t *testing.T) {
 }
 
 func TestServices_CheckValues__nil(t *testing.T) {
-	// GIVEN: a nil Services pointer.
 	var s *Services
 
-	// WHEN/THEN: CheckValues returns no error and changed=false.
 	_, _ = test.AssertCheckValuesWithErrorAndChanged(
 		t,
-		packageName,
 		`^$`,
 		false,
 		s.CheckValues,
@@ -453,15 +434,13 @@ func TestServices_CheckValues__nil(t *testing.T) {
 }
 
 func TestService_CheckValues(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Service.
 	tests := []struct {
 		name     string
 		input    *Service
-		noInit   bool
 		errRegex string
 		changed  bool
 	}{
@@ -534,7 +513,7 @@ func TestService_CheckValues(t *testing.T) {
 		{
 			name: "options + latest_version + deployed_version err",
 			input: test.Must(t, func() (*Service, error) {
-				cfgOverride := plainDefaultsConfig(t)
+				cfgOverride := plainDefaultsConfig()
 				cfgOverride.Hard.DeployedVersionLookup.Method = ""
 				return DecodeService(
 					"yaml", []byte(test.TrimYAML(`
@@ -799,7 +778,6 @@ func TestService_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -809,11 +787,10 @@ func TestService_CheckValues(t *testing.T) {
 }
 
 func TestService_CheckValues__deployed_version__manual(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Service with a `manual` deployed_version carrying a version.
 	tests := []struct {
 		name        string
 		version     string
@@ -853,58 +830,53 @@ func TestService_CheckValues__deployed_version__manual(t *testing.T) {
 				)
 			})
 
-			// AND: a Status wired to the announce/database channels.
 			svc.Status.AnnounceChannel = make(chan []byte, 8)
 			svc.Status.DatabaseChannel = make(chan dbtype.Message, 8)
 
-			// WHEN: CheckValues is called.
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				false,
 				svc.CheckValues,
 			)
 
-			prefix := fmt.Sprintf("%s\nService.CheckValues()", packageName)
-
-			// THEN: it only validates - nothing is applied yet.
+			// CheckValues only validates.
 			if got := svc.Status.DeployedVersion(); got != "" {
 				t.Errorf(
-					"%s should not apply the version\ngot: %q",
-					prefix, got,
+					"before ApplyConfiguredVersion: Status.DeployedVersion() mismatch\n"+
+						"got:  %q\nwant: \"\"",
+					got,
 				)
 			}
 
-			// WHEN: the configured version is applied (as Track and a service edit do).
+			// Mirrors Track and a service edit.
 			svc.DeployedVersionLookup.ApplyConfiguredVersion()
-			prefix = fmt.Sprintf("%s\nApplyConfiguredVersion()", packageName)
 
-			// THEN: a valid version reaches the Status, and an invalid one does not.
 			if got := svc.Status.DeployedVersion(); got != tc.wantVersion {
 				t.Errorf(
-					"%s mismatch on Status.DeployedVersion()\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantVersion,
+					"after ApplyConfiguredVersion: Status.DeployedVersion() mismatch\n"+
+						"got:  %q\nwant: %q",
+					got, tc.wantVersion,
 				)
 			}
 
-			// AND: it is never broadcast.
 			if got := len(svc.Status.AnnounceChannel); got != 0 {
 				t.Errorf(
-					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: 0",
-					prefix, got,
+					"after ApplyConfiguredVersion: Status.AnnounceChannel message count mismatch\n"+
+						"got:  %d\nwant: 0",
+					got,
 				)
 			}
 
-			// AND: a valid version is persisted, so that it survives a restart.
 			wantDBMessages := 0
 			if tc.wantVersion != "" {
 				wantDBMessages = 1
 			}
 			if got := len(svc.Status.DatabaseChannel); got != wantDBMessages {
 				t.Errorf(
-					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, wantDBMessages,
+					"after ApplyConfiguredVersion: Status.DatabaseChannel message count mismatch\n"+
+						"got:  %d\nwant: %d",
+					got, wantDBMessages,
 				)
 			}
 		})

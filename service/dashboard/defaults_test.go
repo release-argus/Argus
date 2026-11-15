@@ -24,7 +24,6 @@ import (
 )
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: an input string in a specified format.
 	tests := []struct {
 		name         string
 		format, data string
@@ -35,7 +34,6 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^dashboard:
 					jsontext:
@@ -50,18 +48,19 @@ func TestDecodeDefaults(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:   "YAML/empty",
-			format: "yaml",
-			data:   "",
-			want:   "{}\n",
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/filled",
 			format: "json",
 			data: test.TrimJSON(`{
 				"auto_approve": false,
-				"icon": "https://example.com/icon_here"
-				"icon_link_to": "https://example.com/not_an_icon"
+				"icon": "https://example.com/icon_here",
+				"icon_link_to": "https://example.com/not_an_icon",
 				"web_url": "https://example.com/somewhere"
 			}`),
 			want: test.TrimYAML(`
@@ -70,6 +69,7 @@ func TestDecodeDefaults(t *testing.T) {
 				icon_link_to: https://example.com/not_an_icon
 				web_url: https://example.com/somewhere
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/filled",
@@ -86,6 +86,7 @@ func TestDecodeDefaults(t *testing.T) {
 				icon_link_to: https://example.com/not_an_icon
 				web_url: https://example.com/somewhere
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "invalid format",
@@ -148,7 +149,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -158,7 +158,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		opt  *Defaults
@@ -213,29 +212,24 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.opt.IsZero()
 
-			// THEN: it should return the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a new Defaults instance.
-	options := Defaults{}
+	defaults := Defaults{}
 
-	// WHEN: Default is called.
-	options.Default()
+	defaults.Default()
 
-	// THEN: the AutoApprove field should be given a default value.
-	if options.AutoApprove == nil {
-		t.Errorf("%s\nDefaults.Default() .AutoApprove mismatch\ngot:  nil\nwant: non-nil", packageName)
+	if defaults.AutoApprove == nil || *defaults.AutoApprove {
+		t.Errorf(
+			"Defaults.AutoApprove mismatch\ngot:  %s\nwant: false",
+			test.StringifyPtr(defaults.AutoApprove),
+		)
 	}
 }

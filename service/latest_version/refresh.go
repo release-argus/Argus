@@ -37,7 +37,7 @@ func Refresh(
 		return "", false, errors.New("lookup is nil")
 	}
 
-	logFrom := logx.LogFrom{Primary: "latest_version/refresh", Secondary: lookup.GetServiceID()}
+	logFrom := logx.LogFrom{Primary: lookup.GetServiceID(), Secondary: "latest_version/refresh"}
 
 	// Whether this new semantic_version resolves differently than the current one.
 	semanticVerDiff := semanticVersioning != nil && (

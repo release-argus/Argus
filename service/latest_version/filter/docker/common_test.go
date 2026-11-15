@@ -28,7 +28,6 @@ import (
 func TestIsUsable(t *testing.T) {
 	now := time.Now().UTC()
 
-	// GIVEN: a query token and expiration time.
 	tests := []struct {
 		name       string
 		token      string
@@ -71,16 +70,10 @@ func TestIsUsable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: isUsable is called with it.
 			got := isUsable(tc.token, tc.validUntil)
 
-			// THEN: the true is returned if valid time meets requirements.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nisUsable(token=%q, validUntil=%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.token, tc.validUntil,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

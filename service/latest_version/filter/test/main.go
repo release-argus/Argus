@@ -31,8 +31,6 @@ func Require(t *testing.T, dockerType string) *filter.Require {
 	t.Helper()
 
 	requireDefaults, _ := filter.DecodeDefaults("yaml", nil)
-	requireHardDefaults, _ := filter.DecodeDefaults("yaml", nil)
-	requireHardDefaults.Default()
 
 	var image string
 	switch dockerType {

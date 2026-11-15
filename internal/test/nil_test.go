@@ -52,11 +52,6 @@ func TestIsNil(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "interface",
-			x:    interface{}(nil),
-			want: true,
-		},
-		{
 			name: "map",
 			x:    map[string]int{},
 			want: false,
@@ -71,21 +66,36 @@ func TestIsNil(t *testing.T) {
 			x:    []int{},
 			want: false,
 		},
+		{
+			name: "nil chan",
+			x:    (chan int)(nil),
+			want: true,
+		},
+		{
+			name: "nil func",
+			x:    (func())(nil),
+			want: true,
+		},
+		{
+			name: "nil map",
+			x:    map[string]int(nil),
+			want: true,
+		},
+		{
+			name: "nil slice",
+			x:    []int(nil),
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsNil is called on it.
 			got := isNil(tc.x)
 
-			// THEN: The result is as expected.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nIsNil(%v) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.x, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

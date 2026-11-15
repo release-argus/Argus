@@ -26,24 +26,20 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 )
 
-var packageName = "lvbase"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -53,28 +49,23 @@ type testLookup struct {
 
 // decodeTestLookup returns a new testLookup from a string in a given format (json/yaml).
 func decodeTestLookup(
-	t *testing.T,
 	format string,
 	data []byte,
 	options *opt.Options,
 	svcStatus *status.Status,
 	cfg DefaultsConfig,
 ) (*testLookup, error) {
-	t.Helper()
-
 	field := testLookup{
 		Defaults:     cfg.Soft,
 		HardDefaults: cfg.Hard,
 	}
 
-	// Unmarshal static fields.
-	if err := decode.Unmarshal(format, []byte(data), &field); err != nil {
+	if err := decode.Unmarshal(format, data, &field); err != nil {
 		return nil, err
 	}
 
-	// Require.
 	if err := UnmarshalRequire(
-		format, []byte(data),
+		format, data,
 		&field,
 		svcStatus,
 		&cfg.Soft.Require,
@@ -95,15 +86,13 @@ func decodeTestLookup(
 func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	t.Helper()
 
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
+	optCfg := opttest.PlainDefaultsConfig(t)
 
 	defaults, _ := DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
+	defaults.Options = optCfg.Soft
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.Options = optCfg.Hard
 
 	defaults.Require.SetDefaults(&hardDefaults.Require)
 

@@ -20,42 +20,48 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestGetDefaultOfDockerType(t *testing.T) {
-	// GIVEN: a Defaults.
 	defaults := &docker.Defaults{}
+	defaults.Default()
 
 	tests := []struct {
-		name   string
-		dType  string
-		expect docker.RegistryDefaults
-		err    bool
+		name     string
+		dType    string
+		want     docker.RegistryDefaults
+		errRegex string
 	}{
 		{
-			name:   "ecr",
-			dType:  "ecr",
-			expect: defaults.Registry.ECR,
+			name:     "ecr",
+			dType:    "ecr",
+			want:     defaults.Registry.ECR,
+			errRegex: `^$`,
 		},
 		{
-			name:   "ghcr",
-			dType:  "ghcr",
-			expect: defaults.Registry.GHCR,
+			name:     "ghcr",
+			dType:    "ghcr",
+			want:     defaults.Registry.GHCR,
+			errRegex: `^$`,
 		},
 		{
-			name:   "hub",
-			dType:  "hub",
-			expect: defaults.Registry.Hub,
+			name:     "hub",
+			dType:    "hub",
+			want:     defaults.Registry.Hub,
+			errRegex: `^$`,
 		},
 		{
-			name:   "quay",
-			dType:  "quay",
-			expect: defaults.Registry.Quay,
+			name:     "quay",
+			dType:    "quay",
+			want:     defaults.Registry.Quay,
+			errRegex: `^$`,
 		},
 		{
-			name:  "unknown",
-			dType: "foo",
-			err:   true,
+			name:     "unknown",
+			dType:    "foo",
+			errRegex: `^unknown docker registry type: "foo"$`,
 		},
 	}
 
@@ -63,70 +69,15 @@ func TestGetDefaultOfDockerType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetDefaultOfDockerType is called with the Defaults and a registry type.
 			got, err := GetDefaultOfDockerType(t, tc.dType, defaults)
-
-			// THEN: an error is returned when expected *unknown type).
-			if err != nil {
-				if tc.err {
-					return
-				}
-				t.Fatalf(
-					"%s\nunexpected error for type %q: %v",
-					packageName, tc.dType,
-					err,
-				)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			if got != tc.expect {
-				t.Fatalf(
-					"%s\npointer mismatch for type %q:\ngot:  %p\nwant: %p",
-					packageName, tc.dType,
-					got, tc.expect,
-				)
+			if got != tc.want {
+				t.Fatalf("RegistryDefaults mismatch\ngot:  %p\nwant: %p", got, tc.want)
 			}
 		})
-	}
-}
-
-func TestFakeRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: a FakeRegistryDefaults.
-	fake := &MockRegistryDefaults{}
-	// WHEN: IsZero is called.
-	got := fake.IsZero()
-	// THEN: false is returned.
-	if got != false {
-		t.Fatalf(
-			"%s\nunexpected IsZero result:\ngot:  %v\nwant: %v",
-			packageName, got, false,
-		)
-	}
-}
-
-func TestFakeRegistryDefaults_GetType(t *testing.T) {
-	// GIVEN: a FakeRegistryDefaults.
-	fake := &MockRegistryDefaults{}
-	// WHEN: GetType is called.
-	got := fake.GetType()
-	// THEN: "fake" is returned.
-	if got != "fake" {
-		t.Fatalf(
-			"%s\nunexpected GetType result:\ngot:  %q\nwant: %q",
-			packageName, got, "fake",
-		)
-	}
-}
-
-func TestFakeRegistryDefaults_String(t *testing.T) {
-	// GIVEN: a FakeRegistryDefaults.
-	fake := &MockRegistryDefaults{}
-	// WHEN: String is called.
-	got := fake.String("")
-	// THEN: an empty string is returned.
-	if got != "" {
-		t.Fatalf(
-			"%s\nunexpected String result:\ngot:  %q\nwant: %q",
-			packageName, got, "",
-		)
 	}
 }

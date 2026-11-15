@@ -21,26 +21,24 @@ import (
 	"testing"
 
 	latestver "github.com/release-argus/Argus/service/latest_version"
-	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 )
 
 // dummyGitHubToken stands in for a real token where no request is made.
 const dummyGitHubToken = "dummy-github-token"
 
-// PlainDefaultsConfig returns plain defaults and hardDefaults for testing.
+// PlainDefaultsConfig returns plain defaults and hardDefaults with a dummy GitHub token.
 func PlainDefaultsConfig(t *testing.T) latestver.DefaultsConfig {
 	t.Helper()
 
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
+	optCfg := opttest.PlainDefaultsConfig(t)
 
 	defaults, _ := latestver.DecodeDefaults("yaml", nil)
-	defaults.Common.Options = optDefaults
+	defaults.Common.Options = optCfg.Soft
 	hardDefaults, _ := latestver.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
 	hardDefaults.GitHub.AccessToken = dummyGitHubToken
-	hardDefaults.Common.Options = optHardDefaults
+	hardDefaults.Common.Options = optCfg.Hard
 
 	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)
 

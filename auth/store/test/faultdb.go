@@ -28,7 +28,7 @@ import (
 	"sync"
 	"testing"
 
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 // ErrInjected is the error produced by the fault-injecting driver.
@@ -76,7 +76,7 @@ func FaultDB(t *testing.T) (*sql.DB, *FaultState) {
 	state := &FaultState{}
 	db := sql.OpenDB(&faultConnector{
 		dsn:   ":memory:",
-		d:     sqliteDriver(t),
+		d:     &sqlite.Driver{},
 		state: state,
 	})
 
@@ -87,19 +87,6 @@ func FaultDB(t *testing.T) (*sql.DB, *FaultState) {
 	t.Cleanup(func() { _ = db.Close() })
 
 	return db, state
-}
-
-// sqliteDriver returns the registered modernc SQLite driver.
-func sqliteDriver(t *testing.T) driver.Driver {
-	t.Helper()
-
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("auth_store_test\nopen for driver lookup: %v", err)
-	}
-	d := db.Driver()
-	_ = db.Close()
-	return d
 }
 
 // faultConnector produces fault-injecting connections to a fixed DSN.
@@ -213,7 +200,7 @@ func (r faultResult) LastInsertId() (int64, error) {
 	return r.inner.LastInsertId() //nolint:wrapcheck
 }
 
-// RowsAffected injects a configured failure.
+// RowsAffected always fails with ErrInjected.
 func (faultResult) RowsAffected() (int64, error) {
 	return 0, ErrInjected
 }

@@ -19,14 +19,12 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	// WHEN: PlainDefaultsConfig is called.
 	optCfg := PlainDefaultsConfig(t)
 
-	// THEN: It returns a set of defaults.
-	if optCfg.Soft == nil || optCfg.Hard == nil {
-		t.Fatalf(
-			"%s\nPlainDefaultsConfig() returned nil, defaults: %v, hardDefaults: %v",
-			packageName, optCfg.Soft, optCfg.Hard,
-		)
+	if optCfg.Soft == nil {
+		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if optCfg.Hard == nil {
+		t.Error("DefaultsConfig.Hard mismatch\ngot:  nil\nwant: non-nil")
 	}
 }

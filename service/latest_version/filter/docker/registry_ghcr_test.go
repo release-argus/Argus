@@ -18,7 +18,6 @@ package docker
 
 import (
 	"encoding/base64"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -34,7 +33,6 @@ import (
 // #######################
 
 func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a GHCRRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -166,25 +164,19 @@ func TestGHCRRegistryDefaults_Unmarshal(t *testing.T) {
 				func(v *GHCRRegistryDefaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"GHCRRegistryDefaults",
+				"GHCRRegistryDefaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nGHCRRegistryDefaults.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("GHCRRegistryDefaults.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestGHCRRegistry_Unmarshal(t *testing.T) {
-	// GIVEN: a GHCRRegistry and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -340,26 +332,20 @@ func TestGHCRRegistry_Unmarshal(t *testing.T) {
 				func(v *GHCRRegistry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"GHCRRegistry",
+				"GHCRRegistry.Unmarshal",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if registry.Auth == nil {
-				t.Errorf(
-					"%s\nGHCRRegistry.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("GHCRRegistry.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
-	// GIVEN: a GHCRRegistry and JSON/YAML to decode into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -542,7 +528,6 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is decoded into itself.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.registry,
@@ -555,7 +540,6 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
 				"GHCRRegistry.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -569,7 +553,6 @@ func TestGHCRRegistry_ApplyOverrides(t *testing.T) {
 // ####################
 
 func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: a GHCRRegistryDefaults.
 	tests := []struct {
 		name     string
 		registry *GHCRRegistryDefaults
@@ -602,12 +585,12 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			want: true,
+			want: true, // IsZero ignores the cached query token.
 		},
 		{
-			name: "non-empty/all",
+			name: "non-empty/Token, queryToken and validUntil",
 			registry: &GHCRRegistryDefaults{
-				Auth: &GHCRAuth{
+				Auth: &GHCRAuthDefaults{
 					Token:      "foo",
 					queryToken: "bar",
 					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -621,22 +604,16 @@ func TestGHCRRegistryDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called with it.
 			got := tc.registry.IsZero()
 
-			// THEN: true is returned if all fields are empty.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nGHCRRegistryDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestGHCRRegistry_IsZero(t *testing.T) {
-	// GIVEN: a GHCRRegistry.
 	tests := []struct {
 		name string
 		data *GHCRRegistry
@@ -682,22 +659,16 @@ func TestGHCRRegistry_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nGHCRRegistry.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestGHCRRegistry_Copy(t *testing.T) {
-	// GIVEN: a GHCRRegistry.
 	tests := []struct {
 		name     string
 		registry *GHCRRegistry
@@ -719,9 +690,12 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 				Image: "i1",
 				Tag:   "t1",
 				Auth: &GHCRAuth{
-					Token:    "t1",
-					defaults: &GHCRAuthDefaults{},
+					Token:      "t1",
+					queryToken: "qT",
+					validUntil: time.Now().Add(time.Hour),
+					defaults:   &GHCRAuthDefaults{},
 				},
+				defaults: &GHCRRegistryDefaults{},
 			},
 			want: test.TrimYAML(`
 				image: i1
@@ -736,49 +710,47 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.registry.Copy()
 
-			prefix := fmt.Sprintf("%s\nGHCRRegistry.Copy()", packageName)
-
-			// THEN: the returned Registry unmarshals the same.
 			if got := decode.ToYAMLString(gotInterface, ""); got != tc.want {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("GHCRRegistry mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned Registry is a GHCRRegistry.
 			got, ok := gotInterface.(*GHCRRegistry)
 			if !ok {
 				if gotInterface == nil {
 					return
 				}
 				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, gotInterface,
+					"GHCRRegistry.Copy() type mismatch\ngot:  %T\nwant: *GHCRRegistry",
+					gotInterface,
 				)
 			}
 
-			// AND: the unmarshaled values are the same.
 			gotAuth, ok := got.GetAuth().(*GHCRAuth)
 			hadAuth, _ := tc.registry.GetAuth().(*GHCRAuth)
-			if !ok ||
-				gotAuth.queryToken != hadAuth.queryToken ||
+			if !ok {
+				t.Fatalf(
+					"GHCRRegistry.GetAuth() type mismatch\ngot:  %T\nwant: *GHCRAuth",
+					got.GetAuth(),
+				)
+			}
+			if gotAuth.queryToken != hadAuth.queryToken ||
 				gotAuth.validUntil != hadAuth.validUntil ||
 				got.defaults != tc.registry.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %s",
-					prefix, got, tc.want,
+					"GHCRRegistry mismatch\n"+
+						"got:  Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p\n"+
+						"want: Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p",
+					gotAuth.queryToken, gotAuth.validUntil, got.defaults,
+					hadAuth.queryToken, hadAuth.validUntil, tc.registry.defaults,
 				)
 			}
 
-			// AND: the returned GHCRAuth is at a different address.
 			if gotAuth == hadAuth {
 				t.Fatalf(
-					"%s returned pointer to same Auth for instance %q",
-					prefix, tc.name,
+					"GHCRRegistry.GetAuth(): copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotAuth, hadAuth,
 				)
 			}
 		})
@@ -790,7 +762,6 @@ func TestGHCRRegistry_Copy(t *testing.T) {
 // ########################
 
 func TestGHCRRegistryDefaults_String(t *testing.T) {
-	// GIVEN: a GHCRRegistryDefaults.
 	tests := []struct {
 		name string
 		data *GHCRRegistryDefaults
@@ -829,7 +800,7 @@ func TestGHCRRegistryDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"GHCRRegistryDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -838,7 +809,6 @@ func TestGHCRRegistryDefaults_String(t *testing.T) {
 }
 
 func TestGHCRRegistry_String(t *testing.T) {
-	// GIVEN: a GHCRRegistry.
 	tests := []struct {
 		name string
 		data *GHCRRegistry
@@ -888,7 +858,7 @@ func TestGHCRRegistry_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"GHCRRegistry.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -901,34 +871,22 @@ func TestGHCRRegistry_String(t *testing.T) {
 // #######################
 
 func TestGHCRRegistryDefaults_GetType(t *testing.T) {
-	// GIVEN: a GHCRRegistryDefaults.
 	var registry GHCRRegistryDefaults
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "ghcr"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestGHCRRegistry_GetType(t *testing.T) {
-	// GIVEN: a GHCRRegistry.
 	var registry GHCRRegistry
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "ghcr"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -937,7 +895,6 @@ func TestGHCRRegistry_GetType(t *testing.T) {
 // #########################
 
 func TestGHCRRegistry_NewRequest(t *testing.T) {
-	// GIVEN: a GHCRRegistry, and a tag.
 	tests := []struct {
 		name     string
 		registry *GHCRRegistry
@@ -987,44 +944,22 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 		},
 	}
 
-	// AND: Headers to verify being set.
-	headers := map[string]string{
-		"Accept": "application/vnd.oci.image.index.v1+json",
-	}
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: newRequest() is called on it.
 			req, err := tc.registry.newRequest(tc.tag)
-
-			prefix := fmt.Sprintf(
-				"%s\nGHCRRegistry.newRequest(%q)",
-				packageName, tc.tag,
-			)
-
-			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: The headers are set.
-			for key, value := range headers {
-				if got := req.Header.Get(key); got != value {
-					t.Errorf(
-						"%s .Header[%q] mismatch\ngot:  %q\nwant: %q",
-						prefix, key,
-						got, value,
-					)
-				}
+			want := "application/vnd.oci.image.index.v1+json"
+			if got := req.Header.Get("Accept"); got != want {
+				t.Errorf("http.Request.Header[\"Accept\"] mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -1035,7 +970,6 @@ func TestGHCRRegistry_NewRequest(t *testing.T) {
 // ###################
 
 func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -1060,14 +994,12 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 			name:     "JSON/invalid",
 			format:   "json",
 			data:     "invalid",
-			want:     nil,
 			errRegex: `invalid character`,
 		},
 		{
 			name:   "YAML/invalid",
 			format: "yaml",
 			data:   "invalid",
-			want:   nil,
 			errRegex: test.TrimYAML(`
 				^[^\s]+ string was used where mapping is expected
 				[^\s]+ .+
@@ -1117,23 +1049,21 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			auth, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*GHCRAuthDefaults, error) {
-					var zero GHCRAuthDefaults
-					err := decode.Unmarshal(format, data, &zero)
-					return &zero, err
+					var decoded GHCRAuthDefaults
+					err := decode.Unmarshal(format, data, &decoded)
+					return &decoded, err
 				},
 				tc.format, tc.data,
 				func(v *GHCRAuthDefaults) string { return v.String("") },
-				func() string { return decode.ToYAMLString(tc.want, "") }(),
+				decode.ToYAMLString(tc.want, ""),
 				tc.errRegex,
-				packageName,
-				"GHCRAuthDefaults",
+				"GHCRAuthDefaults.Unmarshal",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
@@ -1141,11 +1071,9 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 				return
 			}
 
-			// AND: The queryToken is encoded only if not already.
 			if auth.queryToken != tc.want.queryToken {
 				t.Errorf(
-					"%s\nGHCRAuthDefaults.Unmarshal(format=%q, data=%q) .queryToken mismatch:\ngot:  %q\nwant: %q",
-					packageName, tc.format, tc.data,
+					"GHCRAuthDefaults.queryToken mismatch\ngot:  %q\nwant: %q",
 					auth.queryToken, tc.want.queryToken,
 				)
 			}
@@ -1158,7 +1086,6 @@ func TestGHCRAuthDefaults_Unmarshal(t *testing.T) {
 // ################
 
 func TestGHCRAuthDefaults_IsZero(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
 		name string
 		data *GHCRAuthDefaults
@@ -1185,22 +1112,16 @@ func TestGHCRAuthDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nGHCRAuthDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestGHCRAuth_Copy(t *testing.T) {
-	// GIVEN: a GHCRAuth.
 	tests := []struct {
 		name string
 		auth *GHCRAuth
@@ -1232,50 +1153,37 @@ func TestGHCRAuth_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			authCopy := tc.auth.Copy()
 
-			prefix := fmt.Sprintf("%s\nGHCRAuth.Copy()", packageName)
-
-			// THEN: the returned RegistryAuth unmarshals the same.
 			if got := decode.ToYAMLString(authCopy, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("GHCRAuth mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned RegistryAuth is a GHCRAuth.
 			got, ok := authCopy.(*GHCRAuth)
 			if !ok {
 				if authCopy == nil {
 					return
 				}
-				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, authCopy,
-				)
+				t.Fatalf("GHCRAuth.Copy() type mismatch\ngot:  %T\nwant: *GHCRAuth", authCopy)
 			}
 			if tc.auth == nil {
 				return
 			}
 
-			// AND: the unmarshaled values are the same.
 			if got.queryToken != tc.auth.queryToken ||
 				got.validUntil != tc.auth.validUntil ||
 				got.defaults != tc.auth.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got, tc.auth,
+					"GHCRAuth mismatch\n"+
+						"got:  queryToken=%q, validUntil=%s, defaults=%p\n"+
+						"want: queryToken=%q, validUntil=%s, defaults=%p",
+					got.queryToken, got.validUntil, got.defaults,
+					tc.auth.queryToken, tc.auth.validUntil, tc.auth.defaults,
 				)
 			}
 
-			// AND: the returned GHCRAuth is at a different address.
 			if got == tc.auth {
-				t.Fatalf(
-					"%s returned pointer to the same Auth for instance %q",
-					prefix, tc.name,
-				)
+				t.Fatalf("copy aliases the original\ngot:  %p\nwant: NOT %p", got, tc.auth)
 			}
 		})
 	}
@@ -1286,7 +1194,6 @@ func TestGHCRAuth_Copy(t *testing.T) {
 // ####################
 
 func TestGHCRAuthDefaults_String(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
 		name string
 		data *GHCRAuthDefaults
@@ -1317,7 +1224,7 @@ func TestGHCRAuthDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"GHCRAuthDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -1330,7 +1237,6 @@ func TestGHCRAuthDefaults_String(t *testing.T) {
 // ###################
 
 func TestGHCRAuthDefaults_Defaults(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
 		name         string
 		data         *GHCRAuthDefaults
@@ -1356,22 +1262,16 @@ func TestGHCRAuthDefaults_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Defaults is called on it.
 			got := tc.data.Defaults()
 
-			// THEN: Defaults are returned when expected.
 			if gotDefaults := got != nil; gotDefaults != tc.haveDefaults {
-				t.Errorf(
-					"%s\nGHCRAuthDefaults.Defaults() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotDefaults, tc.haveDefaults,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", gotDefaults, tc.haveDefaults)
 			}
 		})
 	}
 }
 
 func TestGHCRAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1403,17 +1303,18 @@ func TestGHCRAuthDefaults_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: and GHCRAuthDefaults to take them.
 			data := &GHCRAuthDefaults{}
 
-			// WHEN: SetDefaults() is called to give these defaults.
 			data.SetDefaults(tc.newDefaults)
 
-			// THEN: they are set when expected.
-			if got := data.defaults == tc.newDefaults; got != tc.doesSet {
+			var want *GHCRAuthDefaults
+			if tc.doesSet {
+				want = tc.newDefaults.(*GHCRAuthDefaults)
+			}
+			if data.defaults != want {
 				t.Errorf(
-					"%s\nGHCRAuthDefaults.SetDefaults() .defaults mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.doesSet,
+					"GHCRAuthDefaults.defaults mismatch\ngot:  %p\nwant: %p",
+					data.defaults, want,
 				)
 			}
 		})
@@ -1425,7 +1326,6 @@ func TestGHCRAuthDefaults_SetDefaults(t *testing.T) {
 // #####################
 
 func TestGHCRAuth_CheckValues(t *testing.T) {
-	// GIVEN: a GHCRAuth.
 	tests := []struct {
 		name     string
 		input    *GHCRAuth
@@ -1437,13 +1337,6 @@ func TestGHCRAuth_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "valid",
-			input: &GHCRAuth{
-				Token: "token",
-			},
-			errRegex: `^$`,
-		},
-		{
 			name: "token",
 			input: &GHCRAuth{
 				Token: "token",
@@ -1451,10 +1344,8 @@ func TestGHCRAuth_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "no token",
-			input: &GHCRAuth{
-				Token: "token",
-			},
+			name:     "no token",
+			input:    &GHCRAuth{},
 			errRegex: `^$`,
 		},
 	}
@@ -1465,7 +1356,6 @@ func TestGHCRAuth_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -1478,23 +1368,25 @@ func TestGHCRAuth_CheckValues(t *testing.T) {
 // ######################
 
 func TestGHCRAuth_GetToken(t *testing.T) {
-	// GIVEN: a GHCRAuth with/without defaults.
 	tests := []struct {
-		name string
-		data *GHCRAuth
-		want string
+		name     string
+		data     *GHCRAuth
+		want     string
+		wantSelf string
 	}{
 		{
-			name: "empty",
-			data: &GHCRAuth{},
-			want: "",
+			name:     "empty",
+			data:     &GHCRAuth{},
+			want:     "",
+			wantSelf: "",
 		},
 		{
 			name: "no defaults",
 			data: &GHCRAuth{
 				Token: "root",
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
 		},
 		{
 			name: "defaults fallback",
@@ -1504,7 +1396,8 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "defaults",
+			want:     "defaults",
+			wantSelf: "",
 		},
 		{
 			name: "defaults fallback recursive",
@@ -1517,7 +1410,8 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 					},
 				},
 			},
-			want: "hard-defaults",
+			want:     "hard-defaults",
+			wantSelf: "",
 		},
 		{
 			name: "root Token prioritised",
@@ -1527,7 +1421,8 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
 		},
 	}
 
@@ -1535,26 +1430,16 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetToken() is called on it.
 			got := tc.data.GetToken()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nGHCRAuth.GetToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("GHCRAuth.GetToken() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// WHEN: GetTokenSelf() is called on it.
 			got = tc.data.GetTokenSelf()
 
-			// THEN: the expected result is returned.
-			if got != tc.data.Token {
-				t.Fatalf(
-					"%s\nGHCRAuth.GetTokenSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.data.Token,
-				)
+			if got != tc.wantSelf {
+				t.Fatalf("GHCRAuth.GetTokenSelf() mismatch\ngot:  %q\nwant: %q", got, tc.wantSelf)
 			}
 		})
 	}
@@ -1565,11 +1450,11 @@ func TestGHCRAuth_GetToken(t *testing.T) {
 // #######################
 
 func TestGHCRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
-		name string
-		data *GHCRAuthDefaults
-		want string
+		name        string
+		data        *GHCRAuthDefaults
+		want        string
+		wantRenewed bool
 	}{
 		{
 			name: "empty",
@@ -1583,7 +1468,8 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 				queryToken: "query-token",
 				validUntil: time.Now().Add(-1 * time.Second),
 			},
-			want: "query-token", // auto-renews.
+			want:        "query-token",
+			wantRenewed: true,
 		},
 		{
 			name: "valid",
@@ -1597,38 +1483,42 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			usable := isUsable(tc.data.queryToken, tc.data.validUntil)
+			originalValidUntil := tc.data.validUntil
 
-			// WHEN: GetQueryTokenSelf() is called on it.
+			before := time.Now()
 			queryToken, validUntil := tc.data.GetQueryTokenSelf()
+			after := time.Now()
 
-			prefix := fmt.Sprintf("%s\nGHCRAuthDefaults.GetQueryTokenSelf()", packageName)
-
-			// THEN: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s queryToken mismatch\ngot:  %q\nwant: %q",
-					prefix, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 
-			// AND: the validUntil is returned as before if it was usable.
-			if !validUntil.Equal(tc.data.validUntil) && usable {
-				t.Errorf(
-					"%s validUntil mismatch\ngot:  %q\nwant: %q",
-					prefix, validUntil, tc.data.validUntil,
-				)
+			switch {
+			case tc.wantRenewed:
+				earliest, latest := before.Add(24*time.Hour), after.Add(24*time.Hour)
+				if validUntil.Before(earliest) || validUntil.After(latest) {
+					t.Errorf(
+						"validUntil mismatch\ngot:  %s\nwant: between %s and %s",
+						validUntil, earliest, latest,
+					)
+				}
+			case usable:
+				if !validUntil.Equal(originalValidUntil) {
+					t.Errorf(
+						"validUntil mismatch\ngot:  %s\nwant: %s",
+						validUntil, originalValidUntil,
+					)
+				}
 			}
 		})
 	}
 }
 
 func TestGHCRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults with a queryToken that has expired.
 	data := &GHCRAuthDefaults{
 		Token:      "token",
 		queryToken: "query-token",
@@ -1636,45 +1526,35 @@ func TestGHCRAuthDefaults_GetQueryTokenSelf__parallel(t *testing.T) {
 	}
 	originalQueryToken := data.queryToken
 
-	// AND: the mutex is held.
 	data.mu.Lock()
 	go func() {
 		time.Sleep(time.Second)
 		data.mu.Unlock()
 	}()
 
-	// WHEN: GetQueryTokenSelf() is queued on it by many goroutines.
 	var wg sync.WaitGroup
 	for range 10 {
 		wg.Go(func() {
 			_, _ = data.GetQueryTokenSelf()
 		})
 	}
-	// Call again to verify we still get a queryToken.
 	queryToken, validUntil := data.GetQueryTokenSelf()
 	wg.Wait()
 
-	prefix := fmt.Sprintf("%s\nGHCRAuthDefaults.GetQueryTokenSelf()", packageName)
-
-	// THEN: the query token is returned as expected.
 	if queryToken != originalQueryToken {
-		t.Errorf(
-			"%s queryToken mismatch\ngot:  %q\nwant: %q",
-			prefix, queryToken, originalQueryToken,
-		)
+		t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, originalQueryToken)
 	}
 
-	// AND: the validUntil is refreshed to a usable (future) time.
+	// The Token renews the expired validUntil.
 	if !isUsable(queryToken, validUntil) {
 		t.Errorf(
-			"%s validUntil not usable\ngot: %s\nnow: %s",
-			prefix, validUntil, time.Now(),
+			"isUsable() mismatch\ngot:  false (validUntil=%s, now=%s)\nwant: true",
+			validUntil, time.Now(),
 		)
 	}
 }
 
 func TestGHCRAuth_GetQueryToken(t *testing.T) {
-	// GIVEN: a GHCRAuth.
 	tests := []struct {
 		name     string
 		data     *GHCRAuth
@@ -1716,48 +1596,46 @@ func TestGHCRAuth_GetQueryToken(t *testing.T) {
 			want:     "query-token",
 			errRegex: `^$`,
 		},
+		{
+			name: "no root token - defaults query token",
+			data: &GHCRAuth{
+				defaults: &GHCRAuthDefaults{
+					Token:      "token",
+					queryToken: "default-query-token",
+					validUntil: time.Now().Add(10 * time.Second),
+				},
+			},
+			want:     "default-query-token",
+			errRegex: `^$`,
+		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: an image:tag to query on.
 			detail := ContainerDetail{
 				Image: test.ArgusDockerGHCRRepo,
 				Tag:   "v1.2.3",
 			}
 
-			// WHEN: GetQueryToken() is called on it.
 			queryToken, err := tc.data.GetQueryToken(detail)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nGHCRAuth.GetQueryToken(%+v) error mismatch:\ngot:  %q\nwant: %q",
-					packageName, detail,
-					e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s\nGHCRAuth.GetQueryTokenSelf() mismatch on queryToken\ngot:  %q\nwant: %q",
-					packageName, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 		})
 	}
 }
 
 func TestGHCRAuthDefaults_SetQueryToken(t *testing.T) {
-	// GIVEN: a GHCRAuthDefaults.
 	tests := []struct {
 		name string
 		data *GHCRAuth
@@ -1797,71 +1675,47 @@ func TestGHCRAuthDefaults_SetQueryToken(t *testing.T) {
 			queryToken := "new-query-token"
 			validUntil := time.Now().Add(10 * time.Second)
 
-			// WHEN: SetQueryToken() is called on it.
 			tc.data.SetQueryToken(queryToken, validUntil)
 
-			check := func(name string, d *GHCRAuthDefaults, wantMatch bool) {
+			check := func(d *GHCRAuthDefaults, wantMatch bool) {
+				t.Helper()
 				if d == nil {
+					if wantMatch {
+						t.Error("GHCRAuthDefaults mismatch\ngot:  nil\nwant: non-nil")
+					}
 					return
 				}
-
-				prefix := fmt.Sprintf(
-					"%s\nGHCRAuthDefaults.SetQueryToken(queryToken=%q, validUntil=%q) (%s - wantMatch=%t)",
-					packageName, queryToken, validUntil, name, wantMatch,
+				assertQueryTokenSet(
+					t, "GHCRAuthDefaults",
+					d.queryToken, d.validUntil,
+					queryToken, validUntil,
+					wantMatch,
 				)
-
-				// THEN: the queryToken is set only when expected.
-				if (d.queryToken == queryToken) != wantMatch {
-					t.Errorf(
-						"%s .queryToken mismatch\ngot:  %q\nwant: %q",
-						prefix, queryToken, d.queryToken,
-					)
-				}
-
-				// AND: the validUntil is set only when expected.
-				if d.validUntil.Equal(validUntil) != wantMatch {
-					t.Errorf(
-						"%s .validUntil mismatch\ngot:  %q\nwant: %q",
-						prefix, validUntil, d.validUntil,
-					)
-				}
 			}
 
-			check("root", &tc.data.GHCRAuthDefaults, true)
-			check("defaults", tc.data.defaults, false)
+			check(&tc.data.GHCRAuthDefaults, true)
+			// GHCR query tokens are repo-scoped.
+			check(tc.data.defaults, false)
 			if tc.data.defaults != nil {
-				check("hardDefaults", tc.data.defaults.defaults, false)
+				check(tc.data.defaults.defaults, false)
 			}
 		})
 	}
 }
 
 func TestGHCRAuth_RefreshQueryToken__cached(t *testing.T) {
-	// GIVEN: a GHCRAuth with a cached query token that is valid for a while.
 	auth := &GHCRAuth{
 		queryToken: "cached-token",
 		validUntil: time.Now().Add(time.Hour),
 	}
 	detail := ContainerDetail{Image: test.ArgusDockerGHCRRepo}
 
-	// WHEN: refreshQueryToken is called on it.
 	queryToken, err := auth.refreshQueryToken(detail)
-
-	prefix := fmt.Sprintf(
-		"%s\nGHCRAuth.refreshQueryToken(%+v)",
-		packageName, detail,
-	)
-
-	// THEN: the cached token is returned without error.
-	e := errfmt.FormatError(err)
-	if !util.RegexCheck(`^$`, e) {
-		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q", prefix, e, `^$`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if got, want := queryToken, "cached-token"; got != want {
-		t.Fatalf(
-			"%s queryToken mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Fatalf("queryToken mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
@@ -1870,12 +1724,12 @@ func TestGHCRAuth_RefreshQueryToken__cached(t *testing.T) {
 // ######################
 
 func TestGHCRAuth_Inherit(t *testing.T) {
-	// GIVEN: a GHCRAuth, and a RegistryAuth to try and inherit from.
 	tests := []struct {
 		name                 string
 		auth                 *GHCRAuth
 		from                 RegistryAuth
 		srcDetail, dstDetail ContainerDetail
+		wantToken            string
 		inherit              bool
 	}{
 		{
@@ -1901,10 +1755,11 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 				Image: "a",
 				Tag:   "b",
 			},
-			inherit: true,
+			wantToken: "abc",
+			inherit:   true,
 		},
 		{
-			name: "inherit from GHCRAuth when Details do not match (src.Token is SecretValue)",
+			name: "do not inherit when Details do not match (Token is SecretValue)",
 			auth: &GHCRAuth{
 				Token: util.SecretValue,
 			},
@@ -1921,7 +1776,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 				Image: "c",
 				Tag:   "d",
 			},
-			inherit: true,
+			wantToken: util.SecretValue,
 		},
 		{
 			name: "do not inherit from GHCRAuth when src.Token is not SecretValue",
@@ -1933,6 +1788,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 				queryToken: "qt",
 				validUntil: time.Now(),
 			},
+			wantToken: "foo",
 		},
 		{
 			name: "do not inherit from HubAuth",
@@ -1942,6 +1798,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 			from: &HubAuth{
 				Token: "abc",
 			},
+			wantToken: util.SecretValue,
 		},
 		{
 			name: "do not inherit from QuayAuth",
@@ -1951,6 +1808,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 			from: &QuayAuth{
 				Token: "abc",
 			},
+			wantToken: util.SecretValue,
 		},
 	}
 
@@ -1958,35 +1816,29 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			hadToken, hadQueryToken, hadValidUntil := getTokenData(t, tc.auth)
+			hadQueryToken, hadValidUntil := tc.auth.queryToken, tc.auth.validUntil
 
-			// WHEN: Inherit is called on it.
 			tc.auth.Inherit(tc.from, tc.srcDetail, tc.dstDetail)
 
-			prefix := fmt.Sprintf(
-				"%s\nGHCRAuth.Inherit(from=%T, srcDetail=%+v, dstDetail=%+v)",
-				packageName, tc.from, tc.srcDetail, tc.dstDetail,
-			)
+			if tc.auth.Token != tc.wantToken {
+				t.Errorf("GHCRAuth.Token mismatch\ngot:  %q\nwant: %q", tc.auth.Token, tc.wantToken)
+			}
 
-			// THEN: the expected inheritance has occurred.
-			gotToken, gotQueryToken, gotValidUntil := getTokenData(t, tc.auth)
-			wantToken, wantQueryToken, wantValidUntil := getTokenData(t, tc.from)
-			tokenInherited := hadToken != gotToken
-			queryTokenInherited := hadQueryToken != gotQueryToken
-			validUntilInherited := !hadValidUntil.Equal(gotValidUntil)
-			if (tokenInherited != tc.inherit && hadToken != gotToken) ||
-				(queryTokenInherited != tc.inherit && hadQueryToken != gotQueryToken) ||
-				(validUntilInherited != tc.inherit && !hadValidUntil.Equal(gotValidUntil)) {
-				msg := "%s expected to inherit but did not\ntoken inherited: %t (had %q, got %q, want %q)\nqueryToken inherited: %t (had %q, got %q, want %q)\nvalidUntil inherited: %t (had %q, got %q, want %q)"
-				if !tc.inherit {
-					msg = "%s expected not to inherit but did\ntoken inherited: %t (had: %q, got: %q, want: NOT %q)\nqueryToken inherited: %t (had: %q, got: %q, want: NOT %q)\nvalidUntil inherited: %t (had: %q, got: %q, want: NOT %q)"
-				}
+			wantQueryToken, wantValidUntil := hadQueryToken, hadValidUntil
+			if tc.inherit {
+				from := getTokenData(tc.from)
+				wantQueryToken, wantValidUntil = from.queryToken, from.validUntil
+			}
+			if tc.auth.queryToken != wantQueryToken {
 				t.Errorf(
-					msg,
-					prefix,
-					tokenInherited, hadToken, gotToken, wantToken,
-					queryTokenInherited, hadQueryToken, gotQueryToken, wantQueryToken,
-					validUntilInherited, hadValidUntil, gotValidUntil, wantValidUntil,
+					"GHCRAuth.queryToken mismatch\ngot:  %q\nwant: %q",
+					tc.auth.queryToken, wantQueryToken,
+				)
+			}
+			if !tc.auth.validUntil.Equal(wantValidUntil) {
+				t.Errorf(
+					"GHCRAuth.validUntil mismatch\ngot:  %s\nwant: %s",
+					tc.auth.validUntil, wantValidUntil,
 				)
 			}
 		})

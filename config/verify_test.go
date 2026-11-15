@@ -17,7 +17,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -85,11 +84,14 @@ func testVerify(t *testing.T) *Config {
 }
 
 func TestConfig_CheckValues(t *testing.T) {
+	loadMu.Lock()
+	nilUndefinedFlags(t, &Settings{})
+	loadMu.Unlock()
+
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: variations of Config to test.
 	tests := []struct {
 		name     string
 		cfg      *Config
@@ -99,9 +101,10 @@ func TestConfig_CheckValues(t *testing.T) {
 		wantSave bool
 	}{
 		{
-			name: "valid Config",
-			cfg:  testVerify(t),
-			ok:   true,
+			name:     "valid Config",
+			cfg:      testVerify(t),
+			ok:       true,
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid Settings",
@@ -199,11 +202,68 @@ func TestConfig_CheckValues(t *testing.T) {
 			),
 		},
 		{
+			name: "changed/only Defaults is saved",
+			cfg: &Config{
+				Defaults: Defaults{
+					Notify: shoutrrr.ShoutrrrsDefaults{
+						"gotify": shoutrrr.NewDefaults(
+							"gotify",
+							nil,
+							map[string]string{"port": ":8080"}, // CheckValues strips the colon.
+							nil,
+						),
+					},
+				},
+				SaveChannel: make(chan bool, 1),
+			},
+			ok:       true,
+			wantSave: true,
+			errRegex: `^$`,
+		},
+		{
+			name: "changed/only Notify is saved",
+			cfg: &Config{
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"test": shoutrrr.NewDefaults(
+						"gotify",
+						nil,
+						map[string]string{"port": ":8080"}, // CheckValues strips the colon.
+						nil,
+					),
+				},
+				SaveChannel: make(chan bool, 1),
+			},
+			ok:       true,
+			wantSave: true,
+			errRegex: `^$`,
+		},
+		{
+			name: "changed/only Webhook is saved",
+			cfg: &Config{
+				Webhook: webhook.WebhooksDefaults{
+					"test": test.Must(t, func() (*webhook.Defaults, error) {
+						return webhook.DecodeDefaults(
+							"yaml", []byte(test.TrimYAML(`
+								type: github
+								custom_headers:
+									foo: bar
+							`)),
+						)
+					}),
+				},
+				SaveChannel: make(chan bool, 1),
+			},
+			logRegex: new(`^DEPRECATED: .*webhook.custom_headers.*\s$`),
+			ok:       true,
+			wantSave: true,
+			errRegex: `^$`,
+		},
+		{
 			name: "valid Config that gets changed is saved",
 			cfg: test.Must(t, func() (*Config, error) {
 				cfg := testVerify(t)
 
-				newService, _ := service.DecodeService(
+				newService, err := service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						comment: foo_comment
 						latest_version:
@@ -220,13 +280,17 @@ func TestConfig_CheckValues(t *testing.T) {
 					"Test",
 					svcCfg, notifyCfg, whCfg,
 				)
-				cfg.Service[t.Name()] = newService
+				if err != nil {
+					return nil, err
+				}
+				cfg.Service["added"] = newService
 
 				return cfg, nil
 			}),
 			logRegex: new(`^DEPRECATED: .*\s$`),
 			ok:       true,
 			wantSave: true,
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid Config that gets changed is not saved",
@@ -252,7 +316,7 @@ func TestConfig_CheckValues(t *testing.T) {
 						svcCfg, notifyCfg, whCfg,
 					)
 				})
-				cfg.Service[t.Name()] = newService
+				cfg.Service["added"] = newService
 
 				badService := test.Must(t, func() (*service.Service, error) {
 					return service.DecodeService(
@@ -307,52 +371,30 @@ func TestConfig_CheckValues(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseLog := test.CaptureLog(t, logx.Default())
 			releaseStdout := test.CaptureStdout(t)
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: CheckValues is called on them.
-			resultChannel <- tc.cfg.CheckValues()
+			test.AssertCallLog(t, tc.ok, tc.cfg.CheckValues, logx.ExitCodeChannel(), nil, "")
 
-			prefix := fmt.Sprintf("%s\nConfig.CheckValues()", packageName)
-
-			// THEN: this call will/won't crash the program.
-			if err := test.AssertChannelBool(
-				t,
-				tc.ok,
-				resultChannel,
-				logx.ExitCodeChannel(),
-				nil,
-			); err != nil {
-				t.Fatalf("%s %v", prefix, err)
-			}
-
-			// AND: the error line count matches.
 			stdout := releaseStdout()
 			lines := strings.Split(stdout, "\n")
 			gotLines := len(lines)
-			wantLines := strings.Count(tc.errRegex, "\n")
+			wantLines := strings.Count(tc.errRegex, "\n") + 1
 			if gotLines < wantLines {
 				t.Fatalf(
-					"%s error line count mismatch\ngot:  %d\nwant: %d\nerrRegex: %q\nstdout:   %q",
-					prefix,
-					gotLines, wantLines,
-					tc.errRegex, stdout,
+					"stdout line count mismatch\ngot:  %d (%q)\nwant: >= %d (%q)",
+					gotLines, stdout,
+					wantLines, tc.errRegex,
 				)
-				return
 			}
 
-			// AND: the error regex matches.
 			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.errRegex)
 				return
 			}
 
-			// AND: the log matches.
 			logWant := `^FATAL: Config could not be parsed.*\s$`
 			if tc.ok {
 				logWant = `^$`
@@ -360,36 +402,31 @@ func TestConfig_CheckValues(t *testing.T) {
 			logWant = util.DerefOr(tc.logRegex, logWant)
 			logOut := releaseLog()
 			if !util.RegexCheck(logWant, logOut) {
-				t.Errorf(
-					"%s log mismatch\ngot:  %q\nwant: %q",
-					prefix, logOut, logWant,
-				)
+				t.Errorf("log mismatch\ngot:  %q\nwant: %q", logOut, logWant)
 			}
 
-			// AND: saves are queued as expected.
 			saveQueued := len(tc.cfg.SaveChannel) > 0
 			if saveQueued != tc.wantSave {
-				t.Errorf(
-					"%s save queue mismatch\ngot:  %t\nwant: %t",
-					prefix, saveQueued, tc.wantSave,
-				)
+				t.Errorf("save queue mismatch\ngot:  %t\nwant: %t", saveQueued, tc.wantSave)
 			}
 		})
 	}
 }
 
 func TestConfig_Print(t *testing.T) {
-	// GIVEN: a Config and print flags of true and false.
 	config := testVerify(t)
 	tests := []struct {
+		name string
 		flag bool
 		want string
 	}{
 		{
+			name: "flag: true",
 			flag: true,
 			want: configStr,
 		},
 		{
+			name: "flag: false",
 			flag: false,
 			want: "",
 		},
@@ -402,29 +439,22 @@ func TestConfig_Print(t *testing.T) {
 	exitAfterPrint = func(_ int) {}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("flag: %t", tc.flag)
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureStdout(t)
 
-			// WHEN: Print is called with these flags.
 			config.Print(&tc.flag)
 
-			// THEN: config is printed only when the flag is true.
 			stdout := releaseStdout()
 			if stdout != tc.want {
-				t.Errorf(
-					"%s\nConfig.Print() mismatch with %s\ngot:  %q\n\nwant: %q",
-					packageName, name,
-					stdout, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}
 }
 
 func TestConfig_Print__exitsWhenNotTesting(t *testing.T) {
-	// GIVEN: print flag enabled.
 	config := testVerify(t)
 	flag := true
 
@@ -433,20 +463,15 @@ func TestConfig_Print__exitsWhenNotTesting(t *testing.T) {
 		exitAfterPrint = originalExit
 	})
 
-	var exitCode int
+	exitCode := -1
 	exitAfterPrint = func(code int) { exitCode = code }
 
 	_ = test.CaptureStdout(t)
 
-	// WHEN: Print is called.
 	config.Print(&flag)
 
-	// THEN: the process exit path is invoked with code 0.
-	if exitCode != 0 {
-		t.Errorf(
-			"%s\nConfig.Print() exit code mismatch\ngot:  %d\nwant: 0",
-			packageName, exitCode,
-		)
+	if got, want := exitCode, 0; got != want {
+		t.Errorf("exit code mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 

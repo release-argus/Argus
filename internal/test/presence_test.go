@@ -16,4 +16,35 @@
 
 package test
 
-var packageName = "dashtest"
+import "testing"
+
+func TestPresence(t *testing.T) {
+	tests := []struct {
+		name    string
+		present bool
+		want    string
+	}{
+		{
+			name:    "present",
+			present: true,
+			want:    "present",
+		},
+		{
+			name:    "absent",
+			present: false,
+			want:    "absent",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := Presence(tc.present)
+
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
+			}
+		})
+	}
+}

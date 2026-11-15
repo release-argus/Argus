@@ -17,7 +17,6 @@
 package webhook
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -35,7 +34,6 @@ import (
 // ############
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into a Webhook.
 	tests := []struct {
 		name         string
 		format, data string
@@ -46,7 +44,6 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -162,7 +159,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -172,7 +168,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestWebhooks_MarshalJSON(t *testing.T) {
-	// GIVEN: various Webhooks states to marshal.
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
@@ -211,26 +206,19 @@ func TestWebhooks_MarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nWebhooks.MarshalJSON()", packageName)
-
-			// WHEN: marshaling the Webhooks.
 			data, err := tc.webhooks.MarshalJSON()
 			if err != nil {
-				t.Fatalf("%s returned error: %v", prefix, err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
 			if got := string(data); got != tc.wantStr {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantStr,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.wantStr)
 			}
 		})
 	}
 }
 
 func TestWebhooks_UnmarshalJSON(t *testing.T) {
-	// GIVEN: a string in a given format to unmarshal into Defaults.
 	tests := []struct {
 		name     string
 		data     string
@@ -293,8 +281,8 @@ func TestWebhooks_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:     "invalid JSON",
-			data:     `{`,
-			errRegex: `.+`,
+			data:     `[`,
+			errRegex: `^jsontext: unexpected EOF after offset`,
 		},
 		{
 			name: "wrong shape (object instead of array)",
@@ -310,101 +298,58 @@ func TestWebhooks_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: unmarshaling JSON into a Webhooks.
 			var s Webhooks
 			err := s.UnmarshalJSON([]byte(tc.data))
-
-			prefix := fmt.Sprintf(
-				"%s\nWebhooks.UnmarshalJSON(%q)",
-				packageName, tc.data,
-			)
-
-			// THEN: errors produced match the regex.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: map keys and types are as expected.
 			if got, want := len(s), len(tc.wantKeys); got != want {
 				t.Fatalf(
-					"%s length mismatch\ngot:  %d (%+v)\nwant: %d (%+v)",
-					prefix,
-					len(s), s,
-					len(tc.wantKeys), tc.wantKeys,
+					"length mismatch\ngot:  %d %q\nwant: %d %q",
+					got, util.SortedKeys(s),
+					want, util.SortedKeys(tc.wantKeys),
 				)
 			}
 			for id, wantType := range tc.wantKeys {
 				got, ok := s[id]
 				if !ok {
-					t.Errorf("%s missing key %q", prefix, id)
+					t.Errorf("Webhooks[%q] mismatch\ngot:  absent\nwant: present", id)
 					continue
 				}
 				if got == nil {
-					t.Errorf("%s value for key %q is nil", prefix, id)
+					t.Errorf("Webhooks[%q] mismatch\ngot:  nil\nwant: non-nil", id)
+					continue
 				}
 				if got.Type != wantType {
 					t.Errorf(
-						"%s .Type mismatch for %q\ngot:  %q\nwant: %q",
-						prefix, id,
-						got.Type, wantType,
+						"Webhooks[%q].Type mismatch\ngot:  %q\nwant: %q",
+						id, got.Type, wantType,
 					)
 				}
 				if got.ID != id {
-					t.Errorf(
-						"%s .ID mismatch for key %q\ngot:  %q\nwant: %q",
-						prefix, id,
-						got.ID, id,
-					)
+					t.Errorf("Webhooks[%q].ID mismatch\ngot:  %q\nwant: %q", id, got.ID, id)
 				}
 			}
 		})
 	}
 }
 
-func assertFailsWebhookState(
-	t *testing.T,
-	got *status.FailsWebhook,
-	wantFails map[string]*bool,
-	prefix, target string,
-) {
+// testCopyStatus returns a Status with Webhook fails initialised.
+func testCopyStatus(t *testing.T) *status.Status {
 	t.Helper()
 
-	for key, wantFail := range wantFails {
-		// Each Fail should be value-equal.
-		gotFail := got.Get(key)
-		gotStr := test.StringifyPtr(gotFail)
-		wantStr := test.StringifyPtr(wantFail)
-		if gotStr != wantStr {
-			t.Errorf(
-				"%s %s[%q] mismatch\ngot:  %s\nwant: %s",
-				prefix, target, key,
-				gotStr, wantStr,
-			)
-		}
-		// And mutating the fail should not affect the original map.
-		wantFails[key] = new(!*wantFail)
-		gotFail = got.Get(key)
-		gotStr = test.StringifyPtr(gotFail)
-		if gotStr != wantStr {
-			t.Errorf(
-				"%s %s[%q] changed from mutating original map\ngot:  %s\nwant: %s",
-				prefix, target, key,
-				gotStr, wantStr,
-			)
-		}
-	}
+	svcStatus, _ := statustest.New("yaml", nil)
+	svcStatus.Fails.Webhook.Init(2)
+
+	return svcStatus
 }
 
-func testWebhookForCopy(t *testing.T, svcStatus *status.Status, id string) *Webhook {
-	t.Helper()
-
+func testWebhookForCopy(svcStatus *status.Status, id string) *Webhook {
 	main := &Defaults{
 		Type: "github",
 		URL:  "https://main.example.com",
@@ -450,160 +395,10 @@ func testWebhookForCopy(t *testing.T, svcStatus *status.Status, id string) *Webh
 	return wh
 }
 
-func TestWebhook_Copy(t *testing.T) {
-	tests := []struct {
-		name     string
-		wantNil  bool
-		wantFail map[string]*bool
-		// Mutations to verify that Copy doesn't alias the underlying map.
-		mutateOriginalHeaderValue string
-		mutateCopyHeaderValue     string
-	}{
-		{
-			name:    "nil receiver",
-			wantNil: true,
-		},
-		{
-			name:                      "copies fields and deep-copies pointers, slices, and fails",
-			wantFail:                  map[string]*bool{"notify": new(false)},
-			mutateOriginalHeaderValue: "mutated",
-			mutateCopyHeaderValue:     "copy-mutated",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// GIVEN: a Status.
-			origStatus, _ := statustest.New("yaml", nil)
-			origStatus.Fails.Webhook.Init(2)
-			copyStatus, _ := statustest.New("yaml", nil)
-			copyStatus.Fails.Webhook.Init(2)
-
-			// AND: Notifiers.
-			copyNotifiers := Notifiers{Shoutrrr: &shoutrrr.Shoutrrrs{}}
-
-			// AND: a Webhook.
-			var orig *Webhook
-			if !tc.wantNil {
-				orig = testWebhookForCopy(t, origStatus, "notify")
-			}
-
-			wantStr := decode.ToYAMLString(orig, "")
-
-			// WHEN: Copy is called on it.
-			got := orig.Copy(copyStatus, copyNotifiers)
-
-			prefix := fmt.Sprintf(
-				"%s\nWebhook.Copy(status=%p, notifiers=%v)",
-				packageName, copyNotifiers, copyNotifiers,
-			)
-
-			// THEN: nil handling.
-			if tc.wantNil {
-				if got != nil {
-					t.Fatalf("%s got %v want nil", prefix, got)
-				}
-				return
-			}
-
-			// AND: the copy is non-nil.
-			if got == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
-			}
-
-			// AND: the copy is distinct.
-			if got == orig {
-				t.Fatalf(
-					"%s should return a distinct copy\ngot:  %p\nwant: %p",
-					prefix, got, orig,
-				)
-			}
-
-			// AND: the copy unmarshals the same.
-			if gotStr := decode.ToYAMLString(got, ""); gotStr != wantStr {
-				t.Fatalf(
-					"%s stringified mismatch:\ngot;  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
-			}
-
-			// AND: the fields are copied as expected.
-			fieldTests := []test.FieldAssertion{
-				{Name: "Type", Got: got.Type, Want: orig.Type, Mode: test.CompareEqual},
-				{Name: "URL", Got: got.URL, Want: orig.URL, Mode: test.CompareEqual},
-				{Name: "Secret", Got: got.Secret, Want: orig.Secret, Mode: test.CompareEqual},
-				{Name: "Delay", Got: got.Delay, Want: orig.Delay, Mode: test.CompareEqual},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: copied pointers should be value-equal and non-aliased.
-			fieldTests = []test.FieldAssertion{
-				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: orig.AllowInvalidCerts, Mode: test.CompareDifferentPointer},
-				{Name: "DesiredStatusCode", Got: got.DesiredStatusCode, Want: orig.DesiredStatusCode, Mode: test.CompareDifferentPointer},
-				{Name: "MaxTries", Got: got.MaxTries, Want: orig.MaxTries, Mode: test.CompareDifferentPointer},
-				{Name: "SilentFails", Got: got.SilentFails, Want: orig.SilentFails, Mode: test.CompareDifferentPointer},
-				{Name: "ParentInterval", Got: got.ParentInterval, Want: orig.ParentInterval, Mode: test.CompareDifferentPointer},
-				{Name: "Failed", Got: got.Failed, Want: orig.Failed, Mode: test.CompareDifferentPointer},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: non-base fields are copied/shared.
-			fieldTests = []test.FieldAssertion{
-				{Name: "ID", Got: got.ID, Want: orig.ID, Mode: test.CompareEqual},
-				{Name: "ServiceStatus", Got: got.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
-				{Name: "Notifiers", Got: got.Notifiers.Shoutrrr, Want: copyNotifiers.Shoutrrr, Mode: test.CompareSamePointer},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: defaults pointers are shared.
-			fieldTests = []test.FieldAssertion{
-				{Name: "Main", Got: got.Main, Want: orig.Main, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: got.Defaults, Want: orig.Defaults, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: got.HardDefaults, Want: orig.HardDefaults, Mode: test.CompareSamePointer},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: Failed should be deep-copied.
-			if got.Failed == nil || orig.Failed == nil {
-				t.Fatalf("%s Failed unexpectedly nil", prefix)
-			}
-			if got.Failed == orig.Failed {
-				t.Errorf("%s Failed should not alias", prefix)
-			}
-			assertFailsWebhookState(
-				t,
-				got.Failed,
-				map[string]*bool{"notify": new(false)},
-				prefix,
-				"Failed",
-			)
-			if got.Failed.NextRunnable("notify") != orig.Failed.NextRunnable("notify") {
-				t.Errorf(
-					"%s Failed.NextRunnable(%q) mismatch\ngot:  %v\nwant: %v",
-					prefix, "notify",
-					got.Failed.NextRunnable("notify"),
-					orig.Failed.NextRunnable("notify"),
-				)
-			}
-		})
-	}
-}
-
 func TestWebhooks_Copy(t *testing.T) {
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
-		wantNil  bool
 		wantLen  int
 		// Mutations to verify that Copy doesn't alias the underlying map.
 		reassignOriginalKey string
@@ -611,7 +406,6 @@ func TestWebhooks_Copy(t *testing.T) {
 		{
 			name:     "nil receiver",
 			webhooks: nil,
-			wantNil:  true,
 		},
 		{
 			name:     "pointer to nil map becomes empty map",
@@ -621,11 +415,10 @@ func TestWebhooks_Copy(t *testing.T) {
 		{
 			name: "copies each entry",
 			webhooks: func() *Webhooks {
-				origStatus, _ := statustest.New("yaml", nil)
-				origStatus.Fails.Webhook.Init(2)
+				origStatus := testCopyStatus(t)
 				wh := Webhooks{
-					"foo": testWebhookForCopy(t, origStatus, "foo"),
-					"bar": testWebhookForCopy(t, origStatus, "bar"),
+					"foo": testWebhookForCopy(origStatus, "foo"),
+					"bar": testWebhookForCopy(origStatus, "bar"),
 				}
 				return &wh
 			}(),
@@ -634,10 +427,9 @@ func TestWebhooks_Copy(t *testing.T) {
 		{
 			name: "reassigning original map entry does not affect copy",
 			webhooks: func() *Webhooks {
-				origStatus, _ := statustest.New("yaml", nil)
-				origStatus.Fails.Webhook.Init(2)
+				origStatus := testCopyStatus(t)
 				wh := Webhooks{
-					"foo": testWebhookForCopy(t, origStatus, "foo"),
+					"foo": testWebhookForCopy(origStatus, "foo"),
 				}
 				return &wh
 			}(),
@@ -650,60 +442,197 @@ func TestWebhooks_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a Status.
-			copyStatus, _ := statustest.New("yaml", nil)
-			copyStatus.Fails.Webhook.Init(2)
-
-			// AND: Notifiers.
+			copyStatus := testCopyStatus(t)
 			copyNotifiers := Notifiers{Shoutrrr: &shoutrrr.Shoutrrrs{}}
 
-			// WHEN: Copy is called on it.
 			got := tc.webhooks.Copy(copyStatus, copyNotifiers)
 
-			prefix := fmt.Sprintf("%s\nWebhooks.Copy()", packageName)
-
-			// THEN: nil handling.
-			if tc.wantNil {
+			if tc.webhooks == nil {
 				if got != nil {
-					t.Fatalf("%s got %v want nil", prefix, got)
+					t.Fatal("copy mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
 
-			// AND: the lengths match.
 			if gotLen := len(got); gotLen != tc.wantLen {
-				t.Fatalf("%s length mismatch\ngot:  %d\nwant: %d", prefix, gotLen, tc.wantLen)
+				t.Fatalf(
+					"length mismatch\ngot:  %d %q\nwant: %d %q",
+					gotLen, util.SortedKeys(got),
+					tc.wantLen, util.SortedKeys(*tc.webhooks),
+				)
 			}
 
-			// AND: each entry is a distinct copy.
 			orig := *tc.webhooks
 			for key, want := range orig {
-				gotEntry := got[key]
-				if gotEntry == nil {
-					t.Fatalf("%s missing copied entry %q", prefix, key)
-				}
-				fieldTests := []test.FieldAssertion{
-					{Name: "ID", Got: gotEntry.ID, Want: want.ID, Mode: test.CompareEqual},
-					{Name: "Notifiers.Shoutrrr", Got: gotEntry.Notifiers.Shoutrrr, Want: copyNotifiers.Shoutrrr, Mode: test.CompareSamePointer},
-					{Name: "ServiceStatus", Got: gotEntry.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
-				}
-				if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-					t.Fatal(err)
-				}
+				t.Run(key, func(t *testing.T) {
+					// Serial: reads the original's entries, which the parent reassigns after the loop.
+
+					gotEntry := got[key]
+					if gotEntry == nil {
+						t.Fatal("Webhook mismatch\ngot:  nil\nwant: non-nil")
+					}
+					fieldTests := []test.FieldAssertion{
+						{Name: "ID", Got: gotEntry.ID, Want: want.ID, Mode: test.CompareEqual},
+						{Name: "Notifiers.Shoutrrr", Got: gotEntry.Notifiers.Shoutrrr, Want: copyNotifiers.Shoutrrr, Mode: test.CompareSamePointer},
+						{Name: "ServiceStatus", Got: gotEntry.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
+					}
+					if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+						t.Fatal(testErr)
+					}
+				})
 			}
 
-			// AND: reassigning original map entry does not affect copy.
 			if tc.reassignOriginalKey != "" {
-				newStatus, _ := statustest.New("yaml", nil)
-				newStatus.Fails.Webhook.Init(2)
-				replacement := testWebhookForCopy(t, newStatus, "replacement")
+				newStatus := testCopyStatus(t)
+				replacement := testWebhookForCopy(newStatus, "replacement")
 				orig[tc.reassignOriginalKey] = replacement
 				if got[tc.reassignOriginalKey] == replacement {
 					t.Fatalf(
-						"%s entry %q should not point at replacement value",
-						prefix, tc.reassignOriginalKey,
+						"Webhooks: copy aliases the original\ngot:  %p\nwant: NOT %p",
+						got[tc.reassignOriginalKey], replacement,
 					)
 				}
+			}
+		})
+	}
+}
+
+func TestWebhook_Copy(t *testing.T) {
+	tests := []struct {
+		name     string
+		wantNil  bool
+		wantFail map[string]*bool
+	}{
+		{
+			name:    "nil receiver",
+			wantNil: true,
+		},
+		{
+			name:     "copies fields and deep-copies pointers, slices, and fails",
+			wantFail: map[string]*bool{"notify": new(false)},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			origStatus := testCopyStatus(t)
+			copyStatus := testCopyStatus(t)
+
+			copyNotifiers := Notifiers{Shoutrrr: &shoutrrr.Shoutrrrs{}}
+
+			var orig *Webhook
+			if !tc.wantNil {
+				orig = testWebhookForCopy(origStatus, "notify")
+			}
+
+			wantStr := decode.ToYAMLString(orig, "")
+
+			got := orig.Copy(copyStatus, copyNotifiers)
+
+			if tc.wantNil {
+				if got != nil {
+					t.Fatal("after Copy: copy mismatch\ngot:  non-nil\nwant: nil")
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatal("after Copy: copy mismatch\ngot:  nil\nwant: non-nil")
+			}
+
+			if got == orig {
+				t.Fatalf("after Copy: copy aliases the original\ngot:  %p\nwant: NOT %p", got, orig)
+			}
+
+			if gotStr := decode.ToYAMLString(got, ""); gotStr != wantStr {
+				t.Fatalf("after Copy: Webhook mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
+			}
+
+			fieldTests := []test.FieldAssertion{
+				{Name: "Type", Got: got.Type, Want: orig.Type, Mode: test.CompareEqual},
+				{Name: "URL", Got: got.URL, Want: orig.URL, Mode: test.CompareEqual},
+				{Name: "Secret", Got: got.Secret, Want: orig.Secret, Mode: test.CompareEqual},
+				{Name: "Delay", Got: got.Delay, Want: orig.Delay, Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+				t.Fatalf("after Copy: %v", testErr)
+			}
+
+			fieldTests = []test.FieldAssertion{
+				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: orig.AllowInvalidCerts, Mode: test.CopiedPointerMode(orig.AllowInvalidCerts)},
+				{Name: "DesiredStatusCode", Got: got.DesiredStatusCode, Want: orig.DesiredStatusCode, Mode: test.CopiedPointerMode(orig.DesiredStatusCode)},
+				{Name: "MaxTries", Got: got.MaxTries, Want: orig.MaxTries, Mode: test.CopiedPointerMode(orig.MaxTries)},
+				{Name: "SilentFails", Got: got.SilentFails, Want: orig.SilentFails, Mode: test.CopiedPointerMode(orig.SilentFails)},
+				{Name: "ParentInterval", Got: got.ParentInterval, Want: orig.ParentInterval, Mode: test.CopiedPointerMode(orig.ParentInterval)},
+				{Name: "Failed", Got: got.Failed, Want: orig.Failed, Mode: test.CopiedPointerMode(orig.Failed)},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+				t.Fatalf("after Copy: %v", testErr)
+			}
+
+			fieldTests = []test.FieldAssertion{
+				{Name: "ID", Got: got.ID, Want: orig.ID, Mode: test.CompareEqual},
+				{Name: "ServiceStatus", Got: got.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
+				{Name: "Notifiers.Shoutrrr", Got: got.Notifiers.Shoutrrr, Want: copyNotifiers.Shoutrrr, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+				t.Fatalf("after Copy: %v", testErr)
+			}
+
+			fieldTests = []test.FieldAssertion{
+				{Name: "Main", Got: got.Main, Want: orig.Main, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: got.Defaults, Want: orig.Defaults, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: got.HardDefaults, Want: orig.HardDefaults, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+				t.Fatalf("after Copy: %v", testErr)
+			}
+
+			if got.Failed == nil {
+				t.Fatal("after Copy: Webhook.Failed mismatch\ngot:  nil\nwant: non-nil")
+			}
+			for key, wantFail := range tc.wantFail {
+				gotFailStr := test.StringifyPtr(got.Failed.Get(key))
+				wantFailStr := test.StringifyPtr(wantFail)
+				if gotFailStr != wantFailStr {
+					t.Errorf(
+						"after Copy: Webhook.Failed.Get(%q) mismatch\ngot:  %s\nwant: %s",
+						key, gotFailStr, wantFailStr,
+					)
+				}
+				gotNR, wantNR := got.Failed.NextRunnable(key), orig.Failed.NextRunnable(key)
+				if !gotNR.Equal(wantNR) {
+					t.Errorf(
+						"after Copy: Webhook.Failed.NextRunnable(%q) mismatch\ngot:  %s\nwant: %s",
+						key, gotNR, wantNR,
+					)
+				}
+
+				got.Failed.Set(key, new(!*wantFail))
+				origFailStr := test.StringifyPtr(orig.Failed.Get(key))
+				if origFailStr != wantFailStr {
+					t.Errorf(
+						"after Set: original Webhook.Failed.Get(%q) mismatch\ngot:  %s\nwant: %s",
+						key, origFailStr, wantFailStr,
+					)
+				}
+			}
+
+			if len(got.Headers) == 0 || len(orig.Headers) == 0 {
+				t.Fatalf(
+					"after Copy: len(Webhook.Headers) mismatch\n"+
+						"got:  copy=%d, original=%d\nwant: non-zero",
+					len(got.Headers), len(orig.Headers),
+				)
+			}
+			if &got.Headers[0] == &orig.Headers[0] {
+				t.Errorf(
+					"after Copy: Webhook.Headers: copy aliases the original\n"+
+						"got:  %p\nwant: NOT %p",
+					&got.Headers[0], &orig.Headers[0],
+				)
 			}
 		})
 	}
@@ -714,7 +643,6 @@ func TestWebhooks_Copy(t *testing.T) {
 // #########
 
 func TestWebhooksDefaults_IsZero(t *testing.T) {
-	// GIVEN: a WebhooksDefaults.
 	tests := []struct {
 		name     string
 		defaults *WebhooksDefaults
@@ -750,7 +678,7 @@ func TestWebhooksDefaults_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "non-empty/1 item",
+			name: "non-empty/2 items",
 			defaults: &WebhooksDefaults{
 				"a": &Defaults{
 					Type: "github",
@@ -777,22 +705,16 @@ func TestWebhooksDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhooksDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -899,18 +821,15 @@ func TestDefaults_IsZero(t *testing.T) {
 			t.Parallel()
 
 			got := tc.defaults.IsZero()
+
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() mismatch\ngot:  %t\nwant: %v",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhooks_IsZero(t *testing.T) {
-	// GIVEN: a Webhooks.
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
@@ -931,7 +850,7 @@ func TestWebhooks_IsZero(t *testing.T) {
 			webhooks: &Webhooks{
 				"a": &Webhook{},
 			},
-			want: false,
+			want: false, // An empty entry still counts.
 		},
 		{
 			name: "non-empty/2 items",
@@ -947,21 +866,16 @@ func TestWebhooks_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.webhooks.IsZero()
 
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhooks.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhook_IsDefault(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
 		webhook *Webhook
@@ -1062,15 +976,10 @@ func TestWebhook_IsDefault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsDefault is called on it.
 			got := tc.webhook.IsDefault()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhook.IsDefault() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -1081,7 +990,6 @@ func TestWebhook_IsDefault(t *testing.T) {
 // #############
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -1154,7 +1062,7 @@ func TestDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Defaults.String",
 				tc.defaults.String,
 				tc.want,
 			)
@@ -1163,7 +1071,6 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestWebhooksDefaults_String(t *testing.T) {
-	// GIVEN: a WebhooksDefaults.
 	tests := []struct {
 		name             string
 		webhooksDefaults *WebhooksDefaults
@@ -1184,7 +1091,6 @@ func TestWebhooksDefaults_String(t *testing.T) {
 			webhooksDefaults: &WebhooksDefaults{
 				"one": &Defaults{},
 				"two": &Defaults{},
-				// "two": nil,
 			},
 			want: test.TrimYAML(`
 				one: {}
@@ -1266,7 +1172,7 @@ func TestWebhooksDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"WebhooksDefaults.String",
 				tc.webhooksDefaults.String,
 				tc.want,
 			)
@@ -1275,7 +1181,6 @@ func TestWebhooksDefaults_String(t *testing.T) {
 }
 
 func TestWebhooks_String(t *testing.T) {
-	// GIVEN: webHooks.
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
@@ -1377,22 +1282,16 @@ func TestWebhooks_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Webhooks is stringified with String.
 			got := tc.webhooks.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhooks.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Webhooks.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhook_String(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
 		webhook *Webhook
@@ -1491,7 +1390,7 @@ func TestWebhook_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Webhook.String",
 				tc.webhook.String,
 				tc.want,
 			)

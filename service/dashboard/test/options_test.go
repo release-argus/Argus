@@ -21,11 +21,9 @@ import (
 )
 
 func TestPlainOptions(t *testing.T) {
-	// WHEN: PlainOptions is called.
 	got := PlainOptions(t)
 
-	// THEN: got should be non-nil.
 	if got == nil {
-		t.Errorf("%s\nPlainOptions() returned nil, expected non-nil", packageName)
+		t.Error("mismatch\ngot:  nil\nwant: non-nil")
 	}
 }

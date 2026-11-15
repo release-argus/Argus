@@ -18,12 +18,10 @@ package v1
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -48,26 +46,28 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 		statusCode             int
 	}
 
-	// GIVEN: an API and a request for the Actions of a Service.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
-		name      string
-		serviceID *string
-		commands  command.Commands
-		webhooks  webhook.Webhooks
-		wants     wants
+		name         string
+		serviceID    *string
+		commands     command.Commands
+		commandFails []*bool
+		webhooks     webhook.Webhooks
+		webhookFails map[string]*bool
+		wants        wants
 	}{
 		{
 			name:      "service_id=unknown",
 			serviceID: new("unknown?"),
 			wants: wants{
-				stdoutRegex: `service "unknown\?" not found`,
+				stdoutRegex: `^WARNING: .*service "unknown\?" not found`,
+				bodyRegex:   `^{"message":"service \\"unknown\?\\" not found"}$`,
 				statusCode:  http.StatusNotFound,
 			},
 		},
 		{
-			name:      "service_id=nil",
+			name:      "service_id=empty",
 			serviceID: new(""),
 			wants: wants{
 				bodyRegex:  `{"message":"missing required query parameter: service_id"}`,
@@ -115,12 +115,35 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				"pass0": whtest.Webhook(t, false, false, false),
 			},
 		},
+		{
+			name: "known service_id/fail states",
+			commands: command.Commands{
+				testCommand(true),
+				testCommand(false),
+				{"true"},
+			},
+			commandFails: []*bool{
+				new(true),
+				new(false),
+				nil,
+			},
+			webhooks: webhook.Webhooks{
+				"fail0":  whtest.Webhook(t, true, false, false),
+				"pass0":  whtest.Webhook(t, false, false, false),
+				"unsent": whtest.Webhook(t, false, false, false),
+			},
+			webhookFails: map[string]*bool{
+				"fail0": new(true),
+				"pass0": new(false),
+			},
+		},
 	}
 	cfg := api.Config
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			if tc.wants.statusCode == 0 {
@@ -161,61 +184,68 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 					WebURL: "https://example.com",
 				},
 			)
+			// Status.Init resets the fail states, so they are set after it.
+			for i, failed := range tc.commandFails {
+				if failed != nil {
+					svc.CommandController.Failed.Set(i, *failed)
+				}
+			}
+			for id, failed := range tc.webhookFails {
+				svc.Webhook[id].Failed.Set(id, failed)
+			}
 
 			cfg.OrderMu.Lock()
 			cfg.Service[tc.name] = svc
 			cfg.Order = append(cfg.Order, tc.name)
 			cfg.OrderMu.Unlock()
+			t.Cleanup(func() { cfg.DeleteService(tc.name) })
 
 			target := "/api/v1/service/actions/"
 			params := url.Values{}
-			// Set service_id.
 			params.Set("service_id", serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
-			wHTTP := httptest.NewRecorder()
-			api.httpServiceGetActions(wHTTP, req)
-			res := wHTTP.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
+			w := httptest.NewRecorder()
+			api.httpServiceGetActions(w, req)
+			resp := w.Result()
+			t.Cleanup(func() { _ = resp.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceGetActions()", packageName)
-
-			// THEN: we get the expected response.
 			stdout := releaseStdout()
-			// stdout finishes.
 			if tc.wants.stdoutRegex != "" {
-				tc.wants.stdoutRegex = strings.ReplaceAll(tc.wants.stdoutRegex, "__name__", tc.name)
 				if !util.RegexCheck(tc.wants.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, tc.wants.stdoutRegex,
-					)
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.wants.stdoutRegex)
 				}
 			}
-			message, _ := io.ReadAll(res.Body)
-			if res.StatusCode != tc.wants.statusCode {
+			message, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
+			}
+			if resp.StatusCode != tc.wants.statusCode {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d\nbody: %q",
-					prefix, res.StatusCode, tc.wants.statusCode, message,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					resp.StatusCode, message, tc.wants.statusCode,
 				)
 			}
+			if got := string(message); !util.RegexCheck(tc.wants.bodyRegex, got) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
+			}
 			var gotStruct apitype.ActionSummary
-			_ = decode.Unmarshal("json", message, &gotStruct)
+			if err := decode.Unmarshal("json", message, &gotStruct); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
 			if gotLen, wantLen := len(gotStruct.Command), len(tc.commands); gotLen != wantLen {
 				t.Fatalf(
-					"%s commands count mismatch\ngot:  %d\nwant: %d\nbody: %q",
-					prefix, gotLen, wantLen, message,
+					"ActionSummary.Command length mismatch\ngot:  %d\nwant: %d\nbody: %q",
+					gotLen, wantLen, message,
 				)
 			}
 			if gotLen, wantLen := len(gotStruct.Webhook), len(tc.webhooks); gotLen != wantLen {
 				t.Fatalf(
-					"%s webhooks count mismatch\ngot:  %d\nwant: %d\nbody: %q",
-					prefix, gotLen, wantLen, message,
+					"ActionSummary.Webhook length mismatch\ngot:  %d\nwant: %d\nbody: %q",
+					gotLen, wantLen, message,
 				)
 			}
-			// Check commands.
 			if tc.commands != nil {
 				for cmd, got := range gotStruct.Command {
 					found := false
@@ -229,12 +259,22 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 									break
 								}
 							}
-							if got.Failed != svc.CommandController.Failed.Get(indexInService) ||
-								got.NextRunnable != svc.CommandController.NextRunnable(indexInService) {
+							var failed *bool
+							if indexInService < len(tc.commandFails) {
+								failed = tc.commandFails[indexInService]
+							}
+							gotFailed := test.StringifyPtr(got.Failed)
+							wantFailed := test.StringifyPtr(failed)
+							wantNextRunnable := svc.CommandController.NextRunnable(indexInService)
+							if gotFailed != wantFailed || !got.NextRunnable.Equal(wantNextRunnable) {
 								t.Fatalf(
-									"%s command %q mismatch\ngot:  %+v\nwant: %+v\nbody: %q",
-									prefix, cmd,
-									got, want,
+									"ActionSummary.Command[%q] mismatch\n"+
+										"got:  failed=%s, next_runnable=%s\n"+
+										"want: failed=%s, next_runnable=%s\n"+
+										"body: %q",
+									cmd,
+									gotFailed, got.NextRunnable,
+									wantFailed, wantNextRunnable,
 									message,
 								)
 							}
@@ -243,25 +283,30 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 					}
 					if !found {
 						t.Fatalf(
-							"%s command %q wasn't found in response\nbody: %q",
-							prefix, cmd, message,
+							"ActionSummary.Command[%q] mismatch\ngot:  present\nwant: absent\nbody: %q",
+							cmd, message,
 						)
 					}
 				}
 			}
-			// Check webhooks.
 			if tc.webhooks != nil {
 				for wh, got := range gotStruct.Webhook {
 					found := false
 					for _, want := range tc.webhooks {
 						if wh == want.ID {
 							found = true
-							if got.Failed != want.ServiceStatus.Fails.Webhook.Get(wh) ||
-								got.NextRunnable != want.NextRunnable() {
+							gotFailed := test.StringifyPtr(got.Failed)
+							wantFailed := test.StringifyPtr(tc.webhookFails[wh])
+							wantNextRunnable := want.NextRunnable()
+							if gotFailed != wantFailed || !got.NextRunnable.Equal(wantNextRunnable) {
 								t.Fatalf(
-									"%s webhook %q mismatch\ngot:  %+v\nwant: %+v\nbody: %q",
-									prefix, wh,
-									got, want,
+									"ActionSummary.Webhook[%q] mismatch\n"+
+										"got:  failed=%s, next_runnable=%s\n"+
+										"want: failed=%s, next_runnable=%s\n"+
+										"body: %q",
+									wh,
+									gotFailed, got.NextRunnable,
+									wantFailed, wantNextRunnable,
 									message,
 								)
 							}
@@ -270,8 +315,8 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 					}
 					if !found {
 						t.Fatalf(
-							"%s webhook %q wasn't found in response\nbody: %q",
-							prefix, wh, message,
+							"ActionSummary.Webhook[%q] mismatch\ngot:  present\nwant: absent\nbody: %q",
+							wh, message,
 						)
 					}
 				}
@@ -281,69 +326,16 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 }
 
 func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
-	// GIVEN: an auth-enabled API with two services, only one of which a
-	// scope-limited user can read.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-
-	for _, serviceID := range []string{"readable", "hidden"} {
-		svc := testService(t, serviceID, "url", "url", true)
-		svc.Defaults = &api.Config.Defaults.Service
-		svc.HardDefaults = &api.Config.HardDefaults.Service
-		svc.Command = command.Commands{{"true"}}
-		svc.CommandController = command.NewController(
-			&svc.Status,
-			svc.Command,
-			svc.Notify,
-			new("10m"),
-		)
-
-		api.Config.OrderMu.Lock()
-		api.Config.Service[serviceID] = svc
-		api.Config.Order = append(api.Config.Order, serviceID)
-		api.Config.OrderMu.Unlock()
-		t.Cleanup(func() { api.Config.DeleteService(serviceID) })
-	}
+	addActionableServices(t, api, "readable", "hidden")
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 
-	// AND: a group with GLOBAL service_action:execute, but service:read
-	// scoped only to "readable".
-	if _, err := deps.Store.CreateGroup(t.Context(),
-		"actioners", "",
-		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
-			},
-			{
-				Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"},
-			},
-		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate group: %v",
-			packageName, err,
-		)
-	}
-	createAuthUser(t, deps, "actioner", "actioner-password", "actioners")
-	actionerCookie := loginCookie(t, api, "actioner", "actioner-password")
+	actionerCookie := createActioner(t, api, deps)
 
-	// AND: a group with GLOBAL service:read, but no service_action:execute.
-	if _, err := deps.Store.CreateGroup(t.Context(),
-		"readers", "",
-		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
-			},
-		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate group: %v",
-			packageName, err,
-		)
-	}
+	createAuthGroup(t, deps, "readers", "", []rbac.Grant{
+		{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
+	})
 	createAuthUser(t, deps, "reader", "reader-password", "readers")
 	readerCookie := loginCookie(t, api, "reader", "reader-password")
 
@@ -383,24 +375,15 @@ func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the actions of that service are requested.
-			req := authedRequest(http.MethodGet,
-				"/api/v1/service/actions?service_id="+tc.serviceID,
-				"",
-				tc.cookie,
+			req := authedRequest(
+				http.MethodGet, "/api/v1/service/actions?service_id="+tc.serviceID, "", tc.cookie,
 			)
 			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf(
-				"%s\nhttpServiceGetActions() service_id=%q",
-				packageName, tc.serviceID,
-			)
-
-			// THEN: service_action:execute on a readable target decides the outcome.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s status mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -413,13 +396,14 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 		statusCode                  int
 		stdoutRegex, bodyRegex      string
 		wantSkipMessage             bool
-		latestVersionIsApproved     bool
 		upgradesApprovedVersion     bool
 		upgradesDeployedVersion     bool
 		approveCommandsIndividually bool
+		actions                     map[string]int // Runs announced per command/webhook.
 	}
 
-	// GIVEN: an API and a request for the Actions of a Service.
+	receiver := test.GitHubWebhookServer(t)
+
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
@@ -440,16 +424,19 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			name:    "invalid payload",
 			payload: new("target: foo"),
 			wants: wants{
-				stdoutRegex: test.TrimYAML(`
+				stdoutRegex: "^WARNING: .*" + test.TrimYAML(`
 					invalid payload:
 						jsontext: invalid character`,
 				),
+				bodyRegex:  `^{"message":"invalid payload:`,
+				statusCode: http.StatusBadRequest,
 			},
 		},
 		{
 			name:   "ARGUS_SKIP/known service_id",
 			target: new(ActionSkip),
 			wants: wants{
+				statusCode:      http.StatusOK,
 				wantSkipMessage: true,
 			},
 		},
@@ -458,6 +445,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			active: new(false),
 			target: new(ActionSkip),
 			wants: wants{
+				stdoutRegex:     `^WARNING: .*service is inactive, actions can't be run for it`,
+				bodyRegex:       `^{"message":"service is inactive, actions can't be run for it"}$`,
+				statusCode:      http.StatusBadRequest,
 				wantSkipMessage: false,
 			},
 		},
@@ -466,7 +456,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			serviceID: new("unknown?"),
 			target:    new(ActionSkip),
 			wants: wants{
-				stdoutRegex: `service "unknown\?" not found`,
+				stdoutRegex: `^WARNING: .*service "unknown\?" not found`,
+				bodyRegex:   `^{"message":"service \\"unknown\?\\" not found"}$`,
+				statusCode:  http.StatusNotFound,
 			},
 		},
 		{
@@ -474,7 +466,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			serviceID: new(""),
 			target:    new(ActionSkip),
 			wants: wants{
-				bodyRegex:  `service "" not found`,
+				bodyRegex:  `^{"message":"missing required query parameter: service_id"}$`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -482,8 +474,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			name:   "target=nil, known service_id",
 			target: nil,
 			wants: wants{
-				stdoutRegex: `invalid payload, target service not provided`,
-				statusCode:  http.StatusOK,
+				stdoutRegex: `^WARNING: .*invalid payload, target service not provided`,
+				bodyRegex:   `^{"message":"invalid payload, target service not provided"}$`,
+				statusCode:  http.StatusBadRequest,
 			},
 		},
 		{
@@ -502,6 +495,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
+				actions:    map[string]int{"false 0": 1},
 			},
 		},
 		{
@@ -512,6 +506,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
+				actions:    map[string]int{"known-service-and-webhook": 1},
 			},
 		},
 		{
@@ -523,6 +518,10 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
+				actions: map[string]int{
+					"known-service-and-multiple-webhook-0": 1,
+					"known-service-and-multiple-webhook-1": 1,
+				},
 			},
 		},
 		{
@@ -534,6 +533,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
+				actions:    map[string]int{"ls -a": 1, "false 1": 1},
 			},
 		},
 		{
@@ -549,6 +549,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			wants: wants{
 				statusCode:              http.StatusOK,
 				upgradesApprovedVersion: true,
+				actions:                 map[string]int{"ls -b": 1, "known-service-dvl-webhook-0": 1},
 			},
 		},
 		{
@@ -565,6 +566,10 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			wants: wants{
 				statusCode:              http.StatusOK,
 				upgradesDeployedVersion: true,
+				actions: map[string]int{
+					"ls -c": 1,
+					"known-service-upgrade-deployed-version-webhook-0": 1,
+				},
 			},
 		},
 		{
@@ -577,8 +582,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				"known-service-fail-webhook-0": whtest.Webhook(t, true, false, false),
 			},
 			wants: wants{
-				statusCode:              http.StatusOK,
-				latestVersionIsApproved: true,
+				statusCode: http.StatusOK,
+				actions:    map[string]int{"ls -d": 1, "known-service-fail-webhook-0": 1},
 			},
 		},
 		{
@@ -591,8 +596,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				"known-service-pass-webhook-0": whtest.Webhook(t, false, false, false),
 			},
 			wants: wants{
-				statusCode:              http.StatusOK,
-				latestVersionIsApproved: true,
+				statusCode: http.StatusOK,
+				actions:    map[string]int{"fail": 1, "known-service-pass-webhook-0": 1},
 			},
 		},
 		{
@@ -617,6 +622,25 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			wants: wants{
 				statusCode:              http.StatusOK,
 				upgradesDeployedVersion: true,
+				actions:                 map[string]int{"will_pass": 1},
+			},
+		},
+		{
+			name:   "webhook_NAME/runs the targeted webhook even though it already succeeded",
+			target: new("webhook_already_passed"),
+			webhooks: webhook.Webhooks{
+				"already_passed": whtest.Webhook(t, false, false, false),
+				"unsent":         whtest.Webhook(t, false, false, false),
+			},
+			webhookFails: map[string]*bool{
+				"already_passed": new(false),
+				"unsent":         new(true),
+			},
+			removeDVL:     true,
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode: http.StatusOK,
+				actions:    map[string]int{"already_passed": 1},
 			},
 		},
 		{
@@ -641,6 +665,25 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			wants: wants{
 				statusCode:              http.StatusOK,
 				upgradesDeployedVersion: true,
+				actions:                 map[string]int{"ls -g": 1},
+			},
+		},
+		{
+			name:   "command_NAME/runs the targeted command even though it already succeeded",
+			target: new("command_ls -i"),
+			commands: command.Commands{
+				{"ls", "-i"},
+				{"false", "3"},
+			},
+			commandFails: []*bool{
+				new(false),
+				new(true),
+			},
+			removeDVL:     true,
+			latestVersion: "0.9.0",
+			wants: wants{
+				statusCode: http.StatusOK,
+				actions:    map[string]int{"ls -i": 1},
 			},
 		},
 		{
@@ -653,13 +696,15 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			wants: wants{
 				statusCode:                  http.StatusOK,
 				approveCommandsIndividually: true,
+				actions:                     map[string]int{"ls -h": 1, "false 2": 1, "true": 1},
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			serviceID := util.DerefOr(tc.serviceID, tc.name)
@@ -687,6 +732,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				}
 			}
 
+			for _, wh := range tc.webhooks {
+				wh.URL = receiver.URL
+			}
 			svc.Webhook = tc.webhooks
 			svc.Webhook.Init(
 				&svc.Status,
@@ -711,11 +759,9 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			api.Config.OrderMu.Unlock()
 			t.Cleanup(func() { api.Config.DeleteService(tc.name) })
 
-			// Set service_id.
 			params := url.Values{}
 			params.Set("service_id", serviceID)
 
-			// WHEN: the HTTP request is sent to run the actions.
 			target := tc.target
 			if tc.wants.approveCommandsIndividually {
 				commandTarget := "command_" + tc.commands[0].String()
@@ -726,11 +772,11 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			if tc.wants.approveCommandsIndividually {
 				sends = len(tc.commands)
 			}
-			var prefix string
 			for sends != 0 {
 				sends--
 				if tc.wants.approveCommandsIndividually {
 					*target = "command_" + tc.commands[sends].String()
+					t.Logf("send %d", sends)
 				}
 				body := []byte(`{}`)
 				if target != nil {
@@ -741,41 +787,32 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				}
 				req := httptest.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(body))
 				req.URL.RawQuery = params.Encode()
-				wHTTP := httptest.NewRecorder()
-				api.httpServiceRunActions(wHTTP, req)
-				res := wHTTP.Result()
-				data, _ := io.ReadAll(res.Body)
-				prefix = fmt.Sprintf("%s\nAPI.httpServiceRunActions()", packageName)
-				t.Logf(
-					"%s target=%q\nresult=%q, status_code=%d",
-					prefix, util.DerefOr(target, "<nil>"),
-					string(data), res.StatusCode,
-				)
+				w := httptest.NewRecorder()
+				api.httpServiceRunActions(w, req)
+				resp := w.Result()
+				data, err := io.ReadAll(resp.Body)
+				if err != nil {
+					t.Fatalf("io.ReadAll() failed: %v", err)
+				}
+
+				if got, want := resp.StatusCode, tc.wants.statusCode; got != want {
+					t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, data, want)
+				}
+				if got := string(data); !util.RegexCheck(tc.wants.bodyRegex, got) {
+					t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wants.bodyRegex)
+				}
 				time.Sleep(10 * time.Microsecond)
 			}
 			time.Sleep(time.Duration((len(tc.commands)+len(tc.webhooks))*500) * time.Millisecond)
 
-			// THEN: we get the expected response.
-			expecting := 0
-			if tc.commands != nil {
-				expecting += len(tc.commands)
-				if tc.commandFails != nil {
-					for i := range tc.commandFails {
-						if util.DerefOr(tc.commandFails[i], true) == false {
-							expecting--
-						}
-					}
-				}
+			wantActions := tc.wants.actions
+			if wantActions == nil {
+				wantActions = map[string]int{}
 			}
-			if tc.webhooks != nil {
-				expecting += len(tc.webhooks)
-				if tc.webhookFails != nil {
-					for i := range tc.webhookFails {
-						if tc.webhookFails[i] != nil && *tc.webhookFails[i] == false {
-							expecting--
-						}
-					}
-				}
+
+			expecting := 0
+			for _, count := range wantActions {
+				expecting += count
 			}
 			if tc.wants.upgradesApprovedVersion {
 				expecting++
@@ -786,11 +823,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			if tc.wants.wantSkipMessage {
 				expecting++
 			}
+			wantMessages := expecting
 			messages := make([]apitype.WebSocketMessage, expecting)
-			t.Logf(
-				"%s expecting %d messages",
-				prefix, expecting,
-			)
 			got := 0
 			for expecting != 0 {
 				var message []byte
@@ -799,127 +833,76 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 					message = msg
 				case <-time.After(2 * time.Second):
 					t.Fatalf(
-						"%s timed out waiting for message\ngot:  %d\nwant: %d more",
-						prefix, got, expecting,
+						"Status.AnnounceChannel message count mismatch\n"+
+							"got:  %d (timeout after 2s)\nwant: %d",
+						got, wantMessages,
 					)
 				}
 				if message == nil {
 					stdout := releaseStdout()
-					t.Log(time.Now(), stdout)
 					t.Errorf(
-						"%s expected more messages\ngot:  0\nwant: %d",
-						prefix, expecting,
+						"message %d: Status.AnnounceChannel message mismatch\n"+
+							"got:  nil\nwant: non-nil\nstdout: %q",
+						got, stdout,
 					)
 					return
 				}
-				_ = decode.Unmarshal("json", message, &messages[got])
-				raw, _ := decode.Marshal("json", messages[got])
-				t.Logf(
-					"%s\n%s\n",
-					packageName, string(raw),
-				)
+				if err := decode.Unmarshal("json", message, &messages[got]); err != nil {
+					t.Fatalf("message %d: decode.Unmarshal() failed: %v", got, err)
+				}
+				t.Logf("message %d: announced: %s", got, message)
 				got++
 				expecting--
 			}
-			// extra message check.
 			if extraMessages := len(api.Config.HardDefaults.Service.Status.AnnounceChannel); extraMessages != 0 {
 				raw := <-api.Config.HardDefaults.Service.Status.AnnounceChannel
 				t.Fatalf(
-					"%s wasn't expecting another message but got %d:\n%s",
-					prefix, extraMessages, string(raw),
+					"Status.AnnounceChannel extra message count mismatch\n"+
+						"got:  %d (first: %s)\nwant: 0",
+					extraMessages, raw,
 				)
 			}
 			stdout := releaseStdout()
-			// stdout finishes.
 			if tc.wants.stdoutRegex != "" {
 				if !util.RegexCheck(tc.wants.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, tc.wants.stdoutRegex,
-					)
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.wants.stdoutRegex)
 				}
 				return
 			}
-			t.Log(stdout)
-			// Check version was skipped.
+			t.Logf("stdout: %q", stdout)
 			if util.DerefOrZero(tc.target) == ActionSkip {
 				if tc.wants.wantSkipMessage &&
 					messages[0].ServiceData.Status.ApprovedVersion != serviceinfo.SkippedVersion(svc.Status.LatestVersion()) {
 					t.Errorf(
-						"%s LatestVersion %q wasn't skipped. ApprovedVersion=%q\ngot=%q",
-						prefix, svc.Status.LatestVersion(),
-						svc.Status.ApprovedVersion(),
+						"WebSocketMessage.ServiceData.Status.ApprovedVersion mismatch\ngot:  %q\nwant: %q",
 						messages[0].ServiceData.Status.ApprovedVersion,
+						serviceinfo.SkippedVersion(svc.Status.LatestVersion()),
 					)
 				}
 			} else {
-				// expecting = commands + webhooks that have not failed=false.
-				expecting := 0
-				if tc.commands != nil {
-					expecting += len(tc.commands)
-					if tc.commandFails != nil {
-						for i := range tc.commandFails {
-							if util.DerefOr(tc.commandFails[i], true) == false {
-								expecting--
-							}
-						}
-					}
-
-				}
-				if tc.webhooks != nil {
-					expecting += len(tc.webhooks)
-					if tc.webhookFails != nil {
-						for i := range tc.webhookFails {
-							if tc.webhookFails[i] != nil && *tc.webhookFails[i] == false {
-								expecting--
-							}
-						}
-					}
-				}
-				if tc.wants.upgradesApprovedVersion {
-					expecting++
-				}
-				var received []string
 				for i, message := range messages {
-					t.Logf(
-						"%s - message[%d]=%v",
-						prefix, i, message,
-					)
 					receivedForAnAction := false
 					for _, cmd := range tc.commands {
 						if message.CommandData[cmd.String()] != nil {
 							receivedForAnAction = true
-							received = append(received, cmd.String())
-							t.Logf(
-								"%s FOUND COMMAND %q - failed=%s",
-								prefix, cmd.String(),
-								test.StringifyPtr(message.CommandData[cmd.String()].Failed),
-							)
 							break
 						}
 					}
 					if !receivedForAnAction {
-						for i := range tc.webhooks {
-							if message.WebhookData[i] != nil {
+						for id := range tc.webhooks {
+							if message.WebhookData[id] != nil {
 								receivedForAnAction = true
-								received = append(received, i)
-								t.Logf(
-									"%s FOUND WEBHOOK %q - failed=%s",
-									prefix, i,
-									test.StringifyPtr(message.WebhookData[i].Failed),
-								)
 								break
 							}
 						}
 					}
 					if !receivedForAnAction {
-						//  IF we're expecting a message about approvedVersion.
 						if tc.wants.upgradesApprovedVersion && message.Type == "VERSION" && message.SubType == "ACTION" {
 							if got, want := message.ServiceData.Status.ApprovedVersion, svc.Status.LatestVersion(); got != want {
 								t.Fatalf(
-									"%s expected approved version to be updated to latest version in the message\n%#v\napproved=%#v, latest=%#v",
-									prefix, message,
-									got, want,
+									"message %d: WebSocketMessage.ServiceData.Status.ApprovedVersion mismatch\n"+
+										"got:  %q\nwant: %q",
+									i, got, want,
 								)
 							}
 							continue
@@ -927,21 +910,41 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 						if tc.wants.upgradesDeployedVersion && message.Type == "VERSION" && message.SubType == "UPDATED" {
 							if got, want := message.ServiceData.Status.DeployedVersion, svc.Status.LatestVersion(); got != want {
 								t.Fatalf(
-									"%s expected deployed version to be updated to latest version in the message\n%#v\ndeployed=%#v, latest=%#v",
-									prefix, message,
-									got, want,
+									"message %d: WebSocketMessage.ServiceData.Status.DeployedVersion mismatch\n"+
+										"got:  %q\nwant: %q",
+									i, got, want,
 								)
 							}
 							continue
 						}
-						raw, _ := decode.Marshal("json", message)
-						if string(raw) != `{"page":"","type":""}` {
+						raw, err := decode.Marshal("json", message)
+						if err != nil {
+							t.Fatalf("message %d: decode.Marshal() failed: %v", i, err)
+						}
+						if want := `{"page":"","type":""}`; string(raw) != want {
 							t.Fatalf(
-								"%s Unexpected message\n%#v\n%s",
-								prefix, message, raw,
+								"message %d: WebSocketMessage mismatch\ngot:  %s\nwant: %s",
+								i, raw, want,
 							)
 						}
 					}
+				}
+
+				gotActions := make(map[string]int, len(wantActions))
+				for _, message := range messages {
+					for key := range message.CommandData {
+						gotActions[key]++
+					}
+					for key := range message.WebhookData {
+						gotActions[key]++
+					}
+				}
+				if testErr := test.AssertMapEqual(
+					t,
+					gotActions, wantActions,
+					"WebSocketMessage action counts",
+				); testErr != nil {
+					t.Error(testErr)
 				}
 			}
 		})
@@ -949,56 +952,11 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 }
 
 func TestHTTP_HTTPServiceRunActions__requiresServiceRead(t *testing.T) {
-	// GIVEN: an auth-enabled API with two services, only one of which a
-	// scope-limited user can read.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
+	addActionableServices(t, api, "readable", "hidden")
 
-	for _, serviceID := range []string{"readable", "hidden"} {
-		svc := testService(t, serviceID, "url", "url", true)
-		svc.Defaults = &api.Config.Defaults.Service
-		svc.HardDefaults = &api.Config.HardDefaults.Service
-		svc.Command = command.Commands{{"true"}}
-		svc.CommandController = command.NewController(
-			&svc.Status,
-			svc.Command,
-			svc.Notify,
-			new("10m"),
-		)
-		svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
-		svc.Status.SetDeployedVersion("2.0.0", "", false)
-		svc.Status.SetLatestVersion("3.0.0", "", false)
-		svc.Status.SetApprovedVersion("2.0.0", false)
-
-		api.Config.OrderMu.Lock()
-		api.Config.Service[serviceID] = svc
-		api.Config.Order = append(api.Config.Order, serviceID)
-		api.Config.OrderMu.Unlock()
-		t.Cleanup(func() { api.Config.DeleteService(serviceID) })
-	}
-
-	// AND: a group with GLOBAL service_action:execute, but service:read
-	// scoped only to "readable".
-	if _, err := deps.Store.CreateGroup(t.Context(),
-		"actioners", "",
-		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-				Scope: rbac.Scope{Type: rbac.ScopeGlobal},
-			},
-			{
-				Resource: rbac.ResourceService, Action: rbac.ActionRead,
-				Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"},
-			},
-		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate group: %v",
-			packageName, err,
-		)
-	}
-	createAuthUser(t, deps, "actioner", "actioner-password", "actioners")
-	actionerCookie := loginCookie(t, api, "actioner", "actioner-password")
+	actionerCookie := createActioner(t, api, deps)
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 
 	tests := []struct {
@@ -1026,26 +984,60 @@ func TestHTTP_HTTPServiceRunActions__requiresServiceRead(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// WHEN: the actions are run against that service.
-			req := authedRequest(http.MethodPost,
-				"/api/v1/service/actions?service_id="+tc.serviceID,
-				`{"target":"`+ActionSkip+`"}`,
-				tc.cookie,
+			req := authedRequest(
+				http.MethodPost, "/api/v1/service/actions?service_id="+tc.serviceID,
+				`{"target":"`+ActionSkip+`"}`, tc.cookie,
 			)
 			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf(
-				"%s\nhttpServiceRunActions() service_id=%q",
-				packageName, tc.serviceID,
-			)
-
-			// THEN: service:read on the target decides the outcome.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s status mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
+}
+
+// addActionableServices adds a service with one command and a pending release
+// (2.0.0 deployed, 3.0.0 latest) for each ID.
+func addActionableServices(t *testing.T, api *API, serviceIDs ...string) {
+	t.Helper()
+
+	for _, serviceID := range serviceIDs {
+		svc := testService(t, serviceID, "url", "url", true)
+		svc.Defaults = &api.Config.Defaults.Service
+		svc.HardDefaults = &api.Config.HardDefaults.Service
+		svc.Command = command.Commands{{"true"}}
+		svc.CommandController = command.NewController(
+			&svc.Status,
+			svc.Command,
+			svc.Notify,
+			new("10m"),
+		)
+		svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
+		svc.Status.SetDeployedVersion("2.0.0", "", false)
+		svc.Status.SetLatestVersion("3.0.0", "", false)
+		svc.Status.SetApprovedVersion("2.0.0", false)
+
+		api.Config.OrderMu.Lock()
+		api.Config.Service[serviceID] = svc
+		api.Config.Order = append(api.Config.Order, serviceID)
+		api.Config.OrderMu.Unlock()
+		t.Cleanup(func() { api.Config.DeleteService(serviceID) })
+	}
+}
+
+// createActioner creates a user with GLOBAL service_action:execute and
+// service:read on "readable" only, and returns its session cookie.
+func createActioner(t *testing.T, api *API, deps *AuthDeps) *http.Cookie {
+	t.Helper()
+
+	createAuthGroup(t, deps, "actioners", "", []rbac.Grant{
+		{Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
+		{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "readable"}},
+	})
+	createAuthUser(t, deps, "actioner", "actioner-password", "actioners")
+	return loginCookie(t, api, "actioner", "actioner-password")
 }

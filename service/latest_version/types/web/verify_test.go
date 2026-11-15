@@ -24,15 +24,15 @@ import (
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name     string
 		input    *Lookup
 		errRegex string
 	}{
 		{
-			name:  "Valid Lookup",
-			input: testLookup(t, false),
+			name:     "Valid Lookup",
+			input:    testLookup(t, false),
+			errRegex: `^$`,
 		},
 		{
 			name:     "Empty",
@@ -76,7 +76,6 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)

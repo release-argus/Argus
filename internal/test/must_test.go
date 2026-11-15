@@ -17,16 +17,17 @@
 package test
 
 import (
-	"fmt"
+	"errors"
+	"regexp"
 	"testing"
 )
 
 func TestMust(t *testing.T) {
 	tests := []struct {
-		name  string
-		fn    func() (int, error)
-		panic bool
-		want  int
+		name       string
+		fn         func() (int, error)
+		panicRegex string
+		want       int
 	}{
 		{
 			name: "no error",
@@ -38,35 +39,31 @@ func TestMust(t *testing.T) {
 		{
 			name: "with error",
 			fn: func() (int, error) {
-				return 6, fmt.Errorf("some error")
+				return 6, errors.New("some error")
 			},
-			panic: true,
-			want:  0,
+			panicRegex: `^unexpected error: some error$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			prefix := fmt.Sprintf("%s\nMust()", packageName)
-
-			if tc.panic {
+			if tc.panicRegex != "" {
 				defer func() {
-					if r := recover(); r == nil {
-						t.Fatalf("%s the embedded function did not panic", prefix)
+					r := recover()
+					got, _ := r.(string)
+					if !regexp.MustCompile(tc.panicRegex).MatchString(got) {
+						t.Fatalf("recover() mismatch\ngot:  %v\nwant: %q", r, tc.panicRegex)
 					}
 				}()
 			}
 
-			// WHEN: Must is called.
 			result := Must(t, tc.fn)
 
-			// THEN: the result should be the expected value.
+			if tc.panicRegex != "" {
+				return
+			}
 			if result != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %d\nwant: %d",
-					prefix, result, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %d\nwant: %d", result, tc.want)
 			}
 		})
 	}

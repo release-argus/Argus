@@ -12,34 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
 // Package test provides test helpers for the deployed_version package.
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 )
 
 // PlainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func PlainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+func PlainDefaultsConfig() base.DefaultsConfig {
+	hardDefaults := &base.Defaults{Options: &opt.Defaults{}}
 	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.Options.Default()
 
 	return base.DefaultsConfig{
-		Soft: defaults,
+		Soft: &base.Defaults{Options: &opt.Defaults{}},
 		Hard: hardDefaults,
 	}
 }

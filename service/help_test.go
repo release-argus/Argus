@@ -34,27 +34,24 @@ import (
 // dummyGitHubToken stands in for a real token where no request is made.
 const dummyGitHubToken = "dummy-github-token"
 
-var packageName = "service"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
 func testService(t *testing.T, id string, lvType, dvType string) *Service {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	t.Helper()
+
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	svc := test.Must(t, func() (*Service, error) {
@@ -75,7 +72,6 @@ func testService(t *testing.T, id string, lvType, dvType string) *Service {
 		)
 	})
 
-	// Status.
 	svcStatus, _ := statustest.New("yaml", nil)
 	svc.Status = *svcStatus.Copy(true)
 	svc.HardDefaults.Status.AnnounceChannel = svc.Status.AnnounceChannel
@@ -83,21 +79,15 @@ func testService(t *testing.T, id string, lvType, dvType string) *Service {
 	svc.HardDefaults.Status.SaveChannel = svc.Status.SaveChannel
 	svc.Status.ServiceInfo.ID = svc.ID
 
-	// Check the values.
 	if err, _ := svc.CheckValues(); err != nil {
-		t.Fatalf(
-			"%s\ntestService().CheckValues() error: %v",
-			packageName, err,
-		)
+		t.Fatalf("Service.CheckValues() failed: %v", err)
 	}
 
 	return svc
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
+func plainDefaultsConfig() DefaultsConfig {
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()

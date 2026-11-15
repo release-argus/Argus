@@ -19,53 +19,34 @@ package store
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestNew(t *testing.T) {
-	// GIVEN: a fresh database.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 
-	// WHEN: New is called.
 	store, err := New(t.Context(), db)
-
-	prefix := fmt.Sprintf("%s\nNew()", packageName)
-
-	// THEN: it succeeds.
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// AND: the permission catalogue is synced.
-	if got, want := countRows(t, store, "permissions"), cataloguePairCount(); got != want {
-		t.Errorf(
-			"%s permissions row count mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+	if got, want := test.CountRows(t, store.db, "permissions"), cataloguePairCount(); got != want {
+		t.Errorf("permissions row count mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// AND: the preferences table exists, holding nothing yet.
-	if got := countRows(t, store, "user_preferences"); got != 0 {
-		t.Errorf(
-			"%s user_preferences row count mismatch\ngot:  %d\nwant: 0",
-			prefix, got,
-		)
+	if got, want := test.CountRows(t, store.db, "user_preferences"), 0; got != want {
+		t.Errorf("user_preferences row count mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// AND: the three groups are seeded (admin protected; the rest not).
 	groups, err := store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf(
-			"%s Groups() failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.Groups() failed: %v", err)
 	}
 	wantSystem := map[string]bool{
 		GroupAdmin:    true,
@@ -73,36 +54,31 @@ func TestNew(t *testing.T) {
 		GroupViewer:   false,
 	}
 	if got, want := len(groups), len(wantSystem); got != want {
-		t.Fatalf(
-			"%s group count mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Fatalf("len(Store.Groups()) mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 	for _, group := range groups {
 		want, known := wantSystem[group.Name]
 		if !known {
 			t.Errorf(
-				"%s unexpected group %q",
-				prefix, group.Name,
+				"Group.Name mismatch\ngot:  %q\nwant: one of %q",
+				group.Name, []string{GroupAdmin, GroupOperator, GroupViewer},
 			)
 			continue
 		}
 		if group.System != want {
 			t.Errorf(
-				"%s group %q system mismatch\ngot:  %t\nwant: %t",
-				prefix, group.Name, group.System, want,
+				"Group[%q].System mismatch\ngot:  %t\nwant: %t",
+				group.Name, group.System, want,
 			)
 		}
 
-		// AND: each seeded group carries its immutable seed_key.
 		if group.SeedKey != group.Name {
 			t.Errorf(
-				"%s group %q seed_key mismatch\ngot:  %q\nwant: %q",
-				prefix, group.Name, group.SeedKey, group.Name,
+				"Group[%q].SeedKey mismatch\ngot:  %q\nwant: %q",
+				group.Name, group.SeedKey, group.Name,
 			)
 		}
 
-		// AND: admin holds the full catalogue; the others hold their remits.
 		wantGrants := map[string]int{
 			GroupAdmin:    cataloguePairCount(),
 			GroupOperator: seedGrantCount(t, GroupOperator),
@@ -110,134 +86,111 @@ func TestNew(t *testing.T) {
 		}[group.Name]
 		if len(group.Grants) != wantGrants {
 			t.Errorf(
-				"%s group %q grant count mismatch\ngot:  %d\nwant: %d",
-				prefix, group.Name, len(group.Grants), wantGrants,
+				"len(Group[%q].Grants) mismatch\ngot:  %d\nwant: %d",
+				group.Name, len(group.Grants), wantGrants,
 			)
 		}
 	}
 
-	// AND: every seeded grant is valid against the catalogue.
 	for _, group := range groups {
 		for _, grant := range group.Grants {
 			if !grant.Valid() {
 				t.Errorf(
-					"%s group %q holds an invalid grant: %+v",
-					prefix, group.Name, grant,
+					"Group[%q].Grants[%q].Valid() mismatch\ngot:  false\nwant: true",
+					group.Name, grantString(grant),
 				)
 			}
 		}
 	}
 
-	// AND: the remits hold.
 	byName := groupsByName(t, store)
 	remitChecks := []struct {
+		name     string
 		group    string
 		resource rbac.Resource
 		action   rbac.Action
 		want     bool
 	}{
-		{GroupOperator, rbac.ResourceService, rbac.ActionCreate, true},
-		{GroupOperator, rbac.ResourceNotify, rbac.ActionExecute, true},
-		{GroupViewer, rbac.ResourceService, rbac.ActionRead, true},
-		{GroupViewer, rbac.ResourceConfig, rbac.ActionRead, true},
-		{GroupViewer, rbac.ResourceService, rbac.ActionCreate, false},
-		{GroupOperator, rbac.ResourceMetric, rbac.ActionRead, false},
-		{GroupViewer, rbac.ResourceMetric, rbac.ActionRead, false},
+		{name: "operator/metric:read", group: GroupOperator, resource: rbac.ResourceMetric, action: rbac.ActionRead, want: false},
+		{name: "operator/notify:execute", group: GroupOperator, resource: rbac.ResourceNotify, action: rbac.ActionExecute, want: true},
+		{name: "operator/service:create", group: GroupOperator, resource: rbac.ResourceService, action: rbac.ActionCreate, want: true},
+		{name: "viewer/config:read", group: GroupViewer, resource: rbac.ResourceConfig, action: rbac.ActionRead, want: true},
+		{name: "viewer/metric:read", group: GroupViewer, resource: rbac.ResourceMetric, action: rbac.ActionRead, want: false},
+		{name: "viewer/service:create", group: GroupViewer, resource: rbac.ResourceService, action: rbac.ActionCreate, want: false},
+		{name: "viewer/service:read", group: GroupViewer, resource: rbac.ResourceService, action: rbac.ActionRead, want: true},
 	}
 	for _, check := range remitChecks {
-		if got := groupHasGlobalGrant(byName[check.group], check.resource, check.action); got != check.want {
-			t.Errorf(
-				"%s group %q grant on %s:%s\ngot:  %v\nwant: %v",
-				prefix, check.group, check.resource, check.action, got, check.want,
-			)
-		}
+		t.Run(check.name, func(t *testing.T) {
+			t.Parallel()
+
+			group := groupNamed(t, byName, check.group)
+			if got := groupHasGlobalGrant(group, check.resource, check.action); got != check.want {
+				t.Errorf("groupHasGlobalGrant() mismatch\ngot:  %t\nwant: %t", got, check.want)
+			}
+		})
 	}
 }
 
 func TestNew__idempotent(t *testing.T) {
-	// GIVEN: a database already initialised once, with user changes on top.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfirst New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
-	// User renames viewer's description and strips admin grants directly.
+	// User renames viewer's description and strips all grants from every group.
 	newDescription := "customised"
 	if _, err := store.db.Exec(`
 			UPDATE groups
-			SET description = '`+newDescription+`'
+			SET description = ?
 			WHERE name = ?;`,
-		GroupViewer,
+		newDescription, GroupViewer,
 	); err != nil {
-		t.Fatalf(
-			"%s\nsetup update failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("update: DB.Exec() failed: %v", err)
 	}
 	if _, err := store.db.Exec(
 		`DELETE FROM group_permissions;`,
 	); err != nil {
-		t.Fatalf(
-			"%s\nsetup delete failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("delete: DB.Exec() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nNew() again", packageName)
-
-	// WHEN: New runs again on the same database.
 	store, err = New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: no duplicate groups appear.
-	if got := countRows(t, store, "groups"); got != 3 {
-		t.Errorf(
-			"%s group count mismatch\ngot:  %d\nwant: 3",
-			prefix, got,
-		)
+	if got := test.CountRows(t, store.db, "groups"); got != 3 {
+		t.Errorf("groups row count mismatch\ngot:  %d\nwant: 3", got)
 	}
 
-	// AND: user customisation of non-admin groups survives.
 	var description string
 	if err := store.db.QueryRow(
 		`SELECT description FROM groups WHERE name = ?;`, GroupViewer,
 	).Scan(&description); err != nil || description != newDescription {
 		t.Errorf(
-			"%s viewer description mismatch\ngot:  %q, err=%v\nwant: %q",
-			prefix, description, err, newDescription,
+			"viewer: Group.Description mismatch\ngot:  %q, err=%v\nwant: %q, err=nil",
+			description, err, newDescription,
 		)
 	}
 
-	// AND: admin grants are restored to the full catalogue.
+	// Starters stay stripped: only admin is restored to the full catalogue.
 	groups, err := store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf(
-			"%s Groups() failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.Groups() failed: %v", err)
 	}
 	for _, group := range groups {
 		switch group.Name {
 		case GroupAdmin:
 			if len(group.Grants) != cataloguePairCount() {
 				t.Errorf(
-					"%s %s grants not re-synced\ngot:  %d\nwant: %d",
-					prefix, group.Name, len(group.Grants), cataloguePairCount(),
+					"len(Group[%q].Grants) mismatch\ngot:  %d\nwant: %d",
+					group.Name, len(group.Grants), cataloguePairCount(),
 				)
 			}
 		default:
 			if len(group.Grants) != 0 {
 				t.Errorf(
-					"%s %s grants shouldn't have re-synced\ngot:  %d\nwant: 0",
-					prefix, group.Name, len(group.Grants),
+					"len(Group[%q].Grants) mismatch\ngot:  %d\nwant: 0",
+					group.Name, len(group.Grants),
 				)
 			}
 		}
@@ -245,141 +198,94 @@ func TestNew__idempotent(t *testing.T) {
 }
 
 func TestNew__starterGroupDeletionPersists(t *testing.T) {
-	// GIVEN: an initialised database with a deleted starter group.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfirst New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
-	operator, ok := groupsByName(t, store)[GroupOperator]
-	if !ok {
-		t.Fatalf("%s\noperator group not seeded", packageName)
-	}
+	operator := mustGroupByName(t, store, GroupOperator)
 	if err := store.DeleteGroup(t.Context(), operator.ID); err != nil {
-		t.Fatalf(
-			"%s\nDeleteGroup failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.DeleteGroup() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nNew() after deleting a starter group", packageName)
-
-	// WHEN: New runs again.
 	store, err = New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the deleted starter group is not re-created, while the others remain.
+	// Only a fresh install seeds starters.
 	byName := groupsByName(t, store)
 	if _, present := byName[GroupOperator]; present {
-		t.Errorf("%s operator group was re-added after deletion", prefix)
+		t.Error("byName[GroupOperator] mismatch\ngot:  present\nwant: absent (deleted)")
 	}
 	for _, want := range []string{GroupAdmin, GroupViewer} {
 		if _, present := byName[want]; !present {
-			t.Errorf(
-				"%s group %q should still be present",
-				prefix, want,
-			)
+			t.Errorf("byName[%q] mismatch\ngot:  absent\nwant: present", want)
 		}
 	}
 }
 
 func TestNew__starterGroupRenamePersists(t *testing.T) {
-	// GIVEN: an initialised database whose admin has renamed a starter group.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfirst New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
-	viewer, ok := groupsByName(t, store)[GroupViewer]
-	if !ok {
-		t.Fatalf("%s\nviewer group not seeded", packageName)
-	}
+	viewer := mustGroupByName(t, store, GroupViewer)
 	newName := "watchers"
 	if _, err := store.UpdateGroup(
 		t.Context(),
 		viewer.ID,
 		GroupPatch{Name: &newName},
 	); err != nil {
-		t.Fatalf(
-			"%s\nUpdateGroup failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.UpdateGroup() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nNew() after renaming a starter group", packageName)
-
-	// WHEN: New runs again.
 	store, err = New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the original name is not re-seeded; the renamed group persists,
-	// keeping its immutable seed_key.
+	// Seeding finds the group by its seed_key.
 	byName := groupsByName(t, store)
 	if got, want := len(byName), 3; got != want {
-		t.Errorf(
-			"%s group count mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("len(byName) mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 	if _, present := byName[GroupViewer]; present {
-		t.Errorf(
-			"%s original %q group name was re-seeded",
-			prefix, GroupViewer,
-		)
+		t.Error("byName[GroupViewer] mismatch\ngot:  present\nwant: absent (renamed)")
 	}
 	renamed, present := byName[newName]
 	if !present {
-		t.Fatalf(
-			"%s renamed group %q missing",
-			prefix, newName,
-		)
+		t.Fatal("byName[newName] mismatch\ngot:  absent\nwant: present")
 	}
 	if renamed.SeedKey != GroupViewer {
-		t.Errorf(
-			"%s seed_key mismatch\ngot:  %q\nwant: %q",
-			prefix, renamed.SeedKey, GroupViewer,
-		)
+		t.Errorf("Group.SeedKey mismatch\ngot:  %q\nwant: %q", renamed.SeedKey, GroupViewer)
 	}
 }
 
 func TestNew__permissionsIntroducedLater(t *testing.T) {
-	// GIVEN: initialised databases missing a permission pair (simulating a database
-	// seeded before the pair entered the catalogue), with various user edits on top.
 	tests := []struct {
 		name  string
 		setup func(t *testing.T, store *Store)
-		check func(t *testing.T, prefix string, byName map[string]Group)
+		check func(t *testing.T, byName map[string]Group)
 	}{
 		{
 			name: "admin only/new non-read permission stays out of starter groups",
 			setup: func(t *testing.T, store *Store) {
 				removePermission(t, store.db, rbac.ResourceNotify, rbac.ActionExecute)
 			},
-			check: func(t *testing.T, prefix string, byName map[string]Group) {
-				if !groupHasGlobalGrant(byName[GroupAdmin], rbac.ResourceNotify, rbac.ActionExecute) {
-					t.Errorf("%s admin should have gained notify:execute", prefix)
+			check: func(t *testing.T, byName map[string]Group) {
+				r, a := rbac.ResourceNotify, rbac.ActionExecute
+				if !groupHasGlobalGrant(groupNamed(t, byName, GroupAdmin), r, a) {
+					t.Error(
+						"groupHasGlobalGrant(byName[GroupAdmin]) mismatch\ngot:  false\nwant: true",
+					)
 				}
 				for _, groupName := range []string{GroupOperator, GroupViewer} {
-					if groupHasGlobalGrant(byName[groupName], rbac.ResourceNotify, rbac.ActionExecute) {
+					if groupHasGlobalGrant(groupNamed(t, byName, groupName), r, a) {
 						t.Errorf(
-							"%s %s should not have gained notify:execute",
-							prefix, groupName,
+							"groupHasGlobalGrant(byName[%q]) mismatch\ngot:  true\nwant: false",
+							groupName,
 						)
 					}
 				}
@@ -390,15 +296,18 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 			setup: func(t *testing.T, store *Store) {
 				removePermission(t, store.db, rbac.ResourceConfig, rbac.ActionRead)
 			},
-			check: func(t *testing.T, prefix string, byName map[string]Group) {
-				if !groupHasGlobalGrant(byName[GroupAdmin], rbac.ResourceConfig, rbac.ActionRead) {
-					t.Errorf("%s admin should have gained config:read", prefix)
+			check: func(t *testing.T, byName map[string]Group) {
+				r, a := rbac.ResourceConfig, rbac.ActionRead
+				if !groupHasGlobalGrant(groupNamed(t, byName, GroupAdmin), r, a) {
+					t.Error(
+						"groupHasGlobalGrant(byName[GroupAdmin]) mismatch\ngot:  false\nwant: true",
+					)
 				}
 				for _, groupName := range []string{GroupOperator, GroupViewer} {
-					if groupHasGlobalGrant(byName[groupName], rbac.ResourceConfig, rbac.ActionRead) {
+					if groupHasGlobalGrant(groupNamed(t, byName, groupName), r, a) {
 						t.Errorf(
-							"%s %s should not have gained config:read",
-							prefix, groupName,
+							"groupHasGlobalGrant(byName[%q]) mismatch\ngot:  true\nwant: false",
+							groupName,
 						)
 					}
 				}
@@ -415,16 +324,16 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 							(SELECT id FROM permissions WHERE resource = ? AND action = ?);`,
 					GroupOperator, string(rbac.ResourceService), string(rbac.ActionCreate),
 				); err != nil {
-					t.Fatalf(
-						"%s\nsetup strip failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.Exec() failed: %v", err)
 				}
 			},
-			check: func(t *testing.T, prefix string, byName map[string]Group) {
-				// The stripped grant is not restored.
-				if groupHasGlobalGrant(byName[GroupOperator], rbac.ResourceService, rbac.ActionCreate) {
-					t.Errorf("%s operator's stripped service:create was restored", prefix)
+			check: func(t *testing.T, byName map[string]Group) {
+				r, a := rbac.ResourceService, rbac.ActionCreate
+				if groupHasGlobalGrant(groupNamed(t, byName, GroupOperator), r, a) {
+					t.Error(
+						"groupHasGlobalGrant(byName[GroupOperator]) mismatch\n" +
+							"got:  true\nwant: false",
+					)
 				}
 			},
 		},
@@ -432,17 +341,14 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 			name: "deleted group/skipped",
 			setup: func(t *testing.T, store *Store) {
 				removePermission(t, store.db, rbac.ResourceNotify, rbac.ActionExecute)
-				operator := groupsByName(t, store)[GroupOperator]
+				operator := mustGroupByName(t, store, GroupOperator)
 				if err := store.DeleteGroup(t.Context(), operator.ID); err != nil {
-					t.Fatalf(
-						"%s\nsetup DeleteGroup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("Store.DeleteGroup() failed: %v", err)
 				}
 			},
-			check: func(t *testing.T, prefix string, byName map[string]Group) {
+			check: func(t *testing.T, byName map[string]Group) {
 				if _, present := byName[GroupOperator]; present {
-					t.Errorf("%s deleted operator group was re-created", prefix)
+					t.Error("byName[GroupOperator] mismatch\ngot:  present\nwant: absent (deleted)")
 				}
 			},
 		},
@@ -450,24 +356,21 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 			name: "renamed group/grants left untouched",
 			setup: func(t *testing.T, store *Store) {
 				removePermission(t, store.db, rbac.ResourceNotify, rbac.ActionExecute)
-				operator := groupsByName(t, store)[GroupOperator]
+				operator := mustGroupByName(t, store, GroupOperator)
 				newName := "ops"
 				if _, err := store.UpdateGroup(
 					t.Context(),
 					operator.ID,
 					GroupPatch{Name: &newName},
 				); err != nil {
-					t.Fatalf(
-						"%s\nsetup UpdateGroup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("Store.UpdateGroup() failed: %v", err)
 				}
 			},
-			check: func(t *testing.T, prefix string, byName map[string]Group) {
-				if groupHasGlobalGrant(byName["ops"], rbac.ResourceNotify, rbac.ActionExecute) {
-					t.Errorf(
-						"%s renamed operator group should not have gained notify:execute",
-						prefix,
+			check: func(t *testing.T, byName map[string]Group) {
+				r, a := rbac.ResourceNotify, rbac.ActionExecute
+				if groupHasGlobalGrant(groupNamed(t, byName, "ops"), r, a) {
+					t.Error(
+						"groupHasGlobalGrant(byName[\"ops\"]) mismatch\ngot:  true\nwant: false",
 					)
 				}
 			},
@@ -478,214 +381,167 @@ func TestNew__permissionsIntroducedLater(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			db := testDB(t)
+			db := test.MemoryDB(t)
 			store, err := New(t.Context(), db)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfirst New() failed: %v",
-					packageName, err,
-				)
+				t.Fatalf("first: New() failed: %v", err)
 			}
 			tc.setup(t, store)
 
-			prefix := fmt.Sprintf("%s\nNew() with a late permission (%s)", packageName, tc.name)
-
-			// WHEN: New runs again (the removed pair re-enters the catalogue).
 			store, err = New(t.Context(), db)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
+				t.Fatalf("second: New() failed: %v", err)
 			}
 
-			// THEN: the new pair flows to the surviving seed groups' remits.
-			tc.check(t, prefix, groupsByName(t, store))
+			tc.check(t, groupsByName(t, store))
 		})
 	}
 }
 
 func TestNew__retiresStalePermissions(t *testing.T) {
-	// GIVEN: an initialised database holding a permission (and a grant on it)
-	// that is no longer in the code catalogue.
-	db := testDB(t)
+	db := test.MemoryDB(t)
 	store, err := New(t.Context(), db)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfirst New() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("first: New() failed: %v", err)
 	}
-	if _, err := store.db.Exec(
+	test.ExecSQL(
+		t, store.db,
 		`INSERT INTO permissions (resource, action)
 		VALUES ('legacy', 'shazam');`,
-	); err != nil {
-		t.Fatalf(
-			"%s\nsetup insert failed: %v",
-			packageName, err,
-		)
-	}
-	if _, err := store.db.Exec(`
-		INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
+		`INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
 		VALUES (
 			(SELECT id FROM groups WHERE name = 'viewer'),
 			(SELECT id FROM permissions WHERE resource = 'legacy'),
 			'global',
 			''
 		);`,
-	); err != nil {
-		t.Fatalf(
-			"%s\nsetup grant insert failed: %v",
-			packageName, err,
-		)
-	}
+	)
 
-	// AND: a catalogued permission wrongly marked retired.
-	if _, err := store.db.Exec(
+	// A catalogued permission wrongly marked retired.
+	test.ExecSQL(
+		t, store.db,
 		`UPDATE permissions SET retired_at = '2020-01-01T00:00:00Z'
 		WHERE resource = 'config' AND action = 'read';`,
-	); err != nil {
-		t.Fatalf(
-			"%s\nsetup retire failed: %v",
-			packageName, err,
-		)
+	)
+
+	_, err = New(t.Context(), db)
+	if err != nil {
+		t.Fatalf("second: New() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nNew() with stale permission", packageName)
-
-	// WHEN: New runs again.
-	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
-	}
-
-	// THEN: the stale permission is retired rather than deleted, so a downgrade
-	// doesn't destroy the grants referencing it.
+	// Retired rather than deleted, so a downgrade keeps the grants referencing it.
 	var count int
 	if err := store.db.QueryRow(
 		`SELECT COUNT(*) FROM permissions
 		WHERE resource = 'legacy' AND retired_at IS NOT NULL;`,
 	).Scan(&count); err != nil || count != 1 {
 		t.Errorf(
-			"%s stale permission should be retired\ngot:  %d rows, err=%v\nwant: 1",
-			prefix, count, err,
+			"retired: permissions row count mismatch\ngot:  %d, err=%v\nwant: 1, err=nil",
+			count, err,
 		)
 	}
 
-	// AND: its grant survives.
 	if err := store.db.QueryRow(`
 		SELECT COUNT(*) FROM group_permissions gp
 		JOIN permissions p ON p.id = gp.permission_id
 		WHERE p.resource = 'legacy';`,
 	).Scan(&count); err != nil || count != 1 {
 		t.Errorf(
-			"%s grant on a retired permission should be kept\ngot:  %d rows, err=%v\nwant: 1",
-			prefix, count, err,
+			"retired grant: group_permissions row count mismatch\n"+
+				"got:  %d, err=%v\nwant: 1, err=nil",
+			count, err,
 		)
 	}
 
-	// AND: no grant is left orphaned.
 	if err := store.db.QueryRow(`
 		SELECT COUNT(*) FROM group_permissions gp
 		LEFT JOIN permissions p ON p.id = gp.permission_id
 		WHERE p.id IS NULL;`,
 	).Scan(&count); err != nil || count != 0 {
 		t.Errorf(
-			"%s orphaned grants should not exist\ngot:  %d rows, err=%v",
-			prefix, count, err,
+			"orphaned: group_permissions row count mismatch\ngot:  %d, err=%v\nwant: 0, err=nil",
+			count, err,
 		)
 	}
 
-	// AND: a catalogued permission is un-retired, so rolling forward restores it.
 	if err := store.db.QueryRow(
 		`SELECT COUNT(*) FROM permissions
 		WHERE resource = 'config' AND action = 'read' AND retired_at IS NULL;`,
 	).Scan(&count); err != nil || count != 1 {
 		t.Errorf(
-			"%s catalogued permission should be un-retired\ngot:  %d rows, err=%v\nwant: 1",
-			prefix, count, err,
+			"un-retired: permissions row count mismatch\ngot:  %d, err=%v\nwant: 1, err=nil",
+			count, err,
 		)
 	}
 
-	// AND: a further start leaves the already-retired pair untouched.
 	var retiredAt string
 	if err := store.db.QueryRow(
 		`SELECT retired_at FROM permissions WHERE resource = 'legacy';`,
 	).Scan(&retiredAt); err != nil {
-		t.Fatalf(
-			"%s read of retired_at failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("before: DB.QueryRow().Scan() failed: %v", err)
 	}
-	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf(
-			"%s unexpected error on the third start: %v",
-			prefix, err,
-		)
+	_, err = New(t.Context(), db)
+	if err != nil {
+		t.Fatalf("third: New() failed: %v", err)
 	}
 	var retiredAtAfter string
 	if err := store.db.QueryRow(
 		`SELECT retired_at FROM permissions WHERE resource = 'legacy';`,
 	).Scan(&retiredAtAfter); err != nil || retiredAtAfter != retiredAt {
 		t.Errorf(
-			"%s retired_at should not be rewritten\ngot:  %q, err=%v\nwant: %q",
-			prefix, retiredAtAfter, err, retiredAt,
+			"after: permissions.retired_at mismatch\ngot:  %q, err=%v\nwant: %q, err=nil",
+			retiredAtAfter, err, retiredAt,
 		)
 	}
 }
 
 func TestNew__errors(t *testing.T) {
-	// GIVEN: databases in states that break initialisation.
 	tests := []struct {
-		name  string
-		setup func(t *testing.T, db *sql.DB)
+		name     string
+		setup    func(t *testing.T, db *sql.DB)
+		errRegex string
 	}{
 		{
 			name: "closed database",
+			errRegex: test.TrimYAML(`
+				^auth store migrate:
+					create schema_migrations:
+						sql: database is closed$`),
 			setup: func(_ *testing.T, db *sql.DB) {
 				_ = db.Close()
 			},
 		},
 		{
 			name: "malformed schema_migrations rows",
+			errRegex: test.TrimYAML(`
+				^auth store migrate:
+					scan schema_migrations:
+						sql: Scan error on column index 0, name "version"`),
 			setup: func(t *testing.T, db *sql.DB) {
-				for _, statement := range []string{
+				test.ExecSQL(
+					t, db,
 					`CREATE TABLE schema_migrations (version TEXT, applied_at DATETIME);`,
 					`INSERT INTO schema_migrations (version, applied_at) VALUES (NULL, 'x');`,
-				} {
-					if _, err := db.Exec(statement); err != nil {
-						t.Fatalf(
-							"%s\nsetup failed: %v",
-							packageName, err,
-						)
-					}
-				}
+				)
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			db := testDB(t)
+			db := test.MemoryDB(t)
 			tc.setup(t, db)
 
-			// WHEN: New is called.
 			_, err := New(t.Context(), db)
-
-			prefix := fmt.Sprintf("%s\nNew()", packageName)
-
-			// THEN: it errors rather than continuing on a broken schema.
-			if err == nil {
-				t.Errorf("%s expected an error, got nil", prefix)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestNew__Migrate__badMigration(t *testing.T) {
-	// GIVEN: a pending migration with invalid SQL.
 	migrationsHad := migrations
 	migrations = append(
 		append([]migration{}, migrations...),
@@ -693,182 +549,39 @@ func TestNew__Migrate__badMigration(t *testing.T) {
 	)
 	t.Cleanup(func() { migrations = migrationsHad })
 
-	db := testDB(t)
+	db := test.MemoryDB(t)
 
-	// WHEN: New is called.
 	_, err := New(t.Context(), db)
-
-	prefix := fmt.Sprintf("%s\nNew() with a bad migration", packageName)
-
-	// THEN: the bad migration surfaces as an error.
 	if err == nil {
-		t.Fatalf("%s expected an error, got nil", prefix)
+		t.Fatal("error mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 
-func TestNew__SyncPermissions__rowsErr(t *testing.T) {
-	// GIVEN: row iteration fails.
+func TestNew__Migrate__rowsErr(t *testing.T) {
 	rowsErrHad := rowsErr
 	wantErr := errors.New("iteration broke")
 	rowsErr = func(_ *sql.Rows) error { return wantErr }
 	t.Cleanup(func() { rowsErr = rowsErrHad })
 
-	db := testDB(t)
+	db := test.MemoryDB(t)
 
-	// WHEN: New is called (migrate + syncPermissions both iterate rows).
+	// migrate iterates rows first.
 	_, err := New(t.Context(), db)
 
-	prefix := fmt.Sprintf("%s\nNew() with failing row iteration", packageName)
-
-	// THEN: the iteration failure is surfaced.
 	if !errors.Is(err, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, wantErr,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, wantErr)
 	}
-}
-
-func TestNew__SeedGroups_GroupIDBySeedKeyError(t *testing.T) {
-	// GIVEN: an initialised database whose groups table breaks lookups
-	// (seed_key column removed).
-	db := testDB(t)
-	if _, err := New(t.Context(), db); err != nil {
-		t.Fatalf(
-			"%s\nfirst New() failed: %v",
-			packageName, err,
-		)
-	}
-	for _, statement := range []string{
-		`DROP TABLE groups;`,
-		`CREATE TABLE groups (id TEXT NOT NULL PRIMARY KEY);`,
-	} {
-		if _, err := db.Exec(statement); err != nil {
-			t.Fatalf(
-				"%s\nsetup failed: %v", packageName, err,
-			)
-		}
-	}
-
-	// WHEN: New runs again (seedGroups looks groups up by seed_key).
-	_, err := New(t.Context(), db)
-
-	prefix := fmt.Sprintf("%s\nNew() with broken groups table", packageName)
-
-	// THEN: the lookup failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error\ngot: nil", prefix)
-	}
-}
-
-func TestFullCatalogueGrants(t *testing.T) {
-	// GIVEN: the code catalogue.
-	prefix := fmt.Sprintf("%s\nfullCatalogueGrants()", packageName)
-
-	// WHEN: fullCatalogueGrants is called.
-	grants := fullCatalogueGrants()
-
-	// THEN: there is one valid global grant per catalogue pair.
-	if len(grants) != cataloguePairCount() {
-		t.Fatalf(
-			"%s grant count mismatch\ngot:  %d\nwant: %d",
-			prefix, len(grants), cataloguePairCount(),
-		)
-	}
-	for _, grant := range grants {
-		if !grant.Valid() || grant.Scope.Type != rbac.ScopeGlobal {
-			t.Errorf(
-				"%s invalid or non-global grant: %+v",
-				prefix, grant,
-			)
-		}
-	}
-}
-
-func TestStore_InTx__commitError(t *testing.T) {
-	// GIVEN: a Store, and a transaction function that itself commits.
-	store := testStore(t)
-
-	prefix := fmt.Sprintf("%s\ninTx() commit error", packageName)
-
-	// WHEN: inTx tries to commit the already-committed transaction.
-	err := store.inTx(t.Context(), func(tx *sql.Tx) error {
-		_ = tx.Commit()
-		return nil
-	})
-
-	// THEN: the commit failure is surfaced.
-	if err == nil || !errors.Is(err, sql.ErrTxDone) {
-		t.Errorf(
-			"%s expected a commit error\ngot: %v",
-			prefix, err,
-		)
-	}
-}
-
-func TestStore_InTx__rollsBackOnError(t *testing.T) {
-	// GIVEN: an initialised store.
-	db := testDB(t)
-	store, err := New(t.Context(), db)
-	if err != nil {
-		t.Fatalf(
-			"%s\nNew() failed: %v",
-			packageName, err,
-		)
-	}
-	before := countRows(t, store, "groups")
-
-	prefix := fmt.Sprintf("%s\nStore.inTx()", packageName)
-
-	// WHEN: a transaction writes a row that returns an error.
-	wantErr := errors.New("abandon the transaction")
-	gotErr := store.inTx(t.Context(), func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(t.Context(), `
-			INSERT INTO groups (id, name, description, system, created_at, updated_at)
-			VALUES ('rollback-me', 'rollback-me', '', 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');`,
-		); err != nil {
-			t.Fatalf(
-				"%s setup insert failed: %v",
-				prefix, err,
-			)
-		}
-		return wantErr
-	})
-
-	// THEN: the caller's error is returned unwrapped.
-	if !errors.Is(gotErr, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, gotErr, wantErr,
-		)
-	}
-
-	// AND: the write is discarded.
-	if got, want := countRows(t, store, "groups"), before; got != want {
-		t.Errorf(
-			"%s the aborted write survived\ngot:  %d groups\nwant: %d",
-			prefix, got, want,
-		)
-	}
-}
-
-func TestParseTime__invalid(t *testing.T) {
-	// GIVEN: a corrupt stored timestamp.
-	ts := "not-a-timestamp"
-
-	// WHEN: parseTime parses it.
-	_, err := parseTime(ts)
-
-	prefix := fmt.Sprintf("%s\nparseTime()", packageName)
-
-	// THEN: it errors.
-	if err == nil {
-		t.Errorf("%s expected an error\ngot: nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^auth store migrate:
+			iterate schema_migrations:
+				iteration broke`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestMigrate__hotQueriesUseAnIndex(t *testing.T) {
-	// GIVEN: a migrated store, and the queries that run on the growing tables.
 	store := testStore(t)
 
 	tests := []struct {
@@ -913,56 +626,128 @@ func TestMigrate__hotQueriesUseAnIndex(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			prefix := fmt.Sprintf("%s\nEXPLAIN QUERY PLAN", packageName)
-
-			// WHEN: SQLite plans the query.
-			rows, err := store.db.QueryContext(
-				t.Context(),
-				"EXPLAIN QUERY PLAN "+tc.query,
-				tc.args...,
-			)
+			rows, err := store.db.QueryContext(t.Context(), "EXPLAIN QUERY PLAN "+tc.query, tc.args...)
 			if err != nil {
-				t.Fatalf(
-					"%s\nEXPLAIN QUERY PLAN	%q: %v",
-					prefix, tc.query, err,
-				)
+				t.Fatalf("DB.QueryContext() failed: %v", err)
 			}
 			defer rows.Close()
 
-			var plan string
+			var planLines []string
 			for rows.Next() {
 				var id, parent, notUsed int
 				var detail string
 				if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
-					t.Fatalf(
-						"%s\nscan: %v",
-						prefix, err,
-					)
+					t.Fatalf("Rows.Scan() failed: %v", err)
 				}
-				plan += detail + "\n"
+				planLines = append(planLines, detail)
 			}
 			if err := rows.Err(); err != nil {
-				t.Fatalf(
-					"%s\niterate: %v",
-					prefix, err,
-				)
+				t.Fatalf("Rows.Err() failed: %v", err)
 			}
+			plan := strings.Join(planLines, "; ")
 
-			// THEN: it searches the index rather than scanning the table.
 			if !strings.Contains(plan, tc.wantIndex) {
-				t.Errorf(
-					"%s\nindex not used\nquery: %s\ngot plan:\n%s\nwant it to use: %s",
-					prefix, tc.query, plan, tc.wantIndex,
-				)
+				t.Errorf("query plan mismatch\ngot:  %q\nwant: %q", plan, tc.wantIndex)
 			}
-			if strings.Contains(plan, "SCAN sessions") ||
-				strings.Contains(plan, "SCAN api_tokens") ||
-				strings.Contains(plan, "SCAN user_preferences") {
-				t.Errorf(
-					"%s\nfull table scan\nquery: %s\ngot plan:\n%s",
-					prefix, tc.query, plan,
-				)
+			for _, scan := range []string{"SCAN sessions", "SCAN api_tokens", "SCAN user_preferences"} {
+				if strings.Contains(plan, scan) {
+					t.Errorf("query plan mismatch\ngot:  %q\nwant: NOT %q", plan, scan)
+				}
 			}
 		})
+	}
+}
+
+func TestNew__SeedGroups_GroupIDBySeedKeyError(t *testing.T) {
+	db := test.MemoryDB(t)
+	if _, err := New(t.Context(), db); err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	test.ExecSQL(
+		t, db,
+		`DROP TABLE groups;`,
+		`CREATE TABLE groups (id TEXT NOT NULL PRIMARY KEY);`,
+	)
+
+	// seedGroups looks groups up by seed_key.
+	_, err := New(t.Context(), db)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^auth store seed groups:
+			look up seed group "admin":
+				SQL logic error: no such column: seed_key`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
+	}
+}
+
+func TestFullCatalogueGrants(t *testing.T) {
+	grants := fullCatalogueGrants()
+
+	if got, want := len(grants), cataloguePairCount(); got != want {
+		t.Fatalf("len(grants) mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+	for _, grant := range grants {
+		if !grant.Valid() || grant.Scope.Type != rbac.ScopeGlobal {
+			t.Errorf(
+				"Grant mismatch\ngot:  %s, Valid()=%t\nwant: Valid()=true, scope=%s",
+				grantString(grant), grant.Valid(), rbac.ScopeGlobal,
+			)
+		}
+	}
+}
+
+func TestStore_InTx__commitError(t *testing.T) {
+	store := testStore(t)
+
+	err := store.inTx(t.Context(), func(tx *sql.Tx) error {
+		_ = tx.Commit()
+		return nil
+	})
+
+	if !errors.Is(err, sql.ErrTxDone) {
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, sql.ErrTxDone)
+	}
+}
+
+func TestStore_InTx__rollsBackOnError(t *testing.T) {
+	db := test.MemoryDB(t)
+	store, err := New(t.Context(), db)
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	before := test.CountRows(t, store.db, "groups")
+
+	wantErr := errors.New("abandon the transaction")
+	gotErr := store.inTx(t.Context(), func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(t.Context(), `
+			INSERT INTO groups (id, name, description, system, created_at, updated_at)
+			VALUES ('rollback-me', 'rollback-me', '', 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');`,
+		); err != nil {
+			t.Fatalf("Tx.ExecContext() failed: %v", err)
+		}
+		return wantErr
+	})
+
+	e := errfmt.FormatError(gotErr)
+	errRegex := `^abandon the transaction$`
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
+	}
+	if !errors.Is(gotErr, wantErr) {
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", gotErr, wantErr)
+	}
+
+	if got, want := test.CountRows(t, store.db, "groups"), before; got != want {
+		t.Errorf("groups row count mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+}
+
+func TestParseTime__invalid(t *testing.T) {
+	ts := "not-a-timestamp"
+
+	_, err := parseTime(ts)
+	if err == nil {
+		t.Error("error mismatch\ngot:  nil\nwant: non-nil")
 	}
 }

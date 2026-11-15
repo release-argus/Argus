@@ -17,20 +17,17 @@
 package v1
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/release-argus/Argus/config"
 	config_test "github.com/release-argus/Argus/config/test"
 )
 
 func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
-	// GIVEN: an API with NodeJS routes.
 	tests := []struct {
 		name        string
 		route       string
@@ -107,43 +104,39 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg := config_test.BareConfig(t, true)
+			// Serial: resets the config flag vars.
+
+			cfg := config_test.BareConfig(true)
 			api, _ := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(ts.Close)
 			client := http.Client{}
 
-			// WHEN: a HTTP request is made to this router.
 			req, err := http.NewRequest(http.MethodGet, ts.URL+tc.route, nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("http.NewRequest() failed: %v", err)
 			}
 			resp, err := client.Do(req)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Client.Do() failed: %v", err)
+			}
+			t.Cleanup(func() { _ = resp.Body.Close() })
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nAPI.SetupRoutesNodeJS() %q",
-				packageName, req.URL.Path,
-			)
-
-			// THEN: the status code is as expected.
-			if got := resp.StatusCode; got != tc.wantStatus {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.wantStatus,
-				)
+			if got, want := resp.StatusCode, tc.wantStatus; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 
-			// AND: the content type is as expected.
 			if tc.wantContent != "" {
 				contentType := resp.Header.Get("Content-Type")
 				if !strings.Contains(contentType, tc.wantContent) {
 					t.Errorf(
-						"%s Content-Type mismatch\ngot:  %q\nwant: %q",
-						prefix, contentType, tc.wantContent,
+						"Content-Type header mismatch\ngot:  %q\nwant: %q",
+						contentType, tc.wantContent,
 					)
 				}
 			}
@@ -152,7 +145,6 @@ func TestHTTP_SetupRoutesNodeJS(t *testing.T) {
 }
 
 func TestHTTP_SetupRoutesNodeJS__routePrefix(t *testing.T) {
-	// GIVEN: an API served under a route prefix.
 	tests := []struct {
 		name  string
 		route string
@@ -165,56 +157,41 @@ func TestHTTP_SetupRoutesNodeJS__routePrefix(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: resets the config flag vars.
 
-			cfg := config_test.BareConfig(t, true)
+			cfg := config_test.BareConfig(true)
 			cfg.Settings.Web.RoutePrefix = "/test"
 			api, _ := NewAPI(cfg)
 			api.SetupRoutesNodeJS()
 			ts := httptest.NewServer(api.BaseRouter)
 			t.Cleanup(ts.Close)
 
-			// WHEN: the route is requested.
 			resp, err := http.Get(ts.URL + tc.route)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("http.Get() failed: %v", err)
 			}
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nAPI.SetupRoutesNodeJS() %q",
-				packageName, tc.route,
-			)
-
-			// THEN: the shell is served.
-			if resp.StatusCode != http.StatusOK {
-				t.Fatalf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, http.StatusOK,
-				)
+			if got, want := resp.StatusCode, http.StatusOK; got != want {
+				t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 
-			// AND: its <base href> points at the prefix, so the relative asset
-			// URLs inside resolve under it rather than at the domain root.
-			want := `<base href="/test/" />`
-			if !bytes.Contains(body, []byte(want)) {
-				t.Errorf(
-					"%s base href mismatch\nwant to contain: %q\ngot:             %q",
-					prefix, want, body,
-				)
+			// Relative asset URLs resolve under <base href>, not the domain root.
+			gotBase := regexp.MustCompile(`<base[^>]*>`).Find(body)
+			if want := `<base href="/test/" />`; string(gotBase) != want {
+				t.Errorf("base href mismatch\ngot:  %q\nwant: %q", gotBase, want)
 			}
 		})
 	}
 }
 
 func TestHTTP_SetupRoutesNodeJS__routePrefixAssets(t *testing.T) {
-	// GIVEN: an API served under a route prefix. The shell's asset URLs resolve
-	// against its <base href>, so they arrive prefixed and must serve from there.
-	cfg := config_test.BareConfig(t, true)
+	// The shell's asset URLs resolve against its <base href>, so arrive prefixed.
+	cfg := config_test.BareConfig(true)
 	cfg.Settings.Web.RoutePrefix = "/test"
 	api, _ := NewAPI(cfg)
 	api.SetupRoutesNodeJS()
@@ -255,33 +232,27 @@ func TestHTTP_SetupRoutesNodeJS__routePrefixAssets(t *testing.T) {
 			ts := httptest.NewServer(api.BaseRouter)
 			t.Cleanup(ts.Close)
 
-			// WHEN: the asset is requested.
 			resp, err := http.Get(ts.URL + tc.route)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("http.Get() failed: %v", err)
 			}
 			defer resp.Body.Close()
-
-			prefix := fmt.Sprintf(
-				"%s\nAPI.SetupRoutesNodeJS() %q",
-				packageName, tc.route,
-			)
-
-			// THEN: the status code is as expected.
-			if resp.StatusCode != tc.wantStatus {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, tc.wantStatus,
-				)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 
-			// AND: it is the asset, not the shell.
+			if got, want := resp.StatusCode, tc.wantStatus; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
+			}
+
+			// Content-Type tells the asset from the HTML shell.
 			if tc.wantContentType != "" {
 				contentType := resp.Header.Get("Content-Type")
 				if !strings.Contains(contentType, tc.wantContentType) {
 					t.Errorf(
-						"%s Content-Type mismatch\ngot:  %q\nwant: %q",
-						prefix, contentType, tc.wantContentType,
+						"Content-Type header mismatch\ngot:  %q\nwant: %q",
+						contentType, tc.wantContentType,
 					)
 				}
 			}
@@ -290,10 +261,8 @@ func TestHTTP_SetupRoutesNodeJS__routePrefixAssets(t *testing.T) {
 }
 
 func TestHTTP_SetupRoutesFavicon(t *testing.T) {
-	// GIVEN: an API with/without favicon overrides.
 	tests := []struct {
 		name           string
-		favicon        *config.FaviconSettings
 		urlPNG, urlSVG string
 	}{
 		{
@@ -318,89 +287,52 @@ func TestHTTP_SetupRoutesFavicon(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: resets the config flag vars.
 
-			cfg := config_test.BareConfig(t, true)
+			cfg := config_test.BareConfig(true)
 			cfg.Settings.Web.Favicon = testFaviconSettings(tc.urlPNG, tc.urlSVG)
 			api, _ := NewAPI(cfg)
 			api.SetupRoutesFavicon()
 			ts := httptest.NewServer(api.Router)
 			t.Cleanup(ts.Close)
-			client := http.Client{}
-
-			// WHEN: a HTTP request is made to this router (apple-touch-icon.png).
-			req, err := http.NewRequest(
-				http.MethodGet,
-				ts.URL+"/apple-touch-icon.png",
-				nil,
-			)
-			if err != nil {
-				t.Fatalf(
-					"%s\n%v",
-					packageName, err,
-				)
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				t.Fatalf(
-					"%s\n%v",
-					packageName, err,
-				)
+			client := http.Client{
+				CheckRedirect: func(*http.Request, []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
 			}
 
-			prefix := fmt.Sprintf("%s\n/apple-touch-icon.png", packageName)
+			for _, asset := range []struct{ path, wantLocation string }{
+				{path: "/apple-touch-icon.png", wantLocation: tc.urlPNG},
+				{path: "/favicon.svg", wantLocation: tc.urlSVG},
+			} {
+				t.Run(strings.TrimPrefix(asset.path, "/"), func(t *testing.T) {
+					req, err := http.NewRequest(http.MethodGet, ts.URL+asset.path, nil)
+					if err != nil {
+						t.Fatalf("http.NewRequest() failed: %v", err)
+					}
+					resp, err := client.Do(req)
+					if err != nil {
+						t.Fatalf("Client.Do() failed: %v", err)
+					}
+					t.Cleanup(func() { _ = resp.Body.Close() })
+					body, err := io.ReadAll(resp.Body)
+					if err != nil {
+						t.Fatalf("io.ReadAll() failed: %v", err)
+					}
 
-			// THEN: the status code is as expected.
-			wantStatus := http.StatusNotFound
-			if tc.urlPNG != "" {
-				wantStatus = http.StatusOK
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf(
-					"%s - status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, wantStatus,
-				)
-			}
-			if got := resp.Request.URL.String(); tc.urlPNG != "" && got != tc.urlPNG {
-				t.Errorf(
-					"%s - redirect mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.urlPNG,
-				)
-			}
+					// Only an overridden asset is routed; any other 404s.
+					wantStatus := http.StatusNotFound
+					if asset.wantLocation != "" {
+						wantStatus = http.StatusPermanentRedirect
+					}
+					if got, want := resp.StatusCode, wantStatus; got != want {
+						t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
+					}
 
-			// WHEN: a HTTP request is made to this router (favicon.svg).
-			req, err = http.NewRequest(http.MethodGet, ts.URL+"/favicon.svg", nil)
-			if err != nil {
-				t.Fatalf(
-					"%s\n%v",
-					packageName, err,
-				)
-			}
-			resp, err = client.Do(req)
-			if err != nil {
-				t.Fatalf(
-					"%s\n%v",
-					packageName, err,
-				)
-			}
-
-			prefix = fmt.Sprintf("%s\n/favicon.svg", packageName)
-
-			// THEN: the status code is as expected.
-			wantStatus = http.StatusNotFound
-			if tc.urlSVG != "" {
-				wantStatus = http.StatusOK
-			}
-			if resp.StatusCode != wantStatus {
-				t.Errorf(
-					"%s - status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, wantStatus,
-				)
-			}
-			if got := resp.Request.URL.String(); tc.urlSVG != "" && got != tc.urlSVG {
-				t.Errorf(
-					"%s - redirect mismatch\ngot:  %s\nwant: %s",
-					prefix, got, tc.urlSVG,
-				)
+					if got, want := resp.Header.Get("Location"), asset.wantLocation; got != want {
+						t.Errorf("Location header mismatch\ngot:  %q\nwant: %q", got, want)
+					}
+				})
 			}
 		})
 	}

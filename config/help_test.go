@@ -37,36 +37,28 @@ import (
 )
 
 var (
-	packageName = "config"
 	testTempDir string // Process-lifetime home of test config files.
 )
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
+	logx.SetExitCodeChannel(make(chan string, 64))
 
-	// Sweep strays from earlier killed runs.
-	strays, _ := filepath.Glob(filepath.Join(os.TempDir(), "argus-config-test*"))
-	for _, stray := range strays {
-		_ = os.RemoveAll(stray)
-	}
 	tempDir, err := os.MkdirTemp("", "argus-config-test")
 	if err != nil {
-		fmt.Printf("%s\ncreate temp dir: %v", packageName, err)
+		fmt.Printf("os.MkdirTemp() failed: %v\n", err)
 		os.Exit(1)
 	}
 	testTempDir = tempDir
 
-	// Run other tests.
 	exitCode := m.Run()
 	_ = os.RemoveAll(tempDir)
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -75,19 +67,20 @@ func TestMain(m *testing.M) {
 func testConfig(t *testing.T) *Config {
 	t.Helper()
 
-	logLevel := "DEBUG"
 	saveChannel := make(chan bool, 5)
 	databaseChannel := make(chan dbtype.Message, 5)
 
 	dir := filepath.Join(t.TempDir(), "inaccessible")
-	_ = os.Mkdir(dir, 0400)
+	if err := os.Mkdir(dir, 0400); err != nil {
+		t.Fatalf("os.Mkdir() failed: %v", err)
+	}
 
 	cfg := Config{
 		File: filepath.Join(dir, "config.yml"),
 		Settings: Settings{
 			Indentation: 4,
 			Log: LogSettings{
-				Level: logLevel,
+				Level: "DEBUG",
 			},
 		},
 		Notify:  shoutrrr.ShoutrrrsDefaults{},
@@ -114,9 +107,7 @@ func testConfig(t *testing.T) *Config {
 	return &cfg
 }
 
-func testSettings(t *testing.T) Settings {
-	t.Helper()
-
+func testSettings() Settings {
 	return Settings{
 		Log: LogSettings{
 			Timestamps: new(true),
@@ -138,19 +129,17 @@ func testSettings(t *testing.T) Settings {
 
 var loadMu sync.RWMutex
 
-func testLoadBasic(t *testing.T, file string) *Config {
-	cfg := &Config{}
-
+// snapshotFlags returns a func that restores every flag to its current value. The caller holds
+// loadMu.
+func snapshotFlags() func() {
 	strFlags := []**string{
 		&LogLevel, &DataDatabaseFile,
 		&WebListenHost, &WebListenPort, &WebCertFile, &WebPKeyFile, &WebRoutePrefix,
-		&WebBasicAuthUsername, &WebBasicAuthPassword,
+		&WebBasicAuthUsername, &WebBasicAuthPassword, &AuthCreateAdmin, &AuthResetPassword,
 	}
 	boolFlags := []**bool{&LogTimestamps, &DataReadonly}
 	strHad := make([]*string, len(strFlags))
 	boolHad := make([]*bool, len(boolFlags))
-	loadMu.Lock()
-	defer loadMu.Unlock()
 	for i, flag := range strFlags {
 		strHad[i] = *flag
 	}
@@ -158,41 +147,48 @@ func testLoadBasic(t *testing.T, file string) *Config {
 		boolHad[i] = *flag
 	}
 
-	cfg.Settings.NilUndefinedFlags(&map[string]bool{})
-
-	t.Cleanup(func() {
-		loadMu.Lock()
-		defer loadMu.Unlock()
+	return func() {
 		for i, flag := range strFlags {
 			*flag = strHad[i]
 		}
 		for i, flag := range boolFlags {
 			*flag = boolHad[i]
 		}
+	}
+}
+
+// nilUndefinedFlags nils every flag until the test ends. The caller holds loadMu.
+func nilUndefinedFlags(t *testing.T, settings *Settings) {
+	restore := snapshotFlags()
+
+	settings.NilUndefinedFlags(&map[string]bool{})
+
+	t.Cleanup(func() {
+		loadMu.Lock()
+		defer loadMu.Unlock()
+		restore()
 	})
+}
+
+func testLoadBasic(t *testing.T, file string) *Config {
+	t.Helper()
+
+	cfg := &Config{}
+
+	loadMu.Lock()
+	defer loadMu.Unlock()
+	nilUndefinedFlags(t, &cfg.Settings)
 
 	cfg.File = file
 
 	//#nosec G304 -- Loading the test config file
 	data, err := os.ReadFile(file)
 	if err != nil {
-		logx.Fatal(
-			fmt.Sprintf(
-				"%s\nError reading %q\n%s",
-				packageName, file, err,
-			),
-			logx.LogFrom{},
-		)
+		t.Fatalf("os.ReadFile(%q) failed: %v", file, err)
 	}
 
 	if err = cfg.Decode(data); err != nil {
-		logx.Fatal(
-			fmt.Sprintf(
-				"%q\nUnmarshal of %q failed\n%s",
-				packageName, file, err,
-			),
-			logx.LogFrom{},
-		)
+		t.Fatalf("initial: Config.Decode(%q) failed: %v", file, err)
 	}
 
 	saveChannel := make(chan bool, 32)
@@ -204,29 +200,24 @@ func testLoadBasic(t *testing.T, file string) *Config {
 	cfg.HardDefaults.Service.Status.DatabaseChannel = cfg.DatabaseChannel
 
 	if err := cfg.Decode(data); err != nil {
-		t.Fatalf(
-			"Unmarshal of %q failed\n%s",
-			file, err,
-		)
+		t.Fatalf("with channels: Config.Decode(%q) failed: %v", file, err)
 	}
 
 	cfg.GetOrder(data)
 
 	cfg.CheckValues()
-	t.Logf(
-		"%s - Loaded %q",
-		packageName, file,
-	)
 
 	return cfg
 }
 
 func testServiceURL(t *testing.T, id string) *service.Service {
+	t.Helper()
+
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	svc, _ := service.DecodeService(
+	svc, err := service.DecodeService(
 		"yaml", []byte(test.TrimYAML(`
 			options:
 				interval: 5s
@@ -255,6 +246,9 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 		id,
 		svcCfg, notifyCfg, whCfg,
 	)
+	if err != nil {
+		t.Fatalf("service.DecodeService(%q) failed: %v", id, err)
+	}
 
 	svc.Status.SetLastQueried("")
 	svc.Status.SetDeployedVersion("0.0.0", "2001-01-01T01:01:01Z", false)
@@ -263,11 +257,13 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 	return svc
 }
 
-// testServiceManualDV gives a Service whose `manual` deployed_version carries a
+// testServiceManualDV gives a Service whose 'manual' deployed_version carries a
 // pending version.
 func testServiceManualDV(t *testing.T, id, version string) *service.Service {
+	t.Helper()
+
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	svc, err := service.DecodeService(
@@ -289,9 +285,7 @@ func testServiceManualDV(t *testing.T, id, version string) *service.Service {
 		svcCfg, notifyCfg, whCfg,
 	)
 	if err != nil {
-		t.Fatalf("%s testServiceManualDV(id=%q, version=%q) unexpected error: %v",
-			packageName, id, version, err,
-		)
+		t.Fatalf("service.DecodeService(id=%q, version=%q) failed: %v", id, version, err)
 	}
 
 	svc.Status.SetLastQueried("")
@@ -299,11 +293,12 @@ func testServiceManualDV(t *testing.T, id, version string) *service.Service {
 	return svc
 }
 
+// plainDefaults returns plain defaults and hardDefaults for testing.
 func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
 	t.Helper()
 
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 	defaults := &Defaults{
 		Service: *svcCfg.Soft,

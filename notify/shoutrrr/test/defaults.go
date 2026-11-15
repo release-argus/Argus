@@ -15,17 +15,11 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/notify/shoutrrr"
 )
 
 // PlainConfig returns plain defaults and hardDefaults for testing.
-func PlainConfig(t *testing.T) shoutrrr.Config {
-	if t != nil {
-		t.Helper()
-	}
-
+func PlainConfig() shoutrrr.Config {
 	defaults := shoutrrr.ShoutrrrsDefaults{}
 	hardDefaults := shoutrrr.ShoutrrrsDefaults{}
 	hardDefaults.Default()

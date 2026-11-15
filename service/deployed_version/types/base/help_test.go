@@ -29,44 +29,31 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-var packageName = "dvbase"
-
 type testLookup struct {
 	Lookup `yaml:",inline" json:",embed"`
 }
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := DecodeDefaults("yaml", nil)
+func plainDefaultsConfig() DefaultsConfig {
+	hardDefaults := &Defaults{Options: &opt.Defaults{}}
 	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.Options.Default()
 
 	return DefaultsConfig{
-		Soft: defaults,
+		Soft: &Defaults{Options: &opt.Defaults{}},
 		Hard: hardDefaults,
 	}
 }

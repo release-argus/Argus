@@ -141,7 +141,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	// Verify overrides are provided.
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -183,7 +183,7 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	}
 	// Error creating/validating the LatestVersionLookup.
 	if err != nil {
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -231,7 +231,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	// Verify overrides are provided.
 	if overrides == "" {
 		err := errors.New("overrides: <required>")
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -271,7 +271,7 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	}
 	// Error creating/validating the DeployedVersionLookup.
 	if err != nil {
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -340,7 +340,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 	api.Config.OrderMu.RUnlock()
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -362,7 +362,7 @@ func (api *API) httpLatestVersionRefresh(w http.ResponseWriter, r *http.Request)
 		}
 		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
-			logx.Error(err, logFrom, true)
+			logx.Warn(err, logFrom, true)
 			failRequest(&w, err, http.StatusBadRequest)
 			return
 		}
@@ -441,7 +441,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 	api.Config.OrderMu.RUnlock()
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -463,7 +463,7 @@ func (api *API) httpDeployedVersionRefresh(w http.ResponseWriter, r *http.Reques
 		}
 		overrideBytes = []byte(overrides)
 		if err := decode.Unmarshal("json", overrideBytes, &secretRefs); err != nil {
-			logx.Error(err, logFrom, true)
+			logx.Warn(err, logFrom, true)
 			failRequest(&w, err, http.StatusBadRequest)
 			return
 		}
@@ -554,7 +554,7 @@ func (api *API) httpServiceDetail(w http.ResponseWriter, r *http.Request) {
 
 	if svc == nil {
 		err := fmt.Errorf("service %q not found", serviceID)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusNotFound)
 		return
 	}
@@ -786,7 +786,6 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 		targetServicePtr, // nil if creating new.
 		&payload,
 		svcDefaults, notifyDefaults, webhookDefaults,
-		logFrom,
 	)
 	api.Config.OrderMu.RUnlock()
 	if err != nil {
@@ -794,7 +793,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 			`%s %q failed: %w`,
 			reqType, serviceID, err,
 		)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -805,7 +804,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 			reqType, serviceID,
 			&decode.ErrField{Key: "id"},
 		)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -863,8 +862,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 			reqType, util.FirstNonDefault(serviceID, newService.ID),
 			err,
 		)
-		logx.Error(err, logFrom, true)
-
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -892,7 +890,7 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 			reqType, util.FirstNonDefault(serviceID, newService.ID),
 			err,
 		)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -1041,13 +1039,13 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	payload := http.MaxBytesReader(w, r.Body, 1024_00)
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(payload); err != nil {
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
 	if buf.Len() == 0 {
 		err := errors.New("body required")
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -1055,7 +1053,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	var parsedPayload shoutrrr.TestPayload
 	if err := decode.Unmarshal("json", buf.Bytes(), &parsedPayload); err != nil {
 		err = fmt.Errorf("failed to unmarshal payload: %w", err)
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -1124,7 +1122,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
@@ -1132,7 +1130,7 @@ func (api *API) httpNotifyTest(w http.ResponseWriter, r *http.Request) {
 	// Send the message.
 	err = testNotify.TestSend(parsedPayload.ServiceURL)
 	if err != nil {
-		logx.Error(err, logFrom, true)
+		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}

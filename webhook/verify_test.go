@@ -17,8 +17,7 @@
 package webhook
 
 import (
-	"fmt"
-	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -27,7 +26,6 @@ import (
 )
 
 func TestWebhooksDefaults_CheckValues(t *testing.T) {
-	// GIVEN: WebhooksDefaults.
 	tests := []struct {
 		name     string
 		input    *WebhooksDefaults
@@ -35,13 +33,15 @@ func TestWebhooksDefaults_CheckValues(t *testing.T) {
 		changed  bool
 	}{
 		{
-			name:  "nil map",
-			input: (*WebhooksDefaults)(nil),
+			name:     "nil map",
+			errRegex: `^$`,
+			input:    (*WebhooksDefaults)(nil),
 		},
 		{
-			name: "valid single element map",
+			name:     "valid single element map",
+			errRegex: `^$`,
 			input: &WebhooksDefaults{
-				"a": testDefaults(true, false),
+				"a": testDefaults(t, true),
 			},
 		},
 		{
@@ -57,10 +57,11 @@ func TestWebhooksDefaults_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "valid multi element map",
+			name:     "valid multi element map",
+			errRegex: `^$`,
 			input: &WebhooksDefaults{
-				"a": testDefaults(true, false),
-				"b": testDefaults(false, false),
+				"a": testDefaults(t, true),
+				"b": testDefaults(t, false),
 			},
 		},
 		{
@@ -89,7 +90,8 @@ func TestWebhooksDefaults_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "custom_headers -> headers",
+			name:     "custom_headers -> headers",
+			errRegex: `^$`,
 			input: &WebhooksDefaults{
 				"a": &Defaults{
 					CustomHeaders: Headers{
@@ -107,7 +109,6 @@ func TestWebhooksDefaults_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -118,7 +119,7 @@ func TestWebhooksDefaults_CheckValues(t *testing.T) {
 
 func TestWebhooks_CheckValues(t *testing.T) {
 	whCfg := plainConfig(t)
-	// GIVEN: Webhooks.
+
 	tests := []struct {
 		name     string
 		input    func() *Webhooks
@@ -126,14 +127,16 @@ func TestWebhooks_CheckValues(t *testing.T) {
 		changed  bool
 	}{
 		{
-			name:  "nil map",
-			input: func() *Webhooks { return nil },
+			name:     "nil map",
+			errRegex: `^$`,
+			input:    func() *Webhooks { return nil },
 		},
 		{
-			name: "valid single element map",
+			name:     "valid single element map",
+			errRegex: `^$`,
 			input: func() *Webhooks {
 				return &Webhooks{
-					"a": testWebhook(true, false, false),
+					"a": testWebhook(true, false),
 				}
 			},
 		},
@@ -162,11 +165,12 @@ func TestWebhooks_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "valid multi element map",
+			name:     "valid multi element map",
+			errRegex: `^$`,
 			input: func() *Webhooks {
 				return &Webhooks{
-					"a": testWebhook(true, false, false),
-					"b": testWebhook(false, false, false),
+					"a": testWebhook(true, false),
+					"b": testWebhook(false, false),
 				}
 			},
 		},
@@ -210,7 +214,8 @@ func TestWebhooks_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "custom_headers -> headers",
+			name:     "custom_headers -> headers",
+			errRegex: `^$`,
 			input: func() *Webhooks {
 				return &Webhooks{
 					"a": &Webhook{
@@ -250,7 +255,6 @@ func TestWebhooks_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				input.CheckValues,
@@ -260,7 +264,6 @@ func TestWebhooks_CheckValues(t *testing.T) {
 }
 
 func TestWebhook_CheckValues(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name             string
 		delay, wantDelay string
@@ -273,7 +276,8 @@ func TestWebhook_CheckValues(t *testing.T) {
 		changed          bool
 	}{
 		{
-			name: "valid Webhook",
+			name:     "valid Webhook",
+			errRegex: `^$`,
 		},
 		{
 			name:     "invalid delay",
@@ -282,6 +286,7 @@ func TestWebhook_CheckValues(t *testing.T) {
 		},
 		{
 			name:      "fix int delay",
+			errRegex:  `^$`,
 			delay:     "5",
 			wantDelay: "5s",
 		},
@@ -323,7 +328,8 @@ func TestWebhook_CheckValues(t *testing.T) {
 			secret:   new(""),
 		},
 		{
-			name: "valid headers",
+			name:     "valid headers",
+			errRegex: `^$`,
 			headers: Headers{
 				{Key: "foo", Value: "bar"},
 			},
@@ -341,7 +347,8 @@ func TestWebhook_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "custom_headers -> headers",
+			name:     "custom_headers -> headers",
+			errRegex: `^$`,
 			customHeaders: Headers{
 				{Key: "foo", Value: "bar"},
 			},
@@ -366,7 +373,7 @@ func TestWebhook_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			input := testWebhook(true, false, false)
+			input := testWebhook(true, false)
 			if tc.whMainType != "" {
 				input.Main.Type = tc.whMainType
 			}
@@ -385,39 +392,39 @@ func TestWebhook_CheckValues(t *testing.T) {
 			input.CustomHeaders = tc.customHeaders
 			input.Headers = tc.headers
 
-			// THEN: any error is as expected, and changed state matches expected.
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				input.CheckValues,
 			)
 
-			prefix := fmt.Sprintf("%s\nWebhook.CheckValues()", packageName)
-
-			// AND: the delay is fixed when expected.
 			if tc.wantDelay != "" && input.Delay != tc.wantDelay {
-				t.Errorf(
-					"%s Delay mismatch after Webhook CheckValues()\ngot:  %q\nwant: %q",
-					prefix, tc.wantDelay, input.Delay,
-				)
+				t.Errorf("Webhook.Delay mismatch\ngot:  %q\nwant: %q", input.Delay, tc.wantDelay)
 			}
 
-			// AND: CustomHeaders are always moved to Headers.
-			if input.CustomHeaders != nil && input.Headers == nil {
-				t.Errorf(
-					"%s CustomHeaders should have moved to .Headers after Webhook CheckValues()\nHeaders=%v\nCustomHeaders=%v",
-					prefix, input.Headers, input.CustomHeaders,
-				)
+			if tc.customHeaders != nil && tc.headers == nil {
+				if testErr := test.AssertSlicesEqual(
+					t,
+					input.Headers,
+					tc.customHeaders,
+					"Webhook.Headers",
+				); testErr != nil {
+					t.Error(testErr)
+				}
+				if input.CustomHeaders != nil {
+					keys := test.AttributesSorted(input.CustomHeaders, func(h Header) string { return h.Key })
+					t.Errorf(
+						"Webhook.CustomHeaders mismatch\ngot:  keys=%q\nwant: nil (moved)",
+						keys,
+					)
+				}
 			}
 		})
 	}
 }
 
-// Base.CheckDefaults()
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name      string
 		input     *Defaults
@@ -426,8 +433,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 		changed   bool
 	}{
 		{
-			name:  "valid Webhook",
-			input: testDefaults(false, false),
+			name:     "valid Webhook",
+			errRegex: `^$`,
+			input:    testDefaults(t, false),
 		},
 		{
 			name:     "invalid delay",
@@ -437,7 +445,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 			}),
 		},
 		{
-			name: "fix int delay",
+			name:     "fix int delay",
+			errRegex: `^$`,
 			input: test.Must(t, func() (*Defaults, error) {
 				return DecodeDefaults("yaml", []byte("delay: 3"))
 			}),
@@ -458,14 +467,14 @@ func TestDefaults_CheckValues(t *testing.T) {
 			}),
 		},
 		{
-			name: "valid custom headers",
+			name:     "valid custom headers",
+			errRegex: `^$`,
 			input: test.Must(t, func() (*Defaults, error) {
 				return DecodeDefaults(
 					"yaml", []byte(test.TrimYAML(`
 						headers:
 							- key: foo
 							  value: bar
-						url: 'https://example.com/{{ version }'
 					`)),
 				)
 			}),
@@ -489,7 +498,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 			}),
 		},
 		{
-			name: "custom_headers -> headers",
+			name:     "custom_headers -> headers",
+			errRegex: `^$`,
 			input: &Defaults{
 				CustomHeaders: Headers{
 					{Key: "foo", Value: "bar"},
@@ -529,19 +539,25 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
 			)
+
+			if tc.wantDelay != "" && tc.input.Delay != tc.wantDelay {
+				t.Errorf(
+					"Defaults.Delay mismatch\ngot:  %q\nwant: %q",
+					tc.input.Delay, tc.wantDelay,
+				)
+			}
 		})
 	}
 }
 
 func TestWebhooksDefaults_Print(t *testing.T) {
-	testValid := testDefaults(false, false)
-	testInvalid := testDefaults(true, false)
-	// GIVEN: a WebhooksDefaults.
+	testValid := testDefaults(t, false)
+	testFailing := testDefaults(t, true)
+
 	tests := []struct {
 		name             string
 		webhooksDefaults *WebhooksDefaults
@@ -562,64 +578,59 @@ func TestWebhooksDefaults_Print(t *testing.T) {
 					single:
 						type: ` + testValid.Type + `
 						url: ` + testValid.URL + `
-						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
+						allow_invalid_certs: ` + strconv.FormatBool(*testValid.AllowInvalidCerts) + `
 						secret: ` + testValid.Secret + `
-						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
+						desired_status_code: ` + strconv.FormatUint(uint64(*testValid.DesiredStatusCode), 10) + `
 						delay: ` + testValid.Delay + `
-						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
-						silent_fails: ` + fmt.Sprint(*testValid.SilentFails),
+						max_tries: ` + strconv.FormatUint(uint64(*testValid.MaxTries), 10) + `
+						silent_fails: ` + strconv.FormatBool(*testValid.SilentFails),
 			),
 		},
 		{
 			name: "multiple element map",
 			webhooksDefaults: &WebhooksDefaults{
 				"first":  testValid,
-				"second": testInvalid,
+				"second": testFailing,
 			},
 			want: test.TrimYAML(`
 				webhook:
 					first:
 						type: ` + testValid.Type + `
 						url: ` + testValid.URL + `
-						allow_invalid_certs: ` + fmt.Sprint(*testValid.AllowInvalidCerts) + `
+						allow_invalid_certs: ` + strconv.FormatBool(*testValid.AllowInvalidCerts) + `
 						secret: ` + testValid.Secret + `
-						desired_status_code: ` + fmt.Sprint(*testValid.DesiredStatusCode) + `
+						desired_status_code: ` + strconv.FormatUint(uint64(*testValid.DesiredStatusCode), 10) + `
 						delay: ` + testValid.Delay + `
-						max_tries: ` + fmt.Sprint(*testValid.MaxTries) + `
-						silent_fails: ` + fmt.Sprint(*testValid.SilentFails) + `
+						max_tries: ` + strconv.FormatUint(uint64(*testValid.MaxTries), 10) + `
+						silent_fails: ` + strconv.FormatBool(*testValid.SilentFails) + `
 					second:
-						type: ` + testInvalid.Type + `
-						url: ` + testInvalid.URL + `
-						allow_invalid_certs: ` + fmt.Sprint(*testInvalid.AllowInvalidCerts) + `
-						secret: ` + testInvalid.Secret + `
-						desired_status_code: ` + fmt.Sprint(*testInvalid.DesiredStatusCode) + `
-						delay: ` + testInvalid.Delay + `
-						max_tries: ` + fmt.Sprint(*testInvalid.MaxTries) + `
-						silent_fails: ` + fmt.Sprint(*testInvalid.SilentFails),
+						type: ` + testFailing.Type + `
+						url: ` + testFailing.URL + `
+						allow_invalid_certs: ` + strconv.FormatBool(*testFailing.AllowInvalidCerts) + `
+						secret: ` + testFailing.Secret + `
+						desired_status_code: ` + strconv.FormatUint(uint64(*testFailing.DesiredStatusCode), 10) + `
+						delay: ` + testFailing.Delay + `
+						max_tries: ` + strconv.FormatUint(uint64(*testFailing.MaxTries), 10) + `
+						silent_fails: ` + strconv.FormatBool(*testFailing.SilentFails),
 			),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureStdout(t)
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
 
-			// WHEN: Print is called.
 			tc.webhooksDefaults.Print("")
 
-			// THEN: it prints the expected output.
 			stdout := releaseStdout()
-			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if stdout != tc.want {
-				t.Errorf(
-					"%s\nWebhooksDefaults.Print() stdout mismatch\ngot:  %q\nwant: %q",
-					packageName, stdout, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}

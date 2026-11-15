@@ -19,6 +19,7 @@ package test
 import (
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -28,7 +29,8 @@ func TestAssertFields(t *testing.T) {
 	ptr := &val
 	val2 := "test2"
 	ptr2 := &val2
-	// GIVEN: a slice of FieldAssertion's.
+	instant := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	tests := []struct {
 		name           string
 		fieldTest      FieldAssertion
@@ -41,8 +43,68 @@ func TestAssertFields(t *testing.T) {
 			errRegex:  `^$`,
 		},
 		{
+			name:      "CompareEqual mismatch",
+			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val2, Mode: CompareEqual},
+			errRegex:  `^target\.NAME mismatch\ngot:  [^\s]+.*\nwant: [^\s]+.*$`,
+		},
+		{
+			name:      "CompareEqual uncomparable type",
+			fieldTest: FieldAssertion{Name: "NAME", Got: []string{"a"}, Want: []string{"a"}, Mode: CompareEqual},
+			errRegex:  `^target\.NAME: \[\]string is not comparable with ==, use Check$`,
+		},
+		{
+			name:      "CompareEqual success/time.Time by Equal",
+			fieldTest: FieldAssertion{Name: "NAME", Got: instant, Want: instant.In(time.FixedZone("X", 3600)), Mode: CompareEqual},
+			errRegex:  `^$`,
+		},
+		{
+			name:      "CompareEqual mismatch/time.Time",
+			fieldTest: FieldAssertion{Name: "NAME", Got: instant, Want: instant.Add(time.Second), Mode: CompareEqual},
+			errRegex:  `^target\.NAME mismatch\ngot:  .+\nwant: .+$`,
+		},
+		{
+			name:      "CompareEqual success/[]byte by bytes.Equal",
+			fieldTest: FieldAssertion{Name: "NAME", Got: []byte("ab"), Want: []byte("ab"), Mode: CompareEqual},
+			errRegex:  `^$`,
+		},
+		{
+			name:      "CompareEqual mismatch/[]byte",
+			fieldTest: FieldAssertion{Name: "NAME", Got: []byte("ab"), Want: []byte("ac"), Mode: CompareEqual},
+			errRegex:  `^target\.NAME mismatch\ngot:  .+\nwant: .+$`,
+		},
+		{
+			name:      "CompareNotEqual mismatch/[]byte",
+			fieldTest: FieldAssertion{Name: "NAME", Got: []byte("ab"), Want: []byte("ab"), Mode: CompareNotEqual},
+			errRegex:  `^target\.NAME mismatch\ngot:  .+\nwant: NOT .+$`,
+		},
+		{
+			name:      "CompareSamePointer uncomparable type/[]byte",
+			fieldTest: FieldAssertion{Name: "NAME", Got: []byte("ab"), Want: []byte("ab"), Mode: CompareSamePointer},
+			errRegex:  `^target\.NAME: \[\]uint8 is not comparable with ==, use Check$`,
+		},
+		{
+			name:      "CompareNotEqual success",
+			fieldTest: FieldAssertion{Name: "NAME", Got: "abc", Want: "123", Mode: CompareNotEqual},
+			errRegex:  `^$`,
+		},
+		{
+			name:      "CompareNotEqual mismatch",
+			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareNotEqual},
+			errRegex:  `^target\.NAME mismatch\ngot:  [^\s]+.*\nwant: NOT [^\s]+.*$`,
+		},
+		{
 			name:      "CompareSamePointer success",
 			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: ptr, Mode: CompareSamePointer},
+			errRegex:  `^$`,
+		},
+		{
+			name:      "CompareSamePointer mismatch",
+			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: ptr2, Mode: CompareSamePointer},
+			errRegex:  `^target\.NAME mismatch\ngot:  [^\s]+.*\nwant: [^\s]+.*$`,
+		},
+		{
+			name:      "CompareSamePointer success/both nil",
+			fieldTest: FieldAssertion{Name: "NAME", Got: (*string)(nil), Want: (*string)(nil), Mode: CompareSamePointer},
 			errRegex:  `^$`,
 		},
 		{
@@ -51,29 +113,39 @@ func TestAssertFields(t *testing.T) {
 			errRegex:  `^$`,
 		},
 		{
-			name:      "CompareNotEqual success",
-			fieldTest: FieldAssertion{Name: "NAME", Got: "abc", Want: "123", Mode: CompareNotEqual},
+			name:      "CompareDifferentPointer mismatch",
+			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: ptr, Mode: CompareDifferentPointer},
+			errRegex:  `^target\.NAME mismatch\ngot:  [^\s]+.*\nwant: NOT [^\s]+.*$`,
+		},
+		{
+			name:      "CompareDifferentPointer mismatch/both nil",
+			fieldTest: FieldAssertion{Name: "NAME", Got: (*string)(nil), Want: (*string)(nil), Mode: CompareDifferentPointer},
+			errRegex:  `^target\.NAME mismatch\ngot:  [^\s]+.*\nwant: NOT [^\s]+.*$`,
+		},
+		{
+			name:      "CompareDifferentPointer success/nil want",
+			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: (*string)(nil), Mode: CompareDifferentPointer},
 			errRegex:  `^$`,
 		},
 		{
-			name:      "CompareEqual mismatch",
-			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val2, Mode: CompareEqual},
-			errRegex:  `NAME was not handed to the target correctly\ngot:  .*\nwant: .*`,
+			name:      "CompareNotNil success",
+			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Mode: CompareNotNil},
+			errRegex:  `^$`,
 		},
 		{
-			name:      "CompareSamePointer mismatch",
-			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: ptr2, Mode: CompareSamePointer},
-			errRegex:  `NAME was not handed to the target correctly\ngot:  .*\nwant: .*`,
+			name:      "CompareNotNil mismatch/untyped nil",
+			fieldTest: FieldAssertion{Name: "NAME", Mode: CompareNotNil},
+			errRegex:  `^target\.NAME mismatch\ngot:  nil\nwant: non-nil$`,
 		},
 		{
-			name:      "CompareDifferentPointer mismatch",
-			fieldTest: FieldAssertion{Name: "NAME", Got: ptr, Want: ptr, Mode: CompareDifferentPointer},
-			errRegex:  `NAME was not handed to the target correctly\ngot:  .*\nwant: .*`,
+			name:      "CompareNotNil mismatch/typed nil pointer",
+			fieldTest: FieldAssertion{Name: "NAME", Got: (*string)(nil), Mode: CompareNotNil},
+			errRegex:  `^target\.NAME mismatch\ngot:  nil\nwant: non-nil$`,
 		},
 		{
-			name:      "CompareNotEqual mismatch",
-			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareNotEqual},
-			errRegex:  `NAME was not handed to the target correctly\ngot:  .*\nwant: .*`,
+			name:      "CompareNotNil mismatch/nil map",
+			fieldTest: FieldAssertion{Name: "NAME", Got: map[string]string(nil), Mode: CompareNotNil},
+			errRegex:  `^target\.NAME mismatch\ngot:  nil\nwant: non-nil$`,
 		},
 		{
 			name: ".Check() success",
@@ -87,14 +159,14 @@ func TestAssertFields(t *testing.T) {
 			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareEqual, Check: func() (any, any, bool) {
 				return val, val2, false
 			}},
-			errRegex: `NAME was not handed to the target correctly\ngot:  .*\nwant: .*`,
+			errRegex: `target\.NAME mismatch\ngot:  .*\nwant: .*`,
 		},
 		{
 			name: "no target param",
 			fieldTest: FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareEqual, Check: func() (any, any, bool) {
 				return val, val2, false
 			}},
-			errRegex:       `NAME mismatch\ngot:  .*\nwant: .*`,
+			errRegex:       `^NAME mismatch\ngot:  .*\nwant: .*`,
 			targetOverride: new(""),
 		},
 		{
@@ -106,24 +178,36 @@ func TestAssertFields(t *testing.T) {
 				Mode:   CompareEqual,
 				Target: "custom_target",
 			},
-			errRegex: `NAME was not handed to the custom_target correctly\ngot:  .*\nwant: .*`,
+			errRegex: `custom_target\.NAME mismatch\ngot:  .*\nwant: .*`,
 		},
 		{
-			name:           "CompareNotEqual mismatch, no target",
+			name:           "CompareEqual mismatch/strings quoted",
+			fieldTest:      FieldAssertion{Name: "NAME", Got: "", Want: " ", Mode: CompareEqual},
+			errRegex:       `^NAME mismatch\ngot:  ""\nwant: " "$`,
+			targetOverride: new(""),
+		},
+		{
+			name:           "CompareEqual mismatch/nil rendered as nil",
+			fieldTest:      FieldAssertion{Name: "NAME", Got: nil, Want: "x", Mode: CompareEqual},
+			errRegex:       `^NAME mismatch\ngot:  nil\nwant: "x"$`,
+			targetOverride: new(""),
+		},
+		{
+			name:           "CompareNotEqual mismatch/no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: val, Want: val, Mode: CompareNotEqual},
-			errRegex:       `NAME mismatch\ngot:  .*\nwant: NOT .*`,
+			errRegex:       `^NAME mismatch\ngot:  .*\nwant: NOT .*`,
 			targetOverride: new(""),
 		},
 		{
-			name:           "CompareSamePointer mismatch, no target",
+			name:           "CompareSamePointer mismatch/no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: ptr, Want: ptr2, Mode: CompareSamePointer},
-			errRegex:       `NAME mismatch\ngot:  .*\nwant: .*`,
+			errRegex:       `^NAME mismatch\ngot:  .*\nwant: .*`,
 			targetOverride: new(""),
 		},
 		{
-			name:           "CompareDifferentPointer mismatch, no target",
+			name:           "CompareDifferentPointer mismatch/no target",
 			fieldTest:      FieldAssertion{Name: "NAME", Got: ptr, Want: ptr, Mode: CompareDifferentPointer},
-			errRegex:       `NAME mismatch\ngot:  .*\nwant: NOT .*`,
+			errRegex:       `^NAME mismatch\ngot:  .*\nwant: NOT .*`,
 			targetOverride: new(""),
 		},
 	}
@@ -138,20 +222,84 @@ func TestAssertFields(t *testing.T) {
 			}
 			fieldTests := []FieldAssertion{tc.fieldTest}
 
-			// WHEN: AssertFields is called.
 			err := AssertFields(
 				t,
 				fieldTests,
-				"TestAssertFields",
 				target,
 			)
-
-			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !regexp.MustCompile(tc.errRegex).MatchString(e) {
-				t.Fatalf("%s\nAssertFields() error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+		})
+	}
+}
+
+func TestAssertFields__rowTargetDoesNotLeak(t *testing.T) {
+	fieldTests := []FieldAssertion{
+		{Name: "FIRST", Got: 1, Want: 2, Mode: CompareEqual, Target: "custom_target"},
+		{Name: "SECOND", Got: 1, Want: 2, Mode: CompareEqual},
+	}
+
+	err := AssertFields(t, fieldTests, "target")
+	e := errfmt.FormatError(err)
+	want := `(?m)^target\.SECOND mismatch$`
+	if !regexp.MustCompile(want).MatchString(e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, want)
+	}
+}
+
+func TestCopiedPointerMode(t *testing.T) {
+	val := "test"
+
+	tests := []struct {
+		name string
+		want any
+		mode CompareMode
+	}{
+		{name: "untyped nil", want: nil, mode: CompareSamePointer},
+		{name: "typed nil pointer", want: (*string)(nil), mode: CompareSamePointer},
+		{name: "nil map", want: map[string]string(nil), mode: CompareSamePointer},
+		{name: "non-nil pointer", want: &val, mode: CompareDifferentPointer},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := CopiedPointerMode(tc.want)
+
+			if got != tc.mode {
+				t.Errorf("mismatch\ngot:  %d\nwant: %d", got, tc.mode)
+			}
+		})
+	}
+}
+
+func TestFormatValue(t *testing.T) {
+	tests := []struct {
+		name string
+		v    any
+		want string
+	}{
+		{name: "nil", v: nil, want: "nil"},
+		{name: "string", v: "a", want: `"a"`},
+		{name: "string slice", v: []string{"a", "b"}, want: `["a" "b"]`},
+		{name: "string map", v: map[string]string{"k": "v"}, want: `map["k":"v"]`},
+		{name: "map with a non-string key", v: map[int]string{1: "a"}, want: "map[1:a]"},
+		{name: "map with a non-string value", v: map[string]int{"k": 1}, want: "map[k:1]"},
+		{name: "slice with a non-string element", v: []any{"a", 1}, want: "[a 1]"},
+		{name: "int", v: 1, want: "1"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := formatValue(tc.v)
+
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

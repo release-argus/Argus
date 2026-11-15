@@ -19,27 +19,30 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"math"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strconv"
-	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/dashboard"
-	"github.com/release-argus/Argus/service/status"
-	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
 func TestShoutrrr_TestSend(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name        string
 		sType       *string
 		nilShoutrrr bool
 		errRegex    string
+		wantSent    bool
 	}{
 		{
 			name:        "nil shoutrrr",
@@ -53,51 +56,95 @@ func TestShoutrrr_TestSend(t *testing.T) {
 				^failed to create Shoutrrr sender:
 					creating sender with options for URLs \[\]:
 						error initializing router services:
-							unknown service: ""
-								unknown service$`,
+							unknown service: ""$`,
 			),
 		},
 		{
 			name:     "valid",
 			errRegex: `^$`,
+			wantSent: true,
 		},
+	}
+
+	type gotifyRequest struct {
+		path    string
+		body    []byte
+		readErr error
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			requests := make(chan gotifyRequest, 4)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				requests <- gotifyRequest{path: r.URL.Path, body: body, readErr: err}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"id":1}`))
+			}))
+			t.Cleanup(server.Close)
+			serverURL, err := url.Parse(server.URL)
+			if err != nil {
+				t.Fatalf("url.Parse() failed: %v", err)
+			}
 			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.URLFields = map[string]string{
+				"host":  serverURL.Hostname(),
+				"port":  serverURL.Port(),
+				"token": "AAAAAAAAAAAAAAA",
+			}
+			shoutrrr.Params["disabletls"] = "yes"
+			shoutrrr.Params["title"] = "argus"
+			shoutrrr.Options["message"] = "new release"
 			if tc.sType != nil {
 				shoutrrr.Type = *tc.sType
 			}
 			if tc.nilShoutrrr {
 				shoutrrr = nil
 			}
-			testURL := "https://example.com"
 
-			// WHEN: TestSend is called.
-			err := shoutrrr.TestSend(testURL)
-
-			prefix := fmt.Sprintf(
-				"%s\nShoutrrr.TestSend(%q)",
-				packageName, testURL,
-			)
-
-			// THEN: it errors when expected.
+			err = shoutrrr.TestSend("https://example.com")
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			wantRequests := 0
+			if tc.wantSent {
+				wantRequests = 1
+			}
+			if got := len(requests); got != wantRequests {
+				t.Fatalf("request count mismatch\ngot:  %d\nwant: %d", got, wantRequests)
+			}
+			if !tc.wantSent {
+				return
+			}
+			req := <-requests
+			if req.readErr != nil {
+				t.Fatalf("io.ReadAll() failed: %v", req.readErr)
+			}
+			var body struct {
+				Title   string `json:"title"`
+				Message string `json:"message"`
+			}
+			if err = decode.Unmarshal("json", req.body, &body); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
+			if want := "/message"; req.path != want {
+				t.Errorf("http.Request.URL.Path mismatch\ngot:  %q\nwant: %q", req.path, want)
+			}
+			if want := "TEST - argus"; body.Title != want {
+				t.Errorf("request title mismatch\ngot:  %q\nwant: %q", body.Title, want)
+			}
+			if want := "TEST - new release"; body.Message != want {
+				t.Errorf("request message mismatch\ngot:  %q\nwant: %q", body.Message, want)
 			}
 		})
 	}
 }
 
 func TestShoutrrrs_CheckValues(t *testing.T) {
-	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name     string
 		input    *Shoutrrrs
@@ -131,7 +178,7 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 						"custom_headers": `{"foo":"bar"}`},
 				},
 			},
-			changed: true,
+			changed: true, // The "generic" ID types it, so custom_headers is renamed.
 		},
 		{
 			name: "invalid map",
@@ -184,21 +231,11 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			if tc.input != nil {
-				svcStatus, _ := statustest.New("yaml", nil)
-				svcStatus.Init(
-					0, len(*tc.input), 0,
-					status.ServiceInfo{
-						ID: tc.name,
-					},
-					&dashboard.Options{},
-				)
-				notifyCfg := plainConfig(t)
-				tc.input.Init(svcStatus, notifyCfg)
+				tc.input.Init(newTestStatus(t, tc.name, len(*tc.input)), plainConfig())
 			}
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -208,7 +245,6 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 }
 
 func TestShoutrrr_CheckValues(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	testS := testShoutrrr(false, false)
 	tests := []struct {
 		name                       string
@@ -256,7 +292,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			options: map[string]string{
 				"delay": "5",
 			},
-			changed: false,
+			changed: false, // checkValuesOptions fixes the delay without reporting it.
 		},
 		{
 			name: "invalid message template",
@@ -356,39 +392,46 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"path":  "/test",
 			},
 			wantURLFields: map[string]string{
-				"port": "8080",
-				"path": "test",
+				"host":  "foo",
+				"token": "bar",
+				"port":  "8080",
+				"path":  "test",
 			},
 			changed: true,
 		},
 		{
-			name:  "generic.url_fields.custom_headers -> headers",
-			sType: "generic",
+			name:     "generic.url_fields.custom_headers -> headers",
+			errRegex: `^$`,
+			sType:    "generic",
 			urlFields: map[string]string{
 				"host":           "example.com",
 				"custom_headers": `{"foo":"bar"}`,
 			},
 			wantURLFields: map[string]string{
-				"custom_headers": `{"foo":"bar"}`,
+				"host":    "example.com",
+				"headers": `{"foo":"bar"}`,
 			},
 			changed: true,
 		},
 		{
-			name:  "generic.url_fields.custom_headers not pulled to headers if headers already defined",
-			sType: "generic",
+			name:     "generic.url_fields.custom_headers not pulled to headers if headers already defined",
+			errRegex: `^$`,
+			sType:    "generic",
 			urlFields: map[string]string{
 				"host":           "example.com",
 				"custom_headers": `{"foo":"bar"}`,
 				"headers":        `{"foo":"baz"}`,
 			},
 			wantURLFields: map[string]string{
+				"host":    "example.com",
 				"headers": `{"foo":"baz"}`,
 			},
 			changed: true,
 		},
 		{
-			name:  "ntfy.params.disabletls -> disabletlsverification",
-			sType: "ntfy",
+			name:     "ntfy.params.disabletls -> disabletlsverification",
+			errRegex: `^$`,
+			sType:    "ntfy",
 			urlFields: map[string]string{
 				"topic": "123",
 			},
@@ -404,8 +447,9 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed: true,
 		},
 		{
-			name:  "ntfy.params.disabletls not pulled to disabletlsverification if disabletlsverification already defined",
-			sType: "ntfy",
+			name:     "ntfy.params.disabletls not pulled to disabletlsverification if disabletlsverification already defined",
+			errRegex: `^$`,
+			sType:    "ntfy",
 			urlFields: map[string]string{
 				"topic": "123",
 			},
@@ -455,7 +499,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed: false,
 		},
 		{
-			name: "invalid params + locate fail",
+			name: "invalid params/locate skipped",
 			errRegex: test.TrimYAML(`
 				^params:
 					fromaddress: <required>.*
@@ -566,22 +610,40 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				input.CheckValues,
 			)
+
+			if tc.wantURLFields != nil {
+				if testErr := test.AssertMapEqual(t, input.URLFields, tc.wantURLFields, "Shoutrrr.URLFields"); testErr != nil {
+					t.Error(testErr)
+				}
+			}
+			if tc.wantParams != nil {
+				if testErr := test.AssertMapEqual(t, input.Params, tc.wantParams, "Shoutrrr.Params"); testErr != nil {
+					t.Error(testErr)
+				}
+			}
+			if tc.wantDelay != "" {
+				if got := input.Options["delay"]; got != tc.wantDelay {
+					t.Errorf(
+						"Shoutrrr.Options[\"delay\"] mismatch\ngot:  %q\nwant: %q",
+						got, tc.wantDelay,
+					)
+				}
+			}
 		})
 	}
 }
+
 func TestBase_CheckValues(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    *Base
-		want     *Base
-		id       string
-		errRegex string
-		changed  bool
+		name       string
+		input      *Base
+		wantParams map[string]string
+		errRegex   string
+		changed    bool
 	}{
 		{
 			name:     "nil Base",
@@ -659,11 +721,8 @@ func TestBase_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
-			want: &Base{
-				Type: "matrix",
-				Params: map[string]string{
-					"rooms": "alias:server",
-				},
+			wantParams: map[string]string{
+				"rooms": "alias:server",
 			},
 			changed: true,
 		},
@@ -676,11 +735,8 @@ func TestBase_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
-			want: &Base{
-				Type: "matrix",
-				Params: map[string]string{
-					"rooms": "%23alias:server",
-				},
+			wantParams: map[string]string{
+				"rooms": "%23alias:server",
 			},
 			changed: false,
 		},
@@ -693,11 +749,8 @@ func TestBase_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
-			want: &Base{
-				Type: "matrix",
-				Params: map[string]string{
-					"rooms": "alias:server",
-				},
+			wantParams: map[string]string{
+				"rooms": "alias:server",
 			},
 			changed: false,
 		},
@@ -709,17 +762,21 @@ func TestBase_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
-				func() (error, bool) { return tc.input.CheckValues(tc.id) },
+				func() (error, bool) { return tc.input.CheckValues("") },
 			)
+
+			if tc.wantParams != nil {
+				if testErr := test.AssertMapEqual(t, tc.input.Params, tc.wantParams, "Base.Params"); testErr != nil {
+					t.Error(testErr)
+				}
+			}
 		})
 	}
 }
 
 func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
-	// GIVEN: ShoutrrrsDefaults.
 	tests := []struct {
 		name     string
 		input    *ShoutrrrsDefaults
@@ -754,11 +811,14 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					},
 				},
 			},
-			changed: true,
+			changed: true, // The "generic" ID types it, so custom_headers is renamed.
 		},
 		{
-			name:     "invalid type",
-			errRegex: "", // Caught by Shoutrrr.CheckValues.
+			name: "invalid type",
+			errRegex: test.TrimYAML(`
+				^other:
+					type: "somethingUnknown" <invalid> \(supported values = .+\)$`,
+			),
 			input: &ShoutrrrsDefaults{
 				"valid": testDefaults(false, false),
 				"other": NewDefaults(
@@ -783,7 +843,7 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 					nil,
 				),
 			},
-			changed: false,
+			changed: false, // checkValuesOptions fixes the delay without reporting it.
 		},
 		{
 			name: "invalid delay",
@@ -850,7 +910,6 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				tc.input.CheckValues,
@@ -858,8 +917,8 @@ func TestShoutrrrsDefaults_CheckValues(t *testing.T) {
 		})
 	}
 }
+
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: Defaults and various ids.
 	tests := []struct {
 		name     string
 		input    *Defaults
@@ -977,7 +1036,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.changed,
 				func() (error, bool) {
@@ -989,7 +1047,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 }
 
 func TestShoutrrrsDefaults_Print(t *testing.T) {
-	// GIVEN: a ShoutrrrsDefaults.
 	testValid := testDefaults(false, false)
 	testInvalid := testDefaults(true, true)
 	tests := []struct {
@@ -1064,38 +1121,32 @@ func TestShoutrrrsDefaults_Print(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureStdout(t)
 
 			if tc.want != "" {
 				tc.want += "\n"
 			}
 
-			// WHEN: Print is called.
 			tc.shoutrrrsDefaults.Print("")
 
-			// THEN: it prints the expected stdout.
 			stdout := releaseStdout()
-			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if stdout != tc.want {
-				t.Errorf(
-					"%s\nShoutrrrsDefaults.Print() stdout mismatch\ngot:  %q\nwant: %q",
-					packageName, stdout, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}
 }
 
 func TestBase_CorrectSelf(t *testing.T) {
-	// GIVEN: a Service.
 	tests := []struct {
 		name          string
 		sType         string
 		mapTarget     string
 		startAs, want map[string]string
 		wantAbsent    []string
-		renamedVar    bool
+		wantChanged   bool
 	}{
 		{
 			name:      "port/leading colon",
@@ -1106,6 +1157,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"port": "8080",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "port/valid",
@@ -1126,6 +1178,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"path": "argus",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "path/valid",
@@ -1148,6 +1201,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 				"host": "mattermost.example.com",
 				"port": "8443",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "host/valid, no change",
@@ -1170,6 +1224,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 				"host": "example.com",
 				"port": "9090",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "host/scheme without port",
@@ -1182,6 +1237,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 				"host": "example.com",
 				"port": "",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "host/encoded port overrides existing port",
@@ -1194,6 +1250,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 				"host": "example.com",
 				"port": "8443",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "host/invalid host left unchanged",
@@ -1218,7 +1275,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"threadid",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "discord/threadid -> thread_id (but thread_id already defined)",
@@ -1234,7 +1291,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"threadid",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "generic/requestmethod -> method",
@@ -1249,7 +1306,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"requestmethod",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "generic/requestmethod -> method (but method already defined)",
@@ -1265,7 +1322,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"requestmethod",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "generic/custom_headers -> headers",
@@ -1280,7 +1337,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"custom_headers",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "generic/custom_headers -> headers (but headers already defined)",
@@ -1296,7 +1353,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"custom_headers",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "ifttt/usemessageasvalue -> messagevalue",
@@ -1311,7 +1368,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"usemessageasvalue",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "ifttt/usemessageasvalue -> messagevalue (but messagevalue already defined)",
@@ -1327,7 +1384,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"usemessageasvalue",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "ifttt/usetitleasvalue -> titlevalue",
@@ -1342,7 +1399,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"usetitleasvalue",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "ifttt/usetitleasvalue -> titlevalue (but titlevalue already defined)",
@@ -1358,7 +1415,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"usetitleasvalue",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "matrix/rooms/leading #",
@@ -1370,6 +1427,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"rooms": "alias:server",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "matrix/rooms/leading # already urlEncoded",
@@ -1403,6 +1461,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"channel": "argus",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "mattermost/channel, valid",
@@ -1428,7 +1487,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"disabletls",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "ntfy/disabletls -> disabletlsverification (but disabletlsverification already defined)",
@@ -1444,7 +1503,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"disabletls",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "slack/color, already #-prefixed",
@@ -1467,6 +1526,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"color": "#ffffff",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "slack/color, bare hex (no #), uppercase",
@@ -1478,6 +1538,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"color": "#FFFFFF",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "slack/color, named color (non-hex, no # needed)",
@@ -1500,6 +1561,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"color": "#ffffff",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "slack/threadts -> thread_ts",
@@ -1514,7 +1576,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"threadts",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "slack/threadts -> thread_ts (but thread_ts already defined)",
@@ -1530,7 +1592,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"threadts",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "smtp/skiptlsverification -> skiptlsverify",
@@ -1545,7 +1607,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"skiptlsverification",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "smtp/skiptlsverification -> skiptlsverify (but skiptlsverify already defined)",
@@ -1561,7 +1623,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantAbsent: []string{
 				"skiptlsverification",
 			},
-			renamedVar: true,
+			wantChanged: true,
 		},
 		{
 			name:      "smtp/timeout, valid duration",
@@ -1584,6 +1646,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"timeout": "10s",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "smtp/timeout, invalid left for CheckValues",
@@ -1606,6 +1669,7 @@ func TestBase_CorrectSelf(t *testing.T) {
 			want: map[string]string{
 				"botmail": "foo%40bar.com",
 			},
+			wantChanged: true,
 		},
 		{
 			name:      "zulip/botmail, valid",
@@ -1649,116 +1713,90 @@ func TestBase_CorrectSelf(t *testing.T) {
 					make(map[string]string),
 				),
 			)
-			serviceStatus := status.Status{}
-			serviceStatus.Init(
-				0, 1, 0,
-				status.ServiceInfo{
-					ID: tc.name,
-				},
-				&dashboard.Options{},
-			)
+			serviceStatus := newTestStatus(t, tc.name, 1)
 			shoutrrr.Init(
-				&serviceStatus,
+				serviceStatus,
 				shoutrrr.Main, shoutrrr.Defaults, shoutrrr.HardDefaults,
 			)
-			var subTestMap = map[string]struct {
-				defaults  *Defaults
+			subTests := []struct {
+				name      string
+				layer     string
 				URLFields map[string]string
 				Params    map[string]string
 			}{
-				"root": {
+				{
+					name:      "root",
+					layer:     "Shoutrrr",
 					URLFields: shoutrrr.URLFields,
 					Params:    shoutrrr.Params,
 				},
-				"main": {
+				{
+					name:      "main",
+					layer:     "Shoutrrr.Main",
 					URLFields: shoutrrr.Main.URLFields,
 					Params:    shoutrrr.Main.Params,
 				},
-				"defaults": {
+				{
+					name:      "defaults",
+					layer:     "Shoutrrr.Defaults",
 					URLFields: shoutrrr.Defaults.URLFields,
 					Params:    shoutrrr.Defaults.Params,
 				},
-				"hard_defaults": {
+				{
+					name:      "hard_defaults",
+					layer:     "Shoutrrr.HardDefaults",
 					URLFields: shoutrrr.HardDefaults.URLFields,
 					Params:    shoutrrr.HardDefaults.Params,
 				},
 			}
-			// Sub tests - set in different locations and check it's corrected there.
-			for subTest := range subTestMap {
-				t.Logf(
-					"%s - sub_test: %s",
-					packageName, subTest,
-				)
-				if tc.mapTarget == "url_fields" {
-					for k, v := range tc.startAs {
-						subTestMap[subTest].URLFields[k] = v
-					}
-				} else {
-					for k, v := range tc.startAs {
-						subTestMap[subTest].Params[k] = v
-					}
-				}
+			// Set in each location in turn; only root is corrected.
+			for _, subTest := range subTests {
+				t.Run(subTest.name, func(t *testing.T) {
+					// Serial: shares shoutrrr.
 
-				// WHEN: correctSelf is called.
-				typ := shoutrrr.GetType()
-				shoutrrr.correctSelf(typ)
-
-				prefix := fmt.Sprintf(
-					"%s\nBase.correctSelf(%q)",
-					packageName, typ,
-				)
-
-				for k, v := range tc.want {
-					want := v
-					// root is the only one that gets corrected.
-					if subTest != "root" {
-						want = tc.startAs[k]
-					}
-					got := shoutrrr.GetURLField(k)
-					if tc.mapTarget != "url_fields" {
-						got = shoutrrr.GetParam(k)
-					}
-					if got != want {
-						t.Errorf(
-							"%s %s[%q] mismatch\ngot:  %q\nwant: %q",
-							prefix, tc.mapTarget, k,
-							got, want,
-						)
-					}
-					// Reset.
+					targetMap, field := subTest.Params, subTest.layer+".Params"
 					if tc.mapTarget == "url_fields" {
-						delete(subTestMap[subTest].URLFields, k)
-					} else {
-						delete(subTestMap[subTest].Params, k)
+						targetMap, field = subTest.URLFields, subTest.layer+".URLFields"
 					}
-				}
+					maps.Copy(targetMap, tc.startAs)
 
-				// AND: the deprecated key is removed.
-				if subTest == "root" {
-					for _, k := range tc.wantAbsent {
-						_, found := subTestMap[subTest].Params[k]
-						if tc.mapTarget == "url_fields" {
-							_, found = subTestMap[subTest].URLFields[k]
+					changed := shoutrrr.correctSelf(shoutrrr.GetType())
+
+					// correctSelf edits only its receiver.
+					wantChanged := tc.wantChanged && subTest.name == "root"
+					if changed != wantChanged {
+						t.Errorf("changed mismatch\ngot:  %t\nwant: %t", changed, wantChanged)
+					}
+
+					for k, v := range tc.want {
+						want := v
+						if subTest.name != "root" {
+							want = tc.startAs[k]
 						}
-						if found {
-							t.Errorf(
-								"%s %s[%q] should have been removed",
-								prefix, tc.mapTarget, k,
-							)
+						if got := targetMap[k]; got != want {
+							t.Errorf("%s[%q] mismatch\ngot:  %q\nwant: %q", field, k, got, want)
+						}
+						delete(targetMap, k)
+					}
+
+					if subTest.name == "root" {
+						for _, k := range tc.wantAbsent {
+							if _, found := targetMap[k]; found {
+								t.Errorf("%s[%q] mismatch\ngot:  present\nwant: absent", field, k)
+							}
 						}
 					}
-				}
-				for _, k := range tc.wantAbsent {
-					delete(subTestMap[subTest].URLFields, k)
-					delete(subTestMap[subTest].Params, k)
-				}
+					for _, k := range tc.wantAbsent {
+						delete(subTest.URLFields, k)
+						delete(subTest.Params, k)
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestBase_NormaliseParamSelect(t *testing.T) {
-	// GIVEN: a Base and various inputs to normaliseParamSelect.
 	tests := []struct {
 		name       string
 		value      string
@@ -1797,11 +1835,12 @@ func TestBase_NormaliseParamSelect(t *testing.T) {
 			wantValue:  "unchanged",
 		},
 		{
-			name:      "empty value returns false and makes no change",
-			value:     "",
-			allowed:   []string{"One", "Two"},
-			ok:        false,
-			wantValue: "",
+			name:       "empty value returns false and makes no change",
+			value:      "",
+			allowed:    []string{"One", "Two"},
+			startParam: "keepme",
+			ok:         false,
+			wantValue:  "keepme",
 		},
 		{
 			name:       "empty allowed set never matches",
@@ -1817,48 +1856,32 @@ func TestBase_NormaliseParamSelect(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			key := "param"
 			b := &Base{}
 			b.InitMaps()
 			if tc.startParam != "" {
-				b.setParam(tc.name, tc.startParam)
+				b.setParam(key, tc.startParam)
 			}
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: normaliseParamSelect is called.
-			resultChannel <- b.normaliseParamSelect(tc.name, tc.value, tc.allowed)
+			ok := b.normaliseParamSelect(key, tc.value, tc.allowed)
 
-			prefix := fmt.Sprintf("%s\nnormaliseParamSelect()", packageName)
-
-			// THEN: it returns the expected boolean.
-			if err := test.AssertChannelBool(
-				t,
-				tc.ok,
-				resultChannel,
-				nil,
-				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
+			if ok != tc.ok {
+				t.Fatalf("ok mismatch\ngot:  %t\nwant: %t", ok, tc.ok)
 			}
 
-			// AND: Params[key] is set/unchanged as expected.
-			if got := b.GetParam(tc.name); got != tc.wantValue {
-				t.Fatalf(
-					"%s Params[x] mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantValue,
-				)
+			if got := b.GetParam(key); got != tc.wantValue {
+				t.Fatalf("Base.GetParam() mismatch\ngot:  %q\nwant: %q", got, tc.wantValue)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_CheckValuesType(t *testing.T) {
-	// GIVEN: a Shoutrrr with a Type and possibly a Main.
 	tests := []struct {
 		name     string
 		sType    string
 		main     *Defaults
 		errRegex string
-		changed  bool
 	}{
 		{
 			name:     "no type",
@@ -1894,25 +1917,16 @@ func TestShoutrrr_CheckValuesType(t *testing.T) {
 
 			input := testShoutrrr(false, false)
 			input.Type = tc.sType
-			svcStatus, _ := statustest.New("yaml", nil)
-			svcStatus.Init(
-				0, 1, 0,
-				status.ServiceInfo{
-					ID: tc.name,
-				},
-				&dashboard.Options{},
-			)
 			input.Init(
-				svcStatus,
+				newTestStatus(t, tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)
 
 			_, _ = test.AssertCheckValuesWithErrorAndChanged(
 				t,
-				packageName,
 				tc.errRegex,
-				tc.changed,
+				false,
 				input.CheckValues,
 			)
 		})
@@ -1920,7 +1934,6 @@ func TestShoutrrr_CheckValuesType(t *testing.T) {
 }
 
 func TestBase_CheckValuesOptions(t *testing.T) {
-	// GIVEN: a Base with Options.
 	tests := []struct {
 		name      string
 		options   map[string]string
@@ -2023,19 +2036,13 @@ func TestBase_CheckValuesOptions(t *testing.T) {
 
 			err := test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.checkValuesOptions,
 			)
-
-			// AND: the delay is set as expected if it didn't error on delay.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck("^delay: .*", e) {
 				if got := input.getOption("delay"); got != tc.wantDelay {
-					t.Errorf(
-						"%s\nBase.Option.delay mismatch after checkValuesOptions()\ngot:  %q\nwant: %q",
-						packageName, got, tc.wantDelay,
-					)
+					t.Errorf("Base.getOption() mismatch\ngot:  %q\nwant: %q", got, tc.wantDelay)
 				}
 			}
 		})
@@ -2043,7 +2050,6 @@ func TestBase_CheckValuesOptions(t *testing.T) {
 }
 
 func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
-	// GIVEN: a Shoutrrr with Params.
 	tests := []struct {
 		name      string
 		sType     string
@@ -2889,23 +2895,14 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			input := testShoutrrr(false, false)
 			input.Type = tc.sType
 			input.URLFields = tc.urlFields
-			svcStatus, _ := statustest.New("yaml", nil)
-			svcStatus.Init(
-				0, 1, 0,
-				status.ServiceInfo{
-					ID: tc.name,
-				},
-				svcStatus.Dashboard,
-			)
 			input.Init(
-				svcStatus,
+				newTestStatus(t, tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.checkValuesURLFields,
 			)
@@ -2914,7 +2911,6 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 }
 
 func TestShoutrrr_CheckValuesParams(t *testing.T) {
-	// GIVEN: a Shoutrrr with Params.
 	tests := []struct {
 		name      string
 		sType     string
@@ -3237,23 +3233,14 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			input.Type = tc.sType
 			input.Params = tc.params
 			input.URLFields = tc.urlFields
-			svcStatus, _ := statustest.New("yaml", nil)
-			svcStatus.Init(
-				0, 1, 0,
-				status.ServiceInfo{
-					ID: tc.name,
-				},
-				svcStatus.Dashboard,
-			)
 			input.Init(
-				svcStatus,
+				newTestStatus(t, tc.name, 1),
 				tc.main,
 				&Defaults{}, &Defaults{},
 			)
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.checkValuesParams,
 			)
@@ -3262,7 +3249,6 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 }
 
 func TestBase_CheckValuesParams(t *testing.T) {
-	// GIVEN: a Base with Params.
 	tests := []struct {
 		name     string
 		itemType string
@@ -3355,7 +3341,6 @@ func TestBase_CheckValuesParams(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				func() error {
 					return input.checkValuesParams(tc.itemType)
@@ -3366,7 +3351,6 @@ func TestBase_CheckValuesParams(t *testing.T) {
 }
 
 func TestBase_CheckValuesParamsSelects(t *testing.T) {
-	// GIVEN: a Base with Params and different item types.
 	tests := []struct {
 		name      string
 		itemType  string
@@ -3374,7 +3358,6 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		errRegex  string
 		wantParam map[string]string
 	}{
-		// bark
 		{
 			name:     "bark/valid scheme+sound normalised",
 			itemType: "bark",
@@ -3395,15 +3378,15 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"scheme": "-",
 				"sound":  "nope",
 			},
-			errRegex: "^" + test.RegexBracketEscaper.Replace(
+			errRegex: "^" + regexp.QuoteMeta(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.ErrInvalidValue{
+						&polymorphic.ErrInvalidValue{
 							Key:     "scheme",
 							Value:   "-",
 							Allowed: barkNtfyParamScheme,
 						},
-						polymorphic.ErrInvalidValue{
+						&polymorphic.ErrInvalidValue{
 							Key:     "sound",
 							Value:   "nope",
 							Allowed: barkParamSound,
@@ -3412,7 +3395,6 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				),
 			) + "$",
 		},
-		// generic
 		{
 			name:     "generic/valid method normalised",
 			itemType: "generic",
@@ -3430,7 +3412,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			params: map[string]string{
 				"method": "FETCH",
 			},
-			errRegex: "^" + test.RegexBracketEscaper.Replace(
+			errRegex: "^" + regexp.QuoteMeta(
 				polymorphic.ErrInvalidValue{
 					Key:     "method",
 					Value:   "FETCH",
@@ -3438,7 +3420,6 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				}.Error(),
 			) + "$",
 		},
-		// ntfy
 		{
 			name:     "ntfy/valid priority and scheme",
 			itemType: "ntfy",
@@ -3459,7 +3440,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"priority": "urgENT",
 				"scheme":   "ftp",
 			},
-			errRegex: "^" + test.RegexBracketEscaper.Replace(
+			errRegex: "^" + regexp.QuoteMeta(
 				errfmt.FormatError(
 					errors.Join(
 						polymorphic.ErrInvalidValue{
@@ -3476,7 +3457,6 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				),
 			) + "$",
 		},
-		// smtp
 		{
 			name:     "smtp/valid auth and encryption",
 			itemType: "smtp",
@@ -3508,15 +3488,15 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				"auth":       "basic",
 				"encryption": "tls1.3",
 			},
-			errRegex: "^" + test.RegexBracketEscaper.Replace(
+			errRegex: "^" + regexp.QuoteMeta(
 				errfmt.FormatError(
 					errors.Join(
-						polymorphic.ErrInvalidValue{
+						&polymorphic.ErrInvalidValue{
 							Key:     "auth",
 							Value:   "basic",
 							Allowed: smtpParamAuth,
 						},
-						polymorphic.ErrInvalidValue{
+						&polymorphic.ErrInvalidValue{
 							Key:     "encryption",
 							Value:   "tls1.3",
 							Allowed: smtpParamEncryption,
@@ -3525,7 +3505,6 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				),
 			) + "$",
 		},
-		// telegram
 		{
 			name:     "telegram/valid parsemode",
 			itemType: "telegram",
@@ -3543,7 +3522,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			params: map[string]string{
 				"parsemode": "mdx",
 			},
-			errRegex: "^" + test.RegexBracketEscaper.Replace(
+			errRegex: "^" + regexp.QuoteMeta(
 				polymorphic.ErrInvalidValue{
 					Key:     "parsemode",
 					Value:   "mdx",
@@ -3551,15 +3530,16 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 				}.Error(),
 			) + "$",
 		},
-		// unknown type and empty params
 		{
 			name:     "unknown/type is no-op even with values",
 			itemType: "unknown",
 			params: map[string]string{
 				"scheme": "ftp",
 			},
-			errRegex:  `^$`,
-			wantParam: map[string]string{},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"scheme": "ftp",
+			},
 		},
 		{
 			name:     "nil/empty params produces no error",
@@ -3579,20 +3559,15 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				func() error {
 					return input.checkValuesParams(tc.itemType)
 				},
 			)
 
-			// THEN: any expected normalisations took place.
 			for k, v := range tc.wantParam {
 				if got := input.GetParam(k); got != v {
-					t.Fatalf(
-						"%s\nBase checkValuesParams() normalisation mismatch for %q\ngot:  %q\nwant: %q",
-						packageName, k, got, v,
-					)
+					t.Fatalf("Base.GetParam(%q) mismatch\ngot:  %q\nwant: %q", k, got, v)
 				}
 			}
 		})
@@ -3601,7 +3576,7 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 
 func TestBase_ValidateParamSelect(t *testing.T) {
 	key := "test"
-	// GIVEN: a Base and various inputs to validateParamSelect.
+
 	tests := []struct {
 		name     string
 		value    string
@@ -3640,34 +3615,20 @@ func TestBase_ValidateParamSelect(t *testing.T) {
 			input.InitMaps()
 			input.setParam(key, tc.value)
 
-			// WHEN: validateParamSelect is called.
 			err := input.validateParamSelect(key, tc.allowed)
-
-			prefix := fmt.Sprintf("%s\nBase.validateParamSelect()", packageName)
-
-			// THEN: error matches expectation.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: Params[key] is set/unchanged as expected.
 			if got := input.GetParam(key); got != tc.want {
-				t.Fatalf(
-					"%s Params[%q] mismatch\ngot:  %q\nwant: %q",
-					prefix, key,
-					got, tc.want,
-				)
+				t.Fatalf("Base.GetParam() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestParseHostPort(t *testing.T) {
-	// GIVEN: an address that may contain a scheme, host, and/or port.
 	tests := []struct {
 		name     string
 		input    string
@@ -3723,7 +3684,7 @@ func TestParseHostPort(t *testing.T) {
 			wantPort: "",
 		},
 		{
-			name:     "IPv4 address/schema, hostname, and port",
+			name:     "IPv4 address/scheme, hostname, and port",
 			input:    "https://127.0.0.1:9000",
 			wantHost: "127.0.0.1",
 			wantPort: "9000",
@@ -3783,7 +3744,7 @@ func TestParseHostPort(t *testing.T) {
 			wantPort: "",
 		},
 		{
-			name:     "leading trailing spaces trimmed/schema, hostname, and port",
+			name:     "leading trailing spaces trimmed/scheme, hostname, and port",
 			input:    "  https://example.com:123  ",
 			wantHost: "example.com",
 			wantPort: "123",
@@ -3794,14 +3755,11 @@ func TestParseHostPort(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: parseHostPort is called.
 			host, port := parseHostPort(tc.input)
 
-			// THEN: the host and port match the expected values.
 			if host != tc.wantHost || port != tc.wantPort {
 				t.Errorf(
-					"%s\nparseHostPort(%q) mismatch\ngot:  (%q, %q)\nwant: (%q, %q)",
-					packageName, tc.input,
+					"mismatch\ngot:  host=%q, port=%q\nwant: host=%q, port=%q",
 					host, port,
 					tc.wantHost, tc.wantPort,
 				)

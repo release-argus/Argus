@@ -20,28 +20,25 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/internal/logx"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
-var packageName = "command"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -62,4 +59,34 @@ func testController(announceChannel chan []byte) *Controller {
 		nil,
 		new("14m"),
 	)
+}
+
+// testRunnableController returns a Controller of three Commands, varied Failed and NextRunnable.
+func testRunnableController(serviceID string) (*Controller, []time.Time) {
+	controller := NewController(
+		&status.Status{
+			ServiceInfo: serviceinfo.ServiceInfo{
+				ID: serviceID,
+			},
+		},
+		Commands{
+			{"date", "+%m-%d-%Y"},
+			{"true"},
+			{"false"},
+		},
+		nil,
+		new("11m"),
+	)
+	controller.Failed.Set(1, false)
+	controller.Failed.Set(2, true)
+	nextRunnables := []time.Time{
+		time.Now().UTC(),
+		time.Now().UTC().Add(-time.Minute),
+		time.Now().UTC().Add(time.Minute),
+	}
+	for i := range nextRunnables {
+		controller.SetNextRunnable(i, nextRunnables[i])
+	}
+
+	return controller, nextRunnables
 }

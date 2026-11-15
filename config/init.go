@@ -48,10 +48,7 @@ func (c *Config) Load(
 	data, err := os.ReadFile(file)
 	if err != nil && !os.IsNotExist(err) {
 		logx.Fatal(
-			fmt.Sprintf(
-				"Error reading %q\n%s",
-				file, err,
-			),
+			fmt.Sprintf("failed to read %q: %v", file, err),
 			logx.LogFrom{},
 		)
 		return false
@@ -59,10 +56,7 @@ func (c *Config) Load(
 
 	if err := c.Decode(data); err != nil {
 		logx.Fatal(
-			fmt.Sprintf(
-				"Unmarshal of %q failed\n%s",
-				file, err,
-			),
+			fmt.Sprintf("failed to decode %q: %v", file, err),
 			logx.LogFrom{},
 		)
 		return false

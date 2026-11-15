@@ -20,74 +20,58 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_InitMetrics(t *testing.T) {
-	// GIVEN: a Manual Lookup.
 	lookup := Lookup{}
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 
-	// WHEN: InitMetrics is called.
 	lookup.InitMetrics(&lookup)
 
-	// THEN: no metrics should be initialised as the function does nothing.
-	gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-	if gotC != hadC {
-		t.Errorf(
-			"%s\nLookup.InitMetrics() Counter metrics initialised unexpectedly\ngot:  %d\nwant: %d",
-			packageName, gotC, hadC,
-		)
-	}
+	test.AssertMetricCount(
+		t, "Lookup.InitMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, hadC,
+	)
 }
 
 func TestLookup_DeleteMetrics(t *testing.T) {
-	// GIVEN: a Manual Lookup with metrics.
 	originalC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 	lookup := testLookup(t, "")
 	lookup.Lookup.InitMetrics(lookup)
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-	if hadC == 0 {
+	if hadC == originalC {
 		t.Fatalf(
-			"%s\nLookup.InitMetrics() Counter metrics were not initialised (before DeleteMetrics())",
-			packageName,
+			"base.Lookup.InitMetrics() DeployedVersionQueryResultTotal count mismatch\n"+
+				"got:  %d\nwant: NOT %d",
+			hadC, originalC,
 		)
 	}
 
-	// WHEN: DeleteMetrics is called.
 	lookup.DeleteMetrics(lookup)
 
-	// THEN: no metrics should be deleted as the function does nothing.
-	if gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal); gotC != hadC {
-		t.Errorf(
-			"%s\nLookup.DeleteMetrics() Lookup Counter metrics deleted unexpectedly\ngot:  %d\nwant: %d",
-			packageName, hadC, gotC,
-		)
-	}
+	test.AssertMetricCount(
+		t, "Lookup.DeleteMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, hadC,
+	)
 
-	// AND: they can be deleted with DeleteMetrics on the base Lookup.
 	lookup.Lookup.DeleteMetrics(lookup)
-	if gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal); gotC != originalC {
-		t.Errorf(
-			"%s\nBase.QueryMetrics() Lookup Counter metrics not deleted\ngot:  %d\nwant: %d",
-			packageName, originalC, gotC,
-		)
-	}
+	test.AssertMetricCount(
+		t, "base.Lookup.DeleteMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, originalC,
+	)
 }
 
 func TestLookup_QueryMetrics(t *testing.T) {
-	// GIVEN: a Manual Lookup.
 	lookup := Lookup{}
 	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
 
-	// WHEN: QueryMetrics is called.
 	lookup.QueryMetrics(&lookup, nil)
 
-	// THEN: no metrics should be updated as the function does nothing.
-	if gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal); gotC != hadC {
-		t.Errorf(
-			"%s\nLookup.QueryMetrics() unexpected Lookup Counter metric updates\ngot:  %d\nwant: %d",
-			packageName, hadC, gotC,
-		)
-	}
+	test.AssertMetricCount(
+		t, "Lookup.QueryMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, hadC,
+	)
 }

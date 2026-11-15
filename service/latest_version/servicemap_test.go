@@ -17,59 +17,48 @@
 package latestver
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 )
 
 func TestServiceMap(t *testing.T) {
 	tests := []struct {
-		key      string
+		name     string
 		expected Lookup
 	}{
 		{
-			key:      "github",
+			name:     "forgejo",
+			expected: &forgejo.Lookup{},
+		},
+		{
+			name:     "github",
 			expected: &github.Lookup{},
 		},
 		{
-			key:      "web",
+			name:     "web", // An alias of url.
 			expected: &web.Lookup{},
 		},
 		{
-			key:      "url",
+			name:     "url",
 			expected: &web.Lookup{},
 		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.key, func(t *testing.T) {
-			lookupFunc, exists := ServiceMap[tc.key]
+		t.Run(tc.name, func(t *testing.T) {
+			lookupFunc, exists := ServiceMap[tc.name]
 			if !exists {
-				t.Fatalf(
-					"%s\nServiceMap[%q] does not exist",
-					packageName, tc.key,
-				)
+				t.Fatal("ServiceMap mismatch\ngot:  absent\nwant: present")
 			}
 
 			lookup := lookupFunc()
-			if getType(lookup) != getType(tc.expected) {
-				t.Errorf(
-					"%s\nServiceMap[%q]() mismatch\ngot:  %T\nwant: %T",
-					packageName, tc.key,
-					lookup, tc.expected,
-				)
+			if reflect.TypeOf(lookup) != reflect.TypeOf(tc.expected) {
+				t.Errorf("ServiceMap constructor mismatch\ngot:  %T\nwant: %T", lookup, tc.expected)
 			}
 		})
 	}
-}
-
-func getType(lookup Lookup) string {
-	switch lookup.(type) {
-	case *github.Lookup:
-		return "github"
-	case *web.Lookup:
-		return "url"
-	}
-	return "unknown"
 }

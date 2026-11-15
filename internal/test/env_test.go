@@ -17,93 +17,106 @@
 package test
 
 import (
-	"fmt"
 	"os"
+	"slices"
 	"testing"
 )
 
-func TestSetEnv(t *testing.T) {
-	// GIVEN: a map of env vars to set.
+func TestIsolateEnv(t *testing.T) {
+	initial := map[string]string{
+		"ARGUS_ISOLATE_TEST__IN": "in",
+		"ARGUSISOLATE_TEST__IN":  "outside",
+		"ARGUS_TEST__IN":         "exempt",
+		"ISOLATE_TEST__OUTSIDE":  "outside",
+	}
 	tests := []struct {
-		name    string
-		initial map[string]*string
-		input   map[string]string
+		name       string
+		vars       map[string]string
+		wantDuring map[string]*string
 	}{
 		{
-			name: "restore unset",
-			initial: map[string]*string{
-				"ARGUS_TEST__FOO": nil,
-			},
-			input: map[string]string{
-				"ARGUS_TEST__FOO": "bar",
+			name: "unsets ARGUS_ vars, keeps ARGUS_TEST_ and other vars",
+			wantDuring: map[string]*string{
+				"ARGUS_ISOLATE_TEST__IN": nil,
+				"ARGUSISOLATE_TEST__IN":  new("outside"),
+				"ARGUS_TEST__IN":         new("exempt"),
+				"ISOLATE_TEST__OUTSIDE":  new("outside"),
 			},
 		},
 		{
-			name: "restore existing",
-			initial: map[string]*string{
-				"ARGUS_TEST__FOO": new("orig"),
+			name: "sets vars after unsetting",
+			vars: map[string]string{
+				"ARGUS_ISOLATE_TEST__IN":  "set",
+				"ARGUS_ISOLATE_TEST__NEW": "new",
+				"ARGUS_TEST__IN":          "replaced",
+				"ISOLATE_TEST__OUTSIDE":   "replaced",
 			},
-			input: map[string]string{
-				"ARGUS_TEST__FOO": "new",
+			wantDuring: map[string]*string{
+				"ARGUS_ISOLATE_TEST__IN":  new("set"),
+				"ARGUS_ISOLATE_TEST__NEW": new("new"),
+				"ARGUSISOLATE_TEST__IN":   new("outside"),
+				"ARGUS_TEST__IN":          new("replaced"),
+				"ISOLATE_TEST__OUTSIDE":   new("replaced"),
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: sets env vars.
 
-			// AND: the initial state of the env vars is set as specified.
-			for k, v := range tc.initial {
-				if v == nil {
-					_ = os.Unsetenv(k)
-				} else {
-					_ = os.Setenv(k, *v)
-				}
+			for k, v := range initial {
+				_ = os.Setenv(k, v)
+				t.Cleanup(func() { _ = os.Unsetenv(k) })
 			}
+			before := SplitEnvVars(os.Environ())
 
-			// THEN: they are restored to their initial state after the test.
-			// t.Cleanup is LIFO, so queue this before the SetEnv cleanup.
-			t.Cleanup(func() {
-				for k, expected := range tc.initial {
+			t.Run("isolated", func(t *testing.T) {
+				// Serial: sets env vars.
+
+				IsolateEnv(t, tc.vars)
+				// Code under test may set vars itself.
+				_ = os.Setenv("ISOLATE_TEST__SET_DURING", "during")
+
+				for k, want := range tc.wantDuring {
 					got, ok := os.LookupEnv(k)
-
-					if expected == nil {
-						if ok {
-							t.Errorf(
-								"%s\nafter SetEnv(): got %q, want %s to be unset,",
-								packageName, got, k,
-							)
-						}
-					} else {
-						if !ok || got != *expected {
-							t.Errorf(
-								"%s\nafter SetEnv: got %q (exists=%v), want %s=%q",
-								packageName, got, ok, k, *expected,
-							)
-						}
+					switch {
+					case want == nil && ok:
+						t.Errorf(
+							"os.LookupEnv(%q) mismatch\ngot:  present (%q)\nwant: absent",
+							k, got,
+						)
+					case want != nil && (!ok || got != *want):
+						t.Errorf(
+							"os.LookupEnv(%q) mismatch\ngot:  %q (%s)\nwant: %q",
+							k, got, Presence(ok), *want,
+						)
 					}
 				}
 			})
 
-			// WHEN: SetEnv is called with the input map.
-			SetEnv(t, tc.input)
-
-			// THEN: the env vars are set as expected.
-			for k, expected := range tc.input {
-				got, ok := os.LookupEnv(k)
-				if !ok || got != expected {
-					t.Fatalf(
-						"%s\nduring SetEnv: got %q (exists=%v), want %s=%q",
-						packageName, got, ok, k, expected,
-					)
+			// Only key names are reported, since the environment holds sourced secrets.
+			after := SplitEnvVars(os.Environ())
+			var changed []string
+			for k, v := range before {
+				if got, ok := after[k]; !ok || got != v {
+					changed = append(changed, k)
 				}
+			}
+			for k := range after {
+				if _, ok := before[k]; !ok {
+					changed = append(changed, k)
+				}
+			}
+			slices.Sort(changed)
+			if len(changed) != 0 {
+				t.Errorf("os.Environ() changed keys mismatch\ngot:  %q\nwant: []", changed)
 			}
 		})
 	}
 }
 
 func TestSplitEnvVars(t *testing.T) {
-	// GIVEN: a slice of env vars in the form "KEY=VALUE".
 	tests := []struct {
 		name string
 		env  []string
@@ -136,17 +149,12 @@ func TestSplitEnvVars(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: SplitEnvVars is called.
 			got := SplitEnvVars(tc.env)
 
-			prefix := fmt.Sprintf("%s\nSplitEnvVars()", packageName)
-
-			// THEN: the result is as expected.
 			if testErr := AssertMapEqual(
 				t,
 				got,
 				tc.want,
-				prefix,
 				"",
 			); testErr != nil {
 				t.Fatal(testErr)

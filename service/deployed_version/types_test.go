@@ -25,9 +25,8 @@ import (
 )
 
 func TestIsEqual(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 
-	// GIVEN: two Lookups.
 	tests := []struct {
 		name string
 		a, b Lookup
@@ -52,7 +51,7 @@ func TestIsEqual(t *testing.T) {
 		{
 			name: "hard_defaults ignored",
 			a: &web.Lookup{
-				Defaults: &base.Defaults{
+				HardDefaults: &base.Defaults{
 					AllowInvalidCerts: new(false),
 				},
 			},
@@ -181,16 +180,10 @@ func TestIsEqual(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the two Lookups are compared.
 			got := IsEqual(tc.a, tc.b)
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%sIsEqual(a=%v, b=%v) result mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.a, tc.b,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

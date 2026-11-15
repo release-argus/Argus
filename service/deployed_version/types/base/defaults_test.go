@@ -31,7 +31,6 @@ import (
 // ############
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -42,9 +41,8 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
-				deployed_version:
+				^deployed_version:
 					jsontext:
 						unexpected EOF$`,
 			),
@@ -61,7 +59,7 @@ func TestDecodeDefaults(t *testing.T) {
 			format:   "yaml",
 			data:     "",
 			want:     "{}\n",
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/filled",
@@ -76,6 +74,7 @@ func TestDecodeDefaults(t *testing.T) {
 				allow_invalid_certs: true
 				method: GET
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/filled",
@@ -90,6 +89,7 @@ func TestDecodeDefaults(t *testing.T) {
 				allow_invalid_certs: true
 				method: GET
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/invalid format",
@@ -122,7 +122,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -136,7 +135,6 @@ func TestDecodeDefaults(t *testing.T) {
 // #########
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		opt  *Defaults
@@ -183,15 +181,10 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.opt.IsZero()
 
-			// THEN: it should return the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -202,15 +195,12 @@ func TestDefaults_IsZero(t *testing.T) {
 // ########
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: Defaults.
 	defaults := Defaults{}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
-	// THEN: it should set the defaults.
 	if defaults.AllowInvalidCerts == nil {
-		t.Errorf("%s\nDefaults.Default() .AllowInvalidCerts not set\ngot:  nil\nwant: non-nil", packageName)
+		t.Error("Defaults.AllowInvalidCerts mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 
@@ -219,7 +209,6 @@ func TestDefaults_Default(t *testing.T) {
 // ##############
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name       string
 		method     string
@@ -254,12 +243,9 @@ func TestDefaults_CheckValues(t *testing.T) {
 			wantMethod: http.MethodDelete,
 		},
 		{
-			name:   "invalid method",
-			method: "foo",
-			errRegex: fmt.Sprintf(
-				`^method: "FOO" <invalid> .*%s.*$`,
-				http.MethodPost,
-			),
+			name:       "invalid method",
+			method:     "foo",
+			errRegex:   fmt.Sprintf(`^method: "FOO" <invalid> .*%s.*$`, http.MethodPost),
 			wantMethod: "FOO",
 		},
 	}
@@ -272,16 +258,14 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
 
-			// AND: Method is uppercased/unchanged as expected.
 			if input.Method != tc.wantMethod {
 				t.Errorf(
-					"%s\nDefaults.CheckValues() .Method mismatch\ngot:  %q\nwant: %q",
-					packageName, input.Method, tc.wantMethod,
+					"Defaults.Method mismatch\ngot:  %q\nwant: %q",
+					input.Method, tc.wantMethod,
 				)
 			}
 		})

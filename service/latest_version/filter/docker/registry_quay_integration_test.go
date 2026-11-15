@@ -17,7 +17,7 @@
 package docker
 
 import (
-	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -30,7 +30,6 @@ import (
 // #########################
 
 func TestQuayRegistry_Check(t *testing.T) {
-	// GIVEN: a QuayRegistry, and version to check for.
 	tests := []struct {
 		name     string
 		registry QuayRegistry
@@ -68,8 +67,9 @@ func TestQuayRegistry_Check(t *testing.T) {
 					Token: test.DockerQuayToken(t),
 				},
 			},
-			version:  "latest",
-			errRegex: `^` + test.ArgusDockerQuayRepo + `:latest-unknown - tag not found$`,
+			version: "latest",
+			// Quay answers 200 with an empty tag list, which QuayRegistry.parseBody turns into ErrTagNotFound.
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerQuayRepo) + `:latest-unknown - tag not found$`,
 		},
 		{
 			name: "auth/unknown image",
@@ -82,7 +82,7 @@ func TestQuayRegistry_Check(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				` + test.ArgusDockerQuayRepo + `-unknown:latest
+				` + regexp.QuoteMeta(test.ArgusDockerQuayRepo) + `-unknown:latest
 					{"detail": "[^"]+".*}$`,
 			),
 		},
@@ -92,28 +92,16 @@ func TestQuayRegistry_Check(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nQuayRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestQuayRegistry_Check__errors(t *testing.T) {
-	// GIVEN: a QuayRegistry, and version to check for.
 	tests := []struct {
 		name         string
 		quayQueryURL string
@@ -139,9 +127,9 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 		},
 		{
 			name:         "http.client.Do error, invalid URL TLD",
-			quayQueryURL: "https://example.invalid",
+			quayQueryURL: "https://example.invalid/%s/%s",
 			registry: QuayRegistry{
-				Image: test.ArgusDockerGHCRRepo + "-unknown",
+				Image: test.ArgusDockerQuayRepo,
 				Tag:   "{{ version }}",
 				Auth: &QuayAuth{
 					Token: "test",
@@ -149,8 +137,10 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				^parse "https://.*
-					.*invalid URL escape .*$`,
+				^` + regexp.QuoteMeta(test.ArgusDockerQuayRepo) + `:latest
+					Get "https://example\.invalid/.*":
+						dial tcp:
+							lookup .*$`,
 			),
 		},
 	}
@@ -158,7 +148,7 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps quayQueryURL.
 
 			if tc.quayQueryURL != "" {
 				quayQueryURL = tc.quayQueryURL
@@ -167,21 +157,10 @@ func TestQuayRegistry_Check__errors(t *testing.T) {
 				})
 			}
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nQuayRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}

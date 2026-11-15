@@ -17,7 +17,6 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -28,7 +27,6 @@ import (
 // #########
 
 func TestContainerDetail_IsZero(t *testing.T) {
-	// GIVEN: a ContainerDetails
 	tests := []struct {
 		name string
 		data ContainerDetail
@@ -67,22 +65,16 @@ func TestContainerDetail_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nContainerDetail.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestContainerDetailDefaults_IsZero(t *testing.T) {
-	// GIVEN: a ContainerDetailDefaults.
 	tests := []struct {
 		name string
 		data *ContainerDetailDefaults
@@ -109,22 +101,16 @@ func TestContainerDetailDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nContainerDetailDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestContainerDetail_Copy(t *testing.T) {
-	// GIVEN: a ContainerDetails
 	tests := []struct {
 		name string
 		data ContainerDetail
@@ -140,46 +126,37 @@ func TestContainerDetail_Copy(t *testing.T) {
 				Tag:   "t",
 			},
 		},
+		{
+			name: "Image, Tag and Defaults",
+			data: ContainerDetail{
+				Image:    "i",
+				Tag:      "t",
+				Defaults: &ContainerDetailDefaults{Tag: "dt"},
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			got := tc.data.Copy()
 
-			prefix := fmt.Sprintf("%s\nContainerDetail.Copy()", packageName)
-
-			// THEN: the .Image is copied over.
 			if got.Image != tc.data.Image {
 				t.Fatalf(
-					"%s .Image mismatch\ngot:  %q\nwant: %q",
-					prefix, got.Image, tc.data.Image,
+					"ContainerDetail.Image mismatch\ngot:  %q\nwant: %q",
+					got.Image, tc.data.Image,
 				)
 			}
 
-			// AND: the .Image is at a different address.
-			if &got.Image == &tc.data.Image {
-				t.Fatalf(
-					"%s .Image address mismatch\ngot:      %p\nwant: not-%p",
-					prefix, &got.Image, &tc.data.Image,
-				)
-			}
-
-			// AND: the .Tag is copied over.
 			if got.Tag != tc.data.Tag {
-				t.Fatalf(
-					"%s .Tag mismatch\ngot:  %q\nwant: %q",
-					prefix, got.Tag, tc.data.Tag,
-				)
+				t.Fatalf("ContainerDetail.Tag mismatch\ngot:  %q\nwant: %q", got.Tag, tc.data.Tag)
 			}
 
-			// AND: the .Tag is at a different address.
-			if &got.Tag == &tc.data.Tag {
+			if got.Defaults != tc.data.Defaults {
 				t.Fatalf(
-					"%s .Tag address mismatch\ngot:      %p\nwant: not-%p",
-					prefix, &got.Tag, &tc.data.Tag,
+					"ContainerDetail.Defaults mismatch\ngot:  %p\nwant: %p",
+					got.Defaults, tc.data.Defaults,
 				)
 			}
 		})
@@ -191,15 +168,12 @@ func TestContainerDetail_Copy(t *testing.T) {
 // ############
 
 func TestContainerDetailDefaults_Default(t *testing.T) {
-	// GIVEN: a ContainerDetailDefaults.
 	detail := ContainerDetailDefaults{}
 
-	// WHEN: Default() is called on it.
 	detail.Default()
 
-	// THEN: .Tag is given a value.
 	if detail.Tag == "" {
-		t.Fatalf("%s\nContainerDetailDefaults.Default() mismatch\nTag is empty", packageName)
+		t.Fatal("ContainerDetailDefaults.Tag mismatch\ngot:  \"\"\nwant: non-empty")
 	}
 }
 
@@ -209,7 +183,7 @@ func TestContainerDetailDefaults_Default(t *testing.T) {
 
 func TestContainerDetail_GetImage(t *testing.T) {
 	envPrefix := "TEST_CONTAINER_DETAIL_GET_IMAGE"
-	// GIVEN: a ContainerDetail.
+
 	tests := []struct {
 		name string
 		data ContainerDetail
@@ -252,17 +226,12 @@ func TestContainerDetail_GetImage(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: GetImage() is called on it.
 			got := tc.data.GetImage()
 
-			// THEN: the expected image is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nContainerDetail.GetImage() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -270,7 +239,7 @@ func TestContainerDetail_GetImage(t *testing.T) {
 
 func TestContainerDetail_GetTag(t *testing.T) {
 	envPrefix := "TEST_CONTAINER_DETAIL_GET_TAG"
-	// GIVEN: a ContainerDetail.
+
 	tests := []struct {
 		name string
 		data ContainerDetail
@@ -291,7 +260,7 @@ func TestContainerDetail_GetTag(t *testing.T) {
 			want: "t",
 		},
 		{
-			name: "Image with env var",
+			name: "Tag with env var",
 			data: ContainerDetail{
 				Image: "i",
 				Tag:   `t-${` + envPrefix + `_VAR}`,
@@ -321,24 +290,18 @@ func TestContainerDetail_GetTag(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: GetTag() is called on it.
 			got := tc.data.GetTag()
 
-			// THEN: the expected tag is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nContainerDetail.GetTag() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestContainerDetailDefaults_GetTag(t *testing.T) {
-	// GIVEN: a ContainerDetailDefaults chain.
 	tests := []struct {
 		name string
 		data *ContainerDetailDefaults
@@ -367,15 +330,10 @@ func TestContainerDetailDefaults_GetTag(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetTag() is called on it.
 			got := tc.data.GetTag()
 
-			// THEN: the expected tag is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nContainerDetailDefaults.GetTag() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

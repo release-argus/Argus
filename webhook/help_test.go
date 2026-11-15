@@ -29,25 +29,20 @@ import (
 	"github.com/release-argus/Argus/service/status"
 )
 
-var packageName = "defaults"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
-func testWebhook(failing bool, selfSignedCert bool, headers bool) *Webhook {
+func testWebhook(failing bool, headers bool) *Webhook {
 	desiredStatusCode := uint16(0)
 	whMaxTries := uint8(1)
 	webhook := New(
@@ -78,9 +73,6 @@ func testWebhook(failing bool, selfSignedCert bool, headers bool) *Webhook {
 		},
 	)
 	webhook.Failed = &webhook.ServiceStatus.Fails.Webhook
-	if selfSignedCert {
-		webhook.URL = strings.Replace(webhook.URL, "valid", "invalid", 1)
-	}
 	if failing {
 		webhook.Secret = "invalid"
 	}
@@ -98,38 +90,27 @@ func testWebhook(failing bool, selfSignedCert bool, headers bool) *Webhook {
 	return webhook
 }
 
-func testDefaults(failing bool, headers bool) *Defaults {
-	desiredStatusCode := "0"
-	whMaxTries := "1"
+func testDefaults(t *testing.T, failing bool) *Defaults {
+	t.Helper()
 
-	wh, _ := DecodeDefaults(
+	wh, err := DecodeDefaults(
 		"yaml", []byte(test.TrimYAML(`
 			allow_invalid_certs: false
 			delay: 0s
-			desired_status_code: `+desiredStatusCode+`
-			max_tries: `+whMaxTries+`
+			desired_status_code: 0
+			max_tries: 1
 			secret: argus
 			silent_fails: false
 			type: github
 			url: `+test.WebhookGitHub.URLValid+`
 		`)),
 	)
+	if err != nil {
+		t.Fatalf("DecodeDefaults() failed: %v", err)
+	}
 
 	if failing {
 		wh.Secret = "invalid"
-	}
-
-	if headers {
-		wh.URL = strings.Replace(wh.URL, "github-style", "single-header", 1)
-		if failing {
-			wh.Headers = Headers{
-				{Key: "X-Test", Value: "invalid"},
-			}
-		} else {
-			wh.Headers = Headers{
-				{Key: "X-Test", Value: "secret"},
-			}
-		}
 	}
 
 	return wh

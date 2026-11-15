@@ -18,7 +18,6 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -29,11 +28,11 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
 func TestLookup_IsZero(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name string
 		data Lookup
@@ -96,15 +95,10 @@ func TestLookup_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -113,7 +107,6 @@ func TestLookup_IsZero(t *testing.T) {
 func TestLookup_Init(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: a Lookup and its dependencies.
 	options := &opt.Options{}
 	svcStatus := &status.Status{}
 	wantRequireRegexContent := "foo"
@@ -124,248 +117,172 @@ func TestLookup_Init(t *testing.T) {
 		Require: require,
 	}
 
-	// WHEN: Init is called.
 	l.Init(options, svcStatus, lvCfg)
 
-	prefix := fmt.Sprintf(
-		"%s\nLookup.Init(options=%p, status=%p, defaults=%v)",
-		packageName, options, svcStatus, lvCfg,
-	)
-
-	// THEN: pointers to those vars are handed out to the Lookup.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
 		{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 		{Name: "Defaults", Got: l.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
 		{Name: "HardDefaults", Got: l.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+		t.Fatalf("non-empty Require: %v", testErr)
 	}
 
-	// AND: the Require field is initialised correctly.
 	if l.Require == nil {
-		t.Fatalf("%s .Require should not be nil on Lookup", prefix)
+		t.Fatal("non-empty Require: Lookup.Require mismatch\ngot:  nil\nwant: non-nil")
 	}
 	if l.Require.RegexContent != wantRequireRegexContent {
 		t.Errorf(
-			"%s .Require.RegexContent was not handed to the Lookup correctly\ngot:  %q\nwant: %q",
-			prefix, wantRequireRegexContent, l.Require.RegexContent,
+			"non-empty Require: Lookup.Require.RegexContent mismatch\ngot:  %q\nwant: %q",
+			l.Require.RegexContent, wantRequireRegexContent,
 		)
 	}
 
-	// GIVEN: a Lookup with an empty Require.
 	l = &Lookup{
 		Require: &filter.Require{},
 	}
 
-	// WHEN: Init is called.
 	l.Init(options, svcStatus, lvCfg)
 
-	// THEN: the Require field is set to nil.
 	if l.Require != nil {
-		t.Errorf(
-			"%s (Require is empty), gave Lookup a non-nil Require\ngot:  %+v\nwant: nil",
-			prefix, l.Require,
-		)
+		t.Error("empty Require: Lookup.Require mismatch\ngot:  non-nil\nwant: nil")
 	}
 }
 
 func TestLookup_GetServiceID(t *testing.T) {
-	// GIVEN: a Lookup with a Status containing a ServiceID.
 	serviceID := "foo"
 	l := &testLookup{
 		Status: &status.Status{},
 	}
 	l.Status.ServiceInfo.ID = serviceID
 
-	// WHEN: GetService is called.
 	got := l.GetServiceID()
 
-	// THEN: the ServiceID is returned.
 	if serviceID != got {
-		t.Errorf(
-			"%s\nLookup.GetServiceID() value mismatch\ngot:  %q\nwant: %q",
-			packageName, got, serviceID,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, serviceID)
 	}
 }
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
-	lookupType := "test"
 	l := &testLookup{
-		Type: lookupType,
+		Type: "test",
 	}
 	want := "-"
 
-	// WHEN: GetType is called.
 	got := l.GetType()
 
-	// THEN: an empty string is returned.
 	if got != want {
-		t.Errorf(
-			"%s\nLookup.GetType() value mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestLookup_GetOptions(t *testing.T) {
-	// GIVEN: a Lookup with Options.
 	options := &opt.Options{}
 	l := &testLookup{
 		Options: options,
 	}
 
-	// WHEN: GetOptions is called.
 	got := l.GetOptions()
 
-	// THEN: the Options are returned.
 	if options != got {
-		t.Errorf(
-			"%s\nLookup.GetOptions() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, got, options,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, options)
 	}
 }
 
-func TestLookup_GetRequite(t *testing.T) {
-	// GIVEN: a Lookup with Require.
+func TestLookup_GetRequire(t *testing.T) {
 	require := &filter.Require{}
 	l := &testLookup{
 		Require: require,
 	}
 
-	// WHEN: GetRequire is called.
 	got := l.GetRequire()
 
-	// THEN: the Require is returned.
 	if require != got {
-		t.Errorf(
-			"%s\nLookup.GetRequire() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, got, require,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, require)
 	}
 }
 
 func TestLookup_GetStatus(t *testing.T) {
-	// GIVEN: a Lookup with Status.
 	svcStatus := &status.Status{}
 	l := &testLookup{
 		Status: svcStatus,
 	}
 
-	// WHEN: GetStatus is called.
 	got := l.GetStatus()
 
-	// THEN: the Status is returned.
 	if svcStatus != got {
-		t.Errorf(
-			"%s\nLookup.GetStatus() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, got, svcStatus,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, svcStatus)
 	}
 }
 
 func TestLookup_SetStatus(t *testing.T) {
-	// GIVEN: a Lookup and a Status.
 	l := &Lookup{}
 	svcStatus := &status.Status{}
 
-	// WHEN: SetStatus is called.
 	l.SetStatus(svcStatus)
 
-	// THEN: the Status is set.
 	if l.Status != svcStatus {
-		t.Errorf(
-			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, svcStatus,
-			l.Status, svcStatus,
-		)
+		t.Errorf("set: Lookup.Status mismatch\ngot:  %p\nwant: %p", l.Status, svcStatus)
 	}
 
 	// ---
 
-	// GIVEN: a new Status.
 	svcStatus = &status.Status{}
 
-	// WHEN: SetStatus is called.
 	l.SetStatus(svcStatus)
 
-	// THEN: the Status is set.
 	if l.Status != svcStatus {
-		t.Errorf(
-			"%s\nLookup.SetStatus(%p) pointer mismatch\ngot:  %v\nwant: %v",
-			packageName, svcStatus,
-			l.Status, svcStatus,
-		)
+		t.Errorf("replaced: Lookup.Status mismatch\ngot:  %p\nwant: %p", l.Status, svcStatus)
 	}
 }
 
 func TestLookup_GetDefaults(t *testing.T) {
-	// GIVEN: a Lookup with Defaults.
 	defaults := &Defaults{}
 	l := &testLookup{
 		Defaults: defaults,
 	}
 
-	// WHEN: GetDefaults is called.
 	got := l.GetDefaults()
 
-	// THEN: the Defaults are returned.
 	if defaults != got {
-		t.Errorf(
-			"%s\nLookup.GetDefaults() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, got, defaults,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, defaults)
 	}
 }
 
 func TestLookup_GetHardDefaults(t *testing.T) {
-	// GIVEN: a Lookup with HardDefaults.
 	hardDefaults := &Defaults{}
 	l := &testLookup{
 		HardDefaults: hardDefaults,
 	}
 
-	// WHEN: GetHardDefaults is called.
 	got := l.GetHardDefaults()
 
-	// THEN: the HardDefaults are returned.
 	if hardDefaults != got {
-		t.Errorf(
-			"%s\nLookup.GetHardDefaults() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, got, hardDefaults,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, hardDefaults)
 	}
 }
 
 func TestLookup_ServiceURL(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
-		url string
+		name string
+		url  string
 	}{
-		{url: "https://example.com"},
-		{url: "https://release-argus.io"},
+		{name: "example.com", url: "https://example.com"},
+		{name: "release-argus.io", url: "https://release-argus.io"},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.url, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup{}
 			lookup.URL = tc.url
 
-			// WHEN: ServiceURL is called.
 			got := lookup.ServiceURL()
 
-			// THEN: the result is as expected.
 			if tc.url != got {
-				t.Errorf(
-					"%s\nLookup.ServiceURL() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.url,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.url)
 			}
 		})
 	}
@@ -374,15 +291,15 @@ func TestLookup_ServiceURL(t *testing.T) {
 func TestLookup_CheckValues(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name     string
 		data     string
 		errRegex string
 	}{
 		{
-			name: "no URL",
-			data: `type: url`,
+			name:     "no URL",
+			data:     `type: url`,
+			errRegex: `^$`,
 		},
 		{
 			name: "valid URLCommands",
@@ -393,6 +310,7 @@ func TestLookup_CheckValues(t *testing.T) {
 					- type: regex
 						regex: foo
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid URLCommands",
@@ -416,6 +334,7 @@ func TestLookup_CheckValues(t *testing.T) {
 				require:
 					regex_version: v.+
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "invalid Require",
@@ -437,24 +356,17 @@ func TestLookup_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			input, err := decodeTestLookup(
-				t,
 				"yaml", []byte(tc.data),
 				nil,
 				nil,
 				lvCfg,
 			)
-			// Apply the YAML.
 			if err != nil {
-				t.Fatalf(
-					"%s\ndecodeTestLookup(%q) failed: %v",
-					packageName, tc.data,
-					err,
-				)
+				t.Fatalf("decodeTestLookup() failed: %v", err)
 			}
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
@@ -466,19 +378,18 @@ func checkDockerToken(
 	t *testing.T,
 	wantQueryToken, gotQueryToken string,
 	wantValidUntil, gotValidUntil time.Time,
-	message string,
 ) {
+	t.Helper()
+
 	if gotQueryToken != wantQueryToken {
 		t.Errorf(
-			"%s\nRequire.Docker.queryToken %s\ngot:  %q\nwant: %q",
-			packageName, message,
+			"Lookup.Require.Docker queryToken mismatch\ngot:  %q\nwant: %q",
 			gotQueryToken, wantQueryToken,
 		)
 	}
-	if gotValidUntil != wantValidUntil {
+	if !gotValidUntil.Equal(wantValidUntil) {
 		t.Errorf(
-			"%s\nRequire.Docker.validUntil %s\ngot:  %q\nwant: %q",
-			packageName, message,
+			"Lookup.Require.Docker validUntil mismatch\ngot:  %s\nwant: %s",
 			gotValidUntil, wantValidUntil,
 		)
 	}
@@ -487,7 +398,6 @@ func checkDockerToken(
 func TestLookup_InheritSecrets(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: two Lookups with/without Require.
 	tests := []struct {
 		name               string
 		dType              string
@@ -507,7 +417,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					docker:
 						image: release-argus/test
 			`),
-			inheritDockerToken: true,
+			inheritDockerToken: true, // Hub auth is username+token, so the image doesn't matter.
 		},
 		{
 			name:  "ghcr, differing Require.Docker.Image, does not inherit token",
@@ -517,7 +427,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					docker:
 						image: release-argus/test
 			`),
-			inheritDockerToken: false,
+			inheritDockerToken: false, // GHCR query tokens are repo-scoped.
 		},
 		{
 			name:  "removed Require.Docker",
@@ -540,8 +450,7 @@ func TestLookup_InheritSecrets(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			toLookup, _ := decodeTestLookup(
-				t,
+			toLookup, err := decodeTestLookup(
 				"yaml", []byte(test.TrimYAML(`
 					require:
 						docker:
@@ -554,11 +463,13 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				nil, nil,
 				lvCfg,
 			)
+			if err != nil {
+				t.Fatalf("toLookup: decodeTestLookup() failed: %v", err)
+			}
 			toLookup.Require.Docker.GetAuth().SetQueryToken(
 				"", time.Time{},
 			)
-			fromLookup, _ := decodeTestLookup(
-				t,
+			fromLookup, err := decodeTestLookup(
 				"yaml", []byte(test.TrimYAML(`
 					require:
 						docker:
@@ -571,41 +482,38 @@ func TestLookup_InheritSecrets(t *testing.T) {
 				nil, nil,
 				lvCfg,
 			)
+			if err != nil {
+				t.Fatalf("fromLookup: decodeTestLookup() failed: %v", err)
+			}
 			fromLookup.Require.Docker.GetAuth().SetQueryToken(
 				util.SecretValue, time.Now().Add(time.Hour),
 			)
-			// Require.
-			overridesRaw, _ := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			overridesRaw, err := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			if err != nil {
+				t.Fatalf("polymorphic.Extract() failed: %v", err)
+			}
 			if decode.IsNull(overridesRaw) {
 				fromLookup.Require = nil
 			} else {
-				err := UnmarshalRequire(
+				err = UnmarshalRequire(
 					"yaml", []byte(tc.overrides),
 					fromLookup,
 					fromLookup.Status,
 					&lvCfg.Soft.Require,
 				)
 				if err != nil {
-					t.Fatalf(
-						"%s\nUnmarshalRequire(%q) failed: %v",
-						packageName, tc.overrides,
-						err,
-					)
+					t.Fatalf("UnmarshalRequire() failed: %v", err)
 				}
 			}
 
-			// WHEN: InheritSecrets is called.
 			toLookup.InheritSecrets(fromLookup, nil)
 
-			// THEN: the Docker.(QueryToken|ValidUntil) are copied over when expected.
 			if tc.inheritDockerToken {
 				if toLookup.Require == nil || toLookup.Require.Docker == nil ||
 					fromLookup.Require == nil || fromLookup.Require.Docker == nil {
 					t.Fatalf(
-						"%s\nLookup.InheritSecrets() unexpected nil values\n"+
-							"toLookup.Require.Docker, nil=%t\n"+
-							"fromLookup.Require.Docker, nil=%t",
-						packageName,
+						"Lookup.Require.Docker mismatch\n"+
+							"got:  to nil=%t, from nil=%t\nwant: to nil=false, from nil=false",
 						toLookup.Require == nil || toLookup.Require.Docker == nil,
 						fromLookup.Require == nil || fromLookup.Require.Docker == nil,
 					)
@@ -616,7 +524,6 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					t,
 					wantQueryToken, gotQueryToken,
 					wantValidUntil, gotValidUntil,
-					"not copied",
 				)
 			} else if toLookup.Require != nil && toLookup.Require.Docker != nil {
 				gotQueryToken, gotValidUntil := toLookup.Require.Docker.GetAuth().GetQueryTokenSelf()
@@ -625,7 +532,6 @@ func TestLookup_InheritSecrets(t *testing.T) {
 					t,
 					wantQueryToken, gotQueryToken,
 					wantValidUntil, gotValidUntil,
-					"should not be copied",
 				)
 			}
 		})
@@ -633,25 +539,20 @@ func TestLookup_InheritSecrets(t *testing.T) {
 }
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN: a Lookup.
 	l := &testLookup{
 		Type: "test",
 		URL:  "https://example.com",
 	}
 
-	// WHEN: Query is called.
-	gotBool, gotErr := l.Query(true, logx.LogFrom{})
+	errRegex := `^not implemented$`
 
-	prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
+	newVersion, err := l.Query(true, logx.LogFrom{})
 
-	// THEN: the function returns false and an error as it is not implemented.
-	if gotBool != false {
-		t.Errorf(
-			"%s unexpected value\ngot:  %t\nwant: %t",
-			prefix, false, gotBool,
-		)
+	e := errfmt.FormatError(err)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
-	if gotErr == nil {
-		t.Errorf("%s unexpected nil error", prefix)
+	if newVersion {
+		t.Error("newVersion mismatch\ngot:  true\nwant: false")
 	}
 }

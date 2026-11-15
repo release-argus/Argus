@@ -18,7 +18,6 @@
 package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
@@ -28,154 +27,21 @@ import (
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	svctest "github.com/release-argus/Argus/service/test"
-	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
-func TestGetAllShoutrrrNames(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
-	whCfg := whtest.PlainConfig(t)
-
-	// GIVEN: various Services and Notifiers.
-	tests := []struct {
-		name          string
-		svc           service.Services
-		rootNotifiers shoutrrr.ShoutrrrsDefaults
-		want          []string
-	}{
-		{
-			name: "nothing",
-		},
-		{
-			name: "only service notifiers",
-			svc: test.Must(t, func() (service.Services, error) {
-				return service.DecodeServices(
-					"yaml", []byte(test.TrimYAML(`
-						0:
-							notify:
-								foo: {}
-						1:
-							notify:
-								bar: {}
-					`)),
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			want: []string{"bar", "foo"},
-		},
-		{
-			name: "only service notifiers with duplicates",
-			svc: test.Must(t, func() (service.Services, error) {
-				return service.DecodeServices(
-					"yaml", []byte(test.TrimYAML(`
-						0:
-							notify:
-								foo: {}
-						1:
-							notify:
-								foo: {}
-								bar: {}
-					`)),
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			want: []string{"bar", "foo"},
-		},
-		{
-			name: "only root notifiers",
-			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
-				"foo": {},
-				"bar": {},
-			},
-			want: []string{"bar", "foo"},
-		},
-		{
-			name: "root + service notifiers",
-			svc: test.Must(t, func() (service.Services, error) {
-				return service.DecodeServices(
-					"yaml", []byte(test.TrimYAML(`
-						0:
-							notify:
-								foo: {}
-						1:
-							notify:
-								bar: {}
-								foo: {}
-					`)),
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
-				"baz": {},
-			},
-			want: []string{"bar", "baz", "foo"},
-		},
-		{
-			name: "root + service notifiers with duplicates",
-			svc: test.Must(t, func() (service.Services, error) {
-				return service.DecodeServices(
-					"yaml", []byte(test.TrimYAML(`
-						0:
-							notify:
-								foo: {}
-						1:
-							notify:
-								bar: {}
-								foo: {}
-					`)),
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
-				"foo": {},
-				"bar": {},
-				"baz": {},
-			},
-			want: []string{"bar", "baz", "foo"},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			cfg := config.Config{
-				Service: tc.svc,
-				Notify:  tc.rootNotifiers,
-			}
-
-			// WHEN: getAllShoutrrrNames is called on this config.
-			got := getAllShoutrrrNames(&cfg)
-
-			// THEN: a list of all Shoutrrrs will be returned.
-			if err := test.AssertSlicesEqualFunc(
-				t,
-				got,
-				tc.want,
-				func(a, b string) bool { return a == b },
-				fmt.Sprintf("%s\ngetAllShoutrrrNames()", packageName),
-				"",
-			); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
 func TestFindShoutrrr(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	tests := []struct {
 		name        string
 		flag        string
 		cfg         *config.Config
 		stdoutRegex string
 		ok          bool
-		foundInRoot *bool
+		foundInRoot bool
 	}{
 		{
 			name: "empty search with only Service notifiers",
@@ -322,7 +188,7 @@ func TestFindShoutrrr(t *testing.T) {
 					),
 				},
 			},
-			foundInRoot: new(true),
+			foundInRoot: true,
 		},
 		{
 			name:        "matching search of notifier in Service",
@@ -347,7 +213,6 @@ func TestFindShoutrrr(t *testing.T) {
 					)
 				}),
 			},
-			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of notifier in Root and a Service",
@@ -383,7 +248,6 @@ func TestFindShoutrrr(t *testing.T) {
 					),
 				},
 			},
-			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Defaults",
@@ -427,7 +291,6 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Root",
@@ -469,7 +332,6 @@ func TestFindShoutrrr(t *testing.T) {
 						}),
 				},
 			},
-			foundInRoot: new(false),
 		},
 		{
 			name:        "matching search of Service notifier with incomplete config filled by Root and Defaults",
@@ -519,7 +381,6 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: new(false),
 		},
 		{
 			name: "matching search of Root notifier with invalid config",
@@ -556,7 +417,6 @@ func TestFindShoutrrr(t *testing.T) {
 						}),
 				},
 			},
-			foundInRoot: new(true),
 		},
 		{
 			name:        "matching search of Root notifier with incomplete config filled by Defaults",
@@ -605,81 +465,168 @@ func TestFindShoutrrr(t *testing.T) {
 					},
 				},
 			},
-			foundInRoot: new(true),
+			foundInRoot: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tc.cfg.HardDefaults.Notify.Default()
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: findShoutrrr is called with the test Config.
-			got, ok := findShoutrrr(tc.flag, tc.cfg, logx.LogFrom{})
-			resultChannel <- ok
-
-			prefix := fmt.Sprintf(
-				"%s\nfindShoutrrr(%q)",
-				packageName, tc.flag,
-			)
-
-			// THEN: we get the expected stdout.
-			stdout := releaseStdout()
-			if !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant:  %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
-			}
-
-			// AND: it succeeds/fails as expected.
-			if err := test.AssertChannelBool(
+			var got *shoutrrr.Shoutrrr
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool {
+					var ok bool
+					got, ok = findShoutrrr(tc.flag, tc.cfg, logx.LogFrom{})
+					return ok
+				},
 				logx.ExitCodeChannel(),
-				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
+				releaseStdout,
+				tc.stdoutRegex,
+			)
 			if !tc.ok {
 				return
 			}
-			// If the notifier should have been found in the root or in a service.
-			if tc.foundInRoot != nil {
-				if *tc.foundInRoot {
-					w := tc.cfg.Notify[tc.flag].String("")
-					if got := got.String(""); got != w {
-						t.Fatalf(
-							"%s mismatch on Shoutrrr that should have been found in Root\ngot:  %q\nwant: %q",
-							prefix, got, w,
-						)
-					}
-				} else {
-					w := tc.cfg.Service["argus"].Notify[tc.flag].String("")
-					if got := got.String(""); got != w {
-						t.Fatalf(
-							"%s mismatch on Shoutrrr that should have been found on a Service\ngot:  %q\nwant: %q",
-							prefix, got, w,
-						)
-					}
-					// Would have been given in the Init.
-					got.Defaults = tc.cfg.Defaults.Notify[got.Type]
+			if !tc.foundInRoot {
+				if want := tc.cfg.Service["argus"].Notify[tc.flag]; got != want {
+					t.Fatalf("service: Shoutrrr mismatch\ngot:  %p\nwant: %p", got, want)
 				}
+				// A Service Notifier gets its Defaults in Init, which this doesn't call.
+				return
 			}
-			// If there were Defaults for that type.
-			if tc.cfg.Defaults.Notify[got.Type] != nil {
-				want := tc.cfg.Defaults.Notify[got.Type].String("")
-				got := got.Defaults.String("")
-				if got != want {
-					t.Fatalf(
-						"%s defaults were not applied correctly to the Shoutrrr returned\ngot:  %v\nwant: %v",
-						prefix, got, want,
-					)
-				}
+			wantStr := tc.cfg.Notify[tc.flag].String("")
+			if gotStr := got.String(""); gotStr != wantStr {
+				t.Fatalf("root: Shoutrrr.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
+			}
+			if want := tc.cfg.Defaults.Notify[got.Type]; want != nil && got.Defaults != want {
+				t.Fatalf("root: Shoutrrr.Defaults mismatch\ngot:  %p\nwant: %p", got.Defaults, want)
+			}
+		})
+	}
+}
+
+func TestGetAllShoutrrrNames(t *testing.T) {
+	svcCfg := svctest.PlainDefaultsConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
+	whCfg := whtest.PlainConfig(t)
+
+	tests := []struct {
+		name          string
+		svc           service.Services
+		rootNotifiers shoutrrr.ShoutrrrsDefaults
+		want          []string
+	}{
+		{
+			name: "nothing",
+		},
+		{
+			name: "only service notifiers",
+			svc: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						0:
+							notify:
+								foo: {}
+						1:
+							notify:
+								bar: {}
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			want: []string{"bar", "foo"},
+		},
+		{
+			name: "only service notifiers with duplicates",
+			svc: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						0:
+							notify:
+								foo: {}
+						1:
+							notify:
+								foo: {}
+								bar: {}
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			want: []string{"bar", "foo"},
+		},
+		{
+			name: "only root notifiers",
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
+				"foo": {},
+				"bar": {},
+			},
+			want: []string{"bar", "foo"},
+		},
+		{
+			name: "root + service notifiers",
+			svc: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						0:
+							notify:
+								foo: {}
+						1:
+							notify:
+								bar: {}
+								foo: {}
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
+				"baz": {},
+			},
+			want: []string{"bar", "baz", "foo"},
+		},
+		{
+			name: "root + service notifiers with duplicates",
+			svc: test.Must(t, func() (service.Services, error) {
+				return service.DecodeServices(
+					"yaml", []byte(test.TrimYAML(`
+						0:
+							notify:
+								foo: {}
+						1:
+							notify:
+								bar: {}
+								foo: {}
+					`)),
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			rootNotifiers: shoutrrr.ShoutrrrsDefaults{
+				"foo": {},
+				"bar": {},
+				"baz": {},
+			},
+			want: []string{"bar", "baz", "foo"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := config.Config{
+				Service: tc.svc,
+				Notify:  tc.rootNotifiers,
+			}
+
+			got := getAllShoutrrrNames(&cfg)
+
+			if testErr := test.AssertSlicesEqual(t, got, tc.want, ""); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

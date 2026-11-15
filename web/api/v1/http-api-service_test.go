@@ -17,14 +17,13 @@
 package v1
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
@@ -35,10 +34,8 @@ import (
 )
 
 func TestAPI_HTTPServiceOrderGet(t *testing.T) {
-	// GIVEN: an API and a request for the service order.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
-	apiMu := sync.RWMutex{}
 
 	tests := []struct {
 		name  string
@@ -64,27 +61,21 @@ func TestAPI_HTTPServiceOrderGet(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: shares api.Config.
 
+			api.Config.OrderMu.Lock()
 			api.Config.Order = tc.order
+			api.Config.OrderMu.Unlock()
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/service/order", nil)
 			w := httptest.NewRecorder()
-			apiMu.RLock()
 			api.httpServiceOrderGet(w, req)
-			apiMu.RUnlock()
-			res := w.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
+			resp := w.Result()
+			t.Cleanup(func() { _ = resp.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceOrderGet()", packageName)
-
-			// THEN: the expected body is returned.
-			data, err := io.ReadAll(res.Body)
+			data, err := io.ReadAll(resp.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			var wantBuilder strings.Builder
 			wantBuilder.WriteString(`{"order":[`)
@@ -94,22 +85,18 @@ func TestAPI_HTTPServiceOrderGet(t *testing.T) {
 				wantBuilder.WriteString(`"`)
 			}
 			wantBuilder.WriteString("]}\n")
+			// Unfiltered, as auth is disabled.
 			if gotBody, wantBody := string(data), wantBuilder.String(); gotBody != wantBody {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					packageName, gotBody, wantBody,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", gotBody, wantBody)
 			}
 		})
 	}
 }
 
 func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file) // Config holds service "test".
 
-	// AND: users whose grants cover all, some, one, or none of the services.
 	api.Config.OrderMu.Lock()
 	api.Config.Service["middle"] = &service.Service{}
 	api.Config.Service["tagged"] = &service.Service{
@@ -120,31 +107,14 @@ func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
 
 	for groupName, grants := range map[string][]rbac.Grant{
 		"scoped": {
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
 		},
 		"pair": {
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
 		},
 	} {
-		if _, err := deps.Store.CreateGroup(t.Context(), groupName, "", grants); err != nil {
-			t.Fatalf(
-				"%s\ncreate %q group: %v",
-				packageName, groupName, err,
-			)
-		}
+		createAuthGroup(t, deps, groupName, "", grants)
 	}
 	createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
 	createAuthUser(t, deps, "pair-user", "pair-password", "pair")
@@ -184,43 +154,29 @@ func TestAPI_HTTPServiceOrderGet__filteredByGrants(t *testing.T) {
 
 			cookie := loginCookie(t, api, tc.username, tc.password)
 
-			// WHEN: the service order is fetched.
-			w := serveAuth(
-				api,
-				authedRequest(http.MethodGet, "/api/v1/service/order", "", cookie),
-			)
+			req := authedRequest(http.MethodGet, "/api/v1/service/order", "", cookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nGET /service/order", packageName)
-
-			// THEN: it succeeds with the permitted subset, in order.
 			if got, want := w.Code, http.StatusOK; got != want {
 				t.Fatalf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			var response ServiceOrderAPI
 			if err := decode.Unmarshal("json", w.Body.Bytes(), &response); err != nil {
-				t.Fatalf(
-					"%s\nparse response: %v",
-					prefix, err,
-				)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 			if got := response.Order; !slices.Equal(got, tc.want) {
-				t.Errorf(
-					"%s\norder mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.want,
-				)
+				t.Errorf("ServiceOrderAPI.Order mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestAPI_HTTPServiceOrderSet(t *testing.T) {
-	// GIVEN: an API and a request to set the service order.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
-	apiMu := sync.RWMutex{}
 
 	testOrder := []string{"service1", "service2", "service3"}
 	successMessage := `{"message":"order updated"}` + "\n"
@@ -284,7 +240,7 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 			hadOrder:       testOrder,
 			body:           strings.Repeat("a", 1024),
 			wantStatusCode: http.StatusBadRequest,
-			wantOrder:      nil,
+			wantOrder:      testOrder,
 			bodyRegex:      `{"message":"http: request body too large"}`,
 		},
 		{
@@ -292,7 +248,7 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 			hadOrder:       testOrder,
 			body:           `{"order":["service1","service2","service3"}`,
 			wantStatusCode: http.StatusBadRequest,
-			wantOrder:      nil,
+			wantOrder:      testOrder,
 			bodyRegex:      `{"message":"invalid JSON:\\n  jsontext: invalid character '}' after array element`,
 		},
 		{
@@ -307,7 +263,7 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing the API.
+			// Serial: shares api.Config.
 
 			services := make(map[string]*service.Service, len(tc.hadOrder))
 			for _, id := range tc.hadOrder {
@@ -318,46 +274,33 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 			api.Config.Service = services
 			api.Config.OrderMu.Unlock()
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/service/order", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
-			apiMu.Lock()
 			api.httpServiceOrderSet(w, req)
-			apiMu.Unlock()
-			res := w.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
+			resp := w.Result()
+			t.Cleanup(func() { _ = resp.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceOrderSet()", packageName)
-
-			// THEN: the expected status code is returned.
-			if got, want := res.StatusCode, tc.wantStatusCode; got != want {
+			if got, want := resp.StatusCode, tc.wantStatusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
-			data, err := io.ReadAll(res.Body)
+			data, err := io.ReadAll(resp.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.bodyRegex)
 			}
 
-			// AND: the service order is updated as expected.
-			if tc.wantOrder != nil && !util.AreSlicesEqual(api.Config.Order, tc.wantOrder) {
+			// Submitted services are re-seated into the positions they already held.
+			if !util.AreSlicesEqual(api.Config.Order, tc.wantOrder) {
 				t.Errorf(
-					"%s Order mismatch\ngot:  %q\nwant: %q",
-					prefix, api.Config.Order, tc.wantOrder,
+					"Config.Order mismatch\ngot:  %q\nwant: %q",
+					api.Config.Order, tc.wantOrder,
 				)
 			}
 		})
@@ -366,7 +309,7 @@ func TestAPI_HTTPServiceOrderSet(t *testing.T) {
 
 func TestAPI_HTTPServiceSummary(t *testing.T) {
 	testSVC := testService(t, t.Name(), "url", "url", true)
-	// GIVEN: an API and a request for detail of a service.
+
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	api.Config.Service[testSVC.ID] = testSVC
@@ -381,7 +324,7 @@ func TestAPI_HTTPServiceSummary(t *testing.T) {
 		{
 			name:           "known service",
 			serviceID:      testSVC.ID,
-			wantBody:       testSVC.Summary().String(),
+			wantBody:       "^" + regexp.QuoteMeta(testSVC.Summary().String()) + "\n$",
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -406,37 +349,26 @@ func TestAPI_HTTPServiceSummary(t *testing.T) {
 			params := url.Values{}
 			params.Set("service_id", tc.serviceID)
 
-			// WHEN: that HTTP request is sent.
 			req := httptest.NewRequest(http.MethodGet, target, nil)
 			req.URL.RawQuery = params.Encode()
 			w := httptest.NewRecorder()
 			api.httpServiceSummary(w, req)
-			res := w.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
+			resp := w.Result()
+			t.Cleanup(func() { _ = resp.Body.Close() })
 
-			prefix := fmt.Sprintf("%s\nAPI.httpServiceSummary()", packageName)
-
-			// THEN: the expected status code is returned.
-			if got, want := res.StatusCode, tc.wantStatusCode; got != want {
+			if got, want := resp.StatusCode, tc.wantStatusCode; got != want {
 				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: the expected body is returned.
-			data, err := io.ReadAll(res.Body)
+			data, err := io.ReadAll(resp.Body)
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 			if got := string(data); !util.RegexCheck(tc.wantBody, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantBody,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, tc.wantBody)
 			}
 		})
 	}

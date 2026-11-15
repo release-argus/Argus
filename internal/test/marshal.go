@@ -23,21 +23,19 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// Unmarshal implements the format.Unmarshaler interface.
-//
-// Supported formats: json | yaml
+// Unmarshal decodes json or yaml data into v, preferring v's own UnmarshalJSON/UnmarshalYAML.
 func Unmarshal(format string, data []byte, v any) error {
 	switch format {
 	case "json":
 		if unmarshaler, ok := v.(json.Unmarshaler); ok {
-			return unmarshaler.UnmarshalJSON(data)
+			return unmarshaler.UnmarshalJSON(data) //nolint:wrapcheck
 		}
-		return json.Unmarshal(data, v)
+		return json.Unmarshal(data, v) //nolint:wrapcheck
 	case "yaml":
 		if unmarshaler, ok := v.(yaml.BytesUnmarshaler); ok {
-			return unmarshaler.UnmarshalYAML(data)
+			return unmarshaler.UnmarshalYAML(data) //nolint:wrapcheck
 		}
-		return yaml.Unmarshal(data, v)
+		return yaml.Unmarshal(data, v) //nolint:wrapcheck
 	default:
 		return fmt.Errorf("unsupported format: %q", format)
 	}

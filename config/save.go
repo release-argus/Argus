@@ -110,7 +110,7 @@ func (c *Config) Save() (ok bool) {
 	if err := encodeConfigYAML(&buf, int(c.Settings.Indentation), c); err != nil {
 		c.OrderMu.RUnlock()
 		logx.Fatal(
-			fmt.Sprintf("error encoding config: %v", err),
+			fmt.Sprintf("failed to encode config: %v", err),
 			logx.LogFrom{},
 		)
 		return
@@ -125,7 +125,7 @@ func (c *Config) Save() (ok bool) {
 	file, err := openSaveFile(c.File)
 	if err != nil {
 		logx.Fatal(
-			fmt.Sprintf("error opening %s: %v", c.File, err),
+			fmt.Sprintf("failed to open %q: %v", c.File, err),
 			logx.LogFrom{},
 		)
 		return false
@@ -141,7 +141,7 @@ func (c *Config) Save() (ok bool) {
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(writer, line); err != nil {
 			logx.Fatal(
-				fmt.Sprintf("error writing to %s: %v", c.File, err),
+				fmt.Sprintf("failed to write %q: %v", c.File, err),
 				logx.LogFrom{},
 			)
 			return
@@ -150,7 +150,7 @@ func (c *Config) Save() (ok bool) {
 
 	if err := writer.Flush(); err != nil {
 		logx.Fatal(
-			fmt.Sprintf("error flushing %s: %v", c.File, err),
+			fmt.Sprintf("failed to flush %q: %v", c.File, err),
 			logx.LogFrom{},
 		)
 		return

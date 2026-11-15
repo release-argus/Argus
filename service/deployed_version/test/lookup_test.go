@@ -17,96 +17,147 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestMockLookup_ApplyOverrides(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: ApplyOverrides is called with empty format and data.
+
 	err := fake.ApplyOverrides("", nil)
-	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf(
-			"MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
-			err,
-		)
+		t.Errorf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
+
 func TestMockLookup_ApplyOverrides__error(t *testing.T) {
-	// GIVEN: a MockLookup with an error override.
 	wantErr := "TestMockLookup_ApplyOverrides_Error"
 	fake := &MockLookup{OverrideErr: wantErr}
-	// WHEN: ApplyOverrides is called with empty format and data.
+
 	err := fake.ApplyOverrides("", nil)
-	e := errfmt.FormatError(err)
-	if e != wantErr {
-		t.Errorf(
-			"MockLookup.ApplyOverrides(format=\"\", data=nil) error mismatch with OverrideErr set\ngot:  %q\nwant: %q",
-			e, wantErr,
-		)
+	if e := errfmt.FormatError(err); e != wantErr {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, wantErr)
 	}
 }
+
 func TestMockLookup_Copy(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: Copy is called with true.
+
 	got := fake.Copy(fake.Status)
-	// THEN: the returned value is always non-nil.
+
 	if got == nil {
-		t.Errorf("MockLookup.Copy() result mismatch\ngot:  %v\nwant: non-nil",
-			got,
-		)
+		t.Error("mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
+
 func TestMockLookup_DecodeSelf(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: DecodeSelf is called with empty format and data.
+
 	err := fake.DecodeSelf("", nil)
-	// THEN: no error is returned.
 	if err != nil {
-		t.Errorf(
-			"MockLookup.DecodeSelf(format=\"\", data=nil) error mismatch\ngot:  %v\nwant: nil",
-			err,
-		)
+		t.Errorf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
+
 func TestMockLookup_GetType(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: GetType is called.
+
 	got := fake.GetType()
-	// THEN: the returned value is "fake".
-	if got != "fake" {
-		t.Errorf("MockLookup.GetType() value mismatch\ngot:  %q\nwant: \"fake\"", got)
+
+	if want := "fake"; got != want {
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
+
 func TestMockLookup_String(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: String is called with empty prefix.
+
 	got := fake.String("")
-	// THEN: the returned value is "MockLookup".
+
 	want := "lookup: {}\n"
 	if got != want {
-		t.Errorf(
-			"MockLookup.String() value mismatch\ngot:  %q\nwant: %q",
-			got, want,
-		)
+		t.Errorf("MockLookup.String() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
+
 func TestMockLookup_Track(t *testing.T) {
-	// GIVEN: a MockLookup.
 	fake := &MockLookup{}
-	// WHEN: Track is called.
+
 	start := time.Now()
 	fake.Track()
-	// THEN: no panic occurs and the method completes successfully.
+
 	if since := time.Since(start); since > time.Second {
-		t.Errorf("MockLookup.Track() didn't complete within 1 second\ntook: %v", since)
+		t.Errorf("MockLookup.Track() duration mismatch\ngot:  %s\nwant: <1s", since)
+	}
+}
+
+func TestLookup(t *testing.T) {
+	tests := []struct {
+		name       string
+		typ        string
+		fail       bool
+		version    string
+		wantType   string
+		wantFatals []string
+	}{
+		{
+			name:     "manual/passing",
+			typ:      "manual",
+			version:  "1.2.3",
+			wantType: "*manual.Lookup",
+		},
+		{
+			name:     "url/passing",
+			typ:      "url",
+			wantType: "*web.Lookup",
+		},
+		{
+			name:     "url/failing, certificate trust",
+			typ:      "url",
+			fail:     true,
+			wantType: "*web.Lookup",
+		},
+		{
+			name:       "invalid/unknown type",
+			typ:        "something",
+			wantFatals: []string{`^unsupported lookup type "something"$`},
+		},
+		{
+			name:       "invalid/manual version not semantic",
+			typ:        "manual",
+			version:    "not-semver",
+			wantFatals: []string{`^Lookup\(type="manual", fail=false\)\.CheckValues\(\) failed: .+`},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			fakeT := &test.FakeT{Abort: true}
+
+			var dv any
+			fakeT.Aborted(func() { dv = Lookup(fakeT, tc.typ, tc.fail, tc.version) })
+
+			if testErr := test.AssertSlicesEqualFunc(
+				t, fakeT.Fatals, tc.wantFatals,
+				func(got, want string) bool { return util.RegexCheck(want, got) },
+				"FakeT.Fatals",
+			); testErr != nil {
+				t.Fatal(testErr)
+			}
+			if tc.wantType == "" {
+				return
+			}
+
+			if got := fmt.Sprintf("%T", dv); got != tc.wantType {
+				t.Errorf("type mismatch\ngot:  %q\nwant: %q", got, tc.wantType)
+			}
+		})
 	}
 }

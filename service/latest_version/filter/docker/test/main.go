@@ -24,8 +24,6 @@ import (
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 )
 
-const packageName = "docker.test"
-
 // GetDefaultOfDockerType returns the registry defaults for dType from defaults.
 func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Defaults) (docker.RegistryDefaults, error) {
 	t.Helper()
@@ -41,10 +39,7 @@ func GetDefaultOfDockerType(t *testing.T, dType string, defaults *docker.Default
 		return defaults.Registry.Quay, nil
 	}
 
-	return nil, fmt.Errorf(
-		"%s\nunknown docker registry type: %s",
-		packageName, dType,
-	)
+	return nil, fmt.Errorf("unknown docker registry type: %q", dType)
 }
 
 // MockRegistryDefaults is a minimal RegistryDefaults used in tests.
