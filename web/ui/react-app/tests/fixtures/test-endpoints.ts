@@ -1,4 +1,4 @@
-// Test endpoints mirrored from `test/secrets.go` - keep in sync with it.
+// Test endpoints mirrored from `internal/test/secrets.go`; keep them in sync.
 
 // Domain with a valid TLS certificate.
 export const VALID_CERT_NO_PROTOCOL = 'valid.release-argus.io';

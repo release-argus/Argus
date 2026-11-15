@@ -28,7 +28,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Webhook:');
 
-			// GIVEN: a new webhook is added.
 			await section.getByRole('button', { name: /add webhook/i }).click();
 			const header = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^0:/,
@@ -36,9 +35,6 @@ test.describe('Service creation modal - field validation', () => {
 			await expect(header).toBeVisible();
 			await header.click();
 
-			// WHEN/THEN: name/URL/secret are blurred empty then valid.
-			// AND: max tries rejects a non-number, then an out-of-range value,
-			// then accepts a valid one.
 			await runValidations(section, shot, [
 				required({ good: 'my-webhook', input: 'Name', slug: 'name' }),
 				required({
@@ -75,7 +71,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Webhook:');
 
-			// GIVEN: a new webhook is added (defaults to type "github").
 			await section.getByRole('button', { name: /add webhook/i }).click();
 			const header = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^0:/,
@@ -83,7 +78,7 @@ test.describe('Service creation modal - field validation', () => {
 			await expect(header).toBeVisible();
 			await header.click();
 
-			// WHEN: its type is switched to "GitLab".
+			// A new webhook defaults to type "github".
 			await section.locator('#webhook\\.0\\.type').click();
 			await dialog.getByRole('option', { name: /^gitlab$/i }).click();
 			await expect(section.locator('#webhook\\.0\\.type')).toHaveText(
@@ -91,7 +86,6 @@ test.describe('Service creation modal - field validation', () => {
 			);
 			await shot('01-gitlab-type');
 
-			// AND: "Name" is cleared and blurred.
 			const nameInput = section.getByRole('textbox', {
 				name: 'Value field for Name',
 			});
@@ -99,16 +93,12 @@ test.describe('Service creation modal - field validation', () => {
 			await nameInput.fill('');
 			await nameInput.blur();
 
-			// THEN: the same error still applies - type (github/gitlab) doesn't
-			// affect validation.
 			await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
 			await expect(nameField.getByRole('alert')).toHaveText(REQUIRED);
 
-			// WHEN: a valid value is entered.
 			await nameInput.fill('my-gitlab-webhook');
 			await nameInput.blur();
 
-			// THEN: the error clears.
 			await expect(nameInput).toHaveAttribute('aria-invalid', 'false');
 			await expect(nameField.getByRole('alert')).not.toBeVisible();
 		});
@@ -125,7 +115,6 @@ test.describe('Service creation modal - field validation', () => {
 			const section = await openSection(dialog, 'Webhook:');
 			const addWebhook = section.getByRole('button', { name: /add webhook/i });
 
-			// GIVEN: a first webhook is added, expanded, and named "dup".
 			await addWebhook.click();
 			const header0 = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^0:/,
@@ -142,7 +131,6 @@ test.describe('Service creation modal - field validation', () => {
 			await name0.fill('dup');
 			await name0.blur();
 
-			// AND: a second webhook is added and expanded.
 			await addWebhook.click();
 			const header1 = section.locator('[data-slot="accordion-trigger"]', {
 				hasText: /^1:/,
@@ -152,8 +140,6 @@ test.describe('Service creation modal - field validation', () => {
 			const name1 = nameInputs.nth(1);
 			const name1Field = fieldOf(name1);
 
-			// WHEN: the second webhook is given the first's name and blurred.
-			// THEN: it is flagged as not unique.
 			await expectError(
 				name1,
 				'dup',
@@ -162,16 +148,15 @@ test.describe('Service creation modal - field validation', () => {
 				'01-webhook-name-duplicate',
 			);
 
-			// AND: the first webhook is flagged too - the uniqueness check flags
-			// both names; re-blur it to surface the now-applicable error.
+			// Re-blurring the first name flags it too, as both names clash.
 			await name0.focus();
 			await name0.blur();
 			await expect(name0).toHaveAttribute('aria-invalid', 'true');
 			await expect(name0Field.getByRole('alert')).toHaveText(MUST_BE_UNIQUE);
 
-			// WHEN: the second name is made unique. THEN: both errors clear.
 			await name1.fill('dup-2');
 			await name1.blur();
+
 			await expect(name1).toHaveAttribute('aria-invalid', 'false');
 			await expect(name1Field.getByRole('alert')).not.toBeVisible();
 			await name0.focus();

@@ -18,19 +18,17 @@ import {
 import type { PermissionCatalogue } from '@/types/auth';
 
 /**
- * Session and administration e2e specs - run only in the `chromium-auth`
+ * Session and administration e2e specs, run only in the `chromium-auth`
  * project, against the auth-enabled Argus instance (AUTH_BASE_URL, bootstrap
  * admin created by `make playwright-tests-setup`).
  *
- * Scope: getting in and managing things - the session lifecycle (login, deep
- * link, expiry, logout) and the user/group/token administration flows through
- * the UI.
+ * Scope: the session lifecycle (login, deep link, expiry, logout) and the
+ * user/group/token administration flows through the UI.
  *
- * Serial: the tests share one logged-in browser context, so a full run spends
- * only 2 of the login rate limit's budget (5 failed attempts per 5 minutes,
- * keyed on client IP. CI retries replay the whole serial group against the
- * same long-lived instance, so 3 attempts can exceed that budget;
- * the two tests that spend it therefore accept a 429 as a valid rejection.
+ * Login rate limit: 5 failed attempts per 5 minutes, keyed on client IP. A
+ * full run spends only 2 of that budget, but CI retries replay the whole
+ * serial group against the same long-lived instance, so 3 attempts can exceed
+ * it; the two tests that spend it therefore accept a 429 as a valid rejection.
  */
 
 const E2E_USER = `e2e-user-${RUN_ID}`;
@@ -38,6 +36,7 @@ const E2E_VIEWER = `e2e-viewer-${RUN_ID}`;
 const E2E_GROUP = `e2e-group-${RUN_ID}`;
 const E2E_TOKEN = `e2e-token-${RUN_ID}`;
 
+// Serial: shares one logged-in browser context.
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Authentication', () => {
@@ -97,7 +96,6 @@ test.describe('Authentication', () => {
 	});
 
 	test('logs in and returns to the page the user came from', async () => {
-		// Deep link while logged out -> login -> back to the deep link.
 		await page.goto('/account/tokens');
 		await expect(page).toHaveURL(/\/login/);
 		await signIn(ADMIN_USER, ADMIN_PASSWORD);
@@ -110,26 +108,23 @@ test.describe('Authentication', () => {
 		await expect(page.getByText(SERVICE)).toBeVisible();
 	});
 
-	test('the bare /admin and /account paths redirect onto a page', async () => {
-		for (const [parent, landing] of [
-			['/admin', '/admin/users'],
-			['/admin/', '/admin/users'],
-			['/account', '/account/profile'],
-			['/account/', '/account/profile'],
-		]) {
+	for (const [parent, landing] of [
+		['/admin', '/admin/users'],
+		['/admin/', '/admin/users'],
+		['/account', '/account/profile'],
+		['/account/', '/account/profile'],
+	]) {
+		test(`the bare ${parent} path redirects onto ${landing}`, async () => {
 			await page.goto(parent);
-			await expect(page, `${parent} lands on ${landing}`).toHaveURL(
-				new RegExp(`${landing}$`),
-			);
-		}
-	});
+			await expect(page).toHaveURL(new RegExp(`${landing}$`));
+		});
+	}
 
 	test('creates, edits, and deletes a user', async () => {
 		await page.getByRole('button', { name: 'User menu' }).click();
 		await page.getByRole('menuitem', { name: 'Users' }).click();
 		await expect(page).toHaveURL(/\/admin\/users/);
 
-		// Create.
 		cleanupByName(cleanup, adminAPI, 'users', E2E_USER);
 		await page.getByRole('button', { name: 'Add user' }).click();
 		await page.getByLabel('Username').fill(E2E_USER);
@@ -141,13 +136,11 @@ test.describe('Authentication', () => {
 		await expect(row).toBeVisible();
 		await expect(row).toContainText('viewer');
 
-		// Edit.
 		await page.getByRole('button', { name: `Edit user ${E2E_USER}` }).click();
 		await page.getByLabel('Display name').fill('Renamed E2E User');
 		await page.getByRole('button', { name: 'Save' }).click();
 		await expect(row).toContainText('Renamed E2E User');
 
-		// Delete.
 		await page.getByRole('button', { name: `Delete user ${E2E_USER}` }).click();
 		await page
 			.getByRole('alertdialog')
@@ -162,7 +155,6 @@ test.describe('Authentication', () => {
 		// Seeded system groups are listed.
 		await expect(page.getByRole('row', { name: /^admin/ })).toBeVisible();
 
-		// Create, with one grant row.
 		cleanupByName(cleanup, adminAPI, 'groups', E2E_GROUP);
 		await page.getByRole('button', { name: 'Add group' }).click();
 		await page.getByLabel('Name').fill(E2E_GROUP);
@@ -182,7 +174,6 @@ test.describe('Authentication', () => {
 			page.getByRole('button', { name: 'Delete group admin' }),
 		).toHaveCount(0);
 
-		// Delete.
 		await page
 			.getByRole('button', { name: `Delete group ${E2E_GROUP}` })
 			.click();
@@ -196,7 +187,6 @@ test.describe('Authentication', () => {
 	test('creates, uses, and revokes an API token', async ({ request }) => {
 		await page.goto('/account/tokens');
 
-		// Create.
 		cleanupByName(cleanup, adminAPI, 'tokens', E2E_TOKEN);
 		await page.getByRole('button', { name: 'Create token' }).click();
 		await page.getByLabel('Name').fill(E2E_TOKEN);
@@ -215,7 +205,6 @@ test.describe('Authentication', () => {
 		});
 		expect(bearer.status()).toBe(200);
 
-		// Revoke.
 		const row = page.getByRole('row', { name: new RegExp(E2E_TOKEN) });
 		await expect(row).toBeVisible();
 		await page
@@ -255,13 +244,13 @@ test.describe('Authentication', () => {
 		const viewerPage = await viewerContext.newPage();
 		await viewerPage.goto('/approvals');
 
-		// service:read - the fixture service is on their dashboard.
+		// service:read puts the fixture service on their dashboard.
 		await expect(viewerPage.getByText(SERVICE)).toBeVisible();
-		// config:read - the Status pages are visible.
+		// config:read shows the Status pages.
 		await expect(
 			viewerPage.getByRole('button', { name: 'Status' }),
 		).toBeVisible();
-		// No write action is a read, so nothing that changes a service.
+		// No service create, update or order grant, so edit mode is not offered.
 		await expect(
 			viewerPage.getByRole('button', { name: 'Toggle edit mode' }),
 		).toHaveCount(0);
@@ -292,7 +281,6 @@ test.describe('Authentication', () => {
 			`service:read @ service/${SERVICE}`,
 		);
 
-		// Clean up.
 		await page
 			.getByRole('button', { name: `Delete group ${scopedGroup}` })
 			.click();
@@ -352,7 +340,6 @@ test.describe('Authentication', () => {
 			return description;
 		};
 
-		// AND: each permission's own row repeats that same description.
 		await page.getByRole('button', { name: 'Add permission' }).click();
 		for (const resource of resources) {
 			await page.getByLabel('Grant 0 resource').click();
@@ -382,7 +369,6 @@ test.describe('Authentication', () => {
 		const disabledUser = `e2e-disabled-${RUN_ID}`;
 		await page.goto('/admin/users');
 
-		// Create (accounts are enabled by default).
 		cleanupByName(cleanup, adminAPI, 'users', disabledUser);
 		await page.getByRole('button', { name: 'Add user' }).click();
 		await page.getByLabel('Username').fill(disabledUser);
@@ -390,7 +376,7 @@ test.describe('Authentication', () => {
 		await page.getByRole('button', { name: 'Save' }).click();
 		const row = page.getByRole('row', { name: new RegExp(disabledUser) });
 		await expect(row).toBeVisible();
-		// Enabled column: index 3 (Username, Display name, Groups, Enabled).
+		// Accounts start enabled; Enabled is cell 3 (Username, Display name, Groups, Enabled).
 		await expect(row.getByRole('cell').nth(3)).toHaveText('Yes');
 
 		// The Enabled toggle only shows when editing; untick it and save.
@@ -414,7 +400,6 @@ test.describe('Authentication', () => {
 			await attempt.close();
 		}
 
-		// Clean up.
 		await page
 			.getByRole('button', { name: `Delete user ${disabledUser}` })
 			.click();
@@ -436,7 +421,6 @@ test.describe('Authentication', () => {
 		await page.getByRole('option', { name: '30 days' }).click();
 		await page.getByRole('button', { exact: true, name: 'Create' }).click();
 
-		// Dismiss the one-time reveal.
 		await expect(page.getByLabel('New token')).toBeVisible();
 		await page.getByRole('button', { name: 'Done' }).click();
 
@@ -445,7 +429,6 @@ test.describe('Authentication', () => {
 		await expect(row).toBeVisible();
 		await expect(row).not.toContainText('Never');
 
-		// Clean up.
 		await page
 			.getByRole('button', { name: `Revoke token ${expiringToken}` })
 			.click();
@@ -472,10 +455,10 @@ test.describe('Authentication', () => {
 	test('logs out', async () => {
 		await page.getByRole('button', { name: 'User menu' }).click();
 		await page.getByRole('menuitem', { name: 'Log out' }).click();
-		await expect(page).toHaveURL(/\/login/);
+		await expect(page, 'after logout').toHaveURL(/\/login/);
 
 		// Protected pages stay locked.
 		await page.goto('/approvals');
-		await expect(page).toHaveURL(/\/login/);
+		await expect(page, 'after revisit').toHaveURL(/\/login/);
 	});
 });

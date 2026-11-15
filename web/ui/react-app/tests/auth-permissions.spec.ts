@@ -17,7 +17,7 @@ import {
 import type { Action, Grant, Resource } from '@/types/auth';
 
 /**
- * Permission-gating e2e specs - run only in the `chromium-auth` project,
+ * Permission-gating e2e specs, run only in the `chromium-auth` project,
  * against the auth-enabled Argus instance (AUTH_BASE_URL, bootstrap admin
  * created by `make playwright-tests-setup`).
  *
@@ -172,7 +172,7 @@ const PROBES: Probe[] = [
 		ok: 200,
 		path: `/api/v1/service/config?service_id=${encodeURIComponent(SERVICE)}`,
 	},
-	// service outside the scoped reader's grant refuses them.
+	// A service outside the scoped reader's grant refuses them.
 	{
 		allow: ['service-read', 'action-execute+read', 'refresh-execute+read'],
 		method: 'GET',
@@ -206,7 +206,7 @@ const PROBES: Probe[] = [
 		path: '/api/v1/service/order',
 	},
 
-	// guardReadable - the primary grant alone is not enough without service:read.
+	// guardReadable: the primary grant alone is not enough without service:read.
 	{
 		allow: ['action-execute+read'],
 		method: 'GET',
@@ -356,7 +356,7 @@ const send = (ctx: APIRequestContext, route: Route) =>
 	});
 
 /*
- * Not serial: the probes are independent, and the project already caps itself
+ * Not serial: probes are independent, and the project already caps itself
  * to one worker. A failing probe must not mask the rest of the matrix.
  */
 test.describe('Permission gating', () => {
@@ -643,12 +643,11 @@ test.describe('Permission gating', () => {
 			options: { active: false },
 		};
 
-		// Create.
 		const created = await creator.put('/api/v1/service/new', { data: body });
 		expect(created.status(), 'create as service-create').toBe(200);
 
 		try {
-			// The creator cannot then edit or delete it.
+			// The creator cannot then edit it.
 			expect(
 				(
 					await creator.put(
@@ -659,15 +658,14 @@ test.describe('Permission gating', () => {
 				'update as service-create',
 			).toBe(403);
 
-			// Update. The service stays inactive: activating it makes the edit
-			// re-query GitHub, which fails on the unauthenticated rate limit.
+			// The service stays inactive: activating it makes the edit re-query
+			// GitHub, which fails on the unauthenticated rate limit.
 			const updated = await updater.put(
 				`/api/v1/service/config?service_id=${encodeURIComponent(serviceID)}`,
 				{ data: { ...body, dashboard: { web_url: 'https://example.com' } } },
 			);
 			expect(updated.status(), 'update as service-update').toBe(200);
 		} finally {
-			// Delete.
 			const deleted = await deleter.delete(
 				`/api/v1/service/delete?service_id=${encodeURIComponent(serviceID)}`,
 			);

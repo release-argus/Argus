@@ -162,7 +162,7 @@ export const screenshot = async (
 	});
 };
 
-// A filesystem-safe slug of a test's title - used as a per-test folder name.
+// A filesystem-safe slug of a test's title, used as a per-test folder name.
 const titleSlug = (title: string) =>
 	title.replace(/[^\w=.]+/g, '-').replace(/^-+|-+$/g, '');
 
@@ -292,7 +292,6 @@ const fillLatestVersion = async (
 	}
 
 	if (options.urlCommandRegex) {
-		// Add a regex url_command to extract the version from the response body.
 		await section.getByRole('button', { name: /add new url command/i }).click();
 		await section
 			.locator('input[name="latest_version.url_commands.0.regex"]')
@@ -530,9 +529,8 @@ export const createService = async (
 		await fillWebhooks(dialog, options.webhooks);
 	}
 
-	// The server verifies the lookup with a real network call before responding,
-	// so this can be slow, and a transient upstream failure (e.g. an i/o timeout
-	// reaching GitHub) is rejected with the modal left open - retry the submit.
+	// The server verifies the lookup over the network before responding, so this can be slow.
+	// A transient upstream failure leaves the modal open, so the submit is retried.
 	let lastError = '';
 	try {
 		await expect(async () => {
@@ -549,7 +547,7 @@ export const createService = async (
 		}).toPass({ timeout: 90_000 });
 	} catch (err) {
 		// The server rejects a create it cannot verify upstream. A DNS or dial
-		// failure is the environment - skip rather than fail.
+		// failure is the environment, so skip rather than fail.
 		test.skip(
 			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
 				lastError,
@@ -559,7 +557,7 @@ export const createService = async (
 		throw err;
 	}
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
-	// The card, not the heading - only the grid layout renders a heading.
+	// The card, not the heading, as only the grid layout renders a heading.
 	await expect(serviceCard(page, id)).toBeVisible();
 };
 
@@ -589,8 +587,8 @@ export const saveDeployedVersionManual = async (
 
 	const saveButton = section.getByRole('button', { name: 'Save version' });
 	await expect(saveButton).toBeEnabled();
-	// Manual deployed_version updates are server-side rate-limited
-	// - retry the click until it lands outside that window.
+	// Manual deployed_version updates are server-side rate-limited, so retry the
+	// click until it lands outside that window.
 	await expect(async () => {
 		const [response] = await Promise.all([
 			waitForDeployedVersionRefresh(page),

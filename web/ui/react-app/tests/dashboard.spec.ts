@@ -107,7 +107,6 @@ test.describe('Dashboard', () => {
 
 test.describe('Dashboard card timestamps', () => {
 	test.beforeEach(async ({ page }) => {
-		// GIVEN: the grid view, with a loaded service card.
 		await page.goto('/approvals');
 		await expectServiceLoaded(page, EXAMPLE_SERVICE_ID);
 	});
@@ -115,11 +114,8 @@ test.describe('Dashboard card timestamps', () => {
 	test('only the queried timestamp is shown until changed', async ({
 		page,
 	}) => {
-		// WHEN: nothing has been toggled.
-		// THEN: the card only carries the 'queried' timestamp.
 		await expectTimestamps(page, ['queried']);
 
-		// AND: the dropdown reports the same.
 		await openFilterDropdown(page);
 		await expect(page.getByText('Timestamps:')).toBeVisible();
 		await expect(timestampOption(page, 'deployed')).not.toBeChecked();
@@ -128,41 +124,33 @@ test.describe('Dashboard card timestamps', () => {
 	});
 
 	test('each timestamp can be shown, in a fixed order', async ({ page }) => {
-		// WHEN: the other two timestamps are enabled, deployed last.
 		await toggleTimestamps(page, 'found', 'deployed');
 
-		// THEN: all three show, in card order rather than click order.
+		// Deployed was toggled last, so this is card order rather than click order.
 		await expectTimestamps(page, CARD_ORDER);
 	});
 
 	test('a timestamp can be hidden again', async ({ page }) => {
-		// WHEN: 'found' is enabled and the default 'queried' is disabled.
 		await toggleTimestamps(page, 'found', 'queried');
 
-		// THEN: only 'found' remains.
 		await expectTimestamps(page, ['found']);
 	});
 
 	test('every timestamp can be hidden', async ({ page }) => {
-		// WHEN: the only enabled (default) timestamp is disabled.
 		await toggleTimestamps(page, 'queried');
 
-		// THEN: the card shows no timestamps.
 		await expectTimestamps(page, []);
 	});
 
 	test('toggling a timestamp leaves the dropdown open', async ({ page }) => {
-		// WHEN: a timestamp is toggled with the dropdown open.
 		await openFilterDropdown(page);
 		await timestampOption(page, 'found').click();
 
-		// THEN: the dropdown stays open, with the change applied, so more can
-		// be toggled without reopening it.
-		await expect(page.getByRole('menu')).toBeVisible();
+		await expect(page.getByRole('menu'), 'after found').toBeVisible();
 		await expect(timestampOption(page, 'found')).toBeChecked();
 
 		await timestampOption(page, 'deployed').click();
-		await expect(page.getByRole('menu')).toBeVisible();
+		await expect(page.getByRole('menu'), 'after deployed').toBeVisible();
 		await expect(timestampOption(page, 'deployed')).toBeChecked();
 
 		await page.keyboard.press('Escape');
@@ -170,13 +158,11 @@ test.describe('Dashboard card timestamps', () => {
 	});
 
 	test('the choice survives a reload', async ({ page }) => {
-		// WHEN: the defaults are swapped for 'found' alone, and the page reloads.
 		await toggleTimestamps(page, 'found', 'queried');
 		await expectTimestamps(page, ['found']);
 		await page.reload();
 		await expectServiceLoaded(page, EXAMPLE_SERVICE_ID);
 
-		// THEN: the card, and the dropdown, keep that choice.
 		await expectTimestamps(page, ['found']);
 		await openFilterDropdown(page);
 		await expect(timestampOption(page, 'deployed')).not.toBeChecked();
@@ -185,12 +171,10 @@ test.describe('Dashboard card timestamps', () => {
 	});
 
 	test('hiding every timestamp survives a reload', async ({ page }) => {
-		// WHEN: every timestamp is disabled, and the page reloads.
 		await toggleTimestamps(page, 'queried');
 		await page.reload();
 		await expectServiceLoaded(page, EXAMPLE_SERVICE_ID);
 
-		// THEN: none come back.
 		await expectTimestamps(page, []);
 	});
 });

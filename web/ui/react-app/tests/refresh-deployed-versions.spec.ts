@@ -72,7 +72,6 @@ const refreshAndAwait = async (page: Page, serviceIDs: string[]) => {
 	for (const response of responses) {
 		expect(response.ok()).toBeTruthy();
 	}
-	// Success completion toast.
 	const toast = page
 		.locator('[data-sonner-toast][data-type="success"]')
 		.filter({ hasText: 'Refreshed deployed versions' })
@@ -94,7 +93,8 @@ const expectRefreshActionHidden = async (page: Page) => {
 };
 
 /**
- * Narrows the dashboard to the services matching `term`.
+ * Narrows the dashboard to the services matching `term`. The refresh action
+ * targets every visible service, so this keeps it off other specs' services.
  *
  * @param page - The dashboard page.
  * @param term - The search term to filter by.
@@ -133,18 +133,13 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: two services with a url deployed_version.
 		for (const id of ids) {
 			await createTrackedService(page, id);
 		}
 
-		// AND: the search filter narrows the dashboard down to just these two,
-		// so the refresh can't reach services owned by other specs.
 		await filterServices(page, 'REFRESH-ALL');
 		await shot('01-before-refresh');
 
-		// WHEN: the refresh action is picked from the filter dropdown.
-		// THEN: both services are re-queried, and a completion toast is shown.
 		await refreshAndAwait(page, ids);
 		await shot('02-after-refresh');
 	});
@@ -169,13 +164,11 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: three services with a url deployed_version.
 		for (const id of ids) {
 			await createTrackedService(page, id);
 		}
 		await shot('01-before-filter');
 
-		// WHEN: the search filter narrows the visible services down to 2 of the 3.
 		await filterServices(page, 'REFRESH-VISIBLE');
 		await expect(page.getByRole('heading', { name: hiddenID })).toHaveCount(0);
 		for (const id of visibleIDs) {
@@ -187,12 +180,9 @@ test.describe('refresh visible deployed versions', () => {
 		// applied, so we can assert the hidden service's id never appears.
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// AND: the refresh action is picked from the filter dropdown.
 		await refreshAndAwait(page, visibleIDs);
 		await shot('03-after-refresh');
 
-		// THEN: clearing the filter reveals all 3 services again, but only the
-		// 2 that were visible during the refresh were re-queried.
 		await page.getByRole('button', { name: 'Clear search' }).click();
 		await expect(page.getByRole('heading', { name: hiddenID })).toBeVisible();
 		await shot('04-filters-cleared');
@@ -216,7 +206,6 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: one service already on latest_version, and one behind it.
 		await createTrackedService(page, upToDateID, LATEST_VERSION);
 		await createTrackedService(page, updatableID, '0.0.1');
 
@@ -224,7 +213,6 @@ test.describe('refresh visible deployed versions', () => {
 		await expectUpdateState(page, upToDateID, 'UP_TO_DATE');
 		await expectUpdateState(page, updatableID, 'AVAILABLE');
 
-		// WHEN: 'Hide up to date' removes the up-to-date service from view.
 		await toggleHideOption(page, 'Hide up to date');
 		await expect(page.getByRole('heading', { name: upToDateID })).toHaveCount(
 			0,
@@ -235,10 +223,8 @@ test.describe('refresh visible deployed versions', () => {
 
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// AND: the refresh action is picked from the filter dropdown.
 		await refreshAndAwait(page, [updatableID]);
 
-		// THEN: only the still-visible service was re-queried.
 		expect(refreshedServiceIDs).toContain(updatableID);
 		expect(refreshedServiceIDs).not.toContain(upToDateID);
 	});
@@ -258,7 +244,6 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: two updatable services with a url deployed_version.
 		await createTrackedService(page, skippedID);
 		await createTrackedService(page, updatableID);
 
@@ -266,7 +251,6 @@ test.describe('refresh visible deployed versions', () => {
 		await expectUpdateState(page, skippedID, 'AVAILABLE');
 		await expectUpdateState(page, updatableID, 'AVAILABLE');
 
-		// AND: one of them has its release skipped.
 		await serviceCard(page, skippedID)
 			.getByRole('button', { name: /reject release/i })
 			.click();
@@ -275,7 +259,6 @@ test.describe('refresh visible deployed versions', () => {
 		await expect(dialog).not.toBeVisible();
 		await expectUpdateState(page, skippedID, 'SKIPPED');
 
-		// WHEN: 'Hide skipped' removes it from view.
 		await toggleHideOption(page, 'Hide skipped');
 		await expect(page.getByRole('heading', { name: skippedID })).toHaveCount(0);
 		await expect(
@@ -284,12 +267,9 @@ test.describe('refresh visible deployed versions', () => {
 
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// AND: the refresh action is picked from the filter dropdown.
 		await refreshAndAwait(page, [updatableID]);
 
-		// THEN: the skipped service was not re-queried. 'SKIPPED' and
-		// 'UP_TO_DATE' both hide behind their own toggle, so this covers the
-		// third branch of the state-to-hide-value mapping.
+		// SKIPPED maps to its own hide toggle, so the up-to-date case does not cover it.
 		expect(refreshedServiceIDs).toContain(updatableID);
 		expect(refreshedServiceIDs).not.toContain(skippedID);
 	});
@@ -302,14 +282,11 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service already on latest_version - a refresh is still the
-		// only way to notice its deployed_version changing underneath us.
 		await createTrackedService(page, id, LATEST_VERSION);
 		await filterServices(page, 'REFRESH-UP-TO-DATE');
 		await expectUpdateState(page, id, 'UP_TO_DATE');
 
-		// WHEN: the refresh action is picked from the filter dropdown.
-		// THEN: it is re-queried despite being up to date.
+		// Its deployed_version may change, so being up to date doesn't exclude it.
 		await refreshAndAwait(page, [id]);
 	});
 
@@ -328,28 +305,22 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a url deployed_version service, and a manual one - refreshing a
-		// manual deployed_version is a no-op, as it has no source to re-query.
 		await createTrackedService(page, urlID);
 		await createService(page, manualID, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
 
-		// AND: the search filter narrows the dashboard down to just these two,
-		// so the refresh can't reach services owned by other specs.
 		await filterServices(page, 'REFRESH-EXCLUDE-MANUAL');
 		await expectServiceLoaded(page, urlID);
 		await expectServiceLoaded(page, manualID);
 
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// WHEN: the refresh action is picked from the filter dropdown.
 		await refreshAndAwait(page, [urlID]);
 
-		// THEN: only the url service was refreshed - the manual one never fired
-		// a refresh request.
 		expect(refreshedServiceIDs).toContain(urlID);
+		// A manual deployed_version has no source to re-query.
 		expect(refreshedServiceIDs).not.toContain(manualID);
 	});
 
@@ -368,25 +339,19 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a url deployed_version service,
-		// and one with no deployed_version lookup.
 		await createTrackedService(page, trackedID);
 		await createService(page, untrackedID, {
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
 
-		// AND: the search filter narrows the dashboard down to just these two,
-		// so the refresh can't reach services owned by other specs.
 		await filterServices(page, 'REFRESH-EXCLUDE-NONE');
 		await expectServiceLoaded(page, trackedID);
 		await expectServiceLoaded(page, untrackedID);
 
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// WHEN: the refresh action is picked from the filter dropdown.
 		await refreshAndAwait(page, [trackedID]);
 
-		// THEN: only the tracked service was refreshed.
 		expect(refreshedServiceIDs).toContain(trackedID);
 		expect(refreshedServiceIDs).not.toContain(untrackedID);
 	});
@@ -406,10 +371,9 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: 'Hide inactive' is off, so an inactive service renders once created.
+		// Hide inactive is turned off, so an inactive service renders once created.
 		await toggleHideOption(page, 'Hide inactive');
 
-		// AND: two url deployed_version services, one of them inactive.
 		await createTrackedService(page, activeID);
 		await createService(page, inactiveID, {
 			active: false,
@@ -421,7 +385,6 @@ test.describe('refresh visible deployed versions', () => {
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
 
-		// AND: the search filter narrows the dashboard down to just these two.
 		await filterServices(page, 'REFRESH-INACTIVE');
 		await expectServiceLoaded(page, activeID);
 		await expect(
@@ -430,21 +393,17 @@ test.describe('refresh visible deployed versions', () => {
 
 		const refreshedServiceIDs = recordDeployedVersionRefreshes(page);
 
-		// WHEN: the refresh action runs while the inactive service is still shown.
-		// THEN: being inactive doesn't exclude it.
+		// Being inactive doesn't exclude a visible service.
 		await refreshAndAwait(page, [activeID, inactiveID]);
 
-		// WHEN: 'Hide inactive' removes the paused service from view.
 		refreshedServiceIDs.length = 0;
 		await toggleHideOption(page, 'Hide inactive');
 		await expect(page.getByRole('heading', { name: inactiveID })).toHaveCount(
 			0,
 		);
 
-		// AND: the refresh action is picked again.
 		await refreshAndAwait(page, [activeID]);
 
-		// THEN: only the still-visible service was re-queried.
 		expect(refreshedServiceIDs).toContain(activeID);
 		expect(refreshedServiceIDs).not.toContain(inactiveID);
 	});
@@ -457,18 +416,15 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service whose only deployed_version is manual.
 		await createService(page, id, {
 			deployedVersion: { type: 'manual', version: '0.0.1' },
 			latestVersion: LOOKUP_LATEST_VERSION_JSON,
 		});
 
-		// WHEN: the search filter narrows the visible services down to just it.
 		await filterServices(page, id);
 		await expectServiceLoaded(page, id);
 
-		// THEN: the refresh action is hidden - a manual deployed_version has
-		// nothing to re-query.
+		// A manual deployed_version has no source to re-query.
 		await expectRefreshActionHidden(page);
 	});
 
@@ -483,19 +439,17 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a refreshable service is visible, so the action is on offer.
 		await createTrackedService(page, id);
 		await filterServices(page, 'REFRESH-NONE-VISIBLE');
 		await expectServiceLoaded(page, id);
 		await page.getByRole('button', { name: FILTER_BUTTON_NAME }).click();
+		// A refreshable service is visible, so the action is on offer.
 		await expect(refreshMenuItem(page)).toBeVisible();
 		await page.keyboard.press('Escape');
 
-		// WHEN: the search filter is narrowed to match no service at all.
 		await filterServices(page, 'z-no-service-matches-this-filter-z');
 		await expect(page.getByRole('heading', { name: id })).toHaveCount(0);
 
-		// THEN: the action is withdrawn.
 		await expectRefreshActionHidden(page);
 	});
 
@@ -507,8 +461,6 @@ test.describe('refresh visible deployed versions', () => {
 
 		await openDashboardInEditMode(page);
 
-		// GIVEN: a service with a url deployed_version, so the refresh action
-		// has something to act on regardless of viewport.
 		await createTrackedService(page, id);
 
 		await page.setViewportSize({ height: 844, width: 390 });

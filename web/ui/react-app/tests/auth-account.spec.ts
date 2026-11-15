@@ -15,10 +15,10 @@ import {
 } from './fixtures/auth';
 
 /**
- * Account settings e2e specs - run only in the `chromium-auth` project,
+ * Account settings e2e specs, run only in the `chromium-auth` project,
  * against the auth-enabled Argus instance.
  *
- * Scope: what a user may change about their own account at /account/profile -
+ * Scope: what a user may change about their own account at /account/profile:
  * their profile fields, and their password. Each test owns a user of its own.
  */
 
@@ -105,7 +105,7 @@ test.describe('Account settings', () => {
 		await expect(page.getByText('Renamed User')).toBeVisible();
 		await page.keyboard.press('Escape');
 
-		// AND: the change survives a reload, so it reached the API.
+		// The change survives a reload, so it reached the API.
 		await page.reload();
 		await expect(page.getByLabel('Display name')).toHaveValue('Renamed User');
 		await expect(page.getByLabel('Email')).toHaveValue('renamed@example.com');
@@ -129,7 +129,7 @@ test.describe('Account settings', () => {
 		);
 		await expect(page).toHaveURL(/\/account\/profile/);
 
-		// AND: nothing was saved.
+		// The rejected save stored nothing, so a reload shows the field empty.
 		await page.reload();
 		await expect(page.getByLabel('Display name')).toHaveValue('');
 	});
@@ -141,7 +141,6 @@ test.describe('Account settings', () => {
 		const context = await sessionFor(browser, username, PASSWORD);
 		const page = await context.newPage();
 
-		// WHEN: the user sets a new password.
 		await page.goto('/account/profile');
 		await page
 			.getByRole('textbox', { exact: true, name: 'New password' })
@@ -153,27 +152,24 @@ test.describe('Account settings', () => {
 			.getByRole('textbox', { exact: true, name: 'Current password' })
 			.fill(PASSWORD);
 		await page.getByRole('button', { name: 'Save changes' }).click();
-
-		// THEN: it succeeds, and this session survives its own change.
 		await expect(
 			page.getByText('Account updated - other sessions signed out'),
 		).toBeVisible();
+
+		// This session survives its own change.
 		await page.goto('/account/profile');
 		await expect(page.getByLabel('Username')).toHaveValue(username);
 
-		// WHEN: they log out.
 		await page.getByRole('button', { name: 'User menu' }).click();
 		await page.getByRole('menuitem', { name: 'Log out' }).click();
-		await expect(page).toHaveURL(/\/login/);
+		await expect(page, 'after logout').toHaveURL(/\/login/);
 
-		// THEN: the old password no longer gets them in.
 		await signIn(page, username, PASSWORD);
 		await expect(
 			page.getByText(/invalid credentials|too many login attempts/),
 		).toBeVisible();
-		await expect(page).toHaveURL(/\/login/);
+		await expect(page, 'old password').toHaveURL(/\/login/);
 
-		// AND: the new one does - landing back on the page they logged out of.
 		await signIn(page, username, NEW_PASSWORD);
 		await expect(page).not.toHaveURL(/\/login/);
 		await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();

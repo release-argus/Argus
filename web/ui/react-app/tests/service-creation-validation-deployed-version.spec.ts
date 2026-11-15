@@ -25,7 +25,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Deployed Version');
 
-			// GIVEN: `deployed_version.type` is "url".
 			await section.locator('#deployed_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 
@@ -33,12 +32,8 @@ test.describe('Service creation modal - field validation', () => {
 				name: /^Value field for URL$/i,
 			});
 
-			// GIVEN: the "URL" field is focused and blurred.
-			// THEN: no error is shown.
 			await expectValid(urlInput, undefined, shot, '01-url-empty-ok');
 
-			// WHEN: an invalid URL (missing http(s)://) is entered.
-			// THEN: an error is shown.
 			await expectError(
 				urlInput,
 				'example.com',
@@ -47,8 +42,6 @@ test.describe('Service creation modal - field validation', () => {
 				'02-url-invalid',
 			);
 
-			// WHEN: a valid HTTPS URL is entered.
-			// THEN: the error clears.
 			await expectValid(urlInput, 'https://example.com', shot, '03-url-valid');
 		});
 
@@ -63,7 +56,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Deployed Version');
 
-			// GIVEN: `deployed_version.type` is "url".
 			await section.locator('#deployed_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 
@@ -72,8 +64,6 @@ test.describe('Service creation modal - field validation', () => {
 				name: 'Value field for RegEx',
 			});
 
-			// GIVEN: the regex field is empty and the template toggle is off.
-			// THEN: no error is shown - regex is optional by default.
 			await expectValid(
 				regexInput,
 				undefined,
@@ -81,14 +71,11 @@ test.describe('Service creation modal - field validation', () => {
 				'01-regex-empty-toggle-off',
 			);
 
-			// WHEN: the "RegEx Template" toggle is enabled.
 			const templateToggle = section.locator(
 				'#deployed_version\\.template_toggle',
 			);
 			await templateToggle.click();
 
-			// AND: the (still-empty) regex field is blurred to trigger validation.
-			// THEN: regex is now required.
 			await expectError(
 				regexInput,
 				undefined,
@@ -97,8 +84,6 @@ test.describe('Service creation modal - field validation', () => {
 				'02-regex-required-toggle-on',
 			);
 
-			// WHEN: a regex value is entered.
-			// THEN: the error clears.
 			await expectValid(
 				regexInput,
 				'v([0-9.]+)',
@@ -118,7 +103,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Deployed Version');
 
-			// GIVEN: `deployed_version.type` is "manual".
 			await section.locator('#deployed_version\\.type').click();
 			await dialog.getByRole('option', { name: /^manual$/i }).click();
 
@@ -128,12 +112,10 @@ test.describe('Service creation modal - field validation', () => {
 			await expect(versionInput).toBeVisible();
 			const versionField = fieldOf(versionInput);
 
-			// WHEN: an arbitrary string is entered into "Version" and blurred.
 			await versionInput.fill('not-a-semver-and-thats-fine');
 			await versionInput.blur();
 			await shot('01-manual-version-no-validation', versionField);
 
-			// THEN: no validation error is rendered - type=manual has no validator.
 			await expect(versionInput).not.toHaveAttribute('aria-invalid', 'true');
 			await expect(versionField.getByRole('alert')).not.toBeVisible();
 		});
@@ -149,7 +131,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Deployed Version');
 
-			// GIVEN: `deployed_version.type` is "url" with a header row added.
 			await section.locator('#deployed_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 			await clickViaKeyboard(
@@ -163,8 +144,6 @@ test.describe('Service creation modal - field validation', () => {
 				'input[name="deployed_version.headers.0.value"]',
 			);
 
-			// WHEN: the key and value are left empty and blurred.
-			// THEN: a "Required." error is shown for both.
 			await expectError(
 				keyInput,
 				undefined,
@@ -182,8 +161,6 @@ test.describe('Service creation modal - field validation', () => {
 				section,
 			);
 
-			// WHEN: values are entered.
-			// THEN: both errors clear.
 			await expectValid(
 				keyInput,
 				'X-Example',

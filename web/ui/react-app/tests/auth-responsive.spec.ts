@@ -2,7 +2,7 @@ import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { ADMIN_PASSWORD, ADMIN_USER, signedInContext } from './fixtures/auth';
 
 /**
- * Responsive-layout e2e specs for the admin UI - run only in the
+ * Responsive-layout e2e specs for the admin UI, run only in the
  * `chromium-auth` project, against the auth-enabled Argus instance
  * (AUTH_BASE_URL, bootstrap admin created by `make playwright-tests-setup`).
  *
@@ -20,6 +20,7 @@ const DESKTOP = { height: 900, width: 1280 };
 /** A phone with the keyboard up; `resizes-content` takes it off the viewport. */
 const MOBILE_KEYBOARD = { height: 367, width: 390 };
 
+// Serial: shares one signed-in page.
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin UI responsive layout', () => {
@@ -57,13 +58,10 @@ test.describe('Admin UI responsive layout', () => {
 	};
 
 	test('stacked/labels replace the column header below sm', async () => {
-		// GIVEN: a narrow viewport.
 		await page.setViewportSize(MOBILE);
 
-		// WHEN: the grant editor is opened.
 		await openGrantEditor();
 
-		// THEN: every control carries its own label, and the header is dropped.
 		for (const label of ['Resource', 'Action', 'Scope']) {
 			await expect(cellLabel(label)).toBeVisible();
 		}
@@ -71,18 +69,15 @@ test.describe('Admin UI responsive layout', () => {
 	});
 
 	test('stacked/a scoped grant reveals an editable target', async () => {
-		// GIVEN: the grant editor at a narrow viewport.
 		await page.setViewportSize(MOBILE);
 		await openGrantEditor();
 
-		// AND: a global grant has no target field.
+		// A global grant has no target field.
 		await expect(page.getByLabel('Grant 0 target')).toHaveCount(0);
 
-		// WHEN: the grant is scoped to a service.
 		await page.getByLabel('Grant 0 scope').click();
 		await page.getByRole('option', { exact: true, name: 'service' }).click();
 
-		// THEN: the target appears on the stacked row and accepts input.
 		const target = page.getByLabel('Grant 0 target');
 		await expect(target).toBeVisible();
 		await expect(cellLabel('Target')).toBeVisible();
@@ -91,13 +86,10 @@ test.describe('Admin UI responsive layout', () => {
 	});
 
 	test('wide/the column header replaces the per-control labels', async () => {
-		// GIVEN: a desktop viewport.
 		await page.setViewportSize(DESKTOP);
 
-		// WHEN: the grant editor is opened.
 		await openGrantEditor();
 
-		// THEN: the shared header is used and the per-control labels are dropped.
 		await expect(columnHeader()).toBeVisible();
 		for (const label of ['Resource', 'Action', 'Scope']) {
 			await expect(cellLabel(label)).toBeHidden();
@@ -105,10 +97,9 @@ test.describe('Admin UI responsive layout', () => {
 	});
 
 	test('the viewport opts into keyboard resizing', async () => {
-		// GIVEN: any page of the app.
+		// The viewport meta is app-wide, so any page serves.
 		await page.goto('/admin/users');
 
-		// WHEN/THEN: the viewport meta opts in.
 		await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
 			'content',
 			/interactive-widget=resizes-content/,
@@ -116,15 +107,12 @@ test.describe('Admin UI responsive layout', () => {
 	});
 
 	test('a dialog stays reachable under the keyboard', async () => {
-		// GIVEN: a phone viewport with the keyboard up.
 		await page.setViewportSize(MOBILE_KEYBOARD);
 
-		// WHEN: the create-user dialog is opened.
 		await page.goto('/admin/users');
 		await page.getByRole('button', { name: 'Add user' }).click();
 		await expect(dialog()).toBeVisible();
 
-		// THEN: it fits within the viewport.
 		const bounds = await page.evaluate(() => {
 			const box = document
 				.querySelector('[role=dialog]')
@@ -137,7 +125,6 @@ test.describe('Admin UI responsive layout', () => {
 		});
 		expect(bounds).toEqual({ bottom: true, top: true });
 
-		// AND: scrolling it reaches every control.
 		const reachable = await page.evaluate(() => {
 			const content = document.querySelector('[role=dialog]');
 			if (!content) throw new Error('no dialog');

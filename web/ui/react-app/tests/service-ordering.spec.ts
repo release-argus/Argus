@@ -26,8 +26,9 @@ const getServiceOrder = async (page: Page) => {
 /**
  * Drags `source` onto `target`. dnd-kit needs the drag to begin with a small
  * movement (a single jump can be missed) and the pointer to cross the target's
- * centre to swap - so: nudge to activate, step across, overshoot the centre,
- * then dwell before releasing. Works for table (vertical) and grid (horizontal).
+ * centre to swap, so this nudges to activate, steps across, overshoots the
+ * centre, then dwells before releasing. Works for table (vertical) and grid
+ * (horizontal).
  *
  * @param page - The dashboard page.
  * @param source - The drag handle to pick up.
@@ -62,7 +63,7 @@ const dragAndDrop = async (page: Page, source: Locator, target: Locator) => {
 
 /**
  * Clicks "Save order" and waits for it to persist. The short pause lets dnd-kit
- * settle - it swallows a click landing immediately after a drop.
+ * settle, as it swallows a click landing right after a drop.
  *
  * @param page - The dashboard page.
  */
@@ -84,8 +85,7 @@ const ORDERING_SERVICE_OPTIONS: CreateServiceOptions = {
 };
 
 test.describe('Service Ordering', () => {
-	// Both tests reuse the same two IDs, so they must run serially within a
-	// project.
+	// Serial: reuses the same two service IDs.
 	test.describe.configure({ mode: 'serial' });
 
 	// Reordering writes the *global* dashboard order shared by every browser
@@ -129,7 +129,7 @@ test.describe('Service Ordering', () => {
 		await dragAndDrop(page, dragHandle1Grid, targetCard2Grid);
 
 		// dnd-kit applies the reorder on a later frame, so the rendered order can
-		// briefly lag the drop - poll until it reflects the swap.
+		// briefly lag the drop; poll until it reflects the swap.
 		await expect(async () => {
 			const order = await getServiceOrder(page);
 			expect(order.indexOf(two)).toBeLessThan(order.indexOf(one));
@@ -183,7 +183,7 @@ test.describe('Service Ordering', () => {
 		await dragAndDrop(page, dragHandle1Table, targetCard2Table);
 
 		// dnd-kit applies the reorder on a later frame, so the rendered order can
-		// briefly lag the drop - poll until it reflects the swap.
+		// briefly lag the drop; poll until it reflects the swap.
 		await expect(async () => {
 			const order = await getServiceOrder(page);
 			expect(order.indexOf(two)).toBeLessThan(order.indexOf(one));
