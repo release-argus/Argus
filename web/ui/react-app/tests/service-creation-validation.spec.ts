@@ -26,8 +26,6 @@ test.describe('Service creation modal - field validation', () => {
 
 			const intervalInput = valueInputFor(section, 'Interval');
 
-			// WHEN: an invalid duration is entered and blurred.
-			// THEN: an error is shown.
 			await expectError(
 				intervalInput,
 				'abc',
@@ -37,8 +35,6 @@ test.describe('Service creation modal - field validation', () => {
 				section,
 			);
 
-			// WHEN: the value is corrected to a valid duration.
-			// THEN: the error clears.
 			await expectValid(intervalInput, '10m', shot, '02-valid-interval');
 		});
 	});
@@ -53,14 +49,12 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Command:');
 
-			// GIVEN: a new command is added (with one empty argument).
 			await section.getByRole('button', { name: /add command/i }).click();
 
+			// A new command starts with one empty argument.
 			const argInput = section.locator('input[name="command.0.0.arg"]');
 			await expect(argInput).toBeVisible();
 
-			// WHEN: the argument is left empty and blurred.
-			// THEN: an error is shown.
 			await expectError(
 				argInput,
 				'',
@@ -70,16 +64,13 @@ test.describe('Service creation modal - field validation', () => {
 				section,
 			);
 
-			// WHEN: a value is entered.
-			// THEN: the error clears.
 			await expectValid(argInput, '/bin/bash', shot, '02-arg-valid');
 		});
 	});
 
 	test.describe('Service ID / Name', () => {
-		// The seeded service in `fixtures/noauth-config.yml`, reused as the existing
-		// ID/Name to collide against. Matched case-sensitively, so this must be
-		// the exact seeded id.
+		// The service seeded by fixtures/noauth-config.yml. Matching is case-sensitive,
+		// so this must be its exact ID.
 		const EXISTING_ID = 'release-argus/Argus';
 
 		test('ID and Name must be unique against existing services', async ({
@@ -94,8 +85,6 @@ test.describe('Service creation modal - field validation', () => {
 
 			const idInput = dialog.locator('input[name="id"]');
 
-			// WHEN: an existing service's ID is entered and blurred.
-			// THEN: an error is shown.
 			await expectError(
 				idInput,
 				EXISTING_ID,
@@ -104,8 +93,6 @@ test.describe('Service creation modal - field validation', () => {
 				'01-id-duplicate',
 			);
 
-			// WHEN: a unique ID is entered.
-			// THEN: the error clears.
 			await expectValid(
 				idInput,
 				'VALIDATION_TEST_unique',
@@ -113,14 +100,12 @@ test.describe('Service creation modal - field validation', () => {
 				'02-id-unique',
 			);
 
-			// WHEN: ID and Name are separated, revealing a distinct "Name" field.
+			// Separating ID and Name reveals the distinct "Name" field.
 			await dialog
 				.getByRole('button', { name: /toggle to separate id/i })
 				.click();
 			const nameInput = dialog.locator('input[name="name"]');
 
-			// AND: an existing service's ID is entered as the Name and blurred.
-			// THEN: an error is shown.
 			await expectError(
 				nameInput,
 				EXISTING_ID,
@@ -129,8 +114,6 @@ test.describe('Service creation modal - field validation', () => {
 				'03-name-duplicate',
 			);
 
-			// WHEN: a unique Name is entered.
-			// THEN: the error clears.
 			await expectValid(
 				nameInput,
 				'VALIDATION_TEST_unique_name',
@@ -158,8 +141,6 @@ test.describe('Service creation modal - field validation', () => {
 				'input[name="dashboard.icon_link_to"]',
 			);
 
-			// WHEN: arbitrary, non-URL strings are entered into "Icon", "Web URL",
-			// and "Icon link to", and each is blurred.
 			await iconInput.fill('not-a-url');
 			await iconInput.blur();
 			await webUrlInput.fill('not-a-url-either');
@@ -168,7 +149,6 @@ test.describe('Service creation modal - field validation', () => {
 			await iconLinkInput.blur();
 			await shot('01-arbitrary-values');
 
-			// THEN: no validation errors are rendered - these fields have no validator.
 			await expect(iconInput).not.toHaveAttribute('aria-invalid', 'true');
 			await expect(webUrlInput).not.toHaveAttribute('aria-invalid', 'true');
 			await expect(iconLinkInput).not.toHaveAttribute('aria-invalid', 'true');

@@ -32,11 +32,9 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: `latest_version.type` is "github" (default).
+			// The type is left as "github", the default.
 			const repoInput = section.getByRole('textbox', { name: /repository/i });
 
-			// GIVEN: the "Repository" field is focused and blurred.
-			// THEN: a "Required." error is shown.
 			await expectError(
 				repoInput,
 				undefined,
@@ -45,8 +43,6 @@ test.describe('Service creation modal - field validation', () => {
 				'01-github-repo-empty',
 			);
 
-			// WHEN: an invalid "owner/repo" value is entered.
-			// THEN: an error is shown.
 			await expectError(
 				repoInput,
 				'not-a-repo',
@@ -55,8 +51,6 @@ test.describe('Service creation modal - field validation', () => {
 				'02-github-repo-invalid',
 			);
 
-			// WHEN: a valid "owner/repo" value is entered.
-			// THEN: the error clears.
 			await expectValid(
 				repoInput,
 				'release-argus/Argus',
@@ -76,11 +70,9 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: `latest_version.type` is set to "forgejo".
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
 
-			// THEN: a "Host" picker is revealed, holding the first default instance.
 			const hostInput = selectInputFor(section, 'Host');
 			await expect(hostInput).toBeVisible();
 			await expect(
@@ -88,8 +80,6 @@ test.describe('Service creation modal - field validation', () => {
 			).toHaveValue(FIRST_FORGEJO_HOST);
 			await shot('01-forgejo-host-prefilled', section);
 
-			// WHEN: a value that cannot address an instance is entered.
-			// THEN: an error is shown.
 			await selectOrCreate(hostInput, 'ftp://codeberg.org');
 			await expectError(
 				hostInput,
@@ -99,8 +89,6 @@ test.describe('Service creation modal - field validation', () => {
 				'02-forgejo-host-invalid',
 			);
 
-			// WHEN: a host padded with whitespace is entered.
-			// THEN: an error is shown.
 			await selectOrCreate(hostInput, '  https://codeberg.org  ');
 			await expectError(
 				hostInput,
@@ -110,8 +98,6 @@ test.describe('Service creation modal - field validation', () => {
 				'03-forgejo-host-whitespace',
 			);
 
-			// WHEN: a host is entered without a scheme.
-			// THEN: the error clears.
 			await selectOrCreate(hostInput, 'codeberg.org');
 			await expectValid(
 				hostInput,
@@ -122,8 +108,6 @@ test.describe('Service creation modal - field validation', () => {
 
 			const repoInput = section.getByRole('textbox', { name: /repository/i });
 
-			// WHEN: the repository is given as a full address rather than owner/repo.
-			// THEN: an error is shown.
 			await expectError(
 				repoInput,
 				'https://codeberg.org/forgejo/forgejo',
@@ -132,8 +116,6 @@ test.describe('Service creation modal - field validation', () => {
 				'05-forgejo-repo-invalid',
 			);
 
-			// WHEN: a valid "owner/repo" value is entered.
-			// THEN: the error clears.
 			await expectValid(
 				repoInput,
 				'forgejo/forgejo',
@@ -153,7 +135,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: a forgejo service with a repository entered.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
 
@@ -164,39 +145,32 @@ test.describe('Service creation modal - field validation', () => {
 			await repoInput.fill('owner/repo');
 			await repoInput.blur();
 
-			// THEN: the link is built from the selected host.
-			await expect(repoLink).toHaveAttribute(
+			await expect(repoLink, 'pre-filled host').toHaveAttribute(
 				'href',
 				'https://FORGE.example.com:443/owner/repo',
 			);
 
-			// WHEN: a host is entered without a scheme.
-			// THEN: the link defaults it to HTTPS.
 			await selectOrCreate(hostInput, 'codeberg.org');
-			await expect(repoLink).toHaveAttribute(
+			await expect(repoLink, 'after scheme-less host').toHaveAttribute(
 				'href',
 				'https://codeberg.org/owner/repo',
 			);
 
-			// WHEN: a host is entered with a sub-path and a trailing slash.
-			// THEN: the trailing slash is dropped, and the repository follows the sub-path.
 			await selectOrCreate(hostInput, 'https://example.com/git/');
-			await expect(repoLink).toHaveAttribute(
+			// The host's trailing slash is dropped, and the repository follows the sub-path.
+			await expect(repoLink, 'after sub-path host').toHaveAttribute(
 				'href',
 				'https://example.com/git/owner/repo',
 			);
 			await shot('01-forgejo-repo-link', repoInput);
 
-			// WHEN: the host no longer addresses an instance.
-			// THEN: the link is dropped, as there is nowhere to point it.
 			await selectOrCreate(hostInput, 'ftp://codeberg.org');
+			// The host no longer addresses an instance, so there is nowhere to point the link.
 			await expect(repoLink).toBeHidden();
 			await shot('02-forgejo-repo-link-absent', repoInput);
 
-			// WHEN: a usable host is restored.
-			// THEN: the link returns.
 			await selectOrCreate(hostInput, 'codeberg.org');
-			await expect(repoLink).toHaveAttribute(
+			await expect(repoLink, 'after host restored').toHaveAttribute(
 				'href',
 				'https://codeberg.org/owner/repo',
 			);
@@ -213,7 +187,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: a forgejo lookup in the create form.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
 
@@ -222,23 +195,22 @@ test.describe('Service creation modal - field validation', () => {
 				name: /^Value field for Access Token$/i,
 			});
 
-			// AND: an access token is entered.
 			await tokenInput.fill('dummy-e2e-token');
 			await tokenInput.blur();
 			await shot('01-forgejo-token-entered', tokenInput);
 
-			// WHEN: an new host is entered.
 			await selectOrCreate(hostInput, 'codeberg.org');
 
-			// THEN: the token is kept.
-			await expect(tokenInput).toHaveValue('dummy-e2e-token');
+			await expect(tokenInput, 'after first host change').toHaveValue(
+				'dummy-e2e-token',
+			);
 			await shot('02-forgejo-token-kept', tokenInput);
 
-			// WHEN: the host is changed.
 			await selectOrCreate(hostInput, 'git.example.com');
 
-			// THEN: the token is still kept.
-			await expect(tokenInput).toHaveValue('dummy-e2e-token');
+			await expect(tokenInput, 'after second host change').toHaveValue(
+				'dummy-e2e-token',
+			);
 			await shot('03-forgejo-token-still-kept', tokenInput);
 		});
 
@@ -253,7 +225,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: a forgejo lookup, with host defaults configured for two instances.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^forgejo$/i }).click();
 
@@ -267,8 +238,8 @@ test.describe('Service creation modal - field validation', () => {
 				.locator('[aria-labelledby="latest_version.allow_invalid_certs-label"]')
 				.getByRole('radio', { name: /^Default:?$/ });
 
-			// THEN: every configured name-host is offered, the URL-named one only once.
 			await hostInput.click();
+			// The instance whose name is a URL is offered only once.
 			await expect(dialog.getByRole('option')).toHaveText([
 				`${FIRST_FORGEJO_HOST} (${FIRST_FORGEJO_URL_CANONICAL})`,
 				SCHEMALESS_UNIQUE_FORGEJO_HOST,
@@ -277,58 +248,71 @@ test.describe('Service creation modal - field validation', () => {
 			]);
 			await hostInput.blur();
 
-			// AND: the pre-filled instance offers its token as the placeholder, with
-			// its allow_invalid_certs=false as the default.
-			await expect(hostField).toHaveValue(FIRST_FORGEJO_HOST);
-			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
-			await expect(certsDefaultOption).toHaveAttribute(
+			await expect(hostField, 'pre-filled host').toHaveValue(
+				FIRST_FORGEJO_HOST,
+			);
+			// The pre-filled instance offers its token as the placeholder.
+			await expect(tokenInput, 'pre-filled host').toHaveAttribute(
+				'placeholder',
+				SECRET_VALUE,
+			);
+			await expect(certsDefaultOption, 'pre-filled host').toHaveAttribute(
 				'data-default-value',
 				'false',
 			);
 			await shot('04-forgejo-host-defaults-prefilled', section);
 
-			// WHEN: the other configured instance is picked.
 			await selectOrCreate(hostInput, 'https://git.internal.example');
 
-			// THEN: that entry's defaults apply instead - allow_invalid_certs=true.
-			await expect(hostField).toHaveValue('Internal');
-			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
-			await expect(certsDefaultOption).toHaveAttribute(
+			await expect(hostField, 'after Internal host').toHaveValue('Internal');
+			await expect(tokenInput, 'after Internal host').toHaveAttribute(
+				'placeholder',
+				SECRET_VALUE,
+			);
+			await expect(certsDefaultOption, 'after Internal host').toHaveAttribute(
 				'data-default-value',
 				'true',
 			);
 			await shot('05-forgejo-host-defaults-swapped', section);
 
-			// WHEN: the instance is typed as the URL its label shows.
 			await selectOrCreate(hostInput, 'forge.example.com');
 
-			// THEN: that option is picked, so the entry it names is matched again.
-			await expect(hostField).toHaveValue(FIRST_FORGEJO_HOST);
-			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
-			await expect(certsDefaultOption).toHaveAttribute(
+			// The URL an option's label shows picks that option, so its entry is matched.
+			await expect(hostField, 'after Forge by URL').toHaveValue(
+				FIRST_FORGEJO_HOST,
+			);
+			await expect(tokenInput, 'after Forge by URL').toHaveAttribute(
+				'placeholder',
+				SECRET_VALUE,
+			);
+			await expect(certsDefaultOption, 'after Forge by URL').toHaveAttribute(
 				'data-default-value',
 				'false',
 			);
 			await shot('06-forgejo-host-defaults-inherited', section);
 
-			// WHEN: the instance whose name is a URL is picked.
 			await selectOrCreate(hostInput, 'https://git.internal.example');
-			await expect(hostField).toHaveValue('Internal');
+			await expect(hostField, 'after Internal host again').toHaveValue(
+				'Internal',
+			);
 			await selectOrCreate(hostInput, SCHEMALESS_UNIQUE_FORGEJO_HOST);
 
-			// THEN: its entry is matched by that name, so its defaults apply.
-			await expect(hostField).toHaveValue(SCHEMALESS_UNIQUE_FORGEJO_HOST);
-			await expect(tokenInput).toHaveAttribute('placeholder', SECRET_VALUE);
-			await expect(certsDefaultOption).toHaveAttribute(
+			await expect(hostField, 'after URL-named host').toHaveValue(
+				SCHEMALESS_UNIQUE_FORGEJO_HOST,
+			);
+			await expect(tokenInput, 'after URL-named host').toHaveAttribute(
+				'placeholder',
+				SECRET_VALUE,
+			);
+			await expect(certsDefaultOption, 'after URL-named host').toHaveAttribute(
 				'data-default-value',
 				'false',
 			);
 			await shot('07-forgejo-host-defaults-url-named', section);
 
-			// WHEN: an instance with no defaults entry is entered.
 			await selectOrCreate(hostInput, 'git.example.com');
 
-			// THEN: nothing is inherited, so no default is offered.
+			// No defaults entry names this instance, so nothing is inherited.
 			await expect(tokenInput).not.toHaveAttribute('placeholder');
 			await shot('08-forgejo-host-defaults-absent', section);
 		});
@@ -344,7 +328,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: `latest_version.type` is "url".
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 
@@ -352,16 +335,10 @@ test.describe('Service creation modal - field validation', () => {
 				name: /^Value field for URL$/i,
 			});
 
-			// GIVEN: the "URL" field is focused and blurred.
-			// THEN: an error is shown.
 			await expectError(urlInput, undefined, 'Required.', shot, '01-url-empty');
 
-			// WHEN: a valid URL is entered.
-			// THEN: no error is present.
 			await expectValid(urlInput, 'https://example.com', shot, '02-url-valid');
 
-			// WHEN: an invalid URL (missing http(s)://) is entered.
-			// THEN: an error is shown.
 			await expectError(
 				urlInput,
 				'example.com',
@@ -382,7 +359,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: `latest_version.type` is "url" and we've added a url command.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 			await clickViaKeyboard(
@@ -394,8 +370,6 @@ test.describe('Service creation modal - field validation', () => {
 			);
 			await expect(regexInput).toBeVisible();
 
-			// WHEN: an unbalanced (invalid) regular expression is entered.
-			// THEN: an error is shown.
 			await expectError(
 				regexInput,
 				'(',
@@ -404,8 +378,6 @@ test.describe('Service creation modal - field validation', () => {
 				'01-url-command-regex-invalid',
 			);
 
-			// WHEN: the regex is corrected to a valid expression.
-			// THEN: the error clears.
 			await expectValid(
 				regexInput,
 				'v([0-9.]+)',
@@ -413,8 +385,6 @@ test.describe('Service creation modal - field validation', () => {
 				'02-url-command-regex-valid',
 			);
 
-			// WHEN: the regex field is emptied.
-			// THEN: an error is shown.
 			await expectError(
 				regexInput,
 				'',
@@ -435,15 +405,12 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: `latest_version.type` is "url" with a url command added.
 			await section.locator('#latest_version\\.type').click();
 			await dialog.getByRole('option', { name: /^url$/i }).click();
 			await clickViaKeyboard(
 				section.getByRole('button', { name: /add new url command/i }),
 			);
 
-			// WHEN: the command type is switched to "Replace".
-			// THEN: its "Replace" (`old`) field is required.
 			await section
 				.locator('#latest_version\\.url_commands\\.0\\.type')
 				.click();
@@ -467,8 +434,6 @@ test.describe('Service creation modal - field validation', () => {
 				section,
 			);
 
-			// WHEN: the command type is switched to "Split".
-			// THEN: both its "Text" and "Index" fields are required.
 			await section
 				.locator('#latest_version\\.url_commands\\.0\\.type')
 				.click();
@@ -522,11 +487,9 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: the "Require:" sub-accordion is expanded.
 			await section.getByRole('button', { name: /^require:?$/i }).click();
 
-			// Both regex fields are optional (empty is fine) but must compile to a
-			// valid RegExp when set.
+			// Both regex fields are optional, so empty is valid.
 			const contentInput = section.locator(
 				'input[name="latest_version.require.regex_content"]',
 			);
@@ -591,7 +554,6 @@ test.describe('Service creation modal - field validation', () => {
 			const dialog = await openCreateServiceModal(page);
 			const section = await openSection(dialog, 'Latest Version');
 
-			// GIVEN: the "Require:" sub-accordion is expanded.
 			await section.getByRole('button', { name: /^require:?$/i }).click();
 
 			const imageInput = section.locator(
@@ -601,15 +563,11 @@ test.describe('Service creation modal - field validation', () => {
 				'input[name="latest_version.require.docker.tag"]',
 			);
 
-			// GIVEN: both image and tag are set (a satisfied pairing - no error).
 			await imageInput.fill('release-argus/argus');
 			await imageInput.blur();
 			await tagInput.fill('latest');
 			await tagInput.blur();
 
-			// WHEN: the image is cleared while the tag remains.
-			// THEN: the image becomes required - docker needs image and tag together
-			// (or neither).
 			await expectError(
 				imageInput,
 				'',
@@ -619,8 +577,6 @@ test.describe('Service creation modal - field validation', () => {
 				section,
 			);
 
-			// WHEN: the image is restored.
-			// THEN: the pairing is satisfied, the error clears.
 			await expectValid(
 				imageInput,
 				'release-argus/argus',

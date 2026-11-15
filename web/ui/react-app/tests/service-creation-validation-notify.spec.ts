@@ -34,10 +34,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Bark" notifier is added.
 				await addNotify(section, dialog, 'Bark');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({ good: 'bark.example.com', input: 'Host', slug: 'host' }),
 					numeric({ good: '8080', input: 'Port', slug: 'port' }),
@@ -63,10 +61,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Discord" notifier is added.
 				await addNotify(section, dialog, 'Discord');
 
-				// WHEN/THEN: each field is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: 'my-discord', input: 'Name', slug: 'name' }),
 					required({ good: '123456', input: 'Webhook ID', slug: 'webhookid' }),
@@ -85,10 +81,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Google Chat" notifier is added.
 				await addNotify(section, dialog, 'Google Chat');
 
-				// WHEN/THEN: Raw is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'chat.googleapis.com/v1/spaces/foo/messages?key=bar&token=baz',
@@ -112,10 +106,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Gotify" notifier is added.
 				await addNotify(section, dialog, 'Gotify');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({ good: 'gotify.example.com', input: 'Host', slug: 'host' }),
 					numeric({ good: '443', input: 'Port', slug: 'port' }),
@@ -135,10 +127,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Gotify" notifier is added.
 				await addNotify(section, dialog, 'Gotify');
 
-				// WHEN: an "extra" is added and its namespace switched to "other".
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new extras/i }),
 				);
@@ -149,7 +139,7 @@ test.describe('Service creation modal - field validation', () => {
 					.getByRole('option', { exact: true, name: /^other$/i })
 					.click();
 
-				// Scoped by `name` attribute - the extras "Name" shares its
+				// Scoped by name attribute, as the extras "Name" shares its
 				// "Value field for Name" aria-label with the notifier "Name".
 				const nameInput = section.locator(
 					'input[name="notify.0.params.extras.0._namespace"]',
@@ -160,13 +150,11 @@ test.describe('Service creation modal - field validation', () => {
 				);
 				const valueField = fieldOf(valueInput);
 
-				// WHEN: "Name" and "Value" are left empty and blurred.
 				await nameInput.fill('');
 				await nameInput.blur();
 				await valueInput.fill('');
 				await valueInput.blur();
 
-				// THEN: an error is shown for both.
 				await expect(nameInput).toHaveAttribute('aria-invalid', 'true');
 				await expect(nameField.getByRole('alert')).toHaveText(REQUIRED);
 				await expect(valueInput).toHaveAttribute('aria-invalid', 'true');
@@ -174,13 +162,11 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('01-extras-empty', valueField);
 
-				// WHEN: values are entered.
 				await nameInput.fill('my-namespace');
 				await nameInput.blur();
 				await valueInput.fill('{"key": "value"}');
 				await valueInput.blur();
 
-				// THEN: both errors clear.
 				await expect(nameInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(nameField.getByRole('alert')).not.toBeVisible();
 				await expect(valueInput).toHaveAttribute('aria-invalid', 'false');
@@ -201,10 +187,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Generic Webhook" notifier is added.
 				await addNotify(section, dialog, 'Generic Webhook');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'generic.example.com',
@@ -226,10 +210,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Generic Webhook" notifier is added.
 				await addNotify(section, dialog, 'Generic Webhook');
 
-				// WHEN: a header row is added with an empty key and value.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new headers/i }),
 				);
@@ -244,8 +226,10 @@ test.describe('Service creation modal - field validation', () => {
 				await headerValueInput.focus();
 				await headerValueInput.blur();
 
-				// THEN: an error is shown for both.
-				await expect(headerKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(headerKeyInput, 'left empty').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(headerKeyInput).getByRole('alert')).toHaveText(
 					REQUIRED,
 				);
@@ -256,7 +240,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('01-headers-empty');
 
-				// WHEN: a second header row is added with the same key as the first.
 				await headerKeyInput.fill('X-Header');
 				await headerValueInput.fill('one');
 				await clickViaKeyboard(
@@ -275,8 +258,10 @@ test.describe('Service creation modal - field validation', () => {
 				await headerKeyInput.focus();
 				await headerKeyInput.blur();
 
-				// THEN:an error is shown on both duplicate keys.
-				await expect(headerKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(headerKeyInput, 'duplicate key').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(headerKeyInput).getByRole('alert')).toHaveText(
 					MUST_BE_UNIQUE,
 				);
@@ -287,14 +272,12 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('02-headers-duplicate-key');
 
-				// WHEN: the second key is changed to be unique.
 				await headerKeyInput2.fill('X-Header-2');
 				await headerKeyInput2.blur();
 				// Re-touch the first key so its error clears.
 				await headerKeyInput.focus();
 				await headerKeyInput.blur();
 
-				// THEN: both errors clear.
 				await expect(headerKeyInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(
 					fieldOf(headerKeyInput).getByRole('alert'),
@@ -313,7 +296,6 @@ test.describe('Service creation modal - field validation', () => {
 				await templateInput.fill('{}');
 				await templateInput.blur();
 
-				// WHEN: a JSON payload var row is added with an empty key and value.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new json payload vars/i }),
 				);
@@ -328,8 +310,7 @@ test.describe('Service creation modal - field validation', () => {
 				await payloadVarValueInput.focus();
 				await payloadVarValueInput.blur();
 
-				// THEN: an error is shown for both.
-				await expect(payloadVarKeyInput).toHaveAttribute(
+				await expect(payloadVarKeyInput, 'left empty').toHaveAttribute(
 					'aria-invalid',
 					'true',
 				);
@@ -346,7 +327,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('04-json-payload-vars-empty');
 
-				// WHEN: a second JSON payload var row is added with the same key.
 				await payloadVarKeyInput.fill('titleKey');
 				await payloadVarValueInput.fill('title');
 				await clickViaKeyboard(
@@ -365,8 +345,7 @@ test.describe('Service creation modal - field validation', () => {
 				await payloadVarKeyInput.focus();
 				await payloadVarKeyInput.blur();
 
-				// THEN: an error is shown on both duplicate keys.
-				await expect(payloadVarKeyInput).toHaveAttribute(
+				await expect(payloadVarKeyInput, 'duplicate key').toHaveAttribute(
 					'aria-invalid',
 					'true',
 				);
@@ -383,14 +362,12 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('05-json-payload-vars-duplicate-key');
 
-				// WHEN: the second key is changed to be unique.
 				await payloadVarKeyInput2.fill('messageKey');
 				await payloadVarKeyInput2.blur();
 				// Re-touch the first key so its error clears.
 				await payloadVarKeyInput.focus();
 				await payloadVarKeyInput.blur();
 
-				// THEN: both errors clear.
 				await expect(payloadVarKeyInput).toHaveAttribute(
 					'aria-invalid',
 					'false',
@@ -408,7 +385,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('06-json-payload-vars-valid');
 
-				// WHEN: a query var row is added with an empty key and value.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new query vars/i }),
 				);
@@ -423,8 +399,10 @@ test.describe('Service creation modal - field validation', () => {
 				await queryVarValueInput.focus();
 				await queryVarValueInput.blur();
 
-				// THEN: an error is shown for both.
-				await expect(queryVarKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(queryVarKeyInput, 'left empty').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(queryVarKeyInput).getByRole('alert')).toHaveText(
 					REQUIRED,
 				);
@@ -438,7 +416,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('07-query-vars-empty');
 
-				// WHEN: a second query var row is added with the same key as the first.
 				await queryVarKeyInput.fill('foo');
 				await queryVarValueInput.fill('one');
 				await clickViaKeyboard(
@@ -457,8 +434,10 @@ test.describe('Service creation modal - field validation', () => {
 				await queryVarKeyInput.focus();
 				await queryVarKeyInput.blur();
 
-				// THEN:an error is shown on both duplicate keys.
-				await expect(queryVarKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(queryVarKeyInput, 'duplicate key').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(queryVarKeyInput).getByRole('alert')).toHaveText(
 					MUST_BE_UNIQUE,
 				);
@@ -469,14 +448,12 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('08-query-vars-duplicate-key');
 
-				// WHEN: the second key is changed to be unique.
 				await queryVarKeyInput2.fill('bar');
 				await queryVarKeyInput2.blur();
 				// Re-touch the first key so its error clears.
 				await queryVarKeyInput.focus();
 				await queryVarKeyInput.blur();
 
-				// THEN: both errors clear.
 				await expect(queryVarKeyInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(
 					fieldOf(queryVarKeyInput).getByRole('alert'),
@@ -505,10 +482,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Home Assistant" notifier is added.
 				await addNotify(section, dialog, 'Home Assistant');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'homeassistant.local',
@@ -531,10 +506,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "IFTTT" notifier is added.
 				await addNotify(section, dialog, 'IFTTT');
 
-				// WHEN/THEN: each required field is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: 'abc123', input: 'Webhook ID', slug: 'webhookid' }),
 					required({ good: 'event1,event2', input: 'Events', slug: 'events' }),
@@ -563,10 +536,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Join" notifier is added.
 				await addNotify(section, dialog, 'Join');
 
-				// WHEN/THEN: each field is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: 'abc123apikey', input: 'API Key', slug: 'apikey' }),
 					required({
@@ -590,10 +561,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "MatterMost" notifier is added.
 				await addNotify(section, dialog, 'MatterMost');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'mattermost.example.com',
@@ -618,10 +587,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Matrix" notifier is added.
 				await addNotify(section, dialog, 'Matrix');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({ good: 'matrix.example.com', input: 'Host', slug: 'host' }),
 					required({ good: 's3cret', input: 'Password', slug: 'password' }),
@@ -640,10 +607,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Notifiarr" notifier is added.
 				await addNotify(section, dialog, 'Notifiarr');
 
-				// WHEN/THEN: the API key is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: 'abc123apikey', input: 'API Key', slug: 'apikey' }),
 				]);
@@ -662,10 +627,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Ntfy" notifier is added.
 				await addNotify(section, dialog, 'Ntfy');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					optional({ good: 'ntfy.example.com', input: 'Host', slug: 'host' }),
 					numeric({ good: '443', input: 'Port', slug: 'port' }),
@@ -684,11 +647,9 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Ntfy" notifier is added.
 				await addNotify(section, dialog, 'Ntfy');
 
-				// WHEN: an action is added (defaults to type "Broadcast", which
-				// requires `label`; "View"/"HTTP").
+				// A new action defaults to the "Broadcast" type, which needs a label.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new actions/i }),
 				);
@@ -697,8 +658,6 @@ test.describe('Service creation modal - field validation', () => {
 					name: 'Value field for Label',
 				});
 
-				// WHEN: "Label" is left empty and blurred.
-				// THEN: an error is shown.
 				await expectError(
 					labelInput,
 					undefined,
@@ -708,8 +667,6 @@ test.describe('Service creation modal - field validation', () => {
 					section,
 				);
 
-				// WHEN: a value is entered.
-				// THEN: the error clears.
 				await expectValid(
 					labelInput,
 					'Open page',
@@ -717,7 +674,6 @@ test.describe('Service creation modal - field validation', () => {
 					'02-action-label-valid',
 				);
 
-				// WHEN: its type is switched to "View".
 				await section
 					.locator('#notify\\.0\\.params\\.actions\\.0\\.action')
 					.click();
@@ -729,8 +685,6 @@ test.describe('Service creation modal - field validation', () => {
 					name: 'Value field for URL',
 				});
 
-				// WHEN: "URL" is left empty and blurred.
-				// THEN: an error is shown.
 				await expectError(
 					urlInput,
 					undefined,
@@ -740,8 +694,6 @@ test.describe('Service creation modal - field validation', () => {
 					section,
 				);
 
-				// WHEN: a value is entered.
-				// THEN: the error clears.
 				await expectValid(
 					urlInput,
 					'https://example.com',
@@ -761,10 +713,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "OpsGenie" notifier is added.
 				await addNotify(section, dialog, 'OpsGenie');
 
-				// WHEN/THEN: apikey is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'abc123apikey',
@@ -783,10 +733,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "OpsGenie" notifier is added.
 				await addNotify(section, dialog, 'OpsGenie');
 
-				// WHEN: an action is added and left empty.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new actions/i }),
 				);
@@ -797,17 +745,14 @@ test.describe('Service creation modal - field validation', () => {
 				await actionInput.fill('');
 				await actionInput.blur();
 
-				// THEN: an error is shown.
 				await expect(actionInput).toHaveAttribute('aria-invalid', 'true');
 				await expect(actionField.getByRole('alert')).toHaveText(REQUIRED);
 				await waitForAccordionAnimations(section);
 				await shot('01-action-empty', actionField);
 
-				// WHEN: a value is entered.
 				await actionInput.fill('Acknowledge');
 				await actionInput.blur();
 
-				// THEN: the error clears.
 				await expect(actionInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(actionField.getByRole('alert')).not.toBeVisible();
 				await waitForAccordionAnimations(section);
@@ -825,10 +770,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "OpsGenie" notifier is added.
 				await addNotify(section, dialog, 'OpsGenie');
 
-				// WHEN: a details row is added with an empty key and value.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new details/i }),
 				);
@@ -843,8 +786,10 @@ test.describe('Service creation modal - field validation', () => {
 				await detailValueInput.focus();
 				await detailValueInput.blur();
 
-				// THEN: an error is shown for both.
-				await expect(detailKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(detailKeyInput, 'left empty').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(detailKeyInput).getByRole('alert')).toHaveText(
 					REQUIRED,
 				);
@@ -855,7 +800,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('01-details-empty');
 
-				// WHEN: a second details row is added with the same key as the first.
 				await detailKeyInput.fill('priority');
 				await detailValueInput.fill('1');
 				await clickViaKeyboard(
@@ -874,8 +818,10 @@ test.describe('Service creation modal - field validation', () => {
 				await detailKeyInput.focus();
 				await detailKeyInput.blur();
 
-				// THEN:an error is shown on both duplicate keys.
-				await expect(detailKeyInput).toHaveAttribute('aria-invalid', 'true');
+				await expect(detailKeyInput, 'duplicate key').toHaveAttribute(
+					'aria-invalid',
+					'true',
+				);
 				await expect(fieldOf(detailKeyInput).getByRole('alert')).toHaveText(
 					MUST_BE_UNIQUE,
 				);
@@ -886,14 +832,12 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('02-details-duplicate-key');
 
-				// WHEN: the second key is changed to be unique.
 				await detailKeyInput2.fill('severity');
 				await detailKeyInput2.blur();
 				// Re-touch the first key so its error clears.
 				await detailKeyInput.focus();
 				await detailKeyInput.blur();
 
-				// THEN: both errors clear.
 				await expect(detailKeyInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(
 					fieldOf(detailKeyInput).getByRole('alert'),
@@ -917,10 +861,9 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "OpsGenie" notifier is added.
 				await addNotify(section, dialog, 'OpsGenie');
 
-				// WHEN: a responder is added and left empty (defaults to type "team").
+				// A new responder defaults to type "team".
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new responders/i }),
 				);
@@ -931,7 +874,6 @@ test.describe('Service creation modal - field validation', () => {
 				await responderValueInput.focus();
 				await responderValueInput.blur();
 
-				// THEN: an error is shown.
 				await expect(responderValueInput).toHaveAttribute(
 					'aria-invalid',
 					'true',
@@ -942,11 +884,9 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('01-responders-empty');
 
-				// WHEN: a value is entered.
 				await responderValueInput.fill('my-team');
 				await responderValueInput.blur();
 
-				// THEN: the error clears.
 				await expect(responderValueInput).toHaveAttribute(
 					'aria-invalid',
 					'false',
@@ -955,7 +895,6 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('02-responders-valid');
 
-				// WHEN: a "Visible To" target is added and left empty.
 				await clickViaKeyboard(
 					section.getByRole('button', { name: /add new visible to/i }),
 				);
@@ -965,7 +904,6 @@ test.describe('Service creation modal - field validation', () => {
 				await visibleToValueInput.focus();
 				await visibleToValueInput.blur();
 
-				// THEN: an error is shown.
 				await expect(visibleToValueInput).toHaveAttribute(
 					'aria-invalid',
 					'true',
@@ -976,11 +914,9 @@ test.describe('Service creation modal - field validation', () => {
 				await waitForAccordionAnimations(section);
 				await shot('03-visibleto-empty');
 
-				// WHEN: a value is entered.
 				await visibleToValueInput.fill('my-user');
 				await visibleToValueInput.blur();
 
-				// THEN: the error clears.
 				await expect(visibleToValueInput).toHaveAttribute(
 					'aria-invalid',
 					'false',
@@ -1005,10 +941,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "PushBullet" notifier is added.
 				await addNotify(section, dialog, 'PushBullet');
 
-				// WHEN/THEN: each field is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'abc123token',
@@ -1036,10 +970,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "PushOver" notifier is added.
 				await addNotify(section, dialog, 'PushOver');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'abc123token',
@@ -1076,10 +1008,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Rocket.Chat" notifier is added.
 				await addNotify(section, dialog, 'Rocket.Chat');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({ good: 'general', input: 'Channel', slug: 'channel' }),
 					required({
@@ -1104,10 +1034,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Shoutrrr" notifier is added.
 				await addNotify(section, dialog, 'Shoutrrr');
 
-				// WHEN/THEN: Raw is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'slack://xoxb:token@channel',
@@ -1130,11 +1058,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Slack" notifier is added.
 				await addNotify(section, dialog, 'Slack');
 
-				// WHEN/THEN: token/channel are blurred empty then valid.
-				// color rejects a non-hex value, then accepts a valid one.
 				await runValidations(section, shot, [
 					required({ good: 'xoxb:abc123', input: 'Token', slug: 'token' }),
 					required({ good: 'general', input: 'Channel', slug: 'channel' }),
@@ -1163,11 +1088,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Email (SMTP)" notifier is added.
 				await addNotify(section, dialog, 'Email (SMTP)');
 
-				// WHEN/THEN: each field is blurred bad then valid;
-				// timeout rejects a non-duration value then accepts a valid one.
 				await runValidations(section, shot, [
 					required({ good: 'smtp.example.com', input: 'Host', slug: 'host' }),
 					numeric({ good: '587', input: 'Port', slug: 'port' }),
@@ -1205,52 +1127,44 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Teams" notifier is added.
 				await addNotify(section, dialog, 'Teams');
 
-				// --- Host: empty=Required -> valid ---
 				const hostInput = section.getByRole('textbox', {
 					name: 'Value field for Host',
 				});
 				const hostField = fieldOf(hostInput);
 
-				// WHEN: "Host" is cleared and blurred.
 				await hostInput.fill('');
 				await hostInput.blur();
 
-				// THEN: an error is shown.
 				await expect(hostInput).toHaveAttribute('aria-invalid', 'true');
 				await expect(hostField.getByRole('alert')).toHaveText(REQUIRED);
 				await waitForAccordionAnimations(section);
 				await shot('01-host-empty', hostField);
 
-				// WHEN: a value is entered.
 				await hostInput.fill(
 					'prod-00.westus.logic.azure.com:443/workflows/abc123',
 				);
 				await hostInput.blur();
 
-				// THEN: the error clears.
 				await expect(hostInput).toHaveAttribute('aria-invalid', 'false');
 				await expect(hostField.getByRole('alert')).not.toBeVisible();
 				await shot('02-host-valid', hostField);
 
-				// --- Title and Color: arbitrary values -> no validation errors ---
 				const titleInput = section.getByRole('textbox', {
 					name: 'Value field for Title',
 				});
 				const colorInput = section.getByRole('textbox', { name: 'Color' });
 
-				// WHEN: arbitrary values ("zzzzzz" isn't valid hex) are entered into
-				// "Title" and "Color" - neither has a validator.
 				await titleInput.fill('My Notification');
 				await titleInput.blur();
+				// "zzzzzz" is not valid hex, yet Color has no validator.
 				await colorInput.fill('zzzzzz');
 				await colorInput.blur();
 				await shot('03-title-and-color-arbitrary');
 
-				// THEN: no validation errors are rendered for either field (a field
-				// that was never invalid omits `aria-invalid`, so assert not "true").
+				// A field that was never invalid omits aria-invalid, so assert
+				// not "true".
 				await expect(titleInput).not.toHaveAttribute('aria-invalid', 'true');
 				await expect(colorInput).not.toHaveAttribute('aria-invalid', 'true');
 				await expect(fieldOf(titleInput).getByRole('alert')).toHaveCount(0);
@@ -1268,10 +1182,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Telegram" notifier is added.
 				await addNotify(section, dialog, 'Telegram');
 
-				// WHEN/THEN: the token is blurred empty then valid.
 				await runValidations(section, shot, [
 					required({ good: '123456:ABC-DEF', input: 'Token', slug: 'token' }),
 				]);
@@ -1290,10 +1202,8 @@ test.describe('Service creation modal - field validation', () => {
 				const dialog = await openCreateServiceModal(page);
 				const section = await openSection(dialog, 'Notify:');
 
-				// GIVEN: a new "Zulip Chat" notifier is added.
 				await addNotify(section, dialog, 'Zulip Chat');
 
-				// WHEN/THEN: each field is blurred bad then valid.
 				await runValidations(section, shot, [
 					required({
 						good: 'bot@example.com',
@@ -1305,19 +1215,16 @@ test.describe('Service creation modal - field validation', () => {
 					numeric({ good: '443', input: 'Port', slug: 'port' }),
 				]);
 
-				// --- Message Type and To: arbitrary values -> no validation errors ---
 				const messageTypeSelect = section.getByRole('combobox', {
 					name: 'Message Type',
 				});
 				const toInput = section.getByRole('textbox', { name: 'To (DM)' });
 
-				// WHEN: "Message Type" is changed and "To" is filled and blurred.
 				await messageTypeSelect.click();
 				await dialog.getByRole('option', { name: 'Direct' }).click();
 				await toInput.fill('user@example.com');
 				await toInput.blur();
 
-				// THEN: no validation errors are rendered for either field.
 				await expect(toInput).not.toHaveAttribute('aria-invalid', 'true');
 				await expect(fieldOf(toInput).getByRole('alert')).toHaveCount(0);
 				await shot('09-messagetype-and-to-arbitrary');

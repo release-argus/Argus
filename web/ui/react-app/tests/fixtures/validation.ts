@@ -7,8 +7,8 @@ export const NUMBER_REQUIRED = 'Number required.';
 export const MUST_BE_UNIQUE = 'Must be unique.';
 
 /**
- * The field container for `input` - scopes assertions to one field's error so
- * they don't match other fields' errors.
+ * The field container for `input`, which scopes assertions to one field's
+ * error so they don't match other fields' errors.
  *
  * @param input - The field's input element.
  * @returns The enclosing `[data-slot="field"]` container.
@@ -69,7 +69,7 @@ export const waitForAccordionAnimations = (section: Locator) =>
 /**
  * Activates a button via keyboard (focus + Enter). Used for icon-only
  * add/remove buttons whose empty-array row can intercept the pointer and make
- * `.click()` time out - keyboard activation skips hit-testing.
+ * `.click()` time out; keyboard activation skips hit-testing.
  *
  * @param button - The button to activate.
  */
@@ -202,7 +202,7 @@ export const expectValid = async (
 /**
  * For fields that aren't actually validated (e.g. a non-empty default
  * fallback): asserts no error appears. Unlike `expectValid` it doesn't assert
- * `aria-invalid="false"` - a never-invalid field omits the attribute entirely.
+ * `aria-invalid="false"`, as a never-invalid field omits it entirely.
  *
  * @param input - The field input.
  * @param value - Value to fill; `undefined` validates the field without a fill.
