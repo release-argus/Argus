@@ -18,13 +18,23 @@ package httpx
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"testing"
 )
 
+func TestInit(t *testing.T) {
+	if InsecureTransport.TLSClientConfig == nil {
+		t.Fatal("InsecureTransport.TLSClientConfig mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if !InsecureTransport.TLSClientConfig.InsecureSkipVerify {
+		t.Fatal(
+			"InsecureTransport.TLSClientConfig.InsecureSkipVerify mismatch\n" +
+				"got:  false\nwant: true",
+		)
+	}
+}
+
 func TestConfigureInsecureTransport(t *testing.T) {
-	// GIVEN: a transport.
 	tests := []struct {
 		name            string
 		transport       *http.Transport
@@ -51,37 +61,24 @@ func TestConfigureInsecureTransport(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ConfigureInsecureTransport is called on it.
 			configureInsecureTransport(tc.transport)
 
-			prefix := fmt.Sprintf(
-				"%s\nconfigureInsecureTransport(%v)",
-				packageName, tc.transport,
-			)
-
-			// THEN: the transport correctly configured to allow insecure connections.
 			cfg := tc.transport.TLSClientConfig
 			if cfg == nil {
-				t.Fatalf("%s Transport.TLSClientConfig is nil", prefix)
+				t.Fatal("Transport.TLSClientConfig mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if !cfg.InsecureSkipVerify {
-				t.Fatalf("%s Transport.TLSClientConfig.InsecureSkipVerify is false", prefix)
+				t.Fatal(
+					"Transport.TLSClientConfig.InsecureSkipVerify mismatch\n" +
+						"got:  false\nwant: true",
+				)
 			}
 			if tc.checkMinVersion && cfg.MinVersion != tc.wantMinVersion {
 				t.Fatalf(
-					"%s MinVersion mismatch (TLSClientConfig was replaced)\ngot:  %d\nwant: %d",
-					prefix, cfg.MinVersion, tc.wantMinVersion,
+					"Transport.TLSClientConfig.MinVersion mismatch\ngot:  %s\nwant: %s",
+					tls.VersionName(cfg.MinVersion), tls.VersionName(tc.wantMinVersion),
 				)
 			}
 		})
-	}
-}
-
-func TestInit(t *testing.T) {
-	if InsecureTransport.TLSClientConfig == nil {
-		t.Fatalf("%s\nInsecureTransport.TLSClientConfig is nil after init", packageName)
-	}
-	if !InsecureTransport.TLSClientConfig.InsecureSkipVerify {
-		t.Fatalf("%s\nInsecureTransport.TLSClientConfig.InsecureSkipVerify is false after init", packageName)
 	}
 }

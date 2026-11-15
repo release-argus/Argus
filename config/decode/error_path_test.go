@@ -17,12 +17,11 @@
 package decode
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 )
 
 func TestErrKeyField_Error(t *testing.T) {
-	// GIVEN: a ErrKeyField.
 	tests := []struct {
 		name     string
 		err      ErrKeyField
@@ -39,7 +38,7 @@ func TestErrKeyField_Error(t *testing.T) {
 			name: "key + error wrapped",
 			err: ErrKeyField{
 				Key: "testKey",
-				Err: fmt.Errorf("foo"),
+				Err: errors.New("foo"),
 			},
 			expected: `testKey: foo`,
 		},
@@ -49,22 +48,18 @@ func TestErrKeyField_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nstringified ErrKeyField mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("ErrKeyField.Error() mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestErrKeyField_Unwrap(t *testing.T) {
-	// GIVEN: a ErrKeyField.
+	wrapped := errors.New("foo")
+
 	tests := []struct {
 		name     string
 		err      ErrKeyField
@@ -81,9 +76,9 @@ func TestErrKeyField_Unwrap(t *testing.T) {
 			name: "error wrapped",
 			err: ErrKeyField{
 				Key: "testKey",
-				Err: fmt.Errorf("foo"),
+				Err: wrapped,
 			},
-			expected: fmt.Errorf("foo"),
+			expected: wrapped,
 		},
 	}
 
@@ -91,16 +86,10 @@ func TestErrKeyField_Unwrap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is unwrapped.
 			got := tc.err.Unwrap()
 
-			// THEN: the error is unwrapped as expected.
-			if (got != nil && tc.expected != nil) &&
-				got.Error() != tc.expected.Error() {
-				t.Fatalf(
-					"%s\nErrKeyField unwrapped error mismatch\ngot:  %q\nwant:  %q",
-					packageName, got, tc.expected,
-				)
+			if got != tc.expected {
+				t.Fatalf("unwrapped error mismatch\ngot:  %v\nwant: %v", got, tc.expected)
 			}
 		})
 	}

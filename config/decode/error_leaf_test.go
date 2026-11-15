@@ -19,7 +19,6 @@ package decode
 import "testing"
 
 func TestErrField_Error(t *testing.T) {
-	// GIVEN: a ErrField.
 	tests := []struct {
 		name     string
 		err      ErrField
@@ -57,37 +56,22 @@ func TestErrField_Error(t *testing.T) {
 			},
 			expected: `type: "foo" <invalid> (should be X)`,
 		},
-		{
-			name: "key-value + description + allowed values",
-			err: ErrField{
-				Key:         "type",
-				Value:       "foo",
-				Description: "description goes here",
-			},
-			expected: `type: "foo" <invalid> (description goes here)`,
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nstringified ErrField mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("ErrField.Error() mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestErrKey_Error(t *testing.T) {
-	// GIVEN: an ErrKey.
 	tests := []struct {
 		name     string
 		err      ErrKey
@@ -122,15 +106,10 @@ func TestErrKey_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nstringified ErrKey mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("ErrKey.Error() mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}

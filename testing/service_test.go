@@ -18,9 +18,7 @@
 package testing
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/release-argus/Argus/config"
 	dbtype "github.com/release-argus/Argus/db/types"
@@ -31,7 +29,6 @@ import (
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
 	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	svctest "github.com/release-argus/Argus/service/test"
-	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -40,19 +37,18 @@ func TestServiceTest(t *testing.T) {
 	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Config with a Service.
 	tests := []struct {
 		name        string
 		flag        string
 		services    service.Services
-		stdoutRegex *string
+		stdoutRegex string
 		ok          bool
 	}{
 		{
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: new("^$"),
+			stdoutRegex: "^$",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -68,7 +64,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "unknown service",
 			flag:        "test",
 			ok:          false,
-			stdoutRegex: new(`Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`),
+			stdoutRegex: `Service "test" could not be found in config.service\sDid you mean one of these\?\s  - argus`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -84,7 +80,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "github service",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: new(`argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: `argus\)?, Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -99,8 +95,8 @@ func TestServiceTest(t *testing.T) {
 		{
 			name:        "url service type but github owner-repo url",
 			flag:        "argus",
-			ok:          true,
-			stdoutRegex: new("unsupported protocol scheme"),
+			ok:          true, // A failed query still returns ok.
+			stdoutRegex: "unsupported protocol scheme",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -117,7 +113,7 @@ func TestServiceTest(t *testing.T) {
 			name:        "url service",
 			flag:        "argus",
 			ok:          true,
-			stdoutRegex: new(`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`),
+			stdoutRegex: `Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -133,11 +129,10 @@ func TestServiceTest(t *testing.T) {
 			name: "service with deployed version lookup",
 			flag: "argus",
 			ok:   true,
-			stdoutRegex: new(
-				`Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"\s` +
-					`.*Updated to.*\s` +
-					`.*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`,
-			),
+			stdoutRegex: test.TrimYAML(`
+				Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"
+				INFO: .*Updated to.*
+				INFO: .*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -155,19 +150,16 @@ func TestServiceTest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			if tc.services[tc.flag] != nil {
-				hardDefaults := config.Defaults{}
-				hardDefaults.Default()
-				// will do a call for latest_version* and one for deployed_version*.
+				// Nothing drains the channel, so it is buffered for the queries' database writes.
 				dbChannel := make(chan dbtype.Message, 4)
 				tc.services[tc.flag].Status.DatabaseChannel = dbChannel
 			}
 
-			resultChannel := make(chan bool, 1)
-			// WHEN: ServiceTest is called with the test Config.
 			var order []string
 			for i := range tc.services {
 				order = append(order, i)
@@ -176,35 +168,15 @@ func TestServiceTest(t *testing.T) {
 				Service: tc.services,
 				Order:   order,
 			}
-			resultChannel <- ServiceTest(&tc.flag, &cfg)
-			// WHEN: the DB is initialised with it.
 
-			prefix := fmt.Sprintf(
-				"%s\nServiceTest(%q)",
-				packageName, tc.flag,
-			)
-
-			// THEN: it succeeds/fails as expected.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool { return ServiceTest(&tc.flag, &cfg) },
 				logx.ExitCodeChannel(),
-				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-			// THEN: we get the expected stdout.
-			stdout := releaseStdout()
-			if tc.stdoutRegex != nil {
-				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s\nerror mismatch\ngot:  %q\nwant: %s",
-						prefix, stdout, *tc.stdoutRegex,
-					)
-				}
-			}
+				releaseStdout,
+				tc.stdoutRegex,
+			)
 		})
 	}
-	time.Sleep(100 * time.Millisecond)
 }

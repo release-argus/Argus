@@ -18,7 +18,6 @@
 package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
@@ -28,7 +27,6 @@ import (
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	svctest "github.com/release-argus/Argus/service/test"
-	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -37,20 +35,19 @@ func TestNotifyTest(t *testing.T) {
 	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Config with/without Service containing a Shoutrrr and Root Shoutrrrs.
 	tests := []struct {
 		name          string
 		flag          string
 		services      service.Services
 		mainShoutrrrs shoutrrr.ShoutrrrsDefaults
-		stdoutRegex   *string
+		stdoutRegex   string
 		ok            bool
 	}{
 		{
 			name:        "empty flag",
 			flag:        "",
 			ok:          true,
-			stdoutRegex: new("^$"),
+			stdoutRegex: "^$",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -69,7 +66,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "unknown Notifier",
 			flag:        "something",
 			ok:          false,
-			stdoutRegex: new("FATAL: .*Notifier .* could not be found"),
+			stdoutRegex: "FATAL: .*Notifier .* could not be found",
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -87,7 +84,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "known Service Notifier with invalid Gotify token",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: new(`Message failed to send with "bar" config\s+.*invalid gotify token`),
+			stdoutRegex: `Message failed to send with "bar" config\s+.*invalid gotify token`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -111,7 +108,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "invalid Gotify token format",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: new(`invalid gotify token: "abc"`),
+			stdoutRegex: `invalid gotify token: "abc"`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -135,7 +132,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "valid Gotify token format",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: new(`Message failed to send with.*\s.*server responded`),
+			stdoutRegex: `Message failed to send with.*\s.*server responded`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -160,7 +157,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "shoutrrr from Root",
 			flag:        "baz",
 			ok:          false,
-			stdoutRegex: new(`Message failed to send with.*\s.*server responded`),
+			stdoutRegex: `Message failed to send with.*\s.*server responded`,
 			services:    service.Services{},
 			mainShoutrrrs: shoutrrr.ShoutrrrsDefaults{
 				"baz": shoutrrr.NewDefaults(
@@ -181,7 +178,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "successful send",
 			flag:        "work",
 			ok:          true,
-			stdoutRegex: new(`Message sent successfully with "work" config`),
+			stdoutRegex: `Message sent successfully with "work" config`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`
@@ -206,48 +203,23 @@ func TestNotifyTest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			serviceHardDefaults := service.Defaults{}
-			serviceHardDefaults.Default()
-			shoutrrrHardDefaults := shoutrrr.ShoutrrrsDefaults{}
-			shoutrrrHardDefaults.Default()
-
-			resultChannel := make(chan bool, 1)
-			// WHEN: NotifyTest is called with the test Config.
 			cfg := config.Config{
 				Service: tc.services,
 				Notify:  tc.mainShoutrrrs,
 			}
-			resultChannel <- NotifyTest(&tc.flag, &cfg)
 
-			prefix := fmt.Sprintf(
-				"%s\nNotifyTest(%q)",
-				packageName, tc.flag,
-			)
-
-			// THEN: it succeeds/fails as expected.
-			if err := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool { return NotifyTest(&tc.flag, &cfg) },
 				logx.ExitCodeChannel(),
-				nil,
-			); err != nil {
-				t.Fatal(prefix + err.Error())
-			}
-
-			// AND: we get the expected stdout.
-			stdout := releaseStdout()
-			if tc.stdoutRegex != nil {
-				if !util.RegexCheck(*tc.stdoutRegex, stdout) {
-					t.Errorf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, *tc.stdoutRegex,
-					)
-				}
-			}
+				releaseStdout,
+				tc.stdoutRegex,
+			)
 		})
 	}
 }

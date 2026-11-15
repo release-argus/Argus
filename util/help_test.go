@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit || integration
+//go:build unit
 
 package util
 
 import (
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
-
-var packageName = "util"
 
 func testServiceInfo() serviceinfo.ServiceInfo {
 	return serviceinfo.ServiceInfo{

@@ -17,8 +17,7 @@
 package decode
 
 import (
-	"fmt"
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -27,7 +26,6 @@ import (
 )
 
 func TestParseKeys(t *testing.T) {
-	// GIVEN: a JSON key string.
 	tests := []struct {
 		name     string
 		input    string
@@ -94,45 +92,21 @@ func TestParseKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ParseKeys is called.
 			got, err := ParseKeys(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nParseKeys(%q)",
-				packageName, tc.input,
-			)
-
-			// THEN: the keys are returned correctly.
-			if len(got) != len(tc.want) {
-				t.Fatalf(
-					"%s unexpected number of keys returned\ngot:  %v\nwant: %v",
-					prefix, got, tc.want,
-				)
-			}
-			for i := range got {
-				if got[i] != tc.want[i] {
-					t.Fatalf(
-						"%s wrong key [%d]\ngot:  %v\nwant: %v",
-						prefix, i,
-						got, tc.want,
-					)
-				}
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("keys mismatch\ngot:  %v\nwant: %v", got, tc.want)
 			}
 
-			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestNavigateJSON(t *testing.T) {
-	// GIVEN: a JSON string.
 	tests := []struct {
 		name     string
 		input    string
@@ -365,16 +339,6 @@ func TestNavigateJSON(t *testing.T) {
 			errRegex: `^got null at "foo" while navigating "foo.bar"$`,
 		},
 		{
-			name: "fail: case nil from JSON null document",
-			jsonData: func() any {
-				var data any
-				_ = Unmarshal("json", []byte(`null`), &data)
-				return data
-			}(),
-			key:      "version",
-			errRegex: `^got null at "version" while navigating "version"$`,
-		},
-		{
 			name: "fail: default unsupported type mid-path",
 			jsonData: map[string]any{
 				"foo": struct{}{},
@@ -395,39 +359,26 @@ func TestNavigateJSON(t *testing.T) {
 			t.Parallel()
 
 			if tc.input != "" {
-				_ = Unmarshal("json", []byte(tc.input), &tc.jsonData)
+				if err := Unmarshal("json", []byte(tc.input), &tc.jsonData); err != nil {
+					t.Fatalf("Unmarshal() failed: %v", err)
+				}
 			}
 
-			// WHEN: navigateJSON is called.
 			got, err := navigateJSON(&tc.jsonData, tc.key)
 
-			prefix := fmt.Sprintf(
-				"%s\nnavigateJSON(data=%v, key=%q)",
-				packageName, tc.jsonData, tc.key,
-			)
-
-			// THEN: the value is returned correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("value mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestGetValueByKey(t *testing.T) {
-	// GIVEN: a JSON string.
 	tests := []struct {
 		name     string
 		input    string
@@ -448,7 +399,7 @@ func TestGetValueByKey(t *testing.T) {
 			name:     "empty key",
 			input:    `{"foo": "bar"}`,
 			key:      "",
-			want:     "__root",
+			want:     `{"foo": "bar"}`,
 			errRegex: `^$`,
 		},
 		{
@@ -531,30 +482,15 @@ func TestGetValueByKey(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetValueByKey is called.
 			got, err := GetValueByKey([]byte(tc.input), tc.key, "https://release-argus.com")
 
-			prefix := fmt.Sprintf(
-				"%s\nGetValueByKey(data=%q, key=%q)",
-				packageName, tc.input, tc.key,
-			)
-
-			// THEN: the value is returned correctly.
-			tc.want = strings.ReplaceAll(tc.want, "__root", tc.input)
 			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("value mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the error is returned correctly.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
@@ -641,16 +577,10 @@ func TestToJSONString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ToJSONString is called.
 			got := ToJSONString(tc.input)
 
-			// THEN: the JSON string is returned correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nToJSONString(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.input,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

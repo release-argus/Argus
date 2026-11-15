@@ -16,5 +16,6 @@
 
 package logx
 
-var packageName = "logx"
 var timestampRegex = `^[0-9]{4}\/[0-9]{2}\/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} `
+
+var levels = []string{"ERROR", "WARN", "INFO", "VERBOSE", "DEBUG"}

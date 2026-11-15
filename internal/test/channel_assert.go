@@ -17,41 +17,8 @@
 package test
 
 import (
-	"fmt"
 	"regexp"
-	"time"
 )
-
-// AssertChannelBool waits for a value on the channel and checks it against the expected value.
-func AssertChannelBool(
-	t TB,
-	want bool,
-	channel chan bool,
-	exitCodeChannel chan string,
-	releaseStdout func() string,
-) error {
-	t.Helper()
-	timeout := 2500 * time.Millisecond
-
-	select {
-	case got := <-channel:
-		drainExitCode(t, exitCodeChannel)
-		if got != want {
-			if releaseStdout != nil {
-				_ = releaseStdout()
-			}
-			return fmt.Errorf("channel value mismatch\ngot:  %t\nwant: %t", got, want)
-		}
-	case <-time.After(timeout):
-		if releaseStdout != nil {
-			_ = releaseStdout()
-		}
-		drainExitCode(t, exitCodeChannel)
-		return fmt.Errorf("timeout (%s) waiting for message on result channel", timeout)
-	}
-
-	return nil
-}
 
 // AssertCallLog runs call, then checks it returns want and that the log releaseStdout captured
 // matches stdoutRegex. When call returns anything else, the captured log is logged.

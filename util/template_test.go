@@ -28,7 +28,7 @@ import (
 
 func TestTemplate_String(t *testing.T) {
 	svcInfo := testServiceInfo()
-	// GIVEN: a variety of string templates.
+
 	tests := []struct {
 		name        string
 		template    string
@@ -51,21 +51,15 @@ func TestTemplate_String(t *testing.T) {
 			serviceInfo: svcInfo,
 		},
 		{
-			name:     "valid django template with defaulting/had value",
-			template: "{{ service_name | default:service_id }} - {{ version }} released",
-			want: fmt.Sprintf(
-				"%s - %s released",
-				svcInfo.Name, svcInfo.LatestVersion,
-			),
+			name:        "valid django template with defaulting/had value",
+			template:    "{{ service_name | default:service_id }} - {{ version }} released",
+			want:        fmt.Sprintf("%s - %s released", svcInfo.Name, svcInfo.LatestVersion),
 			serviceInfo: svcInfo,
 		},
 		{
 			name:     "valid django template with defaulting/had no value/empty string",
 			template: "{{ service_name | default:service_id }} - {{ version }} released",
-			want: fmt.Sprintf(
-				"%s - %s released",
-				svcInfo.ID, svcInfo.LatestVersion,
-			),
+			want:     fmt.Sprintf("%s - %s released", svcInfo.ID, svcInfo.LatestVersion),
 			serviceInfo: serviceinfo.ServiceInfo{
 				ID:            svcInfo.ID,
 				Name:          "",
@@ -75,9 +69,9 @@ func TestTemplate_String(t *testing.T) {
 			},
 		},
 		{
-			name:     "valid django template with defaulting/had no value/nil",
+			name:     "valid django template with defaulting/had no value/fallback empty",
 			template: "{{ service_name | default:service_id }} - {{ web_url }}",
-			want:     fmt.Sprintf(" - %s", svcInfo.WebURL),
+			want:     " - " + svcInfo.WebURL,
 			serviceInfo: serviceinfo.ServiceInfo{
 				ID:            "",
 				Name:          "",
@@ -98,12 +92,9 @@ func TestTemplate_String(t *testing.T) {
 			serviceInfo: svcInfo,
 		},
 		{
-			name:     "valid django template with array access out of bounds",
-			template: "{{ tags.0 }}-{{ tags.1 }}-{{ tags.2 }}-{{ tags.3 }}",
-			want: fmt.Sprintf(
-				"%s-%s--",
-				svcInfo.Tags[0], svcInfo.Tags[1],
-			),
+			name:        "valid django template with array access out of bounds",
+			template:    "{{ tags.0 }}-{{ tags.1 }}-{{ tags.2 }}-{{ tags.3 }}",
+			want:        fmt.Sprintf("%s-%s--", svcInfo.Tags[0], svcInfo.Tags[1]),
 			serviceInfo: svcInfo,
 		},
 		{
@@ -142,27 +133,48 @@ func TestTemplate_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf(
-				"%s\nTemplateString(tmpl=%q, info=%+v)",
-				packageName, tc.template, tc.serviceInfo,
-			)
-
-			// WHEN: TemplateString is called.
 			got := TemplateString(tc.template, tc.serviceInfo)
 
-			// THEN: the string stays the same.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTemplateString__cannotReadLocalFiles(t *testing.T) {
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret.txt")
+	const contents = "TOP-SECRET-TOKEN"
+	if err := os.WriteFile(secret, []byte(contents), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		template string
+	}{
+		{name: "denied/include", template: `{% include "` + secret + `" %}`},
+		{name: "denied/extends", template: `{% extends "` + secret + `" %}`},
+		{name: "denied/ssi", template: `{% ssi "` + secret + `" %}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := TemplateString(tc.template, serviceinfo.ServiceInfo{})
+
+			if strings.Contains(got, contents) {
+				t.Errorf("output mismatch\ngot:  %q\nwant: NOT %q", got, contents)
+			}
+
+			if got != tc.template {
+				t.Errorf("output mismatch\ngot:  %q\nwant: %q", got, tc.template)
 			}
 		})
 	}
 }
 
 func TestCheckTemplate(t *testing.T) {
-	// GIVEN: a variety of string templates.
 	tests := []struct {
 		name     string
 		template string
@@ -179,7 +191,7 @@ func TestCheckTemplate(t *testing.T) {
 			pass:     true,
 		},
 		{
-			name:     "invalid django template panic",
+			name:     "invalid django template",
 			template: "{{ version }",
 			pass:     false,
 		},
@@ -189,66 +201,10 @@ func TestCheckTemplate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: CheckTemplate is called.
 			got := CheckTemplate(tc.template)
 
-			// THEN: the string stays the same.
 			if got != tc.pass {
-				t.Errorf(
-					"%s\nCheckTemplate(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.template,
-					got, tc.pass,
-				)
-			}
-		})
-	}
-}
-
-func TestTemplateString__cannotReadLocalFiles(t *testing.T) {
-	// GIVEN: a readable file holding a secret, and templates that try to pull
-	// it in.
-	dir := t.TempDir()
-	secret := filepath.Join(dir, "secret.txt")
-	const contents = "TOP-SECRET-TOKEN"
-	if err := os.WriteFile(secret, []byte(contents), 0o600); err != nil {
-		t.Fatalf(
-			"%s\nwrite fixture: %v",
-			packageName, err,
-		)
-	}
-
-	tests := []struct {
-		name     string
-		template string
-	}{
-		{name: "denied/include", template: `{% include "` + secret + `" %}`},
-		{name: "denied/extends", template: `{% extends "` + secret + `" %}`},
-		{name: "denied/ssi", template: `{% ssi "` + secret + `" %}`},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			prefix := fmt.Sprintf(
-				"%s\nTemplateString(tmpl=%q)",
-				packageName, tc.template,
-			)
-
-			// WHEN: the template is rendered.
-			got := TemplateString(tc.template, serviceinfo.ServiceInfo{})
-
-			// THEN: the file's contents never reach the output.
-			if strings.Contains(got, contents) {
-				t.Errorf(
-					"%s read a local file\ngot: %q",
-					prefix, got,
-				)
-			}
-			// AND: it degrades to the template rather than erroring out.
-			if got != tc.template {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.template,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.pass)
 			}
 		})
 	}

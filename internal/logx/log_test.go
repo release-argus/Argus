@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,9 +51,8 @@ func TestInit(t *testing.T) {
 	})
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("level=%s, timestamps=%t", tc.level, tc.timestamps)
-		t.Run(name, func(t *testing.T) {
-			// Serial: resets [once] and [logger].
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: resets once and logger.
 
 			once = sync.Once{}
 			logger = nil
@@ -75,35 +75,24 @@ func TestInit(t *testing.T) {
 }
 
 func TestNewLogger(t *testing.T) {
-	tests := []struct {
-		level      string
-		timestamps bool
-	}{
-		{level: "ERROR", timestamps: true},
-		{level: "ERROR", timestamps: false},
-		{level: "WARN", timestamps: true},
-		{level: "WARN", timestamps: false},
-		{level: "INFO", timestamps: true},
-		{level: "INFO", timestamps: false},
-		{level: "VERBOSE", timestamps: true},
-		{level: "VERBOSE", timestamps: false},
-		{level: "DEBUG", timestamps: true},
-		{level: "DEBUG", timestamps: false},
-	}
-
-	for _, tc := range tests {
-		name := fmt.Sprintf("level=%s, timestamps=%t", tc.level, tc.timestamps)
-		t.Run(name, func(t *testing.T) {
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
 			t.Parallel()
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					t.Parallel()
 
-			fieldTests := []test.FieldAssertion{
-				{Name: "Level", Got: tLogger.Level.Load(), Want: levelMap[tc.level], Mode: test.CompareEqual},
-				{Name: "timestamps", Got: tLogger.timestamps, Want: tc.timestamps, Mode: test.CompareEqual},
-			}
-			if testErr := test.AssertFields(t, fieldTests, "Logger"); testErr != nil {
-				t.Fatal(testErr)
+					tLogger := NewLogger(level, timestamps)
+
+					fieldTests := []test.FieldAssertion{
+						{Name: "Level", Got: tLogger.Level.Load(), Want: levelMap[level], Mode: test.CompareEqual},
+						{Name: "timestamps", Got: tLogger.timestamps, Want: timestamps, Mode: test.CompareEqual},
+					}
+					if testErr := test.AssertFields(t, fieldTests, "Logger"); testErr != nil {
+						t.Fatal(testErr)
+					}
+				})
 			}
 		})
 	}
@@ -184,52 +173,23 @@ func TestLogger_SetLevel(t *testing.T) {
 }
 
 func TestLogger_IsLevel(t *testing.T) {
-	tests := []struct {
-		startLevel, testLevel string
-		want                  bool
-	}{
-		{startLevel: "ERROR", testLevel: "DEBUG", want: false},
-		{startLevel: "ERROR", testLevel: "VERBOSE", want: false},
-		{startLevel: "ERROR", testLevel: "INFO", want: false},
-		{startLevel: "ERROR", testLevel: "WARN", want: false},
-		{startLevel: "ERROR", testLevel: "ERROR", want: true},
-		{startLevel: "WARN", testLevel: "DEBUG", want: false},
-		{startLevel: "WARN", testLevel: "VERBOSE", want: false},
-		{startLevel: "WARN", testLevel: "INFO", want: false},
-		{startLevel: "WARN", testLevel: "WARN", want: true},
-		{startLevel: "WARN", testLevel: "ERROR", want: false},
-		{startLevel: "INFO", testLevel: "DEBUG", want: false},
-		{startLevel: "INFO", testLevel: "VERBOSE", want: false},
-		{startLevel: "INFO", testLevel: "INFO", want: true},
-		{startLevel: "INFO", testLevel: "WARN", want: false},
-		{startLevel: "INFO", testLevel: "ERROR", want: false},
-		{startLevel: "VERBOSE", testLevel: "DEBUG", want: false},
-		{startLevel: "VERBOSE", testLevel: "VERBOSE", want: true},
-		{startLevel: "VERBOSE", testLevel: "INFO", want: false},
-		{startLevel: "VERBOSE", testLevel: "WARN", want: false},
-		{startLevel: "VERBOSE", testLevel: "ERROR", want: false},
-		{startLevel: "DEBUG", testLevel: "DEBUG", want: true},
-		{startLevel: "DEBUG", testLevel: "VERBOSE", want: false},
-		{startLevel: "DEBUG", testLevel: "INFO", want: false},
-		{startLevel: "DEBUG", testLevel: "WARN", want: false},
-		{startLevel: "DEBUG", testLevel: "ERROR", want: false},
-		{startLevel: "DEBUG", testLevel: "FOO", want: false},
-	}
-
-	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"startLevel=%s/testLevel=%s/want=%t",
-			tc.startLevel, tc.testLevel, tc.want,
-		)
-		t.Run(name, func(t *testing.T) {
+	for _, startLevel := range levels {
+		t.Run(startLevel, func(t *testing.T) {
 			t.Parallel()
 
-			tLogger := NewLogger(tc.startLevel, false)
+			for _, testLevel := range slices.Concat(levels, []string{"FOO"}) {
+				t.Run(testLevel, func(t *testing.T) {
+					t.Parallel()
 
-			got := tLogger.IsLevel(tc.testLevel)
+					tLogger := NewLogger(startLevel, false)
 
-			if got != tc.want {
-				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+					got := tLogger.IsLevel(testLevel)
+
+					// Only the logger's own level matches, not the levels it also logs.
+					if want := testLevel == startLevel; got != want {
+						t.Errorf("mismatch\ngot:  %t\nwant: %t", got, want)
+					}
+				})
 			}
 		})
 	}
@@ -238,18 +198,18 @@ func TestLogger_IsLevel(t *testing.T) {
 func TestLogger_SetTimestamps(t *testing.T) {
 	const msg = "timestamp toggle test"
 	tests := []struct {
+		name     string
 		start    bool
 		changeTo bool
 	}{
-		{start: true, changeTo: true},
-		{start: true, changeTo: false},
-		{start: false, changeTo: false},
-		{start: false, changeTo: true},
+		{name: "keep enabled", start: true, changeTo: true},
+		{name: "disable", start: true, changeTo: false},
+		{name: "keep disabled", start: false, changeTo: false},
+		{name: "enable", start: false, changeTo: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("%t to %t", tc.start, tc.changeTo)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			buf := &bytes.Buffer{}
@@ -364,7 +324,7 @@ func TestLogger_Output(t *testing.T) {
 			got := tLogger.GetOutput()
 			if got != tc.newOutput {
 				t.Errorf(
-					"after: Logger.GetOutput() mismatch\ngot:  %p\nwant: %p",
+					"after SetOutput: Logger.GetOutput() mismatch\ngot:  %p\nwant: %p",
 					got, tc.newOutput,
 				)
 			}
@@ -388,431 +348,367 @@ func TestLogger_Output(t *testing.T) {
 }
 
 func TestLogger_Fatal(t *testing.T) {
-	msg := "argus"
-	tests := []struct {
-		level      string
-		timestamps bool
-	}{
-		{level: "ERROR", timestamps: true},
-		{level: "ERROR", timestamps: false},
-		{level: "WARN", timestamps: true},
-		{level: "WARN", timestamps: false},
-		{level: "INFO", timestamps: true},
-		{level: "INFO", timestamps: false},
-		{level: "VERBOSE", timestamps: true},
-		{level: "VERBOSE", timestamps: false},
-		{level: "DEBUG", timestamps: true},
-		{level: "DEBUG", timestamps: false},
-	}
+	const msg = "argus"
 
-	for _, tc := range tests {
-		name := fmt.Sprintf("level=%s, timestamps=%t", tc.level, tc.timestamps)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: captures stdout.
 
-			tLogger.Fatal(errors.New(msg), LogFrom{})
+					tLogger := NewLogger(level, timestamps)
+					releaseStdout := test.CaptureLog(t, tLogger)
 
-			stdout := releaseStdout()
-			regex := fmt.Sprintf("^FATAL: %s\n$", msg)
-			if tc.timestamps {
-				regex = strings.Replace(regex, `^`, timestampRegex, 1)
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
-			}
+					tLogger.Fatal(errors.New(msg), LogFrom{})
 
-			wantExitMsg := "FATAL: " + msg
-			select {
-			case got := <-tLogger.exitCodeChannel:
-				if got != wantExitMsg {
-					t.Errorf(
-						"Logger.exitCodeChannel mismatch\ngot:  %q\nwant: %q",
-						got, wantExitMsg,
-					)
-				}
-			default:
-				t.Error("Logger.exitCodeChannel message count mismatch\ngot:  0\nwant: 1")
+					stdout := releaseStdout()
+					regex := fmt.Sprintf("^FATAL: %s\n$", msg)
+					if timestamps {
+						regex = strings.Replace(regex, `^`, timestampRegex, 1)
+					}
+					if !util.RegexCheck(regex, stdout) {
+						t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+					}
+
+					wantExitMsg := "FATAL: " + msg
+					select {
+					case got := <-tLogger.exitCodeChannel:
+						if got != wantExitMsg {
+							t.Errorf(
+								"Logger.exitCodeChannel mismatch\ngot:  %q\nwant: %q",
+								got, wantExitMsg,
+							)
+						}
+					default:
+						t.Error("Logger.exitCodeChannel message count mismatch\ngot:  0\nwant: 1")
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Error(t *testing.T) {
+	const msg = "argus"
 	tests := []struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level       string
+		shouldPrint bool
 	}{
-		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		{level: "ERROR", shouldPrint: true},
+		{level: "WARN", shouldPrint: true},
+		{level: "INFO", shouldPrint: true},
+		{level: "VERBOSE", shouldPrint: true},
+		{level: "DEBUG", shouldPrint: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
-		)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: its subtests capture stdout.
 
-			tLogger.Error(errors.New(name), LogFrom{}, tc.otherCondition)
+					for _, otherCondition := range []bool{true, false} {
+						t.Run(fmt.Sprintf("otherCondition=%t", otherCondition), func(t *testing.T) {
+							// Serial: captures stdout.
 
-			stdout := releaseStdout()
-			regex := `^$`
-			if tc.shouldPrint {
-				regex = fmt.Sprintf("^ERROR: %s\n$", name)
-				if tc.timestamps {
-					regex = strings.Replace(regex, `^`, timestampRegex, 1)
-				}
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							tLogger := NewLogger(tc.level, timestamps)
+							releaseStdout := test.CaptureLog(t, tLogger)
+
+							tLogger.Error(errors.New(msg), LogFrom{}, otherCondition)
+
+							stdout := releaseStdout()
+							regex := `^$`
+							if tc.shouldPrint && otherCondition {
+								regex = fmt.Sprintf("^ERROR: %s\n$", msg)
+								if timestamps {
+									regex = strings.Replace(regex, `^`, timestampRegex, 1)
+								}
+							}
+							if !util.RegexCheck(regex, stdout) {
+								t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							}
+						})
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Warn(t *testing.T) {
+	const msg = "argus"
 	tests := []struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level       string
+		shouldPrint bool
 	}{
-		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		{level: "ERROR", shouldPrint: false},
+		{level: "WARN", shouldPrint: true},
+		{level: "INFO", shouldPrint: true},
+		{level: "VERBOSE", shouldPrint: true},
+		{level: "DEBUG", shouldPrint: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
-		)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: its subtests capture stdout.
 
-			tLogger.Warn(errors.New(name), LogFrom{}, tc.otherCondition)
+					for _, otherCondition := range []bool{true, false} {
+						t.Run(fmt.Sprintf("otherCondition=%t", otherCondition), func(t *testing.T) {
+							// Serial: captures stdout.
 
-			stdout := releaseStdout()
-			regex := `^$`
-			if tc.shouldPrint {
-				regex = fmt.Sprintf("^WARNING: %s\n$", name)
-				if tc.timestamps {
-					regex = strings.Replace(regex, `^`, timestampRegex, 1)
-				}
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							tLogger := NewLogger(tc.level, timestamps)
+							releaseStdout := test.CaptureLog(t, tLogger)
+
+							tLogger.Warn(errors.New(msg), LogFrom{}, otherCondition)
+
+							stdout := releaseStdout()
+							regex := `^$`
+							if tc.shouldPrint && otherCondition {
+								regex = fmt.Sprintf("^WARNING: %s\n$", msg)
+								if timestamps {
+									regex = strings.Replace(regex, `^`, timestampRegex, 1)
+								}
+							}
+							if !util.RegexCheck(regex, stdout) {
+								t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							}
+						})
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Info(t *testing.T) {
+	const msg = "argus"
 	tests := []struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level       string
+		shouldPrint bool
 	}{
-		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		{level: "ERROR", shouldPrint: false},
+		{level: "WARN", shouldPrint: false},
+		{level: "INFO", shouldPrint: true},
+		{level: "VERBOSE", shouldPrint: true},
+		{level: "DEBUG", shouldPrint: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
-		)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: its subtests capture stdout.
 
-			tLogger.Info(errors.New(name), LogFrom{}, tc.otherCondition)
+					for _, otherCondition := range []bool{true, false} {
+						t.Run(fmt.Sprintf("otherCondition=%t", otherCondition), func(t *testing.T) {
+							// Serial: captures stdout.
 
-			stdout := releaseStdout()
-			regex := `^$`
-			if tc.shouldPrint {
-				regex = fmt.Sprintf("^INFO: %s\n$", name)
-				if tc.timestamps {
-					regex = strings.Replace(regex, `^`, timestampRegex, 1)
-				}
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							tLogger := NewLogger(tc.level, timestamps)
+							releaseStdout := test.CaptureLog(t, tLogger)
+
+							tLogger.Info(errors.New(msg), LogFrom{}, otherCondition)
+
+							stdout := releaseStdout()
+							regex := `^$`
+							if tc.shouldPrint && otherCondition {
+								regex = fmt.Sprintf("^INFO: %s\n$", msg)
+								if timestamps {
+									regex = strings.Replace(regex, `^`, timestampRegex, 1)
+								}
+							}
+							if !util.RegexCheck(regex, stdout) {
+								t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							}
+						})
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Verbose(t *testing.T) {
+	const msg = "argus"
 	tests := []struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level       string
+		shouldPrint bool
 	}{
-		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		{level: "ERROR", shouldPrint: false},
+		{level: "WARN", shouldPrint: false},
+		{level: "INFO", shouldPrint: false},
+		{level: "VERBOSE", shouldPrint: true},
+		{level: "DEBUG", shouldPrint: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
-		)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: its subtests capture stdout.
 
-			tLogger.Verbose(errors.New(name), LogFrom{}, tc.otherCondition)
+					for _, otherCondition := range []bool{true, false} {
+						t.Run(fmt.Sprintf("otherCondition=%t", otherCondition), func(t *testing.T) {
+							// Serial: captures stdout.
 
-			stdout := releaseStdout()
-			regex := `^$`
-			if tc.shouldPrint {
-				regex = fmt.Sprintf("^VERBOSE: %s\n$", name)
-				if tc.timestamps {
-					regex = strings.Replace(regex, `^`, timestampRegex, 1)
-				}
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							tLogger := NewLogger(tc.level, timestamps)
+							releaseStdout := test.CaptureLog(t, tLogger)
+
+							tLogger.Verbose(errors.New(msg), LogFrom{}, otherCondition)
+
+							stdout := releaseStdout()
+							regex := `^$`
+							if tc.shouldPrint && otherCondition {
+								regex = fmt.Sprintf("^VERBOSE: %s\n$", msg)
+								if timestamps {
+									regex = strings.Replace(regex, `^`, timestampRegex, 1)
+								}
+							}
+							if !util.RegexCheck(regex, stdout) {
+								t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							}
+						})
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Debug(t *testing.T) {
+	const msg = "argus"
 	tests := []struct {
-		level          string
-		timestamps     bool
-		otherCondition bool
-		shouldPrint    bool
+		level       string
+		shouldPrint bool
 	}{
-		{level: "ERROR", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "ERROR", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "ERROR", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "WARN", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "WARN", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "INFO", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "INFO", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: true, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: true, shouldPrint: false},
-		{level: "VERBOSE", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "VERBOSE", timestamps: false, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: true, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: false, otherCondition: true, shouldPrint: true},
-		{level: "DEBUG", timestamps: true, otherCondition: false, shouldPrint: false},
-		{level: "DEBUG", timestamps: false, otherCondition: false, shouldPrint: false},
+		{level: "ERROR", shouldPrint: false},
+		{level: "WARN", shouldPrint: false},
+		{level: "INFO", shouldPrint: false},
+		{level: "VERBOSE", shouldPrint: false},
+		{level: "DEBUG", shouldPrint: true},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf(
-			"level=%s/timestamps=%t/otherCondition=%t/print=%t",
-			tc.level, tc.timestamps, tc.otherCondition, tc.shouldPrint,
-		)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+		t.Run(tc.level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: its subtests capture stdout.
 
-			tLogger.Debug(errors.New(name), LogFrom{}, tc.otherCondition)
+					for _, otherCondition := range []bool{true, false} {
+						t.Run(fmt.Sprintf("otherCondition=%t", otherCondition), func(t *testing.T) {
+							// Serial: captures stdout.
 
-			stdout := releaseStdout()
-			regex := `^$`
-			if tc.shouldPrint {
-				regex = fmt.Sprintf("^DEBUG: %s\n$", name)
-				if tc.timestamps {
-					regex = strings.Replace(regex, `^`, timestampRegex, 1)
-				}
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							tLogger := NewLogger(tc.level, timestamps)
+							releaseStdout := test.CaptureLog(t, tLogger)
+
+							tLogger.Debug(errors.New(msg), LogFrom{}, otherCondition)
+
+							stdout := releaseStdout()
+							regex := `^$`
+							if tc.shouldPrint && otherCondition {
+								regex = fmt.Sprintf("^DEBUG: %s\n$", msg)
+								if timestamps {
+									regex = strings.Replace(regex, `^`, timestampRegex, 1)
+								}
+							}
+							if !util.RegexCheck(regex, stdout) {
+								t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+							}
+						})
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger_Deprecated(t *testing.T) {
-	tests := []struct {
-		level      string
-		timestamps bool
-	}{
-		{level: "ERROR", timestamps: true},
-		{level: "ERROR", timestamps: false},
-		{level: "WARN", timestamps: true},
-		{level: "WARN", timestamps: false},
-		{level: "INFO", timestamps: true},
-		{level: "INFO", timestamps: false},
-		{level: "VERBOSE", timestamps: true},
-		{level: "VERBOSE", timestamps: false},
-		{level: "DEBUG", timestamps: true},
-		{level: "DEBUG", timestamps: false},
-	}
+	const msg = "argus"
 
-	for _, tc := range tests {
-		name := fmt.Sprintf("level=%s, timestamps=%t", tc.level, tc.timestamps)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: captures stdout.
 
-			tLogger.Deprecated(errors.New(name))
+					tLogger := NewLogger(level, timestamps)
+					releaseStdout := test.CaptureLog(t, tLogger)
 
-			stdout := releaseStdout()
-			regex := fmt.Sprintf("^DEPRECATED: %s\n$", name)
-			if tc.timestamps {
-				regex = strings.Replace(regex, `^`, timestampRegex, 1)
-			}
-			if !util.RegexCheck(regex, stdout) {
-				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+					tLogger.Deprecated(errors.New(msg))
+
+					stdout := releaseStdout()
+					regex := fmt.Sprintf("^DEPRECATED: %s\n$", msg)
+					if timestamps {
+						regex = strings.Replace(regex, `^`, timestampRegex, 1)
+					}
+					if !util.RegexCheck(regex, stdout) {
+						t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, regex)
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestLogger__lengthCap(t *testing.T) {
-	tests := []struct {
-		level      string
-		timestamps bool
-	}{
-		{level: "DEBUG", timestamps: true},
-		{level: "DEBUG", timestamps: false},
-		{level: "VERBOSE", timestamps: true},
-		{level: "VERBOSE", timestamps: false},
-	}
+	for _, level := range []string{"DEBUG", "VERBOSE"} {
+		t.Run(level, func(t *testing.T) {
+			// Serial: its subtests capture stdout.
 
-	for _, tc := range tests {
-		name := fmt.Sprintf("level=%s, timestamps=%t", tc.level, tc.timestamps)
-		t.Run(name, func(t *testing.T) {
-			// Serial: captures stdout.
+			for _, timestamps := range []bool{true, false} {
+				t.Run(fmt.Sprintf("timestamps=%t", timestamps), func(t *testing.T) {
+					// Serial: captures stdout.
 
-			tLogger := NewLogger(tc.level, tc.timestamps)
-			releaseStdout := test.CaptureLog(t, tLogger)
+					tLogger := NewLogger(level, timestamps)
+					releaseStdout := test.CaptureLog(t, tLogger)
 
-			err := errors.New(strings.Repeat("a", 9999))
+					err := errors.New(strings.Repeat("a", 9999))
 
-			switch tc.level {
-			case "DEBUG":
-				tLogger.Debug(err, LogFrom{}, true)
-			case "VERBOSE":
-				tLogger.Verbose(err, LogFrom{}, true)
-			case "INFO":
-				tLogger.Info(err, LogFrom{}, true)
-			case "WARN":
-				tLogger.Warn(err, LogFrom{}, true)
-			case "ERROR":
-				tLogger.Error(err, LogFrom{}, true)
-			}
+					switch level {
+					case "DEBUG":
+						tLogger.Debug(err, LogFrom{}, true)
+					case "VERBOSE":
+						tLogger.Verbose(err, LogFrom{}, true)
+					case "INFO":
+						tLogger.Info(err, LogFrom{}, true)
+					case "WARN":
+						tLogger.Warn(err, LogFrom{}, true)
+					case "ERROR":
+						tLogger.Error(err, LogFrom{}, true)
+					}
 
-			stdout := releaseStdout()
-			gotTimestamps := util.RegexCheck(timestampRegex, stdout)
-			if gotTimestamps != tc.timestamps {
-				t.Errorf(
-					"timestamp mismatch\ngot:  %s\nwant: %s",
-					test.Presence(gotTimestamps), test.Presence(tc.timestamps),
-				)
-			}
+					stdout := releaseStdout()
+					gotTimestamps := util.RegexCheck(timestampRegex, stdout)
+					if gotTimestamps != timestamps {
+						t.Errorf(
+							"timestamp mismatch\ngot:  %s\nwant: %s",
+							test.Presence(gotTimestamps), test.Presence(timestamps),
+						)
+					}
 
-			maxLength := 1001 // 1000 + 1 for the newline.
-			if tc.timestamps {
-				maxLength += 20
-			}
-			if gotLength := len(stdout); gotLength != maxLength {
-				t.Errorf("len(stdout) mismatch\ngot:  %d\nwant: %d", gotLength, maxLength)
+					maxLength := 1001 // 1000 + 1 for the newline.
+					if timestamps {
+						maxLength += 20
+					}
+					if gotLength := len(stdout); gotLength != maxLength {
+						t.Errorf("len(stdout) mismatch\ngot:  %d\nwant: %d", gotLength, maxLength)
+					}
+				})
 			}
 		})
 	}

@@ -17,12 +17,11 @@
 package util
 
 import (
-	"fmt"
+	"strings"
 	"testing"
 )
 
 func TestRandAlphaNumericLower(t *testing.T) {
-	// GIVEN: different size strings are wanted.
 	tests := []struct {
 		name   string
 		wanted int
@@ -49,35 +48,17 @@ func TestRandAlphaNumericLower(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RandAlphaNumericLower is called.
 			got := RandAlphaNumericLower(tc.wanted)
 
-			prefix := fmt.Sprintf(
-				"%s\nRandAlphaNumericLower(%d)",
-				packageName, tc.wanted,
-			)
-
-			// THEN: we get a random string of the specified length.
 			if gotLen := len(got); gotLen != tc.wanted {
-				t.Errorf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, tc.wanted,
-				)
+				t.Errorf("length mismatch\ngot:  %d\nwant: %d", gotLen, tc.wanted)
 			}
 
-			// AND: it contains only lowercase alphanumeric characters.
 			for _, v := range got {
-				valid := false
-				for _, char := range alphanumericLower {
-					if v == char {
-						valid = true
-						break
-					}
-				}
-				if !valid {
+				if !strings.ContainsRune(alphanumericLower, v) {
 					t.Errorf(
-						"%s contains non-alphanumeric character %q\ngot:  %q",
-						prefix, string(v), got,
+						"character %q mismatch\ngot:  %q\nwant: only characters in %q",
+						v, got, alphanumericLower,
 					)
 				}
 			}
@@ -86,7 +67,6 @@ func TestRandAlphaNumericLower(t *testing.T) {
 }
 
 func TestRandNumeric(t *testing.T) {
-	// GIVEN: different size strings are wanted.
 	tests := []struct {
 		name   string
 		wanted int
@@ -113,35 +93,17 @@ func TestRandNumeric(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RandNumeric is called.
 			got := RandNumeric(tc.wanted)
 
-			prefix := fmt.Sprintf(
-				"%s\nRandNumeric(%d)",
-				packageName, tc.wanted,
-			)
-
-			// THEN: we get a random numeric string of the specified length.
 			if gotLen := len(got); gotLen != tc.wanted {
-				t.Errorf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, tc.wanted,
-				)
+				t.Errorf("length mismatch\ngot:  %d\nwant: %d", gotLen, tc.wanted)
 			}
 
-			// AND: it contains only numeric characters.
 			for _, v := range got {
-				valid := false
-				for _, char := range numeric {
-					if v == char {
-						valid = true
-						break
-					}
-				}
-				if !valid {
+				if !strings.ContainsRune(numeric, v) {
 					t.Errorf(
-						"%s contains non-numeric character %q\ngot:  %q",
-						prefix, string(v), got,
+						"character %q mismatch\ngot:  %q\nwant: only characters in %q",
+						v, got, numeric,
 					)
 				}
 			}
@@ -150,7 +112,6 @@ func TestRandNumeric(t *testing.T) {
 }
 
 func TestRandString(t *testing.T) {
-	// GIVEN: different size strings are wanted with different alphabets.
 	tests := []struct {
 		name     string
 		wanted   int
@@ -187,35 +148,17 @@ func TestRandString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RandString is called.
 			result := RandString(tc.wanted, tc.alphabet)
 
-			prefix := fmt.Sprintf(
-				"%s\nRandString(length=%d, alphabet=%q)",
-				packageName, tc.wanted, tc.alphabet,
-			)
-
-			// THEN: we get a random alphabet string of the specified length.
 			if got := len(result); got != tc.wanted {
-				t.Errorf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.wanted,
-				)
+				t.Errorf("length mismatch\ngot:  %d\nwant: %d", got, tc.wanted)
 			}
 
-			// AND: it contains only alphabet characters.
 			for _, v := range result {
-				valid := false
-				for _, char := range tc.alphabet {
-					if v == char {
-						valid = true
-						break
-					}
-				}
-				if !valid {
+				if !strings.ContainsRune(tc.alphabet, v) {
 					t.Errorf(
-						"%s contains non-alphabet character %q\ngot:  %q",
-						prefix, string(v), result,
+						"character %q mismatch\ngot:  %q\nwant: only characters in %q",
+						v, result, tc.alphabet,
 					)
 				}
 			}

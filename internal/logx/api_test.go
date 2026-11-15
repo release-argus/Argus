@@ -26,42 +26,53 @@ import (
 )
 
 func TestPackageAPI(t *testing.T) {
+	hadLog := logger
+	t.Cleanup(func() { logger = hadLog })
+
 	once = sync.Once{}
 	logger = nil
 
 	exitCodeChannel := Init("DEBUG", false)
+
 	if Default() != logger {
-		t.Fatalf("%s Default() pointer mismatch", packageName)
+		t.Fatalf("Default() mismatch\ngot:  %p\nwant: %p", Default(), logger)
 	}
 	if ExitCodeChannel() != exitCodeChannel {
-		t.Fatalf("%s ExitCodeChannel() pointer mismatch", packageName)
+		t.Fatalf(
+			"ExitCodeChannel() mismatch\ngot:  %p\nwant: %p",
+			ExitCodeChannel(), exitCodeChannel,
+		)
 	}
 
 	SetLevel("INFO")
-	t.Cleanup(func() { logger.SetLevel("DEBUG") })
-	if logger.Level.Load() != levelMap["INFO"] {
-		t.Fatalf("%s SetLevel(INFO) returned false", packageName)
+	if got, want := logger.Level.Load(), levelMap["INFO"]; got != want {
+		t.Fatalf("Logger.Level mismatch\ngot:  %d\nwant: %d", got, want)
 	}
-	if Level() != levelMap["INFO"] {
-		t.Fatalf("%s Level() value mismatch", packageName)
+	if got, want := Level(), levelMap["INFO"]; got != want {
+		t.Fatalf("Level() mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
 	SetTimestamps(true)
-	t.Cleanup(func() { logger.SetTimestamps(false) })
+	if !logger.timestamps {
+		t.Fatal("Logger.timestamps mismatch\ngot:  false\nwant: true")
+	}
 	if !IsLevel("INFO") {
-		t.Fatalf("%s IsLevel(INFO) returned false", packageName)
+		t.Fatal("IsLevel() mismatch\ngot:  false\nwant: true")
 	}
 
 	buf := &bytes.Buffer{}
 	SetOutput(buf)
 	if GetOutput() != buf {
-		t.Fatalf("%s GetOutput() pointer mismatch", packageName)
+		t.Fatalf("GetOutput() mismatch\ngot:  %p\nwant: %p", GetOutput(), buf)
 	}
 
 	newChannel := make(chan string, 1)
 	SetExitCodeChannel(newChannel)
 	if logger.exitCodeChannel != newChannel {
-		t.Fatalf("%s SetExitCodeChannel() pointer mismatch", packageName)
+		t.Fatalf(
+			"Logger.exitCodeChannel mismatch\ngot:  %p\nwant: %p",
+			logger.exitCodeChannel, newChannel,
+		)
 	}
 
 	releaseStdout := test.CaptureLog(t, Default())
@@ -76,7 +87,7 @@ func TestPackageAPI(t *testing.T) {
 	Fatal("fatal", from)
 
 	if got := releaseStdout(); got == "" {
-		t.Fatalf("%s expected package-level log output", packageName)
+		t.Fatal("releaseStdout() mismatch\ngot:  \"\"\nwant: NOT \"\"")
 	}
 }
 
@@ -86,17 +97,14 @@ func TestLoggerInstance_Panic(t *testing.T) {
 		logger = hadLog
 	})
 
-	// GIVEN: logger is not initialised.
 	once = sync.Once{}
 	logger = nil
 
-	// THEN: loggerInstance will panic.
 	defer func() {
 		if recover() == nil {
-			t.Fatalf("%s expected panic when logger is not initialised", packageName)
+			t.Fatal("recover() mismatch\ngot:  nil\nwant: non-nil")
 		}
 	}()
 
-	// WHEN: loggerInstance is called.
 	_ = Level()
 }

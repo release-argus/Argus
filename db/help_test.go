@@ -36,11 +36,9 @@ import (
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "db"
 var cfg *config.Config
 
 func TestMain(m *testing.M) {
-	// GIVEN: a Log.
 	logtest.InitLog()
 
 	databaseFile := "TestMain.db.test"
@@ -48,37 +46,36 @@ func TestMain(m *testing.M) {
 	cfg = testConfig(nil)
 	cfg.Settings.Data.DatabaseFile = databaseFile
 
-	// AND: a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
-	api := Get(cfg)
-	go api.Handler(ctx)
+	dbAPI := Get(cfg)
+	go dbAPI.Handler(ctx)
 
-	// Run other tests.
 	exitCode := m.Run()
 	cancel()
 	_ = os.Remove(cfg.Settings.Data.DatabaseFile)
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
-func testConfig(t *testing.T) (cfg *config.Config) {
+func testConfig(t *testing.T) *config.Config {
 	databaseFile := "test.db"
-	var baseDir = ""
 	if t != nil {
-		baseDir = t.TempDir()
-		databaseFile = filepath.Join(baseDir, "test.db")
-		_, _ = os.Create(databaseFile)
+		databaseFile = filepath.Join(t.TempDir(), "test.db")
+		file, err := os.Create(databaseFile)
+		if err != nil {
+			t.Fatalf("os.Create() failed: %v", err)
+		}
+		_ = file.Close()
 	}
 
 	databaseChannel := make(chan dbtype.Message, 16)
 	saveChannel := make(chan bool, 16)
-	cfg = &config.Config{
+	c := &config.Config{
 		Settings: config.Settings{
 			Data: config.DataSettings{
 				DatabaseFile: databaseFile,
@@ -108,15 +105,13 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 
 	if t != nil {
 		t.Cleanup(func() {
-			_ = os.Remove(cfg.File)
-			_ = os.Remove(cfg.Settings.Data.DatabaseFile)
+			_ = os.Remove(c.Settings.Data.DatabaseFile)
 		})
 	}
 
-	// Services.
-	for svcName := range cfg.Service {
+	for svcName := range c.Service {
 		svc := service.Service{
-			ID:     "foo",
+			ID:     svcName,
 			Status: status.Status{},
 			Dashboard: dashboard.Options{
 				WebURL: "https://example.com",
@@ -134,11 +129,10 @@ func testConfig(t *testing.T) (cfg *config.Config) {
 		svc.Status.SetLatestVersion("3.0.0", time.Now().Add(time.Hour).Format(time.RFC3339), false)
 		svc.Status.SetApprovedVersion("1.0.0", false)
 
-		// Add service to Config.
-		cfg.Service[svcName] = &svc
+		c.Service[svcName] = &svc
 	}
 
-	return
+	return c
 }
 
 func testAPI(t *testing.T) *api {
@@ -151,13 +145,33 @@ func testAPI(t *testing.T) *api {
 	return tAPI
 }
 
-func dbCleanup(api *api) {
-	if api.db != nil {
-		_ = api.db.Close()
+// assertFailsOnSchema checks call fails with a log matching errRegex on a status table rebuilt by statements.
+func assertFailsOnSchema(t *testing.T, call func(*api) bool, statements []string, errRegex string) {
+	t.Helper()
+
+	releaseStdout := test.CaptureLog(t, logx.Default())
+	tAPI := testAPI(t)
+	tAPI.initialise()
+	test.DropTable(t, tAPI.db, "status")
+	test.ExecSQL(t, tAPI.db, statements...)
+	go tAPI.Handler(t.Context())
+
+	test.AssertCallLog(
+		t,
+		false,
+		func() bool { return call(tAPI) },
+		logx.ExitCodeChannel(),
+		releaseStdout,
+		errRegex,
+	)
+}
+
+func dbCleanup(tAPI *api) {
+	if tAPI.db != nil {
+		_ = tAPI.db.Close()
 	}
-	_ = os.Remove(api.config.File)
-	_ = os.Remove(api.config.Settings.Data.DatabaseFile)
-	_ = os.Remove(api.config.Settings.Data.DatabaseFile + "-journal")
+	_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+	_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile + "-journal")
 }
 
 func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
@@ -173,10 +187,10 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 			approved_version
 		FROM status
 		WHERE id = ?;`
-	// Retry up-to 10 times in case 'database is locked'.
 	var row *sql.Rows
 	var err error
-	for i := 0; i < 10; i++ {
+	// Retry while the database is locked.
+	for range 10 {
 		row, err = db.Query(sqlStmt, serviceID)
 		if err == nil {
 			break
@@ -184,7 +198,7 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 		time.Sleep(10 * time.Millisecond)
 	}
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("DB.Query(%q) failed: %v", serviceID, err)
 	}
 	t.Cleanup(func() { _ = row.Close() })
 
@@ -199,10 +213,13 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 	for row.Next() {
 		err = row.Scan(&id, &lv, &lvt, &dv, &dvt, &av)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("Rows.Scan() failed: %v", err)
 		}
 	}
-	svcStatus, _ := statustest.New(
+	if err := row.Err(); err != nil {
+		t.Fatalf("Rows.Err() failed: %v", err)
+	}
+	svcStatus, err := statustest.New(
 		"yaml", []byte(test.TrimYAML(`
 			approved_version: '`+av+`'
 			deployed_version: '`+dv+`'
@@ -211,6 +228,9 @@ func queryRow(t *testing.T, db *sql.DB, serviceID string) *status.Status {
 			latest_version_timestamp: '`+lvt+`'
 		`)),
 	)
+	if err != nil {
+		t.Fatalf("statustest.New(%q) failed: %v", serviceID, err)
+	}
 	svcStatus.Init(
 		0, 0, 0,
 		status.ServiceInfo{
