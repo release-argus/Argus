@@ -17,13 +17,11 @@
 package util
 
 import (
-	"fmt"
 	"regexp"
 	"testing"
 )
 
 func TestRegexCheck(t *testing.T) {
-	// GIVEN: a variety of Regexes to apply to a string.
 	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
 	tests := []struct {
 		name  string
@@ -46,24 +44,16 @@ func TestRegexCheck(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RegexCheck is called.
 			got := RegexCheck(tc.regex, str)
 
-			prefix := fmt.Sprintf(
-				"%s\nRegexCheck(re=%q, str=%q)",
-				packageName, tc.regex, str,
-			)
-
-			// THEN: the regex matches when expected.
 			if got != tc.match {
-				t.Errorf("%s mismatch\ngot:  %t\nwant: %t", prefix, got, tc.match)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.match)
 			}
 		})
 	}
 }
 
 func TestRegexCheckWithVersion(t *testing.T) {
-	// GIVEN: a variety of Regexes to apply to a string.
 	str := `testing\n"beta-release": "0.1.2-beta"\n"stable-release": "0.1.1"`
 	tests := []struct {
 		name    string
@@ -89,27 +79,16 @@ func TestRegexCheckWithVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RegexCheckWithVersion is called.
 			got := RegexCheckWithVersion(tc.regex, str, tc.version)
 
-			prefix := fmt.Sprintf(
-				"%s\nRegexCheckWithVersion(re=%q, str=%q, version=%q)",
-				packageName, tc.regex, str, tc.version,
-			)
-
-			// THEN: the regex matches when expected.
 			if got != tc.match {
-				t.Errorf(
-					"%s mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.match,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.match)
 			}
 		})
 	}
 }
 
 func TestRegexTemplate(t *testing.T) {
-	// GIVEN: a RegEx, Index (and possibly a template) and text to run it on.
 	tests := []struct {
 		name            string
 		text            string
@@ -135,7 +114,7 @@ func TestRegexTemplate(t *testing.T) {
 			text:     "abc123-def456-ghi789",
 			regex:    `([a-z]+)(\d+)`,
 			template: "$1$4-$10",
-			want:     "abc$4-abc0",
+			want:     "abc$4-abc0", // $10 is not a group, so its $1 is replaced.
 		},
 		{
 			name:     "template with all placeholders out of range",
@@ -148,7 +127,7 @@ func TestRegexTemplate(t *testing.T) {
 			name:  "no template",
 			text:  "abc123-def456-ghi789",
 			regex: `([a-z]+)(\d+)`,
-			want:  "123",
+			want:  "123", // No template gives the last group.
 		},
 	}
 
@@ -156,24 +135,12 @@ func TestRegexTemplate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			re := regexp.MustCompile(tc.regex)
-			texts := re.FindAllStringSubmatch(tc.text, 1)
-			regexMatches := texts[0]
+			regexMatches := regexp.MustCompile(tc.regex).FindStringSubmatch(tc.text)
 
-			// WHEN: RegexTemplate is called on the regex matches.
 			got := RegexTemplate(regexMatches, tc.template)
 
-			prefix := fmt.Sprintf(
-				"%s\nRegexTemplate(matches=%v, template=%q)",
-				packageName, regexMatches, tc.template,
-			)
-
-			// THEN: the expected string is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

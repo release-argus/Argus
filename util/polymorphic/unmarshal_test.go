@@ -17,7 +17,6 @@
 package polymorphic
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -48,7 +47,6 @@ func testData() struct2 {
 }
 
 func TestUnmarshal(t *testing.T) {
-	// GIVEN: struct2 and data to unmarshal into a given key in it.
 	tests := []struct {
 		name     string
 		format   string
@@ -82,7 +80,6 @@ func TestUnmarshal(t *testing.T) {
 			data:   []byte(`{"abc": "123"`),
 			key:    "field1",
 			v:      testData(),
-			want:   decode.ToYAMLString(testData(), ""),
 			errRegex: test.TrimYAML(`
 				^extract "field1":
 					[^\s]+ unexpected EOF`,
@@ -146,32 +143,17 @@ func TestUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Unmarshal is called.
 			err := Unmarshal(tc.format, tc.data, tc.key, &tc.v)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshal(format=%q, data=%q, key=%q)",
-				packageName, tc.format, tc.data, tc.key,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %s\nwant: %s",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the field stringifies as expected.
 			if got := decode.ToYAMLString(tc.v, ""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("decode.ToYAMLString() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

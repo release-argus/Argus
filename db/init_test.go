@@ -42,7 +42,7 @@ import (
 )
 
 func TestAPI_Get(t *testing.T) {
-	// Uses the DB that [TestMain] runs.
+	// Uses the DB that TestMain runs.
 	target := "keep0"
 	cell := dbtype.Cell{Column: "latest_version", Value: "9.9.9"}
 	cfg.DatabaseChannel <- dbtype.Message{
@@ -134,7 +134,7 @@ func TestAPI_Get__fail(t *testing.T) {
 				tAPI := testAPI(t)
 				tAPI.initialise()
 				defer tAPI.db.Close()
-				// Drop a required column so [api.extractServiceStatus] fails.
+				// Drop a required column so api.extractServiceStatus fails.
 				if _, err := tAPI.db.Exec("ALTER TABLE status DROP COLUMN deployed_version;"); err != nil {
 					t.Fatalf("drop column: DB.Exec() failed: %v", err)
 				}
@@ -209,7 +209,7 @@ func TestAPI_dbHandles(t *testing.T) {
 
 	tAPI.CloseDB()
 	if err := tAPI.db.Ping(); err == nil {
-		t.Error("closed: DB.Ping() error mismatch\ngot:  nil\nwant: non-nil")
+		t.Error("after CloseDB: DB.Ping() error mismatch\ngot:  nil\nwant: non-nil")
 	}
 
 	unopened := &api{}
@@ -362,19 +362,7 @@ func TestAPI_Initialise(t *testing.T) {
 				dbCleanup(tAPI)
 			})
 
-			resultChannel := make(chan bool, 1)
-
-			resultChannel <- tAPI.initialise()
-
-			if testErr := test.AssertChannelBool(
-				t,
-				tc.ok,
-				resultChannel,
-				logx.ExitCodeChannel(),
-				nil,
-			); testErr != nil {
-				t.Fatal(testErr)
-			}
+			test.AssertCallLog(t, tc.ok, tAPI.initialise, logx.ExitCodeChannel(), nil, "")
 			if !tc.ok {
 				return
 			}
@@ -498,19 +486,7 @@ func TestAPI_RemoveUnknownServices(t *testing.T) {
 			}
 			wantOk := !tc.databaseDeleted
 
-			resultChannel := make(chan bool, 1)
-
-			resultChannel <- tAPI.removeUnknownServices()
-
-			if testErr := test.AssertChannelBool(
-				t,
-				wantOk,
-				resultChannel,
-				logx.ExitCodeChannel(),
-				nil,
-			); testErr != nil {
-				t.Fatal(testErr)
-			}
+			test.AssertCallLog(t, wantOk, tAPI.removeUnknownServices, logx.ExitCodeChannel(), nil, "")
 			if !wantOk {
 				return
 			}
@@ -610,21 +586,7 @@ func TestAPI_RemoveUnknownServices__fail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Serial: captures stdout.
 
-			releaseStdout := test.CaptureLog(t, logx.Default())
-			tAPI := testAPI(t)
-			tAPI.initialise()
-			test.DropTable(t, tAPI.db, "status")
-			test.ExecSQL(t, tAPI.db, tc.statements...)
-			go tAPI.Handler(t.Context())
-
-			test.AssertCallLog(
-				t,
-				false,
-				tAPI.removeUnknownServices,
-				logx.ExitCodeChannel(),
-				releaseStdout,
-				tc.errRegex,
-			)
+			assertFailsOnSchema(t, (*api).removeUnknownServices, tc.statements, tc.errRegex)
 		})
 	}
 }
@@ -778,21 +740,7 @@ func TestAPI_ExtractServiceStatus__fail(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Serial: captures stdout.
 
-			releaseStdout := test.CaptureLog(t, logx.Default())
-			tAPI := testAPI(t)
-			tAPI.initialise()
-			test.DropTable(t, tAPI.db, "status")
-			test.ExecSQL(t, tAPI.db, tc.statements...)
-			go tAPI.Handler(t.Context())
-
-			test.AssertCallLog(
-				t,
-				false,
-				tAPI.extractServiceStatus,
-				logx.ExitCodeChannel(),
-				releaseStdout,
-				tc.errRegex,
-			)
+			assertFailsOnSchema(t, (*api).extractServiceStatus, tc.statements, tc.errRegex)
 		})
 	}
 }
@@ -1171,19 +1119,14 @@ func TestUpdateTypes(t *testing.T) {
 				tc.setupDB(t, &db, databaseFile)
 			}
 
-			resultChannel := make(chan bool, 1)
-
-			resultChannel <- updateTable(db)
-
-			if testErr := test.AssertChannelBool(
+			test.AssertCallLog(
 				t,
 				tc.ok,
-				resultChannel,
+				func() bool { return updateTable(db) },
 				logx.ExitCodeChannel(),
-				releaseStdout,
-			); testErr != nil {
-				t.Fatal(testErr)
-			}
+				nil,
+				"",
+			)
 			if !tc.ok {
 				stdout := releaseStdout()
 				if !util.RegexCheck(tc.stdoutRegex, stdout) {
@@ -1195,6 +1138,8 @@ func TestUpdateTypes(t *testing.T) {
 			wantTextColumns := []string{"id", "latest_version", "deployed_version", "approved_version"}
 			for _, column := range wantTextColumns {
 				t.Run(column, func(t *testing.T) {
+					t.Parallel()
+
 					var columnType string
 					if err := db.QueryRow(`
 						SELECT type

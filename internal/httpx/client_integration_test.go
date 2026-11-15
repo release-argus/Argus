@@ -30,7 +30,6 @@ import (
 )
 
 func TestClient_Get__certValidation(t *testing.T) {
-	// GIVEN: a HTTP client, and a url to query.
 	tests := []struct {
 		name        string
 		client      *http.Client
@@ -70,37 +69,27 @@ func TestClient_Get__certValidation(t *testing.T) {
 				url = test.LookupPlain.URLInvalid
 			}
 
-			try := 0
-			for {
-				try++
-
-				// WHEN: a HTTP request is made to this URL.
-				err := getPlain(t, tc.client, url)
+			for try := 0; ; try++ {
+				err := getPlain(tc.client, url)
 				e := errfmt.FormatError(err)
-				if strings.Contains(e, "context deadline exceeded") && try < 3 {
+				if strings.Contains(e, "context deadline exceeded") && try < 2 {
 					time.Sleep(time.Second)
 					continue
 				}
 
-				// THEN: an error is returned only when expected.
 				if util.RegexCheck(tc.errRegex, e) {
 					return
 				}
-				t.Fatalf(
-					"%s\nGET %q error mismatch\ngot:  %q\nwant: %q",
-					packageName, url, e, tc.errRegex,
-				)
+				t.Fatalf("attempt %d: error mismatch\ngot:  %q\nwant: %q", try, e, tc.errRegex)
 			}
 		})
 	}
 }
 
-func getPlain(t *testing.T, client *http.Client, url string) error {
-	t.Helper()
-
+func getPlain(client *http.Client, url string) error {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+		return fmt.Errorf("http.NewRequest() failed: %w", err)
 	}
 
 	resp, err := client.Do(req)
@@ -109,10 +98,12 @@ func getPlain(t *testing.T, client *http.Client, url string) error {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+		return fmt.Errorf(
+			"status code mismatch\ngot:  %d - %q\nwant: %d",
+			resp.StatusCode, body, http.StatusOK,
+		)
 	}
-
-	_, err = io.Copy(io.Discard, resp.Body)
 	return err
 }

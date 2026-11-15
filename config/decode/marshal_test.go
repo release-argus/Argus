@@ -17,7 +17,6 @@
 package decode
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -26,7 +25,6 @@ import (
 )
 
 func TestIsNull(t *testing.T) {
-	// GIVEN: []byte.
 	tests := []struct {
 		name string
 		data []byte
@@ -68,22 +66,16 @@ func TestIsNull(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsNull is called on it.
 			got := IsNull(tc.data)
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nIsNull(%v) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.data, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestErrUnsupportedFormat_Error(t *testing.T) {
-	// GIVEN: a ErrUnsupportedFormat.
 	tests := []struct {
 		name     string
 		err      ErrUnsupportedFormat
@@ -109,14 +101,12 @@ func TestErrUnsupportedFormat_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
 				t.Fatalf(
-					"%s\nErrUnsupportedFormat stringified mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
+					"ErrUnsupportedFormat.Error() mismatch\ngot:  %q\nwant: %q",
+					got, tc.expected,
 				)
 			}
 		})
@@ -130,7 +120,6 @@ type testStruct struct {
 }
 
 func TestUnmarshal(t *testing.T) {
-	// GIVEN: []byte and a format.
 	tests := []struct {
 		name     string
 		data     []byte
@@ -146,7 +135,6 @@ func TestUnmarshal(t *testing.T) {
 				jsontext:
 					unexpected EOF`,
 			),
-			want: "{}\n",
 		},
 		{
 			name:     "JSON/empty object",
@@ -167,7 +155,6 @@ func TestUnmarshal(t *testing.T) {
 			data:     []byte{},
 			format:   "x",
 			errRegex: `^unsupported format: "x"$`,
-			want:     "{}\n",
 		},
 		{
 			name: "JSON/valid data",
@@ -211,33 +198,18 @@ func TestUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Unmarshal is called on it.
 			var target testStruct
 			err := Unmarshal(tc.format, tc.data, &target)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshal(format=%s, data=%v)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the result stringifies as expected.
 			if got := ToYAMLString(target, ""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("ToYAMLString() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -258,7 +230,6 @@ func (c *customUnmarshaler) UnmarshalYAML(data []byte) error {
 }
 
 func TestUnmarshal__customUnmarshaler(t *testing.T) {
-	// GIVEN: a target that implements a custom unmarshaler.
 	tests := []struct {
 		name   string
 		format string
@@ -286,36 +257,20 @@ func TestUnmarshal__customUnmarshaler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Unmarshal is called on it.
 			err := Unmarshal(tc.format, tc.data, tc.target)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshal(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: no error is returned.
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %q",
-					prefix, err,
-				)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// AND: the custom unmarshaler received the raw data.
 			got := tc.target.(*customUnmarshaler).got
 			if string(got) != string(tc.want) {
-				t.Errorf(
-					"%s custom unmarshaler data mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("customUnmarshaler.got mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestMarshal(t *testing.T) {
-	// GIVEN: struct and a format.
 	tests := []struct {
 		name     string
 		data     testStruct
@@ -357,32 +312,17 @@ func TestMarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Marshal is called on it.
 			gotBytes, err := Marshal(tc.format, tc.data)
-
-			prefix := fmt.Sprintf(
-				"%s\nMarshal(format=%q, data=%v)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the result stringifies as expected.
 			if got := string(gotBytes); got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("output mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

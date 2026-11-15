@@ -18,13 +18,11 @@
 package testing
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
 func TestRunAndExit(t *testing.T) {
-	// GIVEN: various combinations of ok and flag.
 	type args struct {
 		ok   bool
 		flag string
@@ -57,38 +55,26 @@ func TestRunAndExit(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're sharing exitFunc.
+			// Serial: swaps exitFunc.
 
 			flag := tc.args.flag
 			var exited bool
 			var code int
 
-			// Override exitFunc to capture the exit instead of actually exiting.
 			exitFunc = func(c int) {
 				exited = true
 				code = c
 			}
 			defer func() { exitFunc = os.Exit }()
 
-			// WHEN: ExitIfTestFails is called.
 			RunAndExit(tc.args.ok, &flag)
 
-			prefix := fmt.Sprintf("%s\nTestExit()", packageName)
-
-			// THEN: it should exit as expected.
 			if exited != tc.wantExit {
-				t.Fatalf(
-					"%s exit mismatch\ngot:  exit=%v\nwant: exit=%v",
-					prefix, exited, tc.wantExit,
-				)
+				t.Fatalf("exited mismatch\ngot:  %t\nwant: %t", exited, tc.wantExit)
 			}
 
-			// AND: with the expected code.
 			if exited && code != tc.wantCode {
-				t.Fatalf(
-					"%s exit code mismatch\ngot:  exit=%d\nwant: exit=%d",
-					prefix, code, tc.wantCode,
-				)
+				t.Fatalf("exit code mismatch\ngot:  %d\nwant: %d", code, tc.wantCode)
 			}
 		})
 	}

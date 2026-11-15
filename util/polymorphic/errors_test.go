@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit
+
 package polymorphic
 
 import "testing"
 
 func TestErrInvalidValue_Error(t *testing.T) {
-	// GIVEN: an ErrInvalidValue.
 	tests := []struct {
 		name     string
 		err      *ErrInvalidValue
@@ -74,22 +75,16 @@ func TestErrInvalidValue_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nErrInvalidValue stringified mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("ErrInvalidValue.Error() mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}
 }
 
 func TestErrInvalidValues_Error(t *testing.T) {
-	// GIVEN: an ErrInvalidValues.
 	tests := []struct {
 		name     string
 		err      *ErrInvalidValues
@@ -173,15 +168,10 @@ func TestErrInvalidValues_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the error is stringified.
 			got := tc.err.Error()
 
-			// THEN: the error is formatted as expected.
 			if got != tc.expected {
-				t.Fatalf(
-					"%s\nErrInvalidValues stringified mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.expected,
-				)
+				t.Fatalf("ErrInvalidValues.Error() mismatch\ngot:  %q\nwant: %q", got, tc.expected)
 			}
 		})
 	}

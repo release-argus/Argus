@@ -18,70 +18,48 @@ package util
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 )
 
 func TestRetryWithBackoff_Success(t *testing.T) {
-	// GIVEN: a successful operation.
 	operation := func() error {
 		return nil
 	}
 
-	// WHEN: RetryWithBackoff() is called.
 	err := RetryWithBackoff(
 		operation, 3,
 		100*time.Millisecond,
 		1*time.Second,
 		nil,
 	)
-
-	// THEN: no error is returned.
 	if err != nil {
-		t.Fatalf(
-			"%s\nRetryWithBackoff() error mismatch\ngot:  %v\nwant: nil",
-			packageName, err,
-		)
+		t.Fatalf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
 
 func TestRetryWithBackoff_Failure(t *testing.T) {
-	// GIVEN: a failed operation.
 	expectedErr := errors.New("operation failed")
 	operation := func() error {
 		return expectedErr
 	}
 
-	// WHEN: RetryWithBackoff() is called.
 	err := RetryWithBackoff(
 		operation, 3,
 		100*time.Millisecond,
 		1*time.Second,
 		nil,
 	)
-
-	prefix := fmt.Sprintf("%s\nRetryWithBackoff()", packageName)
-
-	// THEN: the expected error is returned.
 	if err == nil {
-		t.Fatalf(
-			"%s error mismatch\ngot:  nil\nwant: %v",
-			prefix, expectedErr,
-		)
+		t.Fatalf("error mismatch\ngot:  nil\nwant: %v", expectedErr)
 	}
 
-	// AND: the error is of the expected type.
 	if !errors.Is(err, expectedErr) {
-		t.Fatalf(
-			"%s error type mismatch\ngot:  %v\nwant: %v",
-			prefix, err, expectedErr,
-		)
+		t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, expectedErr)
 	}
 }
 
 func TestRetryWithBackoff_StopCondition(t *testing.T) {
-	// GIVEN: a stop condition that returns true.
 	operation := func() error {
 		return errors.New("operation failed")
 	}
@@ -89,49 +67,36 @@ func TestRetryWithBackoff_StopCondition(t *testing.T) {
 		return true
 	}
 
-	// WHEN: RetryWithBackoff() is called.
 	err := RetryWithBackoff(
 		operation, 3,
 		100*time.Millisecond,
 		1*time.Second, shouldStop,
 	)
 
-	prefix := fmt.Sprintf("%s\nRetryWithBackoff()", packageName)
-
-	// THEN: the stop condition prevents the error.
+	// Stopping returns nil rather than the operation's error.
 	if err != nil {
-		t.Fatalf(
-			"%s stop condition didn't prevent error\ngot:  %v\nwant: nil",
-			prefix, err,
-		)
+		t.Fatalf("error mismatch\ngot:  %v\nwant: nil", err)
 	}
 }
 
 func TestRetryWithBackoff_ExponentialBackoff(t *testing.T) {
-	// GIVEN: a failed operation.
 	operation := func() error {
 		return errors.New("operation failed")
 	}
 
 	start := time.Now()
-	// WHEN: RetryWithBackoff() is called.
+
 	err := RetryWithBackoff(
-		operation, 3,
-		100*time.Millisecond,
+		operation, 4,
+		50*time.Millisecond,
 		1*time.Second, nil,
 	)
 	elapsed := time.Since(start)
 
-	prefix := fmt.Sprintf("%s\nRetryWithBackoff()", packageName)
-
-	// THEN: the error is returned after the expected delay.
 	if err == nil {
-		t.Fatalf("%s error mismatch\ngot:  nil\nwant: error", prefix)
+		t.Fatal("error mismatch\ngot:  nil\nwant: non-nil")
 	}
-	if elapsed < 300*time.Millisecond {
-		t.Fatalf(
-			"%s\nRetryWithBackoff() delay mismatch\ngot:  %v\nwant: 300ms+",
-			prefix, elapsed,
-		)
+	if elapsed < 350*time.Millisecond {
+		t.Fatalf("delay mismatch\ngot:  %v\nwant: 350ms+", elapsed)
 	}
 }

@@ -17,6 +17,10 @@
 package main
 
 import (
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -24,51 +28,54 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-var packageName = "healthcheck"
-
 func TestRun(t *testing.T) {
-	// GIVEN: various arguments.
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	t.Cleanup(server.Close)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen() failed: %v", err)
+	}
+	closedAddr := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatalf("Listener.Close() failed: %v", err)
+	}
+
 	tests := []struct {
-		name        string
-		args        []string
-		stderrRegex string
+		name     string
+		args     []string
+		errRegex string
 	}{
 		{
-			name:        "missing arguments",
-			args:        []string{},
-			stderrRegex: `^expected URL as command-line argument$`,
+			name:     "missing arguments",
+			args:     []string{},
+			errRegex: `^expected URL as command-line argument$`,
 		},
 		{
-			name: "invalid URL",
-			args: []string{"http://invalid-url"},
-			stderrRegex: test.TrimYAML(`
+			name: "unreachable URL",
+			args: []string{"http://" + closedAddr},
+			errRegex: test.TrimYAML(`
 				^error:
-					Get "http://invalid-url":
-						dial tcp:
-							lookup .* no such host$`,
+					Get "http://` + regexp.QuoteMeta(closedAddr) + `":
+						dial tcp ` + regexp.QuoteMeta(closedAddr) + `:
+							connect:
+								connection refused$`,
 			),
 		},
 		{
-			name:        "valid URL",
-			args:        []string{"https://www.google.com"},
-			stderrRegex: `^$`,
+			name:     "valid URL",
+			args:     []string{server.URL},
+			errRegex: `^$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: shares http.DefaultTransport, which run writes.
 
-			// WHEN: run is called with those arguments.
 			err := run(tc.args)
-
-			// THEN: it errors when expected.
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.stderrRegex, e) {
-				t.Errorf(
-					"%s\nrun() stderr mismatch\ngot:  %q:\nwant: %q",
-					packageName, e, tc.stderrRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}

@@ -17,14 +17,12 @@
 package polymorphic
 
 import (
-	"fmt"
+	"errors"
 	"testing"
-
-	"github.com/release-argus/Argus/config/decode"
-	"github.com/release-argus/Argus/util/errfmt"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestExtract(t *testing.T) {
@@ -34,12 +32,11 @@ func TestExtract(t *testing.T) {
 		key    string
 	}
 
-	// GIVEN: a variety of raw input and a key.
 	tests := []struct {
-		name       string
-		args       Args
-		expected   []byte
-		errorRegex string
+		name     string
+		args     Args
+		expected []byte
+		errRegex string
 	}{
 		{
 			name: "nil raw input",
@@ -48,8 +45,8 @@ func TestExtract(t *testing.T) {
 				raw:    nil,
 				key:    "test",
 			},
-			expected:   nil,
-			errorRegex: `^$`,
+			expected: nil,
+			errRegex: `^$`,
 		},
 		{
 			name: "key not present in raw input",
@@ -58,8 +55,8 @@ func TestExtract(t *testing.T) {
 				raw:    []byte(`{"foo":"bar"}`),
 				key:    "something",
 			},
-			expected:   nil,
-			errorRegex: `^$`,
+			expected: nil,
+			errRegex: `^$`,
 		},
 		{
 			name: "key present in JSON format",
@@ -68,11 +65,8 @@ func TestExtract(t *testing.T) {
 				raw:    []byte(`{"key":"value"}`),
 				key:    "key",
 			},
-			expected: func() []byte {
-				b, _ := decode.Marshal("json", "value")
-				return b
-			}(),
-			errorRegex: `^$`,
+			expected: []byte(`"value"`),
+			errRegex: `^$`,
 		},
 		{
 			name: "key present in YAML format",
@@ -81,11 +75,8 @@ func TestExtract(t *testing.T) {
 				raw:    []byte(`{"key":"value"}`),
 				key:    "key",
 			},
-			expected: func() []byte {
-				b, _ := decode.Marshal("yaml", "value")
-				return b
-			}(),
-			errorRegex: `^$`,
+			expected: []byte("value\n"),
+			errRegex: `^$`,
 		},
 		{
 			name: "unsupported format",
@@ -95,7 +86,7 @@ func TestExtract(t *testing.T) {
 				key:    "key",
 			},
 			expected: nil,
-			errorRegex: test.TrimYAML(`
+			errRegex: test.TrimYAML(`
 				^extract "key":
 					unsupported format: "xml"$`,
 			),
@@ -108,7 +99,7 @@ func TestExtract(t *testing.T) {
 				key:    "key",
 			},
 			expected: nil,
-			errorRegex: test.TrimYAML(`
+			errRegex: test.TrimYAML(`
 				^extract "key":
 					jsontext: .*
 						invalid character .*$`,
@@ -120,74 +111,42 @@ func TestExtract(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Extract is called.
 			result, err := Extract(tc.args.format, tc.args.raw, tc.args.key)
-
-			prefix := fmt.Sprintf(
-				"%s\nExtract(format=%q, data=%q, key=%q)",
-				packageName, tc.args.format, tc.args.raw, tc.args.key,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errorRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %s\nwant: %s",
-					prefix, e, tc.errorRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the result is as expected.
 			if !util.AreSlicesEqual(tc.expected, result) {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					prefix, result, tc.expected,
-				)
+				t.Errorf("result mismatch\ngot:  %q\nwant: %q", result, tc.expected)
 			}
 		})
 	}
 }
 
 func TestExtract__marshalError(t *testing.T) {
-	// GIVEN: a failing marshal function.
 	original := marshalExtractSubtree
-	customErr := fmt.Errorf("marshal failed")
+	customErr := errors.New("marshal failed")
 	marshalExtractSubtree = func(format string, m any) ([]byte, error) {
 		return nil, customErr
 	}
 	t.Cleanup(func() { marshalExtractSubtree = original })
 
-	// AND: a key that is present to extract from valid data.
 	key := "foo"
 	data := []byte(`{"` + key + `":"value"}`)
 
-	errRegex := key + ":\n  " + customErr.Error()
+	errRegex := test.TrimYAML(key + ":\n  " + customErr.Error())
 
-	// WHEN: Extract is called on this key.
 	result, err := Extract("json", data, key)
-
-	prefix := fmt.Sprintf(
-		"%s\nExtract(format=%q, data=%q, key=%q)",
-		packageName, "json", data, key,
-	)
-
-	// THEN: the marshal error is returned.
 	e := errfmt.FormatError(err)
-	if !util.RegexCheck(test.TrimYAML(errRegex), e) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 
-	// AND: nil is marshaled.
 	if result != nil {
-		t.Errorf(
-			"%s result mismatch\ngot:  %v\nwant: nil",
-			prefix, result,
-		)
+		t.Errorf("result mismatch\ngot:  %q\nwant: nil", result)
 	}
 }

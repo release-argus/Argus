@@ -25,7 +25,6 @@ import (
 )
 
 func TestErrField__formatError(t *testing.T) {
-	// GIVEN: a ErrKeyField.
 	tests := []struct {
 		name string
 		err  error
@@ -170,15 +169,10 @@ func TestErrField__formatError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FormatError is called with it.
 			got := errfmt.FormatError(tc.err)
 
-			// THEN: the error is formatted as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nFormatError mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

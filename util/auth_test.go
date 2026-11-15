@@ -17,32 +17,26 @@
 package util
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"testing"
 )
 
 func TestBasicAuth(t *testing.T) {
-	// GIVEN: a username and password.
 	username := "test"
 	password := "123"
 
-	// WHEN: BasicAuth is called with this.
 	got := BasicAuth(username, password)
 
-	// THEN: username:password is returned in base64.
+	// "test:123" in base64.
 	want := "dGVzdDoxMjM="
 	if got != want {
-		t.Errorf(
-			"%s\nBasicAUth Failed encoding\ngot:  %q\nwant: %q",
-			packageName,
-			got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestIsHashed(t *testing.T) {
-	// GIVEN: a string.
 	tests := []struct {
 		name  string
 		input string
@@ -69,23 +63,16 @@ func TestIsHashed(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: isHashed is called on it.
 			got := isHashed(tc.input)
 
-			// THEN: the hash is detected correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nBasicAuth.isHashed(%q) mismatch\ngot:  %v\nwant: %v",
-					packageName, tc.input,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHash(t *testing.T) {
-	// GIVEN: a string.
 	tests := []struct {
 		name  string
 		input string
@@ -107,23 +94,16 @@ func TestHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: hash is called on it.
 			got := hash(tc.input)
 
-			// THEN: the string is hashed correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nhash(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.input,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %x\nwant: %x", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHashFromString(t *testing.T) {
-	// GIVEN: a string that contains a hash.
 	tests := []struct {
 		name string
 		str  string
@@ -145,25 +125,16 @@ func TestHashFromString(t *testing.T) {
 			want := sha256.Sum256([]byte(tc.str))
 			input := fmt.Sprintf("h__%x", want)[3:]
 
-			// WHEN: hashFromString is called on it.
 			got := hashFromString(input)
 
-			// THEN: the string is hashed correctly.
-			var got32 [32]byte
-			copy(got32[:], got[:])
-			if got32 != want {
-				t.Errorf(
-					"%s\nhashFromString(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, input,
-					got32, want,
-				)
+			if !bytes.Equal(got, want[:]) {
+				t.Errorf("mismatch\ngot:  %x\nwant: %x", got, want)
 			}
 		})
 	}
 }
 
 func TestGetHash(t *testing.T) {
-	// GIVEN: a string that may or may not be hashed.
 	tests := []struct {
 		name          string
 		input         string
@@ -193,36 +164,23 @@ func TestGetHash(t *testing.T) {
 				want = FmtHash(sha256.Sum256([]byte(tc.input)))
 			}
 
-			// WHEN: GetHash is called on it.
 			got := GetHash(tc.input)
 
-			// THEN: the string is hashed correctly.
 			gotHash := FmtHash(got)
 			if gotHash != want {
-				t.Errorf(
-					"%s\nGetHash(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.input,
-					gotHash, want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", gotHash, want)
 			}
 		})
 	}
 }
 
 func TestFmtHash(t *testing.T) {
-	// GIVEN: a hash.
-	hash := sha256.Sum256([]byte("foo"))
+	sum := sha256.Sum256([]byte("foo"))
 
-	// WHEN: FmtHash is called on it.
-	got := FmtHash(hash)
+	got := FmtHash(sum)
 
-	// THEN: the hash is formatted correctly.
-	want := fmt.Sprintf("h__%x", hash)
+	want := fmt.Sprintf("h__%x", sum)
 	if got != want {
-		t.Errorf(
-			"%s\nFmtHash(%q) mismatch\ngot:  %q\nwant: %q",
-			packageName, hash,
-			got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }

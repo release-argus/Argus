@@ -25,36 +25,31 @@ import (
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-// errReader fails partway through, as a dropped connection would.
+// errReader fails on the first read, as a dropped connection would.
 type errReader struct{ err error }
 
 func (r errReader) Read([]byte) (int, error) { return 0, r.err }
 
 func TestReadBody(t *testing.T) {
-	// GIVEN: a response body.
 	tests := []struct {
 		name     string
 		body     string
 		reader   func() interface{ Read([]byte) (int, error) }
-		wantLen  int
 		errRegex string
 	}{
 		{
 			name:     "read/empty",
 			body:     "",
-			wantLen:  0,
 			errRegex: `^$`,
 		},
 		{
 			name:     "read/small document",
 			body:     `{"version":"1.2.3"}`,
-			wantLen:  19,
 			errRegex: `^$`,
 		},
 		{
 			name:     "read/exactly at the limit",
 			body:     strings.Repeat("a", MaxBodyBytes),
-			wantLen:  MaxBodyBytes,
 			errRegex: `^$`,
 		},
 		{
@@ -85,33 +80,23 @@ func TestReadBody(t *testing.T) {
 				reader = tc.reader()
 			}
 
-			// WHEN: ReadBody is called with it.
 			got, err := ReadBody(reader)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s\nReadBody() error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
-				// AND: nothing is handed back alongside an error.
 				if got != nil {
-					t.Errorf(
-						"%s\nReadBody() returned %d bytes alongside an error\nwant: nil",
-						packageName, len(got),
-					)
+					t.Errorf("body mismatch\ngot:  %d bytes\nwant: nil", len(got))
 				}
 				return
 			}
 
-			// AND: the whole body came back when no error returned.
-			if g, w := len(got), tc.wantLen; g != w {
+			if string(got) != tc.body {
 				t.Fatalf(
-					"%s\nReadBody() length mismatch\ngot:  %d\nwant: %d",
-					packageName, g, w,
+					"body mismatch\ngot:  %d bytes, %.40q\nwant: %d bytes, %.40q",
+					len(got), got,
+					len(tc.body), tc.body,
 				)
 			}
 		})
