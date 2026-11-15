@@ -18,29 +18,26 @@ package service
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config/decode"
-	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
-	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
-	lvtest "github.com/release-argus/Argus/service/latest_version/test"
-	whtest "github.com/release-argus/Argus/webhook/test"
-
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
+	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/filter/docker"
+	lvtest "github.com/release-argus/Argus/service/latest_version/test"
 	lvbase "github.com/release-argus/Argus/service/latest_version/types/base"
 	lvforgejo "github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	lvgithub "github.com/release-argus/Argus/service/latest_version/types/github"
@@ -50,10 +47,10 @@ import (
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/webhook"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
-func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
-	// GIVEN: oldSecretRefs to unmarshal from JSON.
+func TestSecretRefs_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     string
@@ -199,20 +196,18 @@ func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: UnmarshalX is called.
 			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*secretRefs, error) {
-					var zero secretRefs
-					err := decode.Unmarshal(format, data, &zero)
-					return &zero, err
+					var refs secretRefs
+					err := decode.Unmarshal(format, data, &refs)
+					return &refs, err
 				},
 				"json", tc.data,
 				func(v *secretRefs) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"oldSecretRefs",
+				"secretRefs.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -221,8 +216,8 @@ func TestOldSecretRefs_UnmarshalJSON(t *testing.T) {
 }
 
 func TestFromPayload(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type fromDefaults struct {
@@ -231,7 +226,6 @@ func TestFromPayload(t *testing.T) {
 		webhook bool
 	}
 
-	// GIVEN: a payload and the Service defaults.
 	tests := []struct {
 		name       string
 		oldService *Service
@@ -295,7 +289,7 @@ func TestFromPayload(t *testing.T) {
 							type: github
 							url: `+test.ArgusGitHubRepo+`
 						`)),
-					"active=nil stays nil",
+					"active=true becomes nil",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -371,7 +365,7 @@ func TestFromPayload(t *testing.T) {
 							type: github
 							url: `+test.ArgusGitHubRepo+`
 						`)),
-					"Require.Docker stays if have Type&Image&Tag",
+					"Require.Docker removed if no image:tag",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -529,7 +523,7 @@ func TestFromPayload(t *testing.T) {
 								- key: X-Foo
 									value: aFoo
 						`)),
-					"Give Notify secrets",
+					"Give DeployedVersion secrets",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -991,7 +985,7 @@ func TestFromPayload(t *testing.T) {
 								url: https://example.com/gitlab
 								secret: gitlabSecret
 					`)),
-					"active=nil stays nil",
+					"Give ALL secrets",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -1064,7 +1058,7 @@ func TestFromPayload(t *testing.T) {
 								url: https://example.com/gitlab
 								secret: gitlabSecret
 						`)),
-					"active=nil stays nil",
+					"Give ALL secrets",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -1294,7 +1288,7 @@ func TestFromPayload(t *testing.T) {
 							type: github
 							url: `+test.ArgusGitHubRepo+`
 					`)),
-					"All FromDefaults",
+					"CommandFromDefaults + NotifyFromDefaults + WebhookFromDefaults",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -1305,7 +1299,6 @@ func TestFromPayload(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Convert the string payload to a ReadCloser.
 			tc.payload = test.TrimJSON(tc.payload)
 			reader := bytes.NewReader([]byte(tc.payload))
 			payload := io.NopCloser(reader)
@@ -1342,45 +1335,28 @@ func TestFromPayload(t *testing.T) {
 				tc.oldService.init(notifyCfg, whCfg, nil, nil, nil)
 			}
 
-			// WHEN: we call FromPayload.
 			svc, err := FromPayload(
 				tc.oldService,
 				&payload,
 				tc.svcCfg, tc.notifyCfg, tc.whCfg,
-				logx.LogFrom{Primary: tc.name},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nFromPayload(%q)",
-				packageName, tc.payload,
-			)
-
-			// THEN: we get an error if the payload is invalid.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s\nerror mismatch from\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: we should get a new Service otherwise.
 			gotStr, wantStr := svc.String(""), tc.want.String("")
 			if gotStr != wantStr {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			// AND: the Service fromDefaults is set when expected.
 			if svc.CommandFromDefaults != tc.wantFromDefaults.command {
 				t.Errorf(
-					"%s CommandFromDefaults mismatch\ngot:  %v\nwant: %v",
-					prefix, svc.CommandFromDefaults, tc.wantFromDefaults.command,
+					"Service.CommandFromDefaults mismatch\ngot:  %t\nwant: %t",
+					svc.CommandFromDefaults, tc.wantFromDefaults.command,
 				)
 			} else if svc.CommandFromDefaults {
 				if testErr := test.AssertSlicesEqualFunc(
@@ -1390,43 +1366,33 @@ func TestFromPayload(t *testing.T) {
 					func(a, b command.Command) bool {
 						return a.JSON() == b.JSON()
 					},
-					prefix,
-					"Command",
+					"Service.Command",
 				); testErr != nil {
-					t.Errorf(
-						"%s CommandFromDefaults=true, Command should match defaults:\n%v",
-						prefix, testErr,
-					)
+					t.Error(testErr)
 				}
 			}
 			if svc.NotifyFromDefaults != tc.wantFromDefaults.notify {
 				t.Errorf(
-					"%s NotifyFromDefaults mismatch\ngot:  %v\nwant: %v",
-					prefix, svc.NotifyFromDefaults, tc.wantFromDefaults.notify,
+					"Service.NotifyFromDefaults mismatch\ngot:  %t\nwant: %t",
+					svc.NotifyFromDefaults, tc.wantFromDefaults.notify,
 				)
 			} else if svc.NotifyFromDefaults {
 				gotKeys := util.SortedKeys(svc.Notify)
 				wantKeys := util.SortedKeys(tc.svcCfg.Soft.Notify)
 				if !util.AreSlicesEqual(gotKeys, wantKeys) {
-					t.Errorf(
-						"%s NotifyFromDefaults=true, Notify should match defaults:\ngot:  %v\nwant: %v",
-						prefix, gotKeys, wantKeys,
-					)
+					t.Errorf("Service.Notify keys mismatch\ngot:  %q\nwant: %q", gotKeys, wantKeys)
 				}
 			}
 			if svc.WebhookFromDefaults != tc.wantFromDefaults.webhook {
 				t.Errorf(
-					"%s WebhookFromDefaults mismatch\ngot:  %v\nwant: %v",
-					prefix, svc.WebhookFromDefaults, tc.wantFromDefaults.webhook,
+					"Service.WebhookFromDefaults mismatch\ngot:  %t\nwant: %t",
+					svc.WebhookFromDefaults, tc.wantFromDefaults.webhook,
 				)
 			} else if svc.WebhookFromDefaults {
 				gotKeys := util.SortedKeys(svc.Webhook)
 				wantKeys := util.SortedKeys(tc.svcCfg.Soft.Webhook)
 				if !util.AreSlicesEqual(gotKeys, wantKeys) {
-					t.Errorf(
-						"%s WebhookFromDefaults=true, Webhook should match defaults:\ngot:  %v\nwant: %v",
-						prefix, gotKeys, wantKeys,
-					)
+					t.Errorf("Service.Webhook keys mismatch\ngot:  %q\nwant: %q", gotKeys, wantKeys)
 				}
 			}
 		})
@@ -1434,11 +1400,10 @@ func TestFromPayload(t *testing.T) {
 }
 
 func TestFromPayload__noServiceCreated(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: the function that decodes a Service payload returns nil.
 	original := decodeServiceFromPayload
 	decodeServiceFromPayload = func(
 		format string,
@@ -1453,74 +1418,59 @@ func TestFromPayload__noServiceCreated(t *testing.T) {
 	t.Cleanup(func() { decodeServiceFromPayload = original })
 	errRegex := `^no service created from payload$`
 
-	// AND: a valid payload to create a service.
-	payloadStr := `{
+	payload := io.NopCloser(bytes.NewReader([]byte(`{
 		"latest_version": {
 			"type": "github",
 			"url": "` + test.ArgusGitHubRepo + `"
 		}
-	}`
-	reader := bytes.NewReader([]byte(payloadStr))
-	payload := io.NopCloser(reader)
+	}`)))
 
-	// WHEN: we call FromPayload.
 	_, err := FromPayload(
 		nil,
 		&payload,
 		svcCfg, notifyCfg, whCfg,
-		logx.LogFrom{Primary: "TestFromPayload_NoServiceCreated"},
 	)
-
-	// THEN: we should get an error.
-	prefix := fmt.Sprintf("%s\nFromPayload()", packageName)
 	e := errfmt.FormatError(err)
 	if !util.RegexCheck(errRegex, e) {
-		t.Fatalf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestFromPayload_ReadFromFail(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
-	// GIVEN: an invalid payload.
-	payloadStr := "this is a long payload"
-	payload := io.NopCloser(bytes.NewReader([]byte(payloadStr)))
-	payload = http.MaxBytesReader(nil, payload, 5)
 
-	// WHEN: we call Decode.
+	payload := io.NopCloser(bytes.NewReader([]byte("this is a long payload")))
+	payload = http.MaxBytesReader(nil, payload, 5)
+	errRegex := `^http: request body too large$`
+
 	_, err := FromPayload(
 		&Service{},
 		&payload,
-		svcCfg,
-		notifyCfg,
-		whCfg,
-		logx.LogFrom{},
+		svcCfg, notifyCfg, whCfg,
 	)
-
-	// THEN: we should get an error.
-	if err == nil {
-		t.Errorf(
-			"%s\nFromPayload() gave no error with an invalid payload",
-			packageName,
-		)
+	e := errfmt.FormatError(err)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestService_CheckFetches(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 	id := t.Name()
 
-	// GIVEN: a Service.
+	// Queried for the versions CheckFetches should find.
 	testLV := lvtest.Lookup(t, "url", false)
-	_, _ = testLV.Query(false, logx.LogFrom{})
+	if _, err := testLV.Query(false, logx.LogFrom{}); err != nil {
+		t.Fatalf("latestver.Lookup.Query() failed: %v", err)
+	}
 	testDVL := dvtest.Lookup(t, "url", false, "")
-	_ = testDVL.Query(false, logx.LogFrom{})
+	if err := testDVL.Query(false, logx.LogFrom{}); err != nil {
+		t.Fatalf("deployedver.Lookup.Query() failed: %v", err)
+	}
 	tests := []struct {
 		name                                      string
 		svc                                       *Service
@@ -1580,6 +1530,8 @@ func TestService_CheckFetches(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			startLatestVersion: "foo",
+			wantLatestVersion:  "foo",
 			errRegex: test.TrimYAML(`
 				^latest_version fetches failed:
 					x509 \(certificate invalid\)$`,
@@ -1599,7 +1551,10 @@ func TestService_CheckFetches(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
-			wantLatestVersion: testLV.GetStatus().LatestVersion(),
+			startLatestVersion:   "foo",
+			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
+			startDeployedVersion: "bar",
+			wantDeployedVersion:  "bar",
 			errRegex: test.TrimYAML(`
 				^deployed_version fetches failed:
 					x509 \(certificate invalid\)$`,
@@ -1641,7 +1596,7 @@ func TestService_CheckFetches(t *testing.T) {
 			startLatestVersion:   "foo",
 			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
 			startDeployedVersion: "bar",
-			wantDeployedVersion:  "bar", // Unchanged.
+			wantDeployedVersion:  "bar", // A manual lookup is not queried.
 			errRegex:             `^$`,
 		},
 		{
@@ -1680,40 +1635,30 @@ func TestService_CheckFetches(t *testing.T) {
 			tc.svc.Status.SetLatestVersion(tc.startLatestVersion, "", false)
 			tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, "", false)
 
-			// WHEN: we call CheckFetches.
 			err := tc.svc.CheckFetches()
-
-			prefix := fmt.Sprintf("%s\nService.CheckFetches()", packageName)
-
-			// THEN: the error is as want.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: we get the want LatestVersion.
 			if got := tc.svc.Status.LatestVersion(); got != tc.wantLatestVersion {
 				t.Errorf(
-					"%sStatus.LatestVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, tc.wantLatestVersion, got,
+					"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantLatestVersion,
 				)
 			}
 
-			// AND: we get the want DeployedVersion.
 			if got := tc.svc.Status.DeployedVersion(); got != tc.wantDeployedVersion {
 				t.Errorf(
-					"%s Status.DeployedVersion()\ngot:  %q\nwant: %q",
-					prefix, tc.wantDeployedVersion, got,
+					"Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantDeployedVersion,
 				)
 			}
-			want := 0
-			if got := len(tc.svc.Status.AnnounceChannel); got != want {
+
+			if got, want := len(tc.svc.Status.AnnounceChannel), 0; got != want {
 				t.Errorf(
-					"%s Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, want,
 				)
 			}
 		})
@@ -1721,10 +1666,11 @@ func TestService_CheckFetches(t *testing.T) {
 }
 
 func TestService_GiveSecrets(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 	id := t.Name()
+	timestamp := "2024-01-02T03:04:05Z"
 
 	type statusTests struct {
 		oldLatestVersion, expectedLatestVersion                       string
@@ -1741,7 +1687,6 @@ func TestService_GiveSecrets(t *testing.T) {
 		expectedFails map[string]*bool
 	}
 
-	// GIVEN: a Service that may have secrets in it referencing those in another Service.
 	tests := []struct {
 		name            string
 		svc, oldService *Service
@@ -2010,8 +1955,13 @@ func TestService_GiveSecrets(t *testing.T) {
 					"foo": new(false),
 					"bar": new(true),
 				},
+				expectedFails: map[string]*bool{
+					"foo": nil,
+					"bar": nil,
+				},
 			},
 			secretRefs: secretRefs{},
+			// Without secretRefs, only access_token and the basic_auth password are inherited.
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2137,6 +2087,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					"bar": {OldIndex: "bar"},
 				},
 			},
+			// avatar is not censorable and the username is not a secret, so both stay masked.
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2182,11 +2133,22 @@ func TestService_GiveSecrets(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
+			oldService: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
 			statusTests: statusTests{
 				oldLatestVersion:               "1.2.3",
 				expectedLatestVersion:          "1.2.3",
-				oldLatestVersionTimestamp:      time.Now().Format(time.RFC3339),
-				expectedLatestVersionTimestamp: time.Now().Format(time.RFC3339),
+				oldLatestVersionTimestamp:      timestamp,
+				expectedLatestVersionTimestamp: timestamp,
 			},
 			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
@@ -2213,7 +2175,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					"yaml", []byte(test.TrimYAML(`
 						latest_version:
 							type: url
-							url: https://example.com
+							url: https://example.com/somewhere-else
 						`)),
 					id,
 					svcCfg, notifyCfg, whCfg,
@@ -2221,7 +2183,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			}),
 			statusTests: statusTests{
 				oldLatestVersion:          "1.2.3",
-				oldLatestVersionTimestamp: time.Now().Format(time.RFC3339),
+				oldLatestVersionTimestamp: timestamp,
 			},
 			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
@@ -2257,8 +2219,8 @@ func TestService_GiveSecrets(t *testing.T) {
 			statusTests: statusTests{
 				oldDeployedVersion:               "1.2.3",
 				expectedDeployedVersion:          "1.2.3",
-				oldDeployedVersionTimestamp:      time.Now().Format(time.RFC3339),
-				expectedDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
+				oldDeployedVersionTimestamp:      timestamp,
+				expectedDeployedVersionTimestamp: timestamp,
 			},
 			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
@@ -2301,7 +2263,7 @@ func TestService_GiveSecrets(t *testing.T) {
 			}),
 			statusTests: statusTests{
 				oldDeployedVersion:          "1.2.3",
-				oldDeployedVersionTimestamp: time.Now().Format(time.RFC3339),
+				oldDeployedVersionTimestamp: timestamp,
 			},
 			secretRefs: secretRefs{},
 			want: test.TrimYAML(`
@@ -2412,6 +2374,9 @@ func TestService_GiveSecrets(t *testing.T) {
 				oldFails: map[string]*bool{
 					"test": new(true),
 				},
+				expectedFails: map[string]*bool{
+					"test": nil,
+				},
 			},
 		},
 		{
@@ -2505,6 +2470,14 @@ func TestService_GiveSecrets(t *testing.T) {
 					- - ls
 						- -lah
 			`),
+			commandTests: commandTests{
+				oldFails: []*bool{
+					new(true),
+				},
+				expectedFails: []*bool{
+					nil,
+				},
+			},
 		},
 	}
 
@@ -2513,6 +2486,14 @@ func TestService_GiveSecrets(t *testing.T) {
 			t.Parallel()
 
 			if tc.oldService != nil {
+				tc.oldService.Status.SetLatestVersion(
+					tc.statusTests.oldLatestVersion, tc.statusTests.oldLatestVersionTimestamp,
+					false,
+				)
+				tc.oldService.Status.SetDeployedVersion(
+					tc.statusTests.oldDeployedVersion, tc.statusTests.oldDeployedVersionTimestamp,
+					false,
+				)
 				for k, v := range tc.commandTests.oldFails {
 					if v != nil {
 						tc.oldService.Status.Fails.Command.Set(k, *v)
@@ -2523,39 +2504,49 @@ func TestService_GiveSecrets(t *testing.T) {
 				}
 			}
 
-			// WHEN: we call giveSecrets.
 			tc.svc.giveSecrets(tc.oldService, tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecrets()", packageName)
-
-			// THEN: we should get a Service with the secrets from the old Service.
-			gotService := tc.svc
-			gotServiceStr := gotService.String("")
-			if gotServiceStr != tc.want {
-				t.Errorf(
-					"%s secrets weren't passed on\ngot:  %q\nwant: %q",
-					prefix, gotServiceStr, tc.want,
-				)
+			if gotStr := tc.svc.String(""); gotStr != tc.want {
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", gotStr, tc.want)
 			}
 
-			if gotService.Webhook != nil {
-				var expectedWH string
-				for name := range gotService.Webhook {
-					expectedWH = name
-					break
+			if testErr := test.AssertFields(
+				t,
+				[]test.FieldAssertion{
+					{Name: "LatestVersion()", Got: tc.svc.Status.LatestVersion(), Want: tc.statusTests.expectedLatestVersion, Mode: test.CompareEqual},
+					{Name: "LatestVersionTimestamp()", Got: tc.svc.Status.LatestVersionTimestamp(), Want: tc.statusTests.expectedLatestVersionTimestamp, Mode: test.CompareEqual},
+					{Name: "DeployedVersion()", Got: tc.svc.Status.DeployedVersion(), Want: tc.statusTests.expectedDeployedVersion, Mode: test.CompareEqual},
+					{Name: "DeployedVersionTimestamp()", Got: tc.svc.Status.DeployedVersionTimestamp(), Want: tc.statusTests.expectedDeployedVersionTimestamp, Mode: test.CompareEqual},
+				},
+				"Status",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+
+			for i, want := range tc.commandTests.expectedFails {
+				gotStr := test.StringifyPtr(tc.svc.Status.Fails.Command.Get(i))
+				wantStr := test.StringifyPtr(want)
+				if gotStr != wantStr {
+					t.Errorf(
+						"Status.Fails.Command.Get(%d) mismatch\ngot:  %q\nwant: %q",
+						i, gotStr, wantStr,
+					)
 				}
-				// Expecting `Failed` to be carried over.
-				for key := range tc.webhookTests.expectedFails {
-					want := tc.webhookTests.expectedFails[key]
-					got := gotService.Webhook[expectedWH].DidFail()
-					wantStr := test.StringifyPtr(want)
-					gotStr := test.StringifyPtr(got)
-					if gotStr != wantStr {
-						t.Errorf(
-							"%s stringified mismatch on .Failed\ngot:  %q\nwant: %q",
-							packageName, gotStr, wantStr,
-						)
-					}
+			}
+
+			for key, want := range tc.webhookTests.expectedFails {
+				wh, ok := tc.svc.Webhook[key]
+				if !ok {
+					t.Errorf("Service.Webhook[%q] mismatch\ngot:  absent\nwant: present", key)
+					continue
+				}
+				gotStr := test.StringifyPtr(wh.DidFail())
+				wantStr := test.StringifyPtr(want)
+				if gotStr != wantStr {
+					t.Errorf(
+						"Service.Webhook[%q].DidFail() mismatch\ngot:  %q\nwant: %q",
+						key, gotStr, wantStr,
+					)
 				}
 			}
 		})
@@ -2564,20 +2555,32 @@ func TestService_GiveSecrets(t *testing.T) {
 
 func TestService_GiveSecretsLatestVersion(t *testing.T) {
 	lvCfg := lvtest.PlainDefaultsConfig(t)
-	type otherData struct {
-		githubData            *lvgithub.Data
-		githubDataTransformed bool
+	githubLookupWithETag := func(etag string) latestver.Lookup {
+		t.Helper()
+		lookup := test.Must(t, func() (latestver.Lookup, error) {
+			return latestver.Decode(
+				"yaml", []byte(test.TrimYAML(`
+					type: github
+					url: `+test.ArgusGitHubRepo+`
+				`)),
+				nil,
+				&status.Status{},
+				lvCfg,
+			)
+		})
+		githubLookup, ok := lookup.(*lvgithub.Lookup)
+		if !ok {
+			t.Fatalf("latestver.Decode() type mismatch\ngot:  %T\nwant: *lvgithub.Lookup", lookup)
+		}
+		githubLookup.GetGitHubData().SetETag(etag)
+		return githubLookup
 	}
 
-	// GIVEN: a LatestVersion that may have secrets in it referencing those in another LatestVersion.
-	githubData := lvgithub.Data{}
-	githubData.SetETag("shazam")
 	tests := []struct {
 		name                   string
 		latestVersion, otherLV latestver.Lookup
 		secretRefs             shared.VSecretRef
 		expected               latestver.Lookup
-		otherData              otherData
 	}{
 		{
 			name: "nil/oldLatestVersion",
@@ -2745,6 +2748,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					lvCfg,
 				)
 			}),
+			// The old token is empty, so the mask clears to fall back to the default.
 			expected: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -2778,7 +2782,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: foo
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: foo
 					`)),
 					nil,
 					&status.Status{},
@@ -2819,7 +2826,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: foo
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: foo
 					`)),
 					nil,
 					&status.Status{},
@@ -2848,7 +2858,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: foo
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: foo
 					`)),
 					nil,
 					&status.Status{},
@@ -2863,7 +2876,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: bar
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: bar
 					`)),
 					nil,
 					&status.Status{},
@@ -2878,7 +2894,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: foo
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: foo
 					`)),
 					nil,
 					&status.Status{},
@@ -2896,7 +2915,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: `+util.SecretValue+`
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: `+util.SecretValue+`
 					`)),
 					nil,
 					&status.Status{},
@@ -2911,7 +2933,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: bar
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: bar
 					`)),
 					nil,
 					&status.Status{},
@@ -2926,7 +2951,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: bar
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: bar
 					`)),
 					nil,
 					&status.Status{},
@@ -2944,7 +2972,10 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: `+util.SecretValue+`
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
+								auth:
+									token: `+util.SecretValue+`
 					`)),
 					nil,
 					&status.Status{},
@@ -2959,6 +2990,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
 					`)),
 					nil,
 					&status.Status{},
@@ -2973,7 +3006,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 						require:
 							docker:
 								type: ghcr
-								token: `+util.SecretValue+`
+								image: `+test.ArgusGitHubRepo+`
+								tag: latest
 					`)),
 					nil,
 					&status.Status{},
@@ -2994,32 +3028,8 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					lvCfg,
 				)
 			}),
-			otherLV: test.Must(t, func() (latestver.Lookup, error) {
-				return latestver.Decode(
-					"yaml", []byte(test.TrimYAML(`
-						type: github
-						url: `+test.ArgusGitHubRepo+`
-					`)),
-					nil,
-					&status.Status{},
-					lvCfg,
-				)
-			}),
-			expected: test.Must(t, func() (latestver.Lookup, error) {
-				return latestver.Decode(
-					"yaml", []byte(test.TrimYAML(`
-						type: github
-						url: `+test.ArgusGitHubRepo+`
-					`)),
-					nil,
-					&status.Status{},
-					lvCfg,
-				)
-			}),
-			otherData: otherData{
-				githubData:            &githubData,
-				githubDataTransformed: true,
-			},
+			otherLV:  githubLookupWithETag("shazam"),
+			expected: githubLookupWithETag("shazam"),
 		},
 		{
 			name: "githubData/not carried over if type wasn't 'github'",
@@ -3056,10 +3066,6 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					lvCfg,
 				)
 			}),
-			otherData: otherData{
-				githubData:            &githubData,
-				githubDataTransformed: false,
-			},
 		},
 		{
 			name: "githubData/not carried over if type no longer 'github'",
@@ -3074,17 +3080,7 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					lvCfg,
 				)
 			}),
-			otherLV: test.Must(t, func() (latestver.Lookup, error) {
-				return latestver.Decode(
-					"yaml", []byte(test.TrimYAML(`
-						type: github
-						url: `+test.ArgusGitHubRepo+`
-					`)),
-					nil,
-					&status.Status{},
-					lvCfg,
-				)
-			}),
+			otherLV: githubLookupWithETag("shazam"),
 			expected: test.Must(t, func() (latestver.Lookup, error) {
 				return latestver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -3096,10 +3092,6 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 					lvCfg,
 				)
 			}),
-			otherData: otherData{
-				githubData:            &githubData,
-				githubDataTransformed: false,
-			},
 		},
 		{
 			name: "only new/changed Headers with want refs",
@@ -3373,116 +3365,82 @@ func TestService_GiveSecretsLatestVersion(t *testing.T) {
 			newService := &Service{LatestVersion: tc.latestVersion}
 			oldService := &Service{LatestVersion: tc.otherLV}
 
-			// WHEN: we call giveSecretsLatestVersion.
 			newService.giveSecretsLatestVersion(oldService.LatestVersion, &tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecretsLatestVersion()", packageName)
-
-			// THEN: we should get a Service with the secrets from the other Service.
+			// Secrets are inherited in place.
 			gotLV := newService.LatestVersion
-
-			// Forgejo resolves its masked token against the stored value, but only
-			// when both address the same instance.
-			if gotLatestVersion, ok := gotLV.(*lvforgejo.Lookup); ok {
-				expectedLatestVersion, _ := tc.expected.(*lvforgejo.Lookup)
-				if gotLatestVersion.AccessToken != expectedLatestVersion.AccessToken {
-					t.Errorf(
-						"%s .AccessToken mismatch\ngot:  %q\nwant: %q",
-						prefix, gotLatestVersion.AccessToken, expectedLatestVersion.AccessToken,
-					)
-				}
-			}
-
-			// GitHub types have AccessTokens too.
-			if gotLatestVersion, ok := gotLV.(*lvgithub.Lookup); ok {
-				if hadLatestVersion, ok := tc.latestVersion.(*lvgithub.Lookup); ok {
-					gotAccessToken := gotLatestVersion.AccessToken
-					expectedAccessToken := hadLatestVersion.AccessToken
-					if gotAccessToken != expectedAccessToken {
-						t.Errorf(
-							"%s .AccessToken mismatch\ngot:  %q\nwant: %q",
-							prefix, gotAccessToken, expectedAccessToken,
-						)
-					}
-				}
-			}
-
-			// Require:
-			var gotRequire *filter.Require
-			var expectedRequire *filter.Require
-			// 	Got:
-			if gotLatestVersion, ok := gotLV.(*lvgithub.Lookup); ok {
-				gotRequire = gotLatestVersion.GetRequire()
-			} else if gotLatestVersion, ok := gotLV.(*lvweb.Lookup); ok {
-				gotRequire = gotLatestVersion.GetRequire()
-			} else if gotLatestVersion, ok := gotLV.(*lvforgejo.Lookup); ok {
-				gotRequire = gotLatestVersion.GetRequire()
-			}
-			// 	Expected:
-			if expectedLatestVersion, ok := tc.expected.(*lvgithub.Lookup); ok {
-				expectedRequire = expectedLatestVersion.GetRequire()
-			} else if expectedLatestVersion, ok := tc.expected.(*lvweb.Lookup); ok {
-				expectedRequire = expectedLatestVersion.GetRequire()
-			} else if expectedLatestVersion, ok := tc.expected.(*lvforgejo.Lookup); ok {
-				expectedRequire = expectedLatestVersion.GetRequire()
-			}
-			// newService has a nil Require, but want non-nil.
-			if gotRequire == nil && expectedRequire != nil {
-				t.Errorf("%s .Require mismatch\ngot:  nil\nwant: non-nil", prefix)
-
-				// newService Require/Docker isn't nil when want is or vice-versa.
-			} else if gotRequire != expectedRequire &&
-				gotRequire.Docker != expectedRequire.Docker &&
-				// newService doesn't have the want Token.
-				gotRequire.Docker.GetAuth().GetTokenSelf() != expectedRequire.Docker.GetAuth().GetTokenSelf() {
-				t.Errorf(
-					"%s .Require.Docker.Token mismatch\ngot:  %q\nwant: %q",
-					prefix,
-					gotRequire.Docker.GetAuth().GetTokenSelf(),
-					expectedRequire.Docker.GetAuth().GetTokenSelf(),
+			if reflect.TypeOf(gotLV) != reflect.TypeOf(tc.expected) {
+				t.Fatalf(
+					"Service.LatestVersion type mismatch\ngot:  %T\nwant: %T",
+					gotLV, tc.expected,
 				)
 			}
 
-			// githubData:
-			if expectedLatestVersion, ok := tc.expected.(*lvgithub.Lookup); ok {
-				// Ensure gotLV is a *lvgithub.Lookup.
-				if gotLatestVersion, ok := gotLV.(*lvgithub.Lookup); ok {
-					got := gotLatestVersion.GetGitHubData().String()
-					expected := expectedLatestVersion.GetGitHubData().String()
-					if got != expected {
-						t.Errorf(
-							"%s .githubData mismatch\ngot:  %v\nwant: %v",
-							prefix, got, expected,
-						)
-					}
-				} else {
-					t.Fatalf(
-						"%s *lvgithub.Lookup type mismatch\ngot:  %T\nwant: github.Lookup",
-						prefix, gotLV,
+			var gotAccessToken, wantAccessToken string
+			switch want := tc.expected.(type) {
+			case *lvforgejo.Lookup:
+				gotAccessToken = gotLV.(*lvforgejo.Lookup).AccessToken
+				wantAccessToken = want.AccessToken
+			case *lvgithub.Lookup:
+				gotAccessToken = gotLV.(*lvgithub.Lookup).AccessToken
+				wantAccessToken = want.AccessToken
+			}
+			if gotAccessToken != wantAccessToken {
+				t.Errorf(
+					"Lookup.AccessToken mismatch\ngot:  %q\nwant: %q",
+					gotAccessToken, wantAccessToken,
+				)
+			}
+
+			gotRequire, expectedRequire := gotLV.GetRequire(), tc.expected.GetRequire()
+			switch {
+			case gotRequire == nil && expectedRequire != nil:
+				t.Error("Lookup.GetRequire() mismatch\ngot:  nil\nwant: non-nil")
+			case gotRequire != nil && expectedRequire == nil:
+				t.Error("Lookup.GetRequire() mismatch\ngot:  non-nil\nwant: nil")
+			case gotRequire != nil:
+				var gotToken, wantToken string
+				if gotRequire.Docker != nil {
+					gotToken = gotRequire.Docker.GetAuth().GetTokenSelf()
+				}
+				if expectedRequire.Docker != nil {
+					wantToken = expectedRequire.Docker.GetAuth().GetTokenSelf()
+				}
+				if gotToken != wantToken {
+					t.Errorf(
+						"Lookup.GetRequire().Docker.GetAuth().GetTokenSelf() mismatch\n"+
+							"got:  %q\nwant: %q",
+						gotToken, wantToken,
 					)
 				}
 			}
-			// Headers:
+
+			if expectedLatestVersion, ok := tc.expected.(*lvgithub.Lookup); ok {
+				got := gotLV.(*lvgithub.Lookup).GetGitHubData().String()
+				expected := expectedLatestVersion.GetGitHubData().String()
+				if got != expected {
+					t.Errorf(
+						"Lookup.GetGitHubData().String() mismatch\ngot:  %q\nwant: %q",
+						got, expected,
+					)
+				}
+			}
 			var expectedHeaders shared.Headers
 			if expectedLV, ok := tc.expected.(*lvweb.Lookup); ok {
 				expectedHeaders = expectedLV.Headers
 			}
 			var gotHeaders shared.Headers
-			if gotLV, ok := gotLV.(*lvweb.Lookup); ok {
-				gotHeaders = gotLV.Headers
+			if gotWebLV, ok := gotLV.(*lvweb.Lookup); ok {
+				gotHeaders = gotWebLV.Headers
 			}
-			if !util.AreSlicesEqual(expectedHeaders, gotHeaders) {
-				t.Errorf(
-					"%s .Headers mismatch\ngot:  %+v\nwant: %+v",
-					prefix, gotHeaders, expectedHeaders,
-				)
+			if testErr := test.AssertSlicesEqual(t, gotHeaders, expectedHeaders, "Lookup.Headers"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestService_GiveSecretsDeployedVersion(t *testing.T) {
-	// GIVEN: a DeployedVersion that may have secrets in it referencing those in another DeployedVersion.
 	tests := []struct {
 		name                     string
 		deployedVersion, otherDV deployedver.Lookup
@@ -3928,77 +3886,54 @@ func TestService_GiveSecretsDeployedVersion(t *testing.T) {
 			newService := &Service{DeployedVersionLookup: tc.deployedVersion}
 			oldService := &Service{DeployedVersionLookup: tc.otherDV}
 
-			// WHEN: we call giveSecretsDeployedVersion.
 			newService.giveSecretsDeployedVersion(oldService.DeployedVersionLookup, &tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecretsDeployedVersion()", packageName)
-
-			// THEN: we should get a Service with the secrets from the other Service.
 			gotDV := newService.DeployedVersionLookup
-			if gotDV == tc.want {
+			switch {
+			case gotDV == nil && tc.want != nil:
+				t.Fatal("Service.DeployedVersionLookup mismatch\ngot:  nil\nwant: non-nil")
+			case gotDV != nil && tc.want == nil:
+				t.Fatal("Service.DeployedVersionLookup mismatch\ngot:  non-nil\nwant: nil")
+			case gotDV == nil:
 				return
 			}
-			// Got/Expected nil but not both.
-			if gotDV == nil && tc.want != nil ||
-				gotDV != nil && tc.want == nil {
+			var gotBasicAuth, expectedBasicAuth *dvweb.BasicAuth
+			var gotHeaders, expectedHeaders shared.Headers
+			if gotWebDV, ok := gotDV.(*dvweb.Lookup); ok {
+				gotBasicAuth, gotHeaders = gotWebDV.BasicAuth, gotWebDV.Headers
+			}
+			if wantWebDV, ok := tc.want.(*dvweb.Lookup); ok {
+				expectedBasicAuth, expectedHeaders = wantWebDV.BasicAuth, wantWebDV.Headers
+			}
+			switch {
+			case gotBasicAuth != nil && expectedBasicAuth == nil:
+				t.Error("Lookup.BasicAuth mismatch\ngot:  non-nil\nwant: nil")
+			case gotBasicAuth == nil && expectedBasicAuth != nil:
+				t.Error("Lookup.BasicAuth mismatch\ngot:  nil\nwant: non-nil")
+			case gotBasicAuth != nil && gotBasicAuth.Password != expectedBasicAuth.Password:
 				t.Errorf(
-					"%s nil/not-nil state unexpected\ngot:  %q\nwant: %q",
-					prefix, gotDV.String(""), tc.want.String(""),
+					"Lookup.BasicAuth.Password mismatch\ngot:  %q\nwant: %q",
+					gotBasicAuth.Password, expectedBasicAuth.Password,
 				)
 			}
-			// BasicAuth:
-			var expectedBasicAuth *dvweb.BasicAuth
-			if expectedLV, ok := tc.want.(*dvweb.Lookup); ok {
-				expectedBasicAuth = expectedLV.BasicAuth
-			}
-			var gotBasicAuth *dvweb.BasicAuth
-			if gotLV, ok := gotDV.(*dvweb.Lookup); ok {
-				gotBasicAuth = gotLV.BasicAuth
-			}
-			if gotBasicAuth != expectedBasicAuth {
-				if gotBasicAuth != nil && expectedBasicAuth == nil {
-					t.Errorf(
-						"%s .BasicAuth mismatch\ngot:  %q\nwant: nil",
-						prefix, *gotBasicAuth,
-					)
-				} else if gotBasicAuth.Password != expectedBasicAuth.Password {
-					t.Errorf(
-						"%s .BasicAuth.Password mismatch\ngot:  %q\nwant: %q",
-						prefix, util.DerefOrZero(gotBasicAuth), util.DerefOrZero(expectedBasicAuth),
-					)
-				}
-			}
-			// Headers:
-			var expectedHeaders shared.Headers
-			if expectedDV, ok := tc.want.(*dvweb.Lookup); ok {
-				expectedHeaders = expectedDV.Headers
-			}
-			var gotHeaders shared.Headers
-			if gotLV, ok := gotDV.(*dvweb.Lookup); ok {
-				gotHeaders = gotLV.Headers
-			}
-			if !util.AreSlicesEqual(expectedHeaders, gotHeaders) {
-				t.Errorf(
-					"%s .Headers mismatch\ngot:  %+v\nwant: %+v",
-					prefix, gotHeaders, expectedHeaders,
-				)
+			if testErr := test.AssertSlicesEqual(t, gotHeaders, expectedHeaders, "Lookup.Headers"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestService_GiveSecretsNotify(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 
-	// GIVEN: a NotifySlice that may have secrets in it referencing those in another NotifySliceSlice.
 	tests := []struct {
 		name                string
 		notify, otherNotify shoutrrr.Shoutrrrs
 		secretRefs          map[string]shared.OldStringIndex
-		expected            shoutrrr.Shoutrrrs
+		want                shoutrrr.Shoutrrrs
 	}{
 		{
-			name:   "nil/NotifySlice",
+			name:   "nil/notify",
 			notify: nil,
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
@@ -4013,7 +3948,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 			},
 			secretRefs: map[string]shared.OldStringIndex{},
-			expected:   nil,
+			want:       nil,
 		},
 		{
 			name: "nil/oldNotifiers",
@@ -4031,7 +3966,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 			otherNotify: nil,
 			secretRefs:  map[string]shared.OldStringIndex{},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4071,7 +4006,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 			},
 			secretRefs: nil,
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4111,7 +4046,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 			},
 			secretRefs: map[string]shared.OldStringIndex{},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4153,7 +4088,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"bish": {OldIndex: "bash"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4205,7 +4140,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: ""},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4267,7 +4202,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "baz"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4329,7 +4264,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4391,7 +4326,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4464,80 +4399,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				"bar": {OldIndex: "foo"},
 				"foo": {OldIndex: "bar"},
 			},
-			expected: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": "shazam",
-					},
-					nil,
-					nil, nil, nil,
-				),
-				"bar": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": "something",
-					},
-					nil,
-					nil, nil, nil,
-				),
-			},
-		},
-		{
-			name: "secretRefs/url_fields.apikey swap vars ignores notify order",
-			notify: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": util.SecretValue,
-					},
-					nil,
-					nil, nil, nil,
-				),
-				"bar": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": util.SecretValue,
-					},
-					nil,
-					nil, nil, nil,
-				),
-			},
-			otherNotify: shoutrrr.Shoutrrrs{
-				"foo": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": "something",
-					},
-					nil,
-					nil, nil, nil,
-				),
-				"bar": shoutrrr.New(
-					nil,
-					"", "",
-					nil,
-					map[string]string{
-						"apikey": "shazam",
-					},
-					nil,
-					nil, nil, nil,
-				),
-			},
-			secretRefs: map[string]shared.OldStringIndex{
-				"bar": {OldIndex: "foo"},
-				"foo": {OldIndex: "bar"},
-			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4599,7 +4461,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4661,7 +4523,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4723,7 +4585,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4785,7 +4647,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4847,7 +4709,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4909,7 +4771,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -4969,7 +4831,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -5031,7 +4893,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -5099,7 +4961,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			secretRefs: map[string]shared.OldStringIndex{
 				"foo": {OldIndex: "foo"},
 			},
-			expected: shoutrrr.Shoutrrrs{
+			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
 					"", "",
@@ -5131,36 +4993,26 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 			&dashboard.Options{},
 		)
-		// Give empty defaults and hardDefaults to the NotifySlice.
 		newService.Notify.Init(&newService.Status, notifyCfg)
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: we call giveSecretsNotify.
 			newService.giveSecretsNotify(tc.otherNotify, tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecretsNotify()", packageName)
-
-			// THEN: we should get a NotifySlice with the secrets from the other Service.
 			gotNotify := newService.Notify
-			gotNotifyStr := gotNotify.String("")
-			expectedStr := tc.expected.String("")
-			if gotNotifyStr != expectedStr {
-				t.Errorf(
-					"%s secrets weren't passed on\ngot:  %+v\nwant: %+v",
-					prefix, gotNotifyStr, expectedStr,
-				)
+			if gotStr, wantStr := gotNotify.String(""), tc.want.String(""); gotStr != wantStr {
+				t.Errorf("Shoutrrrs.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}
 }
 
 func TestService_GiveSecretsWebhook(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
-	// GIVEN: a WebhookSlice that may have secrets in it referencing those in another WebhookSliceSlice.
+
 	tests := []struct {
 		name                  string
 		webhook, otherWebhook webhook.Webhooks
@@ -5168,7 +5020,7 @@ func TestService_GiveSecretsWebhook(t *testing.T) {
 		want                  webhook.Webhooks
 	}{
 		{
-			name:    "nil/WebhookSlice",
+			name:    "nil/webhook",
 			webhook: nil,
 			otherWebhook: webhook.Webhooks{
 				"foo": webhook.New(
@@ -5554,85 +5406,6 @@ func TestService_GiveSecretsWebhook(t *testing.T) {
 		},
 		{
 			name: "secretRefs/secret swap vars",
-			webhook: webhook.Webhooks{
-				"bar": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"bar",
-					nil, webhook.Notifiers{}, nil,
-					util.SecretValue,
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-				"foo": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"foo",
-					nil, webhook.Notifiers{}, nil,
-					util.SecretValue,
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-			},
-			otherWebhook: webhook.Webhooks{
-				"foo": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"foo",
-					nil, webhook.Notifiers{}, nil,
-					"shazam",
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-				"bar": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"bar",
-					nil, webhook.Notifiers{}, nil,
-					"whoosh",
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-			},
-			secretRefs: map[string]shared.WHSecretRef{
-				"bar": {OldIndex: "foo"},
-				"foo": {OldIndex: "bar"},
-			},
-			want: webhook.Webhooks{
-				"foo": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"foo",
-					nil, webhook.Notifiers{}, nil,
-					"whoosh",
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-				"bar": webhook.New(
-					nil, nil,
-					"",
-					nil, nil,
-					"bar",
-					nil, webhook.Notifiers{}, nil,
-					"shazam",
-					nil,
-					"", "",
-					nil, nil, nil,
-				),
-			},
-		},
-		{
-			name: "secretRefs/secret swap vars ignores order sent",
 			webhook: webhook.Webhooks{
 				"bar": webhook.New(
 					nil, nil,
@@ -6376,7 +6149,7 @@ func TestService_GiveSecretsWebhook(t *testing.T) {
 					whCfg,
 				)
 			})
-			// Other Service Status.Fails.
+
 			if tc.otherWebhook != nil {
 				otherServiceStatus := status.Status{}
 				otherServiceStatus.Init(
@@ -6394,18 +6167,11 @@ func TestService_GiveSecretsWebhook(t *testing.T) {
 				)
 			}
 
-			// WHEN: we call giveSecretsWebhook.
 			newService.giveSecretsWebhook(tc.otherWebhook, tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nService.giveSecretsWebhook()", packageName)
-
-			// THEN: we should get a WebhookSlice with the secrets from the other Service.
 			gotWebhook := newService.Webhook
 			if gotStr, wantStr := gotWebhook.String(), tc.want.String(); gotStr != wantStr {
-				t.Errorf(
-					"%s secrets weren't passed on\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Errorf("Webhooks.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}

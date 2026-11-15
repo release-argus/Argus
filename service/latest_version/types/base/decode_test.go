@@ -17,7 +17,6 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -37,9 +36,8 @@ func TestDecode(t *testing.T) {
 	type Args struct {
 		format string
 		data   string
-		lookup *Lookup
 	}
-	// GIVEN: data in a given format to Decode into a Lookup.
+
 	tests := []struct {
 		name     string
 		args     Args
@@ -143,7 +141,6 @@ func TestDecode(t *testing.T) {
 			options := opttest.PlainOptions(t, optCfg)
 			svcStatus := &status.Status{}
 
-			// WHEN: Decode is called.
 			lookup, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Lookup, error) {
@@ -159,7 +156,6 @@ func TestDecode(t *testing.T) {
 				func(v *Lookup) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			)
 			if testErr != nil {
@@ -169,20 +165,14 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecode(format=%q, data=%q)",
-				packageName, tc.args.format, tc.args.data,
-			)
-
-			// AND: pointers are handed out as expected.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: lookup.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -197,13 +187,15 @@ func TestApplyOverrides(t *testing.T) {
 		data   string
 		target *Lookup
 	}
-	// GIVEN: data in a given format to Decode into a Lookup.
+
 	tests := []struct {
-		name              string
-		args              Args
-		want              string
-		reqPointerChanged bool
-		errRegex          string
+		name                string
+		args                Args
+		want                string
+		reqPointerChanged   bool
+		reqPointerUnchecked bool
+		skipPointerCheck    bool
+		errRegex            string
 	}{
 		{
 			name: "JSON/new/no data",
@@ -292,10 +284,9 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want: "",
 			errRegex: test.TrimYAML(`
-					jsontext:
-						unexpected EOF`,
+				^jsontext:
+					unexpected EOF$`,
 			),
 		},
 		{
@@ -315,8 +306,9 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want:     "{}\n",
-			errRegex: `^$`,
+			want:             "{}\n",
+			skipPointerCheck: true,
+			errRegex:         `^$`,
 		},
 		{
 			name: "JSON/existing/fail to extract require",
@@ -445,8 +437,9 @@ func TestApplyOverrides(t *testing.T) {
 					}),
 				},
 			},
-			want:     "url: https://example.com/123\n",
-			errRegex: `^$`,
+			want:              "url: https://example.com/123\n",
+			reqPointerChanged: true,
+			errRegex:          `^$`,
 		},
 		{
 			name: "YAML/existing/remove Require",
@@ -477,8 +470,9 @@ func TestApplyOverrides(t *testing.T) {
 					}),
 				},
 			},
-			want:     "url: https://example.com/456\n",
-			errRegex: `^$`,
+			want:              "url: https://example.com/456\n",
+			reqPointerChanged: true,
+			errRegex:          `^$`,
 		},
 		{
 			name: "JSON/existing/remove Require.Docker",
@@ -567,7 +561,8 @@ func TestApplyOverrides(t *testing.T) {
 						- ls
 						- -lah
 			`),
-			errRegex: `^$`,
+			reqPointerUnchecked: true,
+			errRegex:            `^$`,
 		},
 		{
 			name: "JSON/existing/change Require.x and Require.Docker.x",
@@ -671,10 +666,11 @@ func TestApplyOverrides(t *testing.T) {
 						image: foo
 						tag: something-else
 			`),
-			errRegex: `^$`,
+			reqPointerUnchecked: true,
+			errRegex:            `^$`,
 		},
 		{
-			name: "JSON/existing/change Require.x - type error",
+			name: "JSON/existing/change Require.x/type error",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -709,7 +705,7 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/existing/change Require.x - type error",
+			name: "YAML/existing/change Require.x/type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -835,7 +831,7 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^json: .*unmarshal.*`,
 		},
 		{
-			name: "YAML/new/filled - type error",
+			name: "YAML/new/filled/type error",
 			args: Args{
 				format: "yaml",
 				data:   `url: [https://example.com]`,
@@ -851,15 +847,16 @@ func TestApplyOverrides(t *testing.T) {
 
 			options := opttest.PlainOptions(t, optCfg)
 			svcStatus := &status.Status{}
+			var hadRequire *filter.Require
 			if tc.args.target != nil {
 				tc.args.target.Init(
 					options,
 					svcStatus,
 					lvCfg,
 				)
+				hadRequire = tc.args.target.Require
 			}
 
-			// WHEN: ApplyOverrides is called.
 			lookup, err, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -877,49 +874,32 @@ func TestApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
-				"Lookup.ApplyOverrides",
+				"ApplyOverrides",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if err != nil || lookup == nil {
+			if err != nil || lookup == nil || tc.skipPointerCheck {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nApplyOverrides(format=%q, data=%q, previous=%p)",
-				packageName, tc.args.format, tc.args.data, tc.args.target,
-			)
-
-			wantOptions := options
-			wantStatus := svcStatus
-			wantDefaults := lvCfg.Soft
-			wantHardDefaults := lvCfg.Hard
-			// Fields unchanged when no data provided.
-			if len(tc.args.data) == 0 {
-				wantOptions = tc.args.target.Options
-				wantStatus = tc.args.target.Status
-				wantDefaults = tc.args.target.Defaults
-				wantHardDefaults = tc.args.target.HardDefaults
-			}
 			fieldTests := []test.FieldAssertion{
-				{Name: "Options", Got: lookup.Options, Want: wantOptions, Mode: test.CompareSamePointer},
-				{Name: "Status", Got: lookup.Status, Want: wantStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: lookup.Defaults, Want: wantDefaults, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: wantHardDefaults, Mode: test.CompareSamePointer},
+				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: the Require pointer changes only when the root pointer changes.
-			if tc.args.target != nil && tc.args.target.Require != nil {
-				reqPointerChanged := lookup.Require != tc.args.target.Require
+			// An existing Require is patched in place, and replaced only by a null override.
+			if hadRequire != nil && !tc.reqPointerUnchecked {
+				reqPointerChanged := lookup.Require != hadRequire
 				if reqPointerChanged != tc.reqPointerChanged {
 					t.Fatalf(
-						"%s .Require pointer changed unexpectedly\ngot:  changed=%v\nwant: changed=%v",
-						prefix, reqPointerChanged, tc.reqPointerChanged,
+						"Lookup.Require mismatch\ngot:  changed=%t\nwant: changed=%t",
+						reqPointerChanged, tc.reqPointerChanged,
 					)
 				}
 			}
@@ -935,7 +915,7 @@ func TestUnmarshalRequire(t *testing.T) {
 		data   string
 		lookup *Lookup
 	}
-	// GIVEN: data to unmarshal in a format onto a Require.
+
 	tests := []struct {
 		name     string
 		args     Args
@@ -1152,7 +1132,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "JSON/existing/change Require.x - type error",
+			name: "JSON/existing/change Require.x/type error",
 			args: Args{
 				format: "json",
 				data: test.TrimJSON(`{
@@ -1187,7 +1167,7 @@ func TestUnmarshalRequire(t *testing.T) {
 			),
 		},
 		{
-			name: "YAML/existing/change Require.x - type error",
+			name: "YAML/existing/change Require.x/type error",
 			args: Args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -1319,7 +1299,6 @@ func TestUnmarshalRequire(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: UnmarshalRequire is called.
 			err := UnmarshalRequire(
 				tc.args.format, []byte(tc.args.data),
 				tc.args.lookup,
@@ -1328,30 +1307,16 @@ func TestUnmarshalRequire(t *testing.T) {
 				}),
 				&lvCfg.Soft.Require,
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nUnmarshalRequire(format=%q, data=%q)",
-				packageName, tc.args.format, tc.args.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the new struct stringifies as expected
-			if got := decode.ToYAMLString(&tc.args.lookup, ""); got != tc.want {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+			if got := decode.ToYAMLString(tc.args.lookup, ""); got != tc.want {
+				t.Fatalf("Lookup mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

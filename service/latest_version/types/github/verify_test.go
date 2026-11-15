@@ -26,7 +26,6 @@ import (
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup.
 	ghRepoParts := strings.Split(test.ArgusGitHubRepo, "/")
 	t.Setenv("ARGUS_TEST_LV_GITHUB_OWNER", ghRepoParts[0])
 	t.Setenv("ARGUS_TEST_LV_GITHUB_REPO", ghRepoParts[1])
@@ -42,18 +41,18 @@ func TestLookup_CheckValues(t *testing.T) {
 		args     args
 	}{
 		{
-			name:     "valid",
-			errRegex: "^$",
+			name:     "valid/defaults",
+			errRegex: `^$`,
 		},
 		{
-			name:     "no url",
+			name:     "invalid/no url",
 			errRegex: `^url: <required>.*$`,
 			args: args{
 				url: new(""),
 			},
 		},
 		{
-			name:     "corrects github url",
+			name:     "valid/corrects a github url",
 			errRegex: `^$`,
 			wantURL:  &test.ArgusGitHubRepo,
 			args: args{
@@ -117,7 +116,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid require",
+			name: "invalid/require",
 			errRegex: test.TrimYAML(`
 				^require:
 					regex_content: "[^"]+" <invalid>.*$`,
@@ -129,7 +128,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid urlCommands",
+			name: "invalid/url_commands",
 			errRegex: test.TrimYAML(`
 				^url_commands:
 					- item_0:
@@ -142,7 +141,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			},
 		},
 		{
-			name: "all decode",
+			name: "invalid/url, url_commands and require all fail",
 			errRegex: test.TrimYAML(`
 				^url: <required>.*
 				url_commands:
@@ -167,7 +166,7 @@ func TestLookup_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			input := testLookup(t, false)
+			input := testLookup(t)
 			if tc.args.url != nil {
 				input.URL = *tc.args.url
 			}
@@ -180,10 +179,13 @@ func TestLookup_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
+
+			if tc.wantURL != nil && input.URL != *tc.wantURL {
+				t.Errorf("Lookup.URL mismatch\ngot:  %q\nwant: %q", input.URL, *tc.wantURL)
+			}
 		})
 	}
 }

@@ -17,7 +17,6 @@
 package manual
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -35,7 +34,6 @@ import (
 // ############
 
 func TestLookup_Unmarshal(t *testing.T) {
-	// GIVEN: data to unmarshal into a Lookup.
 	tests := []struct {
 		name         string
 		format, data string
@@ -46,7 +44,6 @@ func TestLookup_Unmarshal(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -99,10 +96,6 @@ func TestLookup_Unmarshal(t *testing.T) {
 				"type": "manual",
 				"version": ["1.2.3"]
 			}`),
-			want: test.TrimYAML(`
-				type: manual
-				version: "1.2.3"
-			`),
 			errRegex: `^json: .*unmarshal.*$`,
 		},
 		{
@@ -131,99 +124,10 @@ func TestLookup_Unmarshal(t *testing.T) {
 				func(v *Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Lookup",
+				"Lookup.Unmarshal",
 			); testErr != nil {
 				t.Fatal(testErr)
 			}
-		})
-	}
-}
-
-// #############
-// # STRINGIFY #
-// #############
-
-func TestString(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
-
-	// GIVEN: a Lookup.
-	lookup := testLookup(t, "")
-	lookup.Status.SetDeployedVersion(
-		lookup.Status.DeployedVersion(),
-		time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
-		false,
-	)
-	lookup.Status.ServiceInfo.ID = t.Name()
-	tests := []struct {
-		name   string
-		lookup *Lookup
-		want   string
-	}{
-		{
-			name: "empty",
-			lookup: test.Must(t, func() (*Lookup, error) {
-				l := Lookup{}
-				l.Status = &status.Status{}
-				l.Status.ServiceInfo.ID = "empty"
-				return &l, nil
-			}),
-			want: "{}\n",
-		},
-		{
-			name: "version moved to Status",
-			lookup: test.Must(t, func() (*Lookup, error) {
-				options, _ := opt.Decode(
-					"yaml", []byte("interval: 1h2m3s"),
-					optCfg,
-				)
-				lookup, _ := Decode("yaml", []byte(test.TrimYAML(`
-						type: manual
-						version: 1.2.3
-					`)),
-					options,
-					lookup.Status.Copy(true),
-					dvCfg,
-				)
-				lookup.Query(false, logx.LogFrom{})
-				return lookup, nil
-			}),
-			want: "type: manual\n",
-		},
-		{
-			name: "filled",
-			lookup: test.Must(t, func() (*Lookup, error) {
-				options, _ := opt.Decode(
-					"yaml", []byte("interval: 1h2m3s"),
-					optCfg,
-				)
-				return Decode("yaml", []byte(test.TrimYAML(`
-						type: manual
-						version: 1.2.3
-					`)),
-					options,
-					lookup.Status.Copy(true),
-					dvCfg,
-				)
-			}),
-			want: test.TrimYAML(`
-				type: manual
-				version: 1.2.3
-			`),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			test.AssertStringWithPrefixes(
-				t,
-				packageName,
-				tc.lookup.String,
-				tc.want,
-			)
 		})
 	}
 }
@@ -233,10 +137,9 @@ func TestString(t *testing.T) {
 // #########
 
 func TestLookup_Copy(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name   string
 		lookup *Lookup
@@ -282,88 +185,159 @@ func TestLookup_Copy(t *testing.T) {
 
 			wantStr := decode.ToYAMLString(tc.lookup, "")
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.lookup.Copy(tc.status)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Copy(status=%p)",
-				packageName, tc.status,
-			)
-
-			// THEN: if nil was copied, we get nil.
 			if tc.lookup == nil {
 				if gotInterface != nil {
-					t.Errorf(
-						"%s of nil mismatch\ngot:  %v\nwant: nil",
-						prefix, gotInterface,
-					)
+					t.Error("Lookup.Copy() mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
 
-			// AND: the copy is non-nil.
 			if gotInterface == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
+				t.Fatal("Lookup.Copy() mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the copy is distinct.
 			if gotInterface == tc.lookup {
 				t.Fatalf(
-					"%s should return a distinct copy\ngot:  %p\nwant: %p",
-					prefix, gotInterface, tc.lookup,
+					"copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotInterface, tc.lookup,
 				)
 			}
 
-			// AND: the type is unchanged.
 			got, ok := gotInterface.(*Lookup)
 			if !ok {
-				t.Fatalf(
-					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
-					prefix, gotInterface,
-				)
+				t.Fatalf("type mismatch\ngot:  %T\nwant: *Lookup", gotInterface)
 			}
 
-			// AND: the copy unmarshals the same.
 			if gotStr := got.String(""); gotStr != wantStr {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Fatalf("Lookup.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			// AND: the fields are copied as expected.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: copied pointers should be value-equal and non-aliased.
 			fieldTests = []test.FieldAssertion{
-				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CopiedPointerMode(tc.lookup.Options)},
 				{Name: "Status", Got: got.Status, Want: tc.status, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: the non-Base fields are copied as expected.
 			fieldTests = []test.FieldAssertion{
 				{Name: "Version", Got: got.Version, Want: tc.lookup.Version, Mode: test.CompareEqual},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: defaults pointers are shared.
 			fieldTests = []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
+		})
+	}
+}
+
+// #############
+// # STRINGIFY #
+// #############
+
+func TestString(t *testing.T) {
+	dvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig(t)
+
+	lookup := testLookup(t, "")
+	lookup.Status.SetDeployedVersion(
+		lookup.Status.DeployedVersion(),
+		time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
+		false,
+	)
+	lookup.Status.ServiceInfo.ID = t.Name()
+	tests := []struct {
+		name   string
+		lookup *Lookup
+		want   string
+	}{
+		{
+			name: "empty",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				l := Lookup{}
+				l.Status = &status.Status{}
+				l.Status.ServiceInfo.ID = "empty"
+				return &l, nil
+			}),
+			want: "{}\n",
+		},
+		{
+			name: "version moved to Status",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				options, err := opt.Decode(
+					"yaml", []byte("interval: 1h2m3s"),
+					optCfg,
+				)
+				if err != nil {
+					return nil, err
+				}
+				l, err := Decode("yaml", []byte(test.TrimYAML(`
+						type: manual
+						version: 1.2.3
+					`)),
+					options,
+					lookup.Status.Copy(true),
+					dvCfg,
+				)
+				if err != nil {
+					return nil, err
+				}
+				return l, l.Query(false, logx.LogFrom{})
+			}),
+			want: "type: manual\n",
+		},
+		{
+			name: "filled",
+			lookup: test.Must(t, func() (*Lookup, error) {
+				options, err := opt.Decode(
+					"yaml", []byte("interval: 1h2m3s"),
+					optCfg,
+				)
+				if err != nil {
+					return nil, err
+				}
+				return Decode("yaml", []byte(test.TrimYAML(`
+						type: manual
+						version: 1.2.3
+					`)),
+					options,
+					lookup.Status.Copy(true),
+					dvCfg,
+				)
+			}),
+			want: test.TrimYAML(`
+				type: manual
+				version: 1.2.3
+			`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.AssertStringWithPrefixes(
+				t,
+				"Lookup.String",
+				tc.lookup.String,
+				tc.want,
+			)
 		})
 	}
 }

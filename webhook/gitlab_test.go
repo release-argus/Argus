@@ -23,7 +23,6 @@ import (
 )
 
 func TestSetGitLabParameter(t *testing.T) {
-	// GIVEN: a HTTP Request.
 	tests := []struct {
 		name        string
 		secret      string
@@ -61,17 +60,11 @@ func TestSetGitLabParameter(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodGet, "/approvals"+tc.queryParams, nil)
 
-			// WHEN: SetGitLabParameter is called.
 			SetGitLabParameter(req, tc.secret)
 
-			// THEN: the function correctly encodes URL.RawQuery.
 			got := req.URL.RawQuery
 			if got != tc.want {
-				t.Errorf(
-					"%s\nSetGitLabParameter(req, secret=%q) didn't put secret into RawQuery\ngot:  %q\nwant: %q",
-					packageName, tc.secret,
-					tc.want, got,
-				)
+				t.Errorf("http.Request.URL.RawQuery mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

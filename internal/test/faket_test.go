@@ -21,15 +21,39 @@ import (
 	"testing"
 )
 
+func TestFakeT_Context(t *testing.T) {
+	var fakeT FakeT
+
+	ctx := fakeT.Context()
+
+	if ctx == nil {
+		t.Fatal("FakeT.Context() mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if err := ctx.Err(); err != nil {
+		t.Errorf("FakeT.Context().Err() mismatch\ngot:  %v\nwant: nil", err)
+	}
+}
+
 func TestFakeT(t *testing.T) {
-	// GIVEN: a functionalto call on a FakeT.
 	tests := []struct {
 		name       string
+		logFn      func(*FakeT, ...any)
 		fn         func(*FakeT, string, ...any)
+		wantLogs   []string
 		wantErrors []string
 		wantFatals []string
 		wantSkips  []string
 	}{
+		{
+			name:     "Log",
+			logFn:    (*FakeT).Log,
+			wantLogs: []string{"hello %s world"},
+		},
+		{
+			name:     "Logf",
+			fn:       (*FakeT).Logf,
+			wantLogs: []string{"hello world"},
+		},
 		{
 			name:       "Errorf",
 			fn:         (*FakeT).Errorf,
@@ -54,24 +78,27 @@ func TestFakeT(t *testing.T) {
 			var fakeT FakeT
 			fakeT.Helper() // No-op.
 
-			// WHEN: the function is called.
-			tc.fn(&fakeT, "hello %s", "world")
+			arg1, arg2 := "hello %s", "world"
+			if tc.logFn != nil {
+				tc.logFn(&fakeT, arg1, arg2)
+			} else {
+				tc.fn(&fakeT, arg1, arg2)
+			}
 
-			// THEN: it lands in that function's slice, and no other.
 			for _, check := range []struct {
 				name string
 				got  []string
 				want []string
 			}{
+				{name: "Logs", got: fakeT.Logs, want: tc.wantLogs},
 				{name: "Errors", got: fakeT.Errors, want: tc.wantErrors},
 				{name: "Fatals", got: fakeT.Fatals, want: tc.wantFatals},
 				{name: "Skips", got: fakeT.Skips, want: tc.wantSkips},
 			} {
 				if !slices.Equal(check.got, check.want) {
 					t.Errorf(
-						"%s\nFakeT.%s(\"hello %%s\", \"world\") %s mismatch\ngot:  %q\nwant: %q",
-						packageName, tc.name, check.name,
-						check.got, check.want,
+						"FakeT.%s mismatch\ngot:  %q\nwant: %q",
+						check.name, check.got, check.want,
 					)
 				}
 			}
@@ -80,10 +107,10 @@ func TestFakeT(t *testing.T) {
 }
 
 func TestFakeT_Aborted(t *testing.T) {
-	// GIVEN: a FakeT that may abort, and a function to make inside Aborted.
 	tests := []struct {
 		name        string
 		abort       bool
+		logFn       func(*FakeT, ...any)
 		fn          func(*FakeT, string, ...any)
 		wantAborted bool
 	}{
@@ -111,6 +138,16 @@ func TestFakeT_Aborted(t *testing.T) {
 			wantAborted: true,
 		},
 		{
+			name:  "Abort set/Log does not stop the call",
+			abort: true,
+			logFn: (*FakeT).Log,
+		},
+		{
+			name:  "Abort set/Logf does not stop the call",
+			abort: true,
+			fn:    (*FakeT).Logf,
+		},
+		{
 			name:  "Abort set/Errorf does not stop the call",
 			abort: true,
 			fn:    (*FakeT).Errorf,
@@ -124,56 +161,38 @@ func TestFakeT_Aborted(t *testing.T) {
 			fakeT := &FakeT{Abort: tc.abort}
 			reachedEnd := false
 
-			// WHEN: Aborted calls a function that may abort.
 			aborted := fakeT.Aborted(func() {
-				if tc.fn != nil {
+				switch {
+				case tc.logFn != nil:
+					tc.logFn(fakeT, "stop %s", "here")
+				case tc.fn != nil:
 					tc.fn(fakeT, "stop %s", "here")
 				}
 				reachedEnd = true
 			})
 
-			// THEN: an aborting function is reported only if tc.abort was set.
 			if aborted != tc.wantAborted {
-				t.Errorf(
-					"%s\nFakeT.Aborted() mismatch\ngot:  %t\nwant: %t",
-					packageName, aborted, tc.wantAborted,
-				)
+				t.Errorf("aborted mismatch\ngot:  %t\nwant: %t", aborted, tc.wantAborted)
 			}
 
-			// AND: the call stopped exactly when it aborted.
 			if wantEnd := !tc.wantAborted; reachedEnd != wantEnd {
-				t.Errorf(
-					"%s\nFakeT.Aborted() reached the end of the call\ngot:  %t\nwant: %t",
-					packageName, reachedEnd, wantEnd,
-				)
+				t.Errorf("reachedEnd mismatch\ngot:  %t\nwant: %t", reachedEnd, wantEnd)
 			}
 		})
 	}
 }
 
 func TestFakeT_Aborted__foreignPanic(t *testing.T) {
-	// GIVEN: a FakeT, and a panic that is not one of its allowed aborts.
 	fakeT := &FakeT{Abort: true}
 	want := "not an abort"
 
-	// THEN: the panic is re-raised rather than reported as an abort.
 	defer func() {
-		switch got := recover(); got {
-		case nil:
-			t.Errorf(
-				"%s\nFakeT.Aborted() swallowed a foreign panic\nwant: %q",
-				packageName, want,
-			)
-		case want:
-			// Re-raised, as it should be.
-		default:
-			t.Errorf(
-				"%s\nFakeT.Aborted() re-raised the wrong value\ngot:  %v\nwant: %q",
-				packageName, got, want,
-			)
+		if got := recover(); got != want {
+			t.Errorf("recover() mismatch\ngot:  %v\nwant: %q", got, want)
 		}
 	}()
 
-	// WHEN: Aborted calls something that panics with it.
-	fakeT.Aborted(func() { panic(want) })
+	fakeT.Aborted(func() {
+		panic(want)
+	})
 }

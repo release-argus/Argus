@@ -17,7 +17,6 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -31,7 +30,6 @@ import (
 // ############
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -47,7 +45,6 @@ func TestDecodeDefaults(t *testing.T) {
 					jsontext:
 						unexpected EOF`,
 			),
-			want: "",
 		},
 		{
 			name:     "JSON/empty object",
@@ -140,7 +137,7 @@ func TestDecodeDefaults(t *testing.T) {
 							token: hub-secret
 					quay:
 						auth:
-							token: ghcr-secret
+							token: quay-secret
 			`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -156,7 +153,7 @@ func TestDecodeDefaults(t *testing.T) {
 							token: hub-secret
 					quay:
 						auth:
-							token: ghcr-secret
+							token: quay-secret
 			`),
 		},
 		{
@@ -170,7 +167,7 @@ func TestDecodeDefaults(t *testing.T) {
 					username: hub-user
 					token: hub-secret
 				quay:
-					token: ghcr-secret
+					token: quay-secret
 			`),
 			errRegex: `^$`,
 			want: test.TrimYAML(`
@@ -185,7 +182,7 @@ func TestDecodeDefaults(t *testing.T) {
 							token: hub-secret
 					quay:
 						auth:
-							token: ghcr-secret
+							token: quay-secret
 			`),
 		},
 		{
@@ -196,12 +193,12 @@ func TestDecodeDefaults(t *testing.T) {
 				"image": "{{ service_id }}",
 				"tag": "{{ version }}",
 				"registry": {
-					ghcr": ["a", "b", "c"]
+					"ghcr": ["a", "b", "c"]
 				}
 			}`),
 			errRegex: test.TrimYAML(`
 				^docker:
-					jsontext: invalid character.*`,
+					json: .*unmarshal JSON array into Go docker\.GHCRRegistryDefaults within "/registry/ghcr":`,
 			),
 		},
 		{
@@ -230,13 +227,11 @@ func TestDecodeDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: we have defaults for each registry type.
 			var defaults Defaults
 			defaults.Default()
 			defaults.Type = ""
 			defaults.Tag = ""
 
-			// WHEN: DecodeDefaults is called.
 			got, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Defaults, error) {
@@ -246,7 +241,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			)
 			if testErr != nil {
@@ -256,28 +250,21 @@ func TestDecodeDefaults(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecodeDefaults(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: The Defaults were passed over correctly.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: &defaults, Mode: test.CompareSamePointer},
-				{Name: "ECR.Auth.Defaults", Got: got.Registry.ECR.GetAuth().Defaults(), Want: defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "GHCR.Auth.Defaults", Got: got.Registry.GHCR.GetAuth().Defaults(), Want: defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Hub.Auth.Defaults", Got: got.Registry.Hub.GetAuth().Defaults(), Want: defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Quay.Auth.Defaults", Got: got.Registry.Quay.GetAuth().Defaults(), Want: defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.ECR.GetAuth().Defaults()", Got: got.Registry.ECR.GetAuth().Defaults(), Want: defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.GHCR.GetAuth().Defaults()", Got: got.Registry.GHCR.GetAuth().Defaults(), Want: defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.Hub.GetAuth().Defaults()", Got: got.Registry.Hub.GetAuth().Defaults(), Want: defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.Quay.GetAuth().Defaults()", Got: got.Registry.Quay.GetAuth().Defaults(), Want: defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Defaults"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestDefaults_MarshalYAML(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -300,6 +287,7 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 				type: ` + PossibleTypes[0] + `
 				tag: 1.2.3
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "dynamic fields",
@@ -336,6 +324,7 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 						auth:
 							token: quay-token
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "filled",
@@ -376,6 +365,7 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 						auth:
 							token: quay-token
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "empty dynamic fields",
@@ -387,7 +377,8 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 					Quay: &QuayRegistryDefaults{},
 				},
 			},
-			want: "type: " + PossibleTypes[0] + "\n",
+			want:     "type: " + PossibleTypes[0] + "\n",
+			errRegex: `^$`,
 		},
 	}
 
@@ -395,26 +386,14 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Marshaled to YAML.
 			gotYAML, err := decode.Marshal("yaml", tc.defaults)
-
-			prefix := fmt.Sprintf("%s\nDefaults.MarshalYAML()", packageName)
-
-			// AND: the error is as expected.
 			e := errfmt.FormatError(err)
-			if util.RegexCheck(tc.errRegex, e) == false {
-				t.Errorf(
-					"%s error mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: The YAML matches.
 			if got := string(gotYAML); got != tc.want {
-				t.Errorf(
-					"%s value mismatch:\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -425,7 +404,6 @@ func TestDefaults_MarshalYAML(t *testing.T) {
 // #########
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -469,22 +447,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: a registryDefaults.
 	tests := []struct {
 		name string
 		data *RegistryDefaultsSet
@@ -560,15 +532,10 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nregistryDefaults.IsZero() values mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -579,25 +546,24 @@ func TestRegistryDefaults_IsZero(t *testing.T) {
 // #############
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: a registryDefaults.
 	tests := []struct {
-		name      string
-		rDefaults *Defaults
-		want      string
+		name     string
+		defaults *Defaults
+		want     string
 	}{
 		{
-			name:      "nil",
-			rDefaults: nil,
-			want:      "null\n",
+			name:     "nil",
+			defaults: nil,
+			want:     "null\n",
 		},
 		{
-			name:      "empty",
-			rDefaults: &Defaults{},
-			want:      "{}\n",
+			name:     "empty",
+			defaults: &Defaults{},
+			want:     "{}\n",
 		},
 		{
 			name: "filled",
-			rDefaults: &Defaults{
+			defaults: &Defaults{
 				Type: "ghcr",
 				Tag:  "1.2.3",
 				Registry: RegistryDefaultsSet{
@@ -647,8 +613,8 @@ func TestDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
-				tc.rDefaults.String,
+				"Defaults.String",
+				tc.defaults.String,
 				tc.want,
 			)
 		})
@@ -660,7 +626,6 @@ func TestDefaults_String(t *testing.T) {
 // ############
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -696,53 +661,40 @@ func TestDefaults_Default(t *testing.T) {
 			defaultType := "hub"
 			defaultContainerDetailTag := "{{ version }}"
 
-			// WHEN: Default() is called on it.
 			tc.data.Default()
 
-			prefix := fmt.Sprintf("%s\nDefaults.Default()", packageName)
-
-			// THEN: the Type is set to the default value.
 			if tc.data.Type != defaultType {
-				t.Fatalf(
-					"%s .Type value mismatch\ngot:  %q\nwant: %q",
-					prefix, tc.data.Type, defaultType,
-				)
+				t.Fatalf("Defaults.Type mismatch\ngot:  %q\nwant: %q", tc.data.Type, defaultType)
 			}
 
-			// AND: the registries are non-nil.
-			if tc.data.Registry.GHCR == nil ||
-				tc.data.Registry.Hub == nil ||
-				tc.data.Registry.Quay == nil {
-				t.Fatalf(
-					"%s got 1+ nil registries\ngot:  %+v\nwant: non-nil registries",
-					prefix, tc.data.Registry,
-				)
+			assertRegistriesNonNil(t, tc.data.Registry)
+
+			if testErr := test.AssertFields(
+				t,
+				[]test.FieldAssertion{
+					{Name: "Registry.ECR.GetAuth()", Got: tc.data.Registry.ECR.GetAuth(), Mode: test.CompareNotNil},
+					{Name: "Registry.GHCR.GetAuth()", Got: tc.data.Registry.GHCR.GetAuth(), Mode: test.CompareNotNil},
+					{Name: "Registry.Hub.GetAuth()", Got: tc.data.Registry.Hub.GetAuth(), Mode: test.CompareNotNil},
+					{Name: "Registry.Quay.GetAuth()", Got: tc.data.Registry.Quay.GetAuth(), Mode: test.CompareNotNil},
+				},
+				"Defaults",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: the registries have Auth's set.
-			if tc.data.Registry.GHCR.GetAuth() == nil ||
-				tc.data.Registry.Hub.GetAuth() == nil ||
-				tc.data.Registry.Quay.GetAuth() == nil {
+			if got := tc.data.Tag; got != defaultContainerDetailTag {
 				t.Fatalf(
-					"%s got 1+ nil .Registry.X.Auth\ngot:  %+v\nwant: non-nil auth on registries",
-					prefix, tc.data.Registry,
-				)
-			}
-
-			// AND: the ContainerDetailDefaults Tag is defaulted.
-			if got := tc.data.ContainerDetailDefaults.Tag; got != defaultContainerDetailTag {
-				t.Fatalf(
-					"%s .ContainerDetailDefaults.Tag value mismatch\ngot:  %q\nwant: %q",
-					prefix, got, defaultContainerDetailTag,
+					"Defaults.Tag mismatch\ngot:  %q\nwant: %q",
+					got, defaultContainerDetailTag,
 				)
 			}
 		})
 	}
 }
 
-func TestDefaults_Defaults(t *testing.T) {
+func TestDefaults_SetDefaults(t *testing.T) {
 	_, hardDefaults := plainDefaults(t)
-	// GIVEN: a Defaults.
+
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -765,44 +717,25 @@ func TestDefaults_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Those defaults have no Defaults.
 			defaults, _ := plainDefaults(t)
 			defaults.Defaults = nil
 
-			// WHEN: Defaults is accessed on it before it is set.
-			got := defaults.Defaults
-
-			// THEN: nil is returned from Defaults.
-			if got != nil {
-				t.Errorf("%s\nfresh Defaults, .Defaults is non-nil", packageName)
-			}
-
-			// WHEN: SetDefaults is called on it.
 			defaults.SetDefaults(tc.defaults)
 
-			prefix := fmt.Sprintf(
-				"%s\nDefaults.SetDefaults(type=%+v)",
-				packageName, tc.defaults,
-			)
-
-			// THEN: Those Defaults are been set.
 			if got := defaults.Defaults; got != tc.defaults {
-				t.Fatalf(
-					"%s mismatch on .Defaults\ngot:  %v\nwant: %v",
-					prefix, got, tc.defaults,
-				)
+				t.Fatalf("Defaults.Defaults mismatch\ngot:  %p\nwant: %p", got, tc.defaults)
 			}
 			if tc.defaults == nil {
 				return
 			}
 			fieldTests := []test.FieldAssertion{
-				{Name: "ECR.Auth.Defaults", Got: defaults.Registry.ECR.GetAuth().Defaults(), Want: tc.defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "GHCR.Auth.Defaults", Got: defaults.Registry.GHCR.GetAuth().Defaults(), Want: tc.defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Hub.Auth.Defaults", Got: defaults.Registry.Hub.GetAuth().Defaults(), Want: tc.defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
-				{Name: "Quay.Auth.Defaults", Got: defaults.Registry.Quay.GetAuth().Defaults(), Want: tc.defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.ECR.GetAuth().Defaults()", Got: defaults.Registry.ECR.GetAuth().Defaults(), Want: tc.defaults.Registry.ECR.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.GHCR.GetAuth().Defaults()", Got: defaults.Registry.GHCR.GetAuth().Defaults(), Want: tc.defaults.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.Hub.GetAuth().Defaults()", Got: defaults.Registry.Hub.GetAuth().Defaults(), Want: tc.defaults.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
+				{Name: "Registry.Quay.GetAuth().Defaults()", Got: defaults.Registry.Quay.GetAuth().Defaults(), Want: tc.defaults.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Defaults"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -813,7 +746,6 @@ func TestDefaults_Defaults(t *testing.T) {
 // ##########
 
 func TestDefaults_GetType(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -869,15 +801,10 @@ func TestDefaults_GetType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetType is called on it.
 			got := tc.data.GetType()
 
-			// THEN: the type is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.GetType() mismatch\ngot %q, want %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -888,7 +815,6 @@ func TestDefaults_GetType(t *testing.T) {
 // ##############
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name     string
 		input    *Defaults
@@ -916,8 +842,11 @@ func TestDefaults_CheckValues(t *testing.T) {
 					"yaml", []byte("type: ghcr"),
 					nil,
 				)
+				if err != nil {
+					return nil, err
+				}
 				input.Type = "foo"
-				return input, err
+				return input, nil
 			}),
 			errRegex: `^type: .* <invalid>.*$`,
 		},
@@ -925,10 +854,8 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -941,160 +868,56 @@ func TestDefaults_CheckValues(t *testing.T) {
 // #############
 
 func TestDefaults_InitRegistries(t *testing.T) {
-	// GIVEN: a fresh Defaults.
 	var d Defaults
 
-	// THEN: all registries are nil
-	if d.Registry.ECR != nil ||
-		d.Registry.GHCR != nil ||
-		d.Registry.Hub != nil ||
-		d.Registry.Quay != nil {
-		t.Fatalf(
-			"%s\nfresh Defaults\ngot: non-nil registry %+v\nwant: all nil",
-			packageName, d.Registry,
-		)
-	}
-
-	// WHEN: initRegistries is called on it.
 	d.initRegistries()
 
-	// THEN: all registries are initialised
-	if d.Registry.ECR == nil ||
-		d.Registry.GHCR == nil ||
-		d.Registry.Hub == nil ||
-		d.Registry.Quay == nil {
-		t.Fatalf(
-			"%s\nDefaults.initRegistries() didn't initialise all registries\ngot: %+v",
-			packageName, d.Registry,
-		)
-	}
+	assertRegistriesNonNil(t, d.Registry)
 }
 
 func TestGetRegistryDefaults(t *testing.T) {
-	// GIVEN: a registry type.
 	tests := []struct {
-		name  string
-		dType string
+		name    string
+		dType   string
+		arrange func(d *Defaults) (want RegistryDefaults)
 	}{
-		{
-			name:  "known: ecr",
-			dType: "ecr",
-		},
-		{
-			name:  "known: ghcr",
-			dType: "ghcr",
-		},
-		{
-			name:  "known: hub",
-			dType: "hub",
-		},
-		{
-			name:  "known: quay",
-			dType: "quay",
-		},
-		{
-			name:  "unknown",
-			dType: "foo",
-		},
+		{name: "ecr/populated", dType: "ecr", arrange: func(d *Defaults) RegistryDefaults { return d.Registry.ECR }},
+		{name: "ecr/nil", dType: "ecr", arrange: func(d *Defaults) RegistryDefaults {
+			d.Registry.ECR = nil
+			return nil
+		}},
+		{name: "ghcr/populated", dType: "ghcr", arrange: func(d *Defaults) RegistryDefaults { return d.Registry.GHCR }},
+		{name: "ghcr/nil", dType: "ghcr", arrange: func(d *Defaults) RegistryDefaults {
+			d.Registry.GHCR = nil
+			return nil
+		}},
+		{name: "hub/populated", dType: "hub", arrange: func(d *Defaults) RegistryDefaults { return d.Registry.Hub }},
+		{name: "hub/nil", dType: "hub", arrange: func(d *Defaults) RegistryDefaults {
+			d.Registry.Hub = nil
+			return nil
+		}},
+		{name: "quay/populated", dType: "quay", arrange: func(d *Defaults) RegistryDefaults { return d.Registry.Quay }},
+		{name: "quay/nil", dType: "quay", arrange: func(d *Defaults) RegistryDefaults {
+			d.Registry.Quay = nil
+			return nil
+		}},
+		{name: "unknown", dType: "foo", arrange: func(*Defaults) RegistryDefaults { return nil }},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Defaults struct.
 			_, defaults := plainDefaults(t)
+			want := tc.arrange(defaults)
 
-			var want RegistryDefaults
-			switch tc.dType {
-			case "ecr":
-				want = defaults.Registry.ECR
-			case "ghcr":
-				want = defaults.Registry.GHCR
-			case "hub":
-				want = defaults.Registry.Hub
-			case "quay":
-				want = defaults.Registry.Quay
-			}
-
-			// WHEN: getRegistryDefaults is called with these.
+			// Siblings stay populated, so a wrong switch arm returns a non-nil sibling and fails.
 			got := getRegistryDefaults(tc.dType, defaults)
 
-			prefix := fmt.Sprintf(
-				"%s\ngetRegistryDefaults(type=%q, defaults=%+v)",
-				packageName, tc.dType, defaults,
-			)
-
-			// THEN: the correct registry defaults are returned.
 			if got != want {
 				t.Fatalf(
-					"%s pointer mismatch\ngot:  %p\nwant: %p",
-					prefix, got, want,
-				)
-			}
-		})
-	}
-}
-
-func TestGetRegistryDefaults_NilDefaults(t *testing.T) {
-	// GIVEN: a registry type.
-	tests := []struct {
-		name  string
-		dType string
-	}{
-		{
-			name:  "known: ecr",
-			dType: "ecr",
-		},
-		{
-			name:  "known: ghcr",
-			dType: "ghcr",
-		},
-		{
-			name:  "known: hub",
-			dType: "hub",
-		},
-		{
-			name:  "known: quay",
-			dType: "quay",
-		},
-		{
-			name:  "unknown",
-			dType: "foo",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// AND: a Defaults struct.
-			_, defaults := plainDefaults(t)
-
-			switch tc.dType {
-			case "ecr":
-				defaults.Registry.ECR = nil
-			case "ghcr":
-				defaults.Registry.GHCR = nil
-			case "hub":
-				defaults.Registry.Hub = nil
-			case "quay":
-				defaults.Registry.Quay = nil
-			}
-
-			// WHEN: getRegistryDefaults is called with these.
-			got := getRegistryDefaults(tc.dType, defaults)
-
-			prefix := fmt.Sprintf(
-				"%s\ngetRegistryDefaults(type=%q, defaults=%+v)",
-				packageName, tc.dType, defaults,
-			)
-
-			// THEN: the nil registry defaults are returned.
-			if got != nil {
-				t.Fatalf(
-					"%s pointer mismatch\ngot:  %p\nwant: nil",
-					prefix, got,
+					"mismatch\ngot:  %s\nwant: %s",
+					registryDefaultsString(got), registryDefaultsString(want),
 				)
 			}
 		})
@@ -1102,10 +925,8 @@ func TestGetRegistryDefaults_NilDefaults(t *testing.T) {
 }
 
 func TestSetRegistryDefaults(t *testing.T) {
-	// GIVEN: a registry type.
 	tests := []struct {
 		name            string
-		dType           string
 		registry        RegistryDefaults
 		defaultRegistry RegistryDefaults
 	}{
@@ -1115,25 +936,26 @@ func TestSetRegistryDefaults(t *testing.T) {
 			defaultRegistry: RegistryDefaultsMap["ghcr"](),
 		},
 		{
-			name:            "nil defaultRegistry",
-			registry:        RegistryDefaultsMap["ghcr"](),
+			name: "nil defaultRegistry keeps the existing link",
+			registry: func() RegistryDefaults {
+				registry := RegistryDefaultsMap["ghcr"]()
+				registry.GetAuth().SetDefaults(RegistryDefaultsMap["ghcr"]().GetAuth())
+				return registry
+			}(),
 			defaultRegistry: nil,
 		},
 		{
 			name:            "ghcr",
-			dType:           "ghcr",
 			registry:        RegistryDefaultsMap["ghcr"](),
 			defaultRegistry: RegistryDefaultsMap["ghcr"](),
 		},
 		{
 			name:            "hub",
-			dType:           "hub",
 			registry:        RegistryDefaultsMap["hub"](),
 			defaultRegistry: RegistryDefaultsMap["hub"](),
 		},
 		{
 			name:            "quay",
-			dType:           "quay",
 			registry:        RegistryDefaultsMap["quay"](),
 			defaultRegistry: RegistryDefaultsMap["quay"](),
 		},
@@ -1143,22 +965,24 @@ func TestSetRegistryDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: setRegistryDefaults is called with these.
+			var want RegistryAuthDefaults
+			if tc.registry != nil {
+				want = tc.registry.GetAuth().Defaults()
+			}
+
 			setRegistryDefaults(tc.registry, tc.defaultRegistry)
 
-			if tc.registry == nil || tc.defaultRegistry == nil {
+			if tc.registry == nil {
 				return
 			}
-			prefix := fmt.Sprintf(
-				"%s\nsetRegistryDefaults(registry=%p, defaultRegistry=%p)",
-				packageName, tc.registry, tc.defaultRegistry,
-			)
 
-			// THEN: the auth defaults have been linked as expected.
-			fieldTests := []test.FieldAssertion{
-				{Name: "Auth.Defaults", Got: tc.registry.GetAuth().Defaults(), Want: tc.defaultRegistry.GetAuth(), Mode: test.CompareSamePointer},
+			if tc.defaultRegistry != nil {
+				want = tc.defaultRegistry.GetAuth()
 			}
-			if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+			fieldTests := []test.FieldAssertion{
+				{Name: "GetAuth().Defaults()", Got: tc.registry.GetAuth().Defaults(), Want: want, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "RegistryDefaults"); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})

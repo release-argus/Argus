@@ -17,9 +17,9 @@
 package docker
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -32,7 +32,6 @@ import (
 // #########################
 
 func TestECRRegistry_Check(t *testing.T) {
-	// GIVEN: an ECRRegistry, and version to check for.
 	tests := []struct {
 		name     string
 		registry ECRRegistry
@@ -57,7 +56,7 @@ func TestECRRegistry_Check(t *testing.T) {
 				Auth:  &ECRAuth{},
 			},
 			version:  "latest",
-			errRegex: `^` + test.ArgusDockerECRRepo + `:latest-unknown - tag not found$`,
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerECRRepo) + `:latest-unknown - tag not found$`,
 		},
 		{
 			name: "unknown image",
@@ -66,8 +65,9 @@ func TestECRRegistry_Check(t *testing.T) {
 				Tag:   "{{ version }}",
 				Auth:  &ECRAuth{},
 			},
-			version:  "latest",
-			errRegex: `^` + test.ArgusDockerECRRepo + `-unknown:latest - tag not found$`,
+			version: "latest",
+			// ECR also answers 404 for an unknown image, which ECRRegistry.parseBody turns into ErrTagNotFound.
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerECRRepo) + `-unknown:latest - tag not found$`,
 		},
 	}
 
@@ -75,34 +75,19 @@ func TestECRRegistry_Check(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nECRRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if util.RegexCheck(`(?i)TOOMANYREQUESTS|rate exceeded`, e) {
-				t.Skipf(
-					"%s registry rate-limited:\n%s",
-					prefix, e,
-				)
+				t.Skipf("registry rate-limited:\n%s", e)
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %s",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestECRRegistry_Check__errors(t *testing.T) {
-	// GIVEN: an ECRRegistry, and version to check for.
 	tests := []struct {
 		name            string
 		ecrTokenAddress string
@@ -154,10 +139,10 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				^` + test.ArgusDockerECRRepo + `:latest
+				^` + regexp.QuoteMeta(test.ArgusDockerECRRepo) + `:latest
 					Get "https://.*
 						dial tcp:
-							lookup .* no such host$`,
+							lookup .*$`,
 			),
 		},
 	}
@@ -167,7 +152,7 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps ecrTokenAddress and ecrQueryURL.
 
 			if tc.ecrTokenAddress != "" {
 				ecrTokenAddress = tc.ecrTokenAddress
@@ -182,28 +167,16 @@ func TestECRRegistry_Check__errors(t *testing.T) {
 				})
 			}
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nECRRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %s",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestECRAuth_RefreshQueryToken__integration(t *testing.T) {
-	// GIVEN: an ECRAuth to fetch a queryToken with.
 	tests := []struct {
 		name         string
 		handler      http.HandlerFunc // Served via httptest; overrides ecrTokenAddress.
@@ -238,7 +211,7 @@ func TestECRAuth_RefreshQueryToken__integration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps ecrTokenAddress.
 
 			switch {
 			case tc.handler != nil:
@@ -256,29 +229,16 @@ func TestECRAuth_RefreshQueryToken__integration(t *testing.T) {
 			}
 			detail := ContainerDetail{Image: test.ArgusDockerECRRepo}
 
-			// AND: an ECRAuth to fetch it with.
 			data := &ECRAuth{}
 
-			// WHEN: refreshQueryToken() is called on it.
 			queryToken, err := data.refreshQueryToken(detail)
-
-			prefix := fmt.Sprintf(
-				"%s\nECRAuth.refreshQueryToken(%+v)",
-				packageName, detail,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: if we didn't error, then we received a query token.
 			if err == nil && queryToken == "" {
-				t.Errorf("%s returned an empty queryToken\nwant: non-empty", prefix)
+				t.Error("queryToken mismatch\ngot:  \"\"\nwant: non-empty")
 			}
 		})
 	}

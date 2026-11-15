@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build unit || integration
+
 // Package test provides test helpers for the service package.
 package test
 
@@ -19,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service"
-	opt "github.com/release-argus/Argus/service/option"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
@@ -28,16 +30,14 @@ import (
 func PlainDefaultsConfig(t *testing.T) service.DefaultsConfig {
 	t.Helper()
 
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
+	optCfg := opttest.PlainDefaultsConfig(t)
 
 	defaults, _ := service.DecodeDefaults("yaml", nil)
-	defaults.Options = *optDefaults
+	defaults.Options = *optCfg.Soft
 	hardDefaults, _ := service.DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
 
-	hardDefaults.Options = *optHardDefaults
+	hardDefaults.Options = *optCfg.Hard
 
 	svcStatus, _ := statustest.New("yaml", nil)
 	hardDefaults.Status = status.NewDefaults(

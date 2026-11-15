@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -35,21 +36,16 @@ import (
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "deployedver"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -71,38 +67,41 @@ func (f *mockLookup) String(prefix string) string                 { return decod
 func (f *mockLookup) Track()                                      {}
 
 func testLookup(t *testing.T, typ string, fail bool, version string) (dv Lookup) {
-	dvCfg := plainDefaultsConfig(t)
+	t.Helper()
 
 	switch typ {
 	case manual.Type:
 		dv = testManual(t, version)
 	case web.Type:
 		dv = testWeb(t, fail, version)
+	default:
+		t.Fatalf("testLookup(type=%q): unsupported type", typ)
 	}
 
 	dv.Init(
 		dv.GetOptions(),
 		dv.GetStatus(),
-		dvCfg,
+		base.DefaultsConfig{
+			Soft: dv.GetDefaults(),
+			Hard: dv.GetHardDefaults(),
+		},
 	)
 	dv.GetStatus().ServiceInfo.ID = "TEST_DV"
 
-	// Check the values.
 	if err := dv.CheckValues(); err != nil {
-		t.Fatalf(
-			"%s.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
-			packageName, dv, fail, err,
-		)
+		t.Fatalf("testLookup(type=%q, fail=%t).CheckValues() failed: %v", typ, fail, err)
 	}
 
 	return dv
 }
 
 func testManual(t *testing.T, version string) Lookup {
-	dvCfg := plainDefaultsConfig(t)
+	t.Helper()
+
+	dvCfg := plainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
-	dv, _ := Decode(
+	dv, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: manual
 			version: `+version+`
@@ -111,45 +110,45 @@ func testManual(t *testing.T, version string) Lookup {
 		svcStatus,
 		dvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode(version=%q) failed: %v", version, err)
+	}
 
 	return dv
 }
 
 func testWeb(t *testing.T, fail bool, version string) Lookup {
-	dvCfg := plainDefaultsConfig(t)
+	t.Helper()
+
+	dvCfg := plainDefaultsConfig()
 
 	svcStatus, _ := statustest.New("yaml", nil)
-	dv, _ := Decode(
+	dv, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: url
 			method: GET
 			url: `+test.LookupBare.URLInvalid+`/`+version+`
-			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+			allow_invalid_certs: `+strconv.FormatBool(!fail)+`
 		`)),
 		opttest.Options(t),
 		svcStatus,
 		dvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode(version=%q) failed: %v", version, err)
+	}
 
 	return dv
 }
 
-// plainDefaults returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
+// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+func plainDefaultsConfig() base.DefaultsConfig {
+	hardDefaults := &base.Defaults{Options: &opt.Defaults{}}
 	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
+	hardDefaults.Options.Default()
 
 	return base.DefaultsConfig{
-		Soft: defaults,
+		Soft: &base.Defaults{Options: &opt.Defaults{}},
 		Hard: hardDefaults,
 	}
 }

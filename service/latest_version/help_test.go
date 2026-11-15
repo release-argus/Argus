@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -28,7 +29,6 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
@@ -37,21 +37,19 @@ import (
 // dummyGitHubToken stands in for a real token where no request is made.
 const dummyGitHubToken = "dummy-github-token"
 
-var packageName = "latestver"
+// testWebVersion is the version the [testWeb] Lookup's URL returns.
+const testWebVersion = "1.2.3"
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -73,9 +71,7 @@ func (f *mockLookup) SetRequire(r *filter.Require)                { f.Require = 
 func (f *mockLookup) String(prefix string) string                 { return decode.ToYAMLString(f, prefix) }
 
 func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
-	if t != nil {
-		t.Helper()
-	}
+	t.Helper()
 
 	lvCfg := plainDefaultsConfig(t)
 
@@ -90,25 +86,23 @@ func testLookup(t *testing.T, typ string, fail bool) (lv Lookup) {
 		lv.GetOptions(),
 		lv.GetStatus(),
 		base.DefaultsConfig{
-			Soft: &lvCfg.Soft.Common,
-			Hard: &lvCfg.Hard.Common,
+			Soft: lv.GetDefaults(),
+			Hard: lv.GetHardDefaults(),
 		},
 	)
 	applyTypeDefaults(lv, lvCfg)
 	lv.GetStatus().ServiceInfo.ID = "TEST_LV"
 
-	// Check the values.
 	if err := lv.CheckValues(); err != nil {
-		t.Fatalf(
-			"%s.Lookup(type=%q, fail=%t).CheckValues() unexpected error: %v",
-			packageName, typ, fail, err,
-		)
+		t.Fatalf("testLookup(type=%q, fail=%t).CheckValues() failed: %v", typ, fail, err)
 	}
 
 	return lv
 }
 
 func testGitHub(t *testing.T, fail bool) Lookup {
+	t.Helper()
+
 	lvCfg := plainDefaultsConfig(t)
 	accessToken := test.GitHubToken(t)
 	if fail {
@@ -116,7 +110,7 @@ func testGitHub(t *testing.T, fail bool) Lookup {
 	}
 
 	svcStatus, _ := statustest.New("yaml", nil)
-	lv, _ := Decode(
+	lv, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: github
 			url: `+test.ArgusGitHubRepo+`
@@ -126,42 +120,48 @@ func testGitHub(t *testing.T, fail bool) Lookup {
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
 
 	return lv
 }
 
 func testWeb(t *testing.T, fail bool) Lookup {
+	t.Helper()
+
 	lvCfg := plainDefaultsConfig(t)
 
 	svcStatus, _ := statustest.New("yaml", nil)
-	lv, _ := Decode(
+	lv, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			type: url
-			url: `+test.LookupBare.URLInvalid+`/1.2.3
-			allow_invalid_certs: `+fmt.Sprint(!fail)+`
+			url: `+test.LookupBare.URLInvalid+`/`+testWebVersion+`
+			allow_invalid_certs: `+strconv.FormatBool(!fail)+`
 		`)),
 		opttest.Options(t),
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
 
 	return lv
 }
 
-// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
+// plainDefaultsConfig returns plain defaults and hardDefaults with a dummy GitHub token.
 func plainDefaultsConfig(t *testing.T) DefaultsConfig {
 	t.Helper()
 
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
+	optCfg := opttest.PlainDefaultsConfig(t)
 
 	defaults, _ := DecodeDefaults("yaml", nil)
-	defaults.Common.Options = optDefaults
+	defaults.Common.Options = optCfg.Soft
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()
 	hardDefaults.GitHub.AccessToken = dummyGitHubToken
-	hardDefaults.Common.Options = optHardDefaults
+	hardDefaults.Common.Options = optCfg.Hard
 
 	defaults.Common.Require.SetDefaults(&hardDefaults.Common.Require)
 

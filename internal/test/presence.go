@@ -12,8 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
-package errfmt
+package test
 
-var packageName = "errfmt"
+// Presence returns "present" or "absent", for a got/want message.
+func Presence(present bool) string {
+	if present {
+		return "present"
+	}
+	return "absent"
+}

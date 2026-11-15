@@ -19,7 +19,6 @@ package types
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -35,7 +34,6 @@ const (
 )
 
 func TestServiceEdit_Marshal(t *testing.T) {
-	// GIVEN: a ServiceEdit.
 	tests := []struct {
 		name  string
 		input ServiceEdit
@@ -141,29 +139,19 @@ func TestServiceEdit_Marshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the ServiceEdit is marshaled to JSON.
 			got, err := decode.Marshal("json", tc.input)
-
-			// THEN: the result is as expected.
 			if err != nil {
-				t.Fatalf(
-					"%s\nServiceEdit marshal errored: %v",
-					packageName, err,
-				)
+				t.Fatalf("decode.Marshal() failed: %v", err)
 			}
 
 			if string(got) != tc.want {
-				t.Errorf(
-					"%s\nServiceEdit marshal value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhookSummary_Marshal(t *testing.T) {
-	// GIVEN: a WebhookSummary.
 	tests := []struct {
 		name  string
 		input *WebhookSummary
@@ -196,28 +184,18 @@ func TestWebhookSummary_Marshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the WebhookSummary is marshaled to JSON.
 			got, err := decode.Marshal("json", tc.input)
-
-			// THEN: the result is as expected.
 			if err != nil {
-				t.Fatalf(
-					"%s\nWebhookSummary marshal errored: %v",
-					packageName, err,
-				)
+				t.Fatalf("decode.Marshal() failed: %v", err)
 			}
 			if string(got) != tc.want {
-				t.Errorf(
-					"%s\nWebhookSummary marshal value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestCommandSummary_Marshal(t *testing.T) {
-	// GIVEN: a CommandSummary.
 	tests := []struct {
 		name  string
 		input *CommandSummary
@@ -250,29 +228,19 @@ func TestCommandSummary_Marshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the CommandSummary is marshaled to JSON.
 			got, err := decode.Marshal("json", tc.input)
-
-			// THEN: the result is as expected.
 			if err != nil {
-				t.Fatalf(
-					"%s\nCommandSummary marshal errored: %v",
-					packageName, err,
-				)
+				t.Fatalf("decode.Marshal() failed: %v", err)
 			}
 
 			if string(got) != tc.want {
-				t.Errorf(
-					"%s\nCommandSummary marshal value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_IsZero(t *testing.T) {
-	// GIVEN: a ServiceSummary struct.
 	tests := []struct {
 		name string
 		data ServiceSummary
@@ -403,22 +371,16 @@ func TestServiceSummary_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nServiceSummary.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_String(t *testing.T) {
-	// GIVEN: a ServiceSummary.
 	tests := []struct {
 		name    string
 		summary *ServiceSummary
@@ -501,29 +463,22 @@ func TestServiceSummary_String(t *testing.T) {
 		},
 	}
 
-	// WHEN: String is called on it.
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the Summary is stringified with String.
 			got := tc.summary.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nServiceSummary.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("ServiceSummary.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceSummary_RemoveUnchanged(t *testing.T) {
-	// GIVEN: two ServiceSummaries.
 	tests := []struct {
 		name           string
 		old, new, want *ServiceSummary
@@ -1019,7 +974,7 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Give them non-nil Status, Command and Webhook.
+			// RemoveUnchanged dereferences Status.
 			if tc.old != nil {
 				initialiseFields(tc.old)
 			}
@@ -1027,19 +982,12 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 				initialiseFields(tc.new)
 			}
 
-			// WHEN: RemoveUnchanged is called, comparing new to old.
 			tc.new.RemoveUnchanged(tc.old)
 
-			prefix := fmt.Sprintf(
-				"%s\nServiceSummary.RemoveUnchanged(%+v)",
-				packageName, tc.old,
-			)
-
-			// THEN: the values that are unchanged are removed.
 			if gotStr, wantStr := tc.new.String(), tc.want.String(); gotStr != wantStr {
 				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
+					"ServiceSummary.RemoveUnchanged() mismatch\ngot:  %q\nwant: %q",
+					gotStr, wantStr,
 				)
 			}
 		})
@@ -1047,7 +995,6 @@ func TestServiceSummary_RemoveUnchanged(t *testing.T) {
 }
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults Defaults
@@ -1114,22 +1061,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -1193,23 +1134,17 @@ func TestDefaults_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Defaults are stringified with String.
 			got := tc.defaults.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Defaults.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestSettings_IsZero(t *testing.T) {
-	// GIVEN: Settings.
 	tests := []struct {
 		name     string
 		settings Settings
@@ -1251,6 +1186,15 @@ func TestSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/Auth",
+			settings: Settings{
+				Auth: AuthSettings{
+					Enabled: new(true),
+				},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/all",
 			settings: Settings{
 				Log: LogSettings{
@@ -1262,6 +1206,9 @@ func TestSettings_IsZero(t *testing.T) {
 				Web: WebSettings{
 					ListenPort: "9001",
 				},
+				Auth: AuthSettings{
+					Enabled: new(true),
+				},
 			},
 			want: false,
 		},
@@ -1271,22 +1218,16 @@ func TestSettings_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.settings.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDataSettings_IsZero(t *testing.T) {
-	// GIVEN: DataSettings.
 	tests := []struct {
 		name         string
 		dataSettings DataSettings
@@ -1328,22 +1269,16 @@ func TestDataSettings_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.dataSettings.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDataSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLogSettings_IsZero(t *testing.T) {
-	// GIVEN: LogSettings.
 	tests := []struct {
 		name        string
 		logSettings LogSettings
@@ -1385,22 +1320,16 @@ func TestLogSettings_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.logSettings.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLogSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebSettings_IsZero(t *testing.T) {
-	// GIVEN: WebSettings.
 	tests := []struct {
 		name        string
 		webSettings WebSettings
@@ -1409,7 +1338,6 @@ func TestWebSettings_IsZero(t *testing.T) {
 		{
 			name: "empty",
 			webSettings: WebSettings{
-
 				ListenHost:  "",
 				ListenPort:  "",
 				CertFile:    "",
@@ -1461,6 +1389,13 @@ func TestWebSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/TrustedProxies",
+			webSettings: WebSettings{
+				TrustedProxies: []string{"10.0.0.0/8"},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/all",
 			webSettings: WebSettings{
 				ListenHost:     "127.0.0.1",
@@ -1469,6 +1404,7 @@ func TestWebSettings_IsZero(t *testing.T) {
 				KeyFile:        "file.pem",
 				RoutePrefix:    "/",
 				DisabledRoutes: []string{"route1", "route2"},
+				TrustedProxies: []string{"10.0.0.0/8"},
 			},
 			want: false,
 		},
@@ -1478,22 +1414,16 @@ func TestWebSettings_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.webSettings.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebSettings.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestNotifiers_String(t *testing.T) {
-	// GIVEN: Notifiers.
 	tests := []struct {
 		name      string
 		notifiers *Notifiers
@@ -1589,23 +1519,17 @@ func TestNotifiers_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Notifiers is stringified with String.
 			got := tc.notifiers.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%sNotifiers.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Notifiers.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestNotifiers_Flatten(t *testing.T) {
-	// GIVEN: a Notifiers.
 	tests := []struct {
 		name   string
 		notify *Notifiers
@@ -1715,33 +1639,27 @@ func TestNotifiers_Flatten(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Flatten is called on it.
 			got := tc.notify.Flatten()
 
-			// THEN: nil Notifiers are kept.
-			if tc.notify == nil && tc.want == nil {
+			if tc.want == nil {
+				if got != nil {
+					t.Errorf("notifiers mismatch\ngot:  non-nil (len=%d)\nwant: nil", len(got))
+				}
 				return
 			}
 
-			// AND: defined fields are censored as expected.
+			if gotLen, wantLen := len(got), len(*tc.want); gotLen != wantLen {
+				t.Fatalf("notifiers length mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
+			}
 			for i := range *tc.want {
-				prefix := fmt.Sprintf(
-					"%s\nNotifiers.Flatten() Notify[%d]",
-					packageName, i,
-				)
-
 				if gotID, wantID := got[i].ID, (*tc.want)[i].ID; gotID != wantID {
-					t.Errorf(
-						"%s .ID mismatch\ngot:  %q\nwant: %q",
-						prefix, gotID, wantID,
-					)
+					t.Errorf("notifiers[%d].ID mismatch\ngot:  %q\nwant: %q", i, gotID, wantID)
 				}
 				if testErr := test.AssertMapEqual(
 					t,
 					got[i].URLFields,
 					(*tc.want)[i].URLFields,
-					prefix,
-					"URLFields",
+					fmt.Sprintf("notifiers[%d].URLFields", i),
 				); testErr != nil {
 					t.Error(testErr)
 				}
@@ -1749,8 +1667,7 @@ func TestNotifiers_Flatten(t *testing.T) {
 					t,
 					got[i].Params,
 					(*tc.want)[i].Params,
-					prefix,
-					"Params",
+					fmt.Sprintf("notifiers[%d].Params", i),
 				); testErr != nil {
 					t.Error(testErr)
 				}
@@ -1760,7 +1677,6 @@ func TestNotifiers_Flatten(t *testing.T) {
 }
 
 func TestNotify_Censor(t *testing.T) {
-	// GIVEN: a Notify.
 	tests := []struct {
 		name         string
 		notify, want *Notify
@@ -1890,32 +1806,26 @@ func TestNotify_Censor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Censor is called on it.
 			tc.notify.Censor()
 
-			prefix := fmt.Sprintf("%s\nNotify.Censor()", packageName)
-
-			// THEN: nil Notifiers are kept.
-			if tc.notify == tc.want {
+			// A nil Notify has nothing to censor.
+			if tc.notify == nil {
 				return
 			}
 
-			// AND: defined fields are censored as expected.
 			if testErr := test.AssertMapEqual(
 				t,
-				tc.want.URLFields,
 				tc.notify.URLFields,
-				prefix,
-				"URLFields",
+				tc.want.URLFields,
+				"Notify.URLFields",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 			if testErr := test.AssertMapEqual(
 				t,
-				tc.want.Params,
 				tc.notify.Params,
-				prefix,
-				"Params",
+				tc.want.Params,
+				"Notify.Params",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -1924,7 +1834,6 @@ func TestNotify_Censor(t *testing.T) {
 }
 
 func TestService_String(t *testing.T) {
-	// GIVEN: a Service.
 	tests := []struct {
 		name  string
 		input *Service
@@ -2030,23 +1939,16 @@ func TestService_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Defaults are stringified with String.
 			got := tc.input.String()
 
-			// THEN: the result is as expected.
-			tc.want = strings.ReplaceAll(tc.want, "\n", "")
 			if got != tc.want {
-				t.Errorf(
-					"%s\nService.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceDefaults_IsZero(t *testing.T) {
-	// GIVEN: ServiceDefaults.
 	tests := []struct {
 		name     string
 		defaults ServiceDefaults
@@ -2166,22 +2068,16 @@ func TestServiceDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nServiceDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceOptions_IsZero(t *testing.T) {
-	// GIVEN: ServiceOptions.
 	tests := []struct {
 		name    string
 		options ServiceOptions
@@ -2232,22 +2128,16 @@ func TestServiceOptions_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.options.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nServiceOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDashboardOptions_IsZero(t *testing.T) {
-	// GIVEN: DashboardOptions.
 	tests := []struct {
 		name    string
 		options DashboardOptions
@@ -2316,22 +2206,16 @@ func TestDashboardOptions_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.options.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDashboardOptions.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersion_String(t *testing.T) {
-	// GIVEN: a LatestVersion.
 	tests := []struct {
 		name  string
 		input *LatestVersion
@@ -2389,22 +2273,16 @@ func TestLatestVersion_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the LatestVersion is stringified with String.
 			got := tc.input.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersion.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("LatestVersion.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionDefaults_IsZero(t *testing.T) {
-	// GIVEN: LatestVersionDefaults.
 	tests := []struct {
 		name     string
 		defaults LatestVersionDefaults
@@ -2496,22 +2374,16 @@ func TestLatestVersionDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersionDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionForgejoDefaults_IsZero(t *testing.T) {
-	// GIVEN: LatestVersionForgejoDefaults.
 	tests := []struct {
 		name     string
 		defaults LatestVersionForgejoDefaults
@@ -2554,22 +2426,16 @@ func TestLatestVersionForgejoDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: it reports whether anything is set.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersionForgejoDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionForgejoHostDefaults_IsZero(t *testing.T) {
-	// GIVEN: LatestVersionForgejoHostDefaults.
 	tests := []struct {
 		name     string
 		defaults LatestVersionForgejoHostDefaults
@@ -2585,24 +2451,28 @@ func TestLatestVersionForgejoHostDefaults_IsZero(t *testing.T) {
 			defaults: LatestVersionForgejoHostDefaults{
 				URL: "https://codeberg.org",
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/AccessToken",
 			defaults: LatestVersionForgejoHostDefaults{
 				AccessToken: util.SecretValue,
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCerts=true",
 			defaults: LatestVersionForgejoHostDefaults{
 				AllowInvalidCerts: new(true),
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/AllowInvalidCerts=false",
 			defaults: LatestVersionForgejoHostDefaults{
 				AllowInvalidCerts: new(false),
 			},
+			want: false,
 		},
 	}
 
@@ -2610,22 +2480,16 @@ func TestLatestVersionForgejoHostDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: it reports whether anything is set.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersionForgejoHostDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionRequire_String(t *testing.T) {
-	// GIVEN: a LatestVersionRequire.
 	tests := []struct {
 		name  string
 		input *LatestVersionRequire
@@ -2677,22 +2541,16 @@ func TestLatestVersionRequire_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the LatestVersionRequire is stringified with String.
 			got := tc.input.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersionRequire.String() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("LatestVersionRequire.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionRequireDefaults_IsZero(t *testing.T) {
-	// GIVEN: LatestVersionRequireDefaults.
 	tests := []struct {
 		name     string
 		defaults LatestVersionRequireDefaults
@@ -2720,22 +2578,16 @@ func TestLatestVersionRequireDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLatestVersionRequireDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLatestVersionRequireDefaults_String(t *testing.T) {
-	// GIVEN: a LatestVersionRequireDefaults.
 	tests := []struct {
 		name string
 		lvRD *LatestVersionRequireDefaults
@@ -2803,14 +2655,12 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the LatestVersionRequireDefaults are stringified with String.
 			got := tc.lvRD.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nLatestVersionRequireDefaults.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
+					"LatestVersionRequireDefaults.String() mismatch\ngot:  %q\nwant: %q",
+					got, tc.want,
 				)
 			}
 		})
@@ -2818,7 +2668,6 @@ func TestLatestVersionRequireDefaults_String(t *testing.T) {
 }
 
 func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerRegistriesDefaults.
 	tests := []struct {
 		name     string
 		defaults RequireDockerRegistriesDefaults
@@ -2836,6 +2685,7 @@ func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
 					Token: "token",
 				},
 			},
+			want: false,
 		},
 	}
 
@@ -2843,22 +2693,16 @@ func TestRequireDockerRegistriesDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistriesDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerRegistryDefaultsAuth_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerRegistryDefaultsAuth.
 	tests := []struct {
 		name     string
 		defaults RequireDockerRegistryDefaultsAuth
@@ -2874,6 +2718,7 @@ func TestRequireDockerRegistryDefaultsAuth_IsZero(t *testing.T) {
 			defaults: RequireDockerRegistryDefaultsAuth{
 				Token: "t",
 			},
+			want: false,
 		},
 	}
 
@@ -2881,22 +2726,16 @@ func TestRequireDockerRegistryDefaultsAuth_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsAuth.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerRegistryDefaultsAuthWithUsername.
 	tests := []struct {
 		name     string
 		defaults RequireDockerRegistryDefaultsAuthWithUsername
@@ -2912,12 +2751,14 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				Token: "t",
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/Username",
 			defaults: RequireDockerRegistryDefaultsAuthWithUsername{
 				Username: "u",
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/all",
@@ -2925,6 +2766,7 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 				Username: "u",
 				Token:    "t",
 			},
+			want: false,
 		},
 	}
 
@@ -2932,22 +2774,16 @@ func TestRequireDockerRegistryDefaultsAuthWithUsername_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsAuthWithUsername.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerRegistryDefaultsToken.
 	tests := []struct {
 		name     string
 		defaults RequireDockerRegistryDefaultsToken
@@ -2959,7 +2795,7 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "non-empty/RequireDockerRegistryDefaultsAuth",
+			name: "non-empty/Token",
 			defaults: RequireDockerRegistryDefaultsToken{
 				Token: "t",
 			},
@@ -2971,22 +2807,16 @@ func TestRequireDockerRegistryDefaultsToken_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsToken.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerRegistryDefaultsToken_GetToken(t *testing.T) {
-	// GIVEN: a RequireDockerRegistryDefaultsToken.
 	tests := []struct {
 		name     string
 		defaults RequireDockerRegistryDefaultsToken
@@ -3010,22 +2840,16 @@ func TestRequireDockerRegistryDefaultsToken_GetToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetToken() is called on it.
 			got := tc.defaults.GetToken()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsToken.GetToken() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T) {
-	// GIVEN: RequireDockerCheckRegistryDefaultsTokenWithUsername.
 	tests := []struct {
 		name     string
 		defaults RequireDockerCheckRegistryDefaultsTokenWithUsername
@@ -3037,7 +2861,7 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 			want:     true,
 		},
 		{
-			name: "non-empty/RequireDockerRegistryDefaultsAuthWithUsername",
+			name: "non-empty/Username and Token",
 			defaults: RequireDockerCheckRegistryDefaultsTokenWithUsername{
 				Username: "u",
 				Token:    "t",
@@ -3050,22 +2874,16 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_IsZero(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerCheckRegistryDefaultsTokenWithUsername.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_GetToken(t *testing.T) {
-	// GIVEN: a RequireDockerCheckRegistryDefaultsTokenWithUsername.
 	tests := []struct {
 		name     string
 		defaults RequireDockerCheckRegistryDefaultsTokenWithUsername
@@ -3090,22 +2908,16 @@ func TestRequireDockerCheckRegistryDefaultsTokenWithUsername_GetToken(t *testing
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetToken() is called on it.
 			got := tc.defaults.GetToken()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerRegistryDefaultsToken.GetToken() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDockerDefaults_IsZero(t *testing.T) {
-	// GIVEN: a RequireDockerDefaults.
 	tests := []struct {
 		name string
 		d    RequireDockerDefaults
@@ -3160,22 +2972,16 @@ func TestRequireDockerDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.d.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDockerDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
-	// GIVEN: a DeployedVersionLookupDefaults.
 	tests := []struct {
 		name string
 		d    DeployedVersionLookupDefaults
@@ -3214,22 +3020,16 @@ func TestDeployedVersionLookupDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.d.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDeployedVersionLookupDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDeployedVersionLookup_String(t *testing.T) {
-	// GIVEN: a DeployedVersionLookup.
 	tests := []struct {
 		name string
 		dvl  *DeployedVersionLookup
@@ -3289,15 +3089,13 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the DeployedVersionLookup is stringified with String.
 			got := tc.dvl.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
 				t.Errorf(
-					"%s\nDeployedVersionLookup.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
+					"DeployedVersionLookup.String() mismatch\ngot:  %q\nwant: %q",
+					got, tc.want,
 				)
 			}
 		})
@@ -3305,7 +3103,6 @@ func TestDeployedVersionLookup_String(t *testing.T) {
 }
 
 func TestURLCommands_String(t *testing.T) {
-	// GIVEN: URLCommands.
 	tests := []struct {
 		name        string
 		urlCommands *URLCommands
@@ -3341,23 +3138,17 @@ func TestURLCommands_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the URLCommands is stringified with String.
 			got := tc.urlCommands.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%s\nURLCommands.String() value mismatch\ngot:  %qs\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("URLCommands.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestStatus_String(t *testing.T) {
-	// GIVEN: a Status.
 	tests := []struct {
 		name   string
 		status *Status
@@ -3405,22 +3196,16 @@ func TestStatus_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the Status is stringified with String.
 			got := tc.status.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nStatus.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Status.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhooks_String(t *testing.T) {
-	// GIVEN: Webhooks.
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
@@ -3491,41 +3276,37 @@ func TestWebhooks_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Webhook is stringified with String.
 			got := tc.webhooks.String()
 
-			// THEN: the result is as expected.
 			tc.want = test.TrimJSON(tc.want)
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhooks.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("Webhooks.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhooks_Flatten(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
-		name    string
-		webhook *Webhooks
-		want    []*Webhook
+		name     string
+		webhooks *Webhooks
+		want     []*Webhook
+		// Flatten shares Headers with the map, so Censor writes through to it.
+		inputMutated bool
 	}{
 		{
-			name:    "nil",
-			webhook: nil,
-			want:    nil,
+			name:     "nil",
+			webhooks: nil,
+			want:     nil,
 		},
 		{
-			name:    "empty",
-			webhook: &Webhooks{},
-			want:    []*Webhook{},
+			name:     "empty",
+			webhooks: &Webhooks{},
+			want:     []*Webhook{},
 		},
 		{
 			name: "webhooks ordered",
-			webhook: &Webhooks{
+			webhooks: &Webhooks{
 				"alpha": Webhook{URL: "https://example.com"},
 				"bravo": Webhook{URL: "https://example.com/other"},
 			},
@@ -3536,7 +3317,7 @@ func TestWebhooks_Flatten(t *testing.T) {
 		},
 		{
 			name: "webhooks ordered and censored",
-			webhook: &Webhooks{
+			webhooks: &Webhooks{
 				"alpha": Webhook{
 					URL:    "https://example.com",
 					Secret: "foo",
@@ -3559,30 +3340,64 @@ func TestWebhooks_Flatten(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "headers censored",
+			webhooks: &Webhooks{
+				"alpha": Webhook{
+					URL:     "https://example.com",
+					Headers: []Header{{Key: "X-Token", Value: "foo"}},
+				},
+			},
+			want: []*Webhook{
+				{
+					ID:      "alpha",
+					URL:     "https://example.com",
+					Headers: []Header{{Key: "X-Token", Value: util.SecretValue}},
+				},
+			},
+			inputMutated: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Flatten is called on it.
-			got := tc.webhook.Flatten()
+			format := "json"
+			inputBefore, err := decode.Marshal(format, tc.webhooks)
+			if err != nil {
+				t.Fatalf("before: decode.Marshal() failed: %v", err)
+			}
 
-			// THEN: the map is flattened, ordered and censored.
-			gotBytes, _ := decode.Marshal("json", got)
-			wantBytes, _ := decode.Marshal("json", tc.want)
+			got := tc.webhooks.Flatten()
+
+			gotBytes, err := decode.Marshal(format, got)
+			if err != nil {
+				t.Fatalf("result: decode.Marshal() failed: %v", err)
+			}
+			wantBytes, err := decode.Marshal(format, tc.want)
+			if err != nil {
+				t.Fatalf("want: decode.Marshal() failed: %v", err)
+			}
 			if gotStr, wantStr := string(gotBytes), string(wantBytes); gotStr != wantStr {
-				t.Errorf(
-					"%s\nWebhooks.Flatten()\ngot:  %q\nwant: %q",
-					packageName, gotStr, wantStr,
-				)
+				t.Errorf("Webhooks.Flatten() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
+			}
+
+			if tc.inputMutated {
+				return
+			}
+			inputAfter, err := decode.Marshal(format, tc.webhooks)
+			if err != nil {
+				t.Fatalf("after: decode.Marshal() failed: %v", err)
+			}
+			if gotStr, wantStr := string(inputAfter), string(inputBefore); gotStr != wantStr {
+				t.Errorf("Webhooks mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}
 }
 
 func TestWebhook_IsZero(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
 		webhook Webhook
@@ -3673,6 +3488,7 @@ func TestWebhook_IsZero(t *testing.T) {
 			webhook: Webhook{
 				SilentFails: new(true),
 			},
+			want: false,
 		},
 		{
 			name: "non-empty/all",
@@ -3691,6 +3507,7 @@ func TestWebhook_IsZero(t *testing.T) {
 				MaxTries:          new(uint8(2)),
 				SilentFails:       new(true),
 			},
+			want: false,
 		},
 	}
 
@@ -3698,22 +3515,16 @@ func TestWebhook_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.webhook.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebhook.IsZero() value mismatch\ngot:  %v\nwant: %v",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestWebhook_String(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name    string
 		webhook *Webhook
@@ -3769,7 +3580,7 @@ func TestWebhook_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Webhook.String",
 				tc.webhook.String,
 				tc.want,
 			)
@@ -3778,7 +3589,6 @@ func TestWebhook_String(t *testing.T) {
 }
 
 func TestWebhook_Censor(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name          string
 		webhook, want *Webhook
@@ -3835,25 +3645,20 @@ func TestWebhook_Censor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Censor is called on it.
 			tc.webhook.Censor()
 
-			prefix := fmt.Sprintf("%s\nWebhook.Censor()", packageName)
-
-			// THEN: nil Webhooks are kept.
-			if tc.webhook == tc.want {
+			// A nil Webhook has nothing to censor.
+			if tc.webhook == nil {
 				return
 			}
 
-			// AND: the Secret is censored.
 			if tc.webhook.Secret != tc.want.Secret {
 				t.Errorf(
-					"%s .Secret uncensored\ngot:  %q\nwant: %q",
-					prefix, tc.webhook.Secret, tc.want.Secret,
+					"Webhook.Secret mismatch\ngot:  %q\nwant: %q",
+					tc.webhook.Secret, tc.want.Secret,
 				)
 			}
 
-			// AND: the headers are as expected.
 			gotHeaders := tc.webhook.Headers
 			wantHeaders := tc.want.Headers
 			if testErr := test.AssertSlicesEqualFunc(
@@ -3861,8 +3666,7 @@ func TestWebhook_Censor(t *testing.T) {
 				gotHeaders,
 				wantHeaders,
 				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
-				prefix,
-				"Headers",
+				"Webhook.Headers",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -3871,7 +3675,6 @@ func TestWebhook_Censor(t *testing.T) {
 }
 
 func TestNilIfUnchanged(t *testing.T) {
-	// GIVEN: two pointers to integers.
 	tests := []struct {
 		name     string
 		oldValue *int
@@ -3891,19 +3694,19 @@ func TestNilIfUnchanged(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name:     "removed, non-nil->nil",
+			name:     "removed/non-nil->nil",
 			oldValue: new(1),
 			newValue: nil,
-			want:     new(0),
+			want:     new(0), // A zero value marks the removal.
 		},
 		{
-			name:     "added, nil->non-nil",
+			name:     "added/nil->non-nil",
 			oldValue: nil,
 			newValue: new(1),
 			want:     new(1),
 		},
 		{
-			name:     "changed, non-nil->other-non-nil",
+			name:     "changed/non-nil->other-non-nil",
 			oldValue: new(1),
 			newValue: new(2),
 			want:     new(2),
@@ -3914,22 +3717,12 @@ func TestNilIfUnchanged(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: nilIfUnchanged is called.
 			got := nilIfUnchanged(tc.oldValue, tc.newValue)
 
-			prefix := fmt.Sprintf(
-				"%s\nnilIfUnchanged(ptr=%v, val=%v)",
-				packageName, tc.oldValue, tc.newValue,
-			)
-
-			// THEN: the newValue is nil'd if it's the same as oldValue.
 			gotStr := test.StringifyPtr(got)
 			wantStr := test.StringifyPtr(tc.want)
 			if gotStr != wantStr {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}

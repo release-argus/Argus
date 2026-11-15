@@ -17,26 +17,23 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
-	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 func TestDecode(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	type Args struct {
 		format, data string
-		lookup       *Lookup
 	}
-	// GIVEN: data in a given format to Decode into a Lookup.
+
 	tests := []struct {
 		name     string
 		args     Args
@@ -58,7 +55,8 @@ func TestDecode(t *testing.T) {
 				format: "json",
 				data:   `{}`,
 			},
-			want: "{}\n",
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "YAML/empty",
@@ -119,14 +117,9 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Options + Status.
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
+			options := opttest.PlainOptions(t, optCfg)
 			svcStatus, _ := statustest.New("yaml", nil)
 
-			// WHEN: Decode is called.
 			lookup, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Lookup, error) {
@@ -141,7 +134,6 @@ func TestDecode(t *testing.T) {
 				func(v *Lookup) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			)
 			if testErr != nil {
@@ -151,40 +143,34 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecode(format=%q, data=%q)",
-				packageName, tc.args.format, tc.args.data,
-			)
-
-			// THEN: pointers are handed out as expected.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestApplyOverrides(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig(t)
 
 	type Args struct {
 		format, data string
 		target       *Lookup
 	}
-	// GIVEN: data to unmarshal in a format onto a Require.
+
 	tests := []struct {
-		name           string
-		args           Args
-		want           string
-		pointerChanged bool
-		errRegex       string
+		name             string
+		args             Args
+		want             string
+		skipPointerCheck bool
+		errRegex         string
 	}{
 		{
 			name: "JSON/no data",
@@ -193,10 +179,9 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want: "",
 			errRegex: test.TrimYAML(`
-					jsontext:
-						unexpected EOF`,
+					^jsontext:
+						unexpected EOF$`,
 			),
 		},
 		{
@@ -216,8 +201,9 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want:     "{}\n",
-			errRegex: `^$`,
+			want:             "{}\n",
+			skipPointerCheck: true,
+			errRegex:         `^$`,
 		},
 		{
 			name: "JSON/new, filled, bare",
@@ -225,9 +211,8 @@ func TestApplyOverrides(t *testing.T) {
 				format: "json",
 				data:   `{"type": "foo"}`,
 			},
-			pointerChanged: true,
-			want:           "type: foo\n",
-			errRegex:       `^$`,
+			want:     "type: foo\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "YAML/new, filled, bare",
@@ -235,9 +220,8 @@ func TestApplyOverrides(t *testing.T) {
 				format: "yaml",
 				data:   `type: foo`,
 			},
-			pointerChanged: true,
-			want:           "type: foo\n",
-			errRegex:       `^$`,
+			want:     "type: foo\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/existing, filled/valid",
@@ -287,10 +271,7 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
+			options := opttest.PlainOptions(t, optCfg)
 			svcStatus := status.New(
 				nil, nil, nil,
 				"",
@@ -303,7 +284,6 @@ func TestApplyOverrides(t *testing.T) {
 				tc.args.target.Init(options, svcStatus, dvCfg)
 			}
 
-			// WHEN: ApplyOverrides is called.
 			lookup, err, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -321,40 +301,23 @@ func TestApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
 				"ApplyOverrides",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if err != nil || lookup == nil {
+			if err != nil || lookup == nil || tc.skipPointerCheck {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nApplyOverrides(format=%q, data=%q)",
-				packageName, tc.args.format, tc.args.data,
-			)
-
-			// AND: pointers are handed out as expected.
-			wantOptions := options
-			wantStatus := svcStatus
-			wantSoft := dvCfg.Soft
-			wantHard := dvCfg.Hard
-			if !tc.pointerChanged {
-				wantOptions = lookup.Options
-				wantStatus = lookup.Status
-				wantSoft = lookup.Defaults
-				wantHard = lookup.HardDefaults
-			}
 			fieldTests := []test.FieldAssertion{
-				{Name: "Options", Got: lookup.Options, Want: wantOptions, Mode: test.CompareSamePointer},
-				{Name: "Status", Got: lookup.Status, Want: wantStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: lookup.Defaults, Want: wantSoft, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: wantHard, Mode: test.CompareSamePointer},
+				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

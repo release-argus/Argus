@@ -21,17 +21,17 @@ import (
 )
 
 func TestStringifyPtr(t *testing.T) {
-	// GIVEN: a pointer to a value.
 	tests := []struct {
 		name string
 		ptr  any
 		want string
 	}{
-		{name: "nil", ptr: nil, want: "<nil>"},
+		{name: "untyped nil", ptr: nil, want: "nil"},
+		{name: "typed nil", ptr: (*int)(nil), want: "nil"},
 		{name: "int, positive", ptr: new(1), want: "1"},
 		{name: "int, negative", ptr: new(-1), want: "-1"},
 		{name: "string", ptr: new("hello"), want: "hello"},
-		{name: "uint", ptr: new(1), want: "1"},
+		{name: "uint8", ptr: new(uint8(1)), want: "1"},
 		{name: "bool", ptr: new(true), want: "true"},
 	}
 
@@ -39,34 +39,18 @@ func TestStringifyPtr(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: StringifyPtr is called.
-			var result string
-			switch v := tc.ptr.(type) {
-			case *bool:
-				result = StringifyPtr(v)
-			case *int:
-				result = StringifyPtr(v)
-			case *string:
-				result = StringifyPtr(v)
-			case *uint8:
-				result = StringifyPtr(v)
-			case nil:
-				var nilPtr *int
-				result = StringifyPtr(nilPtr)
-			default:
-				t.Fatalf(
-					"%s\nunexpected type %T",
-					packageName, tc.ptr,
-				)
-			}
-
-			// THEN: the result should be a string representation of the value.
-			if result != tc.want {
-				t.Errorf(
-					"%s\nStringifyPtr() mismatch\ngot:  %q\nwant: %q",
-					packageName, result, tc.want,
-				)
+			if got := StringifyPtr(tc.ptr); got != tc.want {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
+}
+
+func TestStringifyPtr__nonPointerPanics(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("recover() mismatch\ngot:  nil\nwant: non-nil")
+		}
+	}()
+	StringifyPtr(1)
 }

@@ -17,6 +17,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -33,46 +34,36 @@ func AssertDecode[T any](
 	format, data string,
 	stringify func(T) string,
 	wantStr, errRegex string,
-	packageName, funcName string,
+	call string,
 ) (decoded T, decodeErr, testErr error) {
 	t.Helper()
 
-	// WHEN: The decode function is called with it.
+	t.Logf("calling %s(format=%q, data=%q)", call, format, data)
 	v, err := f(format, []byte(data))
-
-	prefix := fmt.Sprintf(
-		"%s\n%s(format=%q, data=%q)",
-		packageName, funcName, format, data,
-	)
-
-	// THEN: The error is as expected.
 	e := errfmt.FormatError(err)
 	if !regexp.MustCompile(errRegex).MatchString(e) {
-		testErr = fmt.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+		testErr = fmt.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
-	if e != "" {
+	if err != nil {
 		return v, err, testErr
 	}
 
-	// AND: The struct stringifies as expected.
 	var gotStr string
 	if stringify == nil {
-		return v, nil, fmt.Errorf("stringify function is required")
+		return v, nil, errors.Join(testErr, errors.New("stringify function is required"))
 	} else if !isNil(v) {
 		gotStr = stringify(v)
 	}
 	if gotStr != wantStr {
-		testErr = fmt.Errorf(
-			"%s stringified mismatch\ngot:  %q\nwant: %q",
-			prefix, gotStr, wantStr,
+		testErr = errors.Join(
+			testErr,
+			fmt.Errorf("%s() mismatch\ngot:  %q\nwant: %q", call, gotStr, wantStr),
 		)
 	}
 	return v, nil, testErr
 }
 
+// AssertApplyOverrides is [AssertDecode] onto target, also asserting sameAddress of the result.
 func AssertApplyOverrides[T any](
 	t *testing.T,
 	target T,
@@ -81,59 +72,67 @@ func AssertApplyOverrides[T any](
 	stringify func(T) string,
 	wantStr, errRegex string,
 	sameAddress bool,
-	packageName, funcName string,
+	call string,
 ) (overridden T, overridesErr, testErr error) {
 	t.Helper()
 
-	// WHEN: ApplyOverrides is called with it.
+	t.Logf("calling %s(format=%q, data=%q)", call, format, data)
 	v, err := f(format, []byte(data), target)
-
-	prefix := fmt.Sprintf(
-		"%s\n%s(format=%q, data=%q)",
-		packageName, funcName, format, data,
-	)
-
-	// THEN: The error is as expected.
 	e := errfmt.FormatError(err)
 	if !regexp.MustCompile(errRegex).MatchString(e) {
-		testErr = fmt.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+		testErr = fmt.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
-	if e != "" {
+	if err != nil {
 		return v, err, testErr
 	}
 
-	// AND: The struct stringifies correctly.
 	var gotStr string
 	if stringify == nil {
-		return v, nil, fmt.Errorf("stringify function is required")
+		return v, nil, errors.Join(testErr, errors.New("stringify function is required"))
 	} else if !isNil(v) {
 		gotStr = stringify(v)
 	}
 	if gotStr != wantStr {
-		testErr = fmt.Errorf(
-			"%s stringified mismatch\ngot:  %q\nwant: %q",
-			prefix, gotStr, wantStr,
+		testErr = errors.Join(
+			testErr,
+			fmt.Errorf("%s() mismatch\ngot:  %q\nwant: %q", call, gotStr, wantStr),
 		)
 	}
 
-	// AND: the returned struct points to the same address as the previous if non-nil previously.
 	if !isNil(v) && !isNil(target) {
-		gotPtr := reflect.ValueOf(v).Pointer()
-		targetPtr := reflect.ValueOf(target).Pointer()
+		gotPtr, gotOK := addressOf(v)
+		targetPtr, targetOK := addressOf(target)
+		if !gotOK || !targetOK {
+			return v, nil, errors.Join(
+				testErr,
+				fmt.Errorf("%s() address check needs a pointer-like type, got %T", call, v),
+			)
+		}
 		gotSameAddress := gotPtr == targetPtr
 		if gotSameAddress != sameAddress {
-			msg := "%s pointer mismatch - address should have changed\ngot:  %v\nwant: %v"
 			if sameAddress {
-				msg = "%s pointer mismatch - address changed unexpectedly\ngot:  %v\nwant: %v"
+				testErr = errors.Join(testErr, fmt.Errorf(
+					"%s() address mismatch\ngot:  %#x\nwant: %#x",
+					call, gotPtr, targetPtr,
+				))
+			} else {
+				testErr = errors.Join(testErr, fmt.Errorf(
+					"%s() address mismatch\ngot:  %#x\nwant: NOT %#x",
+					call, gotPtr, targetPtr,
+				))
 			}
-			testErr = fmt.Errorf(
-				msg,
-				prefix, gotPtr, targetPtr,
-			)
 		}
 	}
 	return v, nil, testErr
+}
+
+// addressOf returns v's address, and false when v's kind has none.
+func addressOf(v any) (uintptr, bool) {
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Map,
+		reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
+		return rv.Pointer(), true
+	}
+	return 0, false
 }

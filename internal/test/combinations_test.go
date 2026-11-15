@@ -17,12 +17,11 @@
 package test
 
 import (
-	"fmt"
+	"slices"
 	"testing"
 )
 
 func TestCombinations(t *testing.T) {
-	// GIVEN: a slice of values.
 	tests := []struct {
 		name  string
 		input []int
@@ -68,40 +67,10 @@ func TestCombinations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Combinations is called.
 			result := Combinations(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nCombinations(%v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the result should be all possible combinations of the values.
-			if len(result) != len(tc.want) {
-				t.Fatalf(
-					"%s length mismatch\ngot:  %d (%v)\nwant: %d (%v)",
-					prefix,
-					len(result), result,
-					len(tc.want), tc.want,
-				)
-			}
-			for i, want := range tc.want {
-				if len(result[i]) != len(want) {
-					t.Fatalf(
-						"%s items at [%d] differ in length:\ngot:  %v\nwant: %v",
-						prefix, i,
-						result, tc.want,
-					)
-				}
-				for j, v := range want {
-					if result[i][j] != v {
-						t.Fatalf(
-							"%s values at [%d][%d] differ:\ngot:  %v\nwant: %v",
-							prefix, i, j,
-							result, tc.want,
-						)
-					}
-				}
+			if !slices.EqualFunc(result, tc.want, slices.Equal) {
+				t.Fatalf("mismatch\ngot:  %v\nwant: %v", result, tc.want)
 			}
 		})
 	}

@@ -33,7 +33,7 @@ func prefixMapKeys(m map[string]string, prefix string) map[string]string {
 
 func TestFirstNonDefaultWithEnv(t *testing.T) {
 	envVarNameBase := "TEST_FIRST_NON_DEFAULT_WITH_ENV_"
-	// GIVEN: a bunch of comparables.
+
 	tests := []struct {
 		name       string
 		env        map[string]string
@@ -41,7 +41,6 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 		allDefault bool
 		wantIndex  int
 		wantText   string
-		diffValue  bool
 	}{
 		{
 			name:       "no vars",
@@ -81,7 +80,6 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			},
 			wantIndex: 3,
 			wantText:  "bar",
-			diffValue: true,
 		},
 		{
 			name: "1 non-default var/env var partial",
@@ -96,7 +94,6 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			},
 			wantIndex: 3,
 			wantText:  "foobar",
-			diffValue: true,
 		},
 		{
 			name: "2 non-default vars",
@@ -109,7 +106,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 			wantIndex: 0,
 		},
 		{
-			name: "2 non-default vars, empty env vars ignored",
+			name: "2 non-default vars/empty env vars ignored",
 			env: map[string]string{
 				"THREE": "",
 				"FOUR":  "bar",
@@ -120,9 +117,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 				"",
 				fmt.Sprintf(`${%s_FOUR}`, envVarNameBase),
 			},
-			wantIndex: 3,
-			wantText:  fmt.Sprintf(`${%s_UNSET}`, envVarNameBase),
-			diffValue: true,
+			wantIndex: 1, // An unset var stays as written, so it is non-empty.
 		},
 	}
 
@@ -130,53 +125,20 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: the env vars are set.
 			tc.env = prefixMapKeys(tc.env, envVarNameBase)
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: FirstNonDefaultWithEnv is run on a slice of slice.
 			got := FirstNonDefaultWithEnv(tc.slice...)
 
-			prefix := fmt.Sprintf(
-				"%s\nFirstNonDefaultWithEnv(%v)",
-				packageName, tc.slice,
-			)
-
-			// THEN: the correct var (or "") is returned.
 			if tc.allDefault {
-				if got != "" {
-					t.Fatalf(
-						"%s mismatch\ngot:  %q\nwant: \"\"",
-						packageName, got,
-					)
+				if want := ""; got != want {
+					t.Fatalf("value mismatch\ngot:  %q\nwant: %q", got, want)
 				}
 				return
 			}
-			// Values differ when they contain an env var.
-			if tc.diffValue {
-				// Value unchanged.
-				if got == tc.slice[tc.wantIndex] {
-					t.Errorf(
-						"%s values should differ (got %v, slice %v)",
-						prefix, got, tc.slice[tc.wantIndex],
-					)
-
-					// Value isn't changed as expected.
-				} else if got != tc.wantText {
-					t.Errorf(
-						"%s value mismatch\ngot:  %q\nwant: %q",
-						prefix, got, tc.wantText,
-					)
-				}
-
-				return
-			}
-			// Values should match slice
-			if got != tc.slice[tc.wantIndex] {
-				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.slice[tc.wantIndex],
-				)
+			want := ValueOr(tc.wantText, tc.slice[tc.wantIndex])
+			if got != want {
+				t.Errorf("value mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -184,7 +146,7 @@ func TestFirstNonDefaultWithEnv(t *testing.T) {
 
 func TestEvalEnvVars(t *testing.T) {
 	envVarNameBase := "TEST_EVAL_ENV_VARS_"
-	// GIVEN: a string.
+
 	tests := []struct {
 		name  string
 		input string
@@ -192,7 +154,7 @@ func TestEvalEnvVars(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "no env var '${...}",
+			name:  "no env var '${...}'",
 			input: "hello there",
 			want:  "hello there",
 		},
@@ -253,27 +215,19 @@ func TestEvalEnvVars(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: the env vars are set.
 			tc.env = prefixMapKeys(tc.env, envVarNameBase)
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: EvalEnvVars is called.
 			got := EvalEnvVars(tc.input)
 
-			// THEN: the string is evaluated correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nEvalEnvVars(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.input,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestTryExpandEnv(t *testing.T) {
-	// GIVEN: environment variables and a string that may contain environment variables.
 	tests := []struct {
 		name     string
 		input    string
@@ -343,28 +297,20 @@ func TestTryExpandEnv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: the env vars are set.
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: TryExpandEnv is called on the string.
 			result := TryExpandEnv(tc.input)
 
-			// THEN: the result is as expected.
-			want := DerefOr(tc.expected, "<nil>")
-			got := DerefOr(result, "<nil>")
-			if want != got {
-				t.Errorf(
-					"%s\nTryExpandEnv(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.input,
-					got, want,
-				)
+			resultStr := test.StringifyPtr(result)
+			expectedStr := test.StringifyPtr(tc.expected)
+			if resultStr != expectedStr {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", resultStr, expectedStr)
 			}
 		})
 	}
 }
 
 func TestExpandEnvVariables(t *testing.T) {
-	// GIVEN: an env var that may or may not exist.
 	envVarNameBase := "TEST_ENV_REPLACE_FUNC_"
 	tests := []struct {
 		name        string
@@ -375,10 +321,7 @@ func TestExpandEnvVariables(t *testing.T) {
 		{
 			name:       "undefined env var",
 			envVarName: "UNDEFINED",
-			want: fmt.Sprintf(
-				"${%s%s}",
-				envVarNameBase, "UNDEFINED",
-			),
+			want:       fmt.Sprintf("${%s%s}", envVarNameBase, "UNDEFINED"),
 		},
 		{
 			name:        "empty env var",
@@ -398,23 +341,16 @@ func TestExpandEnvVariables(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: the env vars are set.
 			tc.envVarName = envVarNameBase + tc.envVarName
 			if tc.envVarValue != nil {
 				env := map[string]string{tc.envVarName: *tc.envVarValue}
-				test.SetEnv(t, env)
+				test.IsolateEnv(t, env)
 			}
 
-			// WHEN: expandEnvVariables is called.
 			got := expandEnvVariables(fmt.Sprintf("${%s}", tc.envVarName))
 
-			// THEN: the string is evaluated correctly.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nexpandEnvVariables(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.envVarName,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

@@ -39,40 +39,33 @@ func appendFormattedErrorLines(err error, lines []string, indents int) []string 
 
 	if errs, ok := err.(interface{ Unwrap() []error }); ok {
 		for _, child := range errs.Unwrap() {
-			lines = appendFormattedErrorLines(
-				child,
-				lines,
-				indents,
-			)
+			lines = appendFormattedErrorLines(child, lines, indents)
 		}
 		return lines
 	}
 
 	child := errors.Unwrap(err)
-
 	msg := err.Error()
 	if child != nil {
-		childMsg := " " + child.Error()
-		msg = strings.TrimSuffix(msg, childMsg)
+		childMsg := child.Error()
+		// A leading wrapped error is already in msg, so it is not repeated below it.
+		if strings.HasPrefix(msg, childMsg) {
+			child = nil
+		} else {
+			msg = strings.TrimSuffix(msg, " "+childMsg)
+		}
 	}
 
 	indentation := strings.Repeat("  ", indents)
 	msg = strings.TrimSuffix(msg, "\n")
 	lines = append(
 		lines,
-		indentation+strings.ReplaceAll(
-			msg,
-			"\n",
-			"\n"+indentation,
-		),
+		indentation+strings.ReplaceAll(msg, "\n", "\n"+indentation),
 	)
 
 	if child != nil {
-		lines = appendFormattedErrorLines(
-			child,
-			lines,
-			indents+1,
-		)
+		lines = appendFormattedErrorLines(child, lines, indents+1)
 	}
+
 	return lines
 }

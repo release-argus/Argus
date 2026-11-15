@@ -18,32 +18,30 @@ package status
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"sync"
 	"testing"
 
 	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
 )
 
 var metricsMu sync.RWMutex
-var packageName = "status"
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -62,7 +60,6 @@ func testStatus() (status *Status) {
 		&dashboard.Options{},
 	)
 	status = svcStatus
-	status.ServiceInfo.ID = "test"
 	status.Init(
 		0, 0, 0,
 		ServiceInfo{
@@ -84,4 +81,36 @@ func testStatus() (status *Status) {
 	status.SetLastQueried("2002-02-02T00:00:00Z")
 
 	return status
+}
+
+// failSliceValues renders fails by value, as [test.AssertSlicesEqual] compares pointers by address.
+func failSliceValues(fails []*bool) []string {
+	if fails == nil {
+		return nil
+	}
+	values := make([]string, len(fails))
+	for i, v := range fails {
+		values[i] = test.StringifyPtr(v)
+	}
+	return values
+}
+
+// failValues renders fails by value, as [test.AssertMapEqual] compares pointers by address.
+func failValues(fails map[string]*bool) map[string]string {
+	if fails == nil {
+		return nil
+	}
+	values := make(map[string]string, len(fails))
+	for k, v := range fails {
+		values[k] = test.StringifyPtr(v)
+	}
+	return values
+}
+
+// mergedMap returns a new map holding base overlaid with overrides.
+func mergedMap[V any](base, overrides map[string]V) map[string]V {
+	merged := make(map[string]V, len(base)+len(overrides))
+	maps.Copy(merged, base)
+	maps.Copy(merged, overrides)
+	return merged
 }

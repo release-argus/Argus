@@ -32,12 +32,9 @@ func requireSecret(t TB, key string) string {
 	v := os.Getenv(key)
 	if v == "" {
 		if os.Getenv(requireSecretsEnv) == "true" {
-			t.Fatalf(
-				"%s is not set, but %s is true",
-				key, requireSecretsEnv,
-			)
+			t.Fatalf("%q is not set, but %q is true", key, requireSecretsEnv)
 		}
-		t.Skipf("%s is not set", key)
+		t.Skipf("%q is not set", key)
 	}
 	return v
 }

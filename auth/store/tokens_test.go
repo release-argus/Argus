@@ -24,19 +24,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestStore_APIToken__roundTrip(t *testing.T) {
-	// GIVEN: a Store with a user.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	tokenName := "ci"
 
-	prefix := fmt.Sprintf("%s\nAPI token round-trip", packageName)
-
-	// WHEN: a token is created without expiry.
 	plaintext, token, err := store.CreateAPIToken(
 		t.Context(),
 		user.ID,
@@ -44,170 +41,129 @@ func TestStore_APIToken__roundTrip(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s CreateAPIToken failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.CreateAPIToken() failed: %v", err)
 	}
 
-	// THEN: the plaintext is prefixed and the record mirrors it.
 	if !strings.HasPrefix(plaintext, apiTokenPrefix) {
 		t.Errorf(
-			"%s token prefix mismatch\ngot: %q\nwant prefix: %q",
-			prefix, plaintext, apiTokenPrefix,
+			"after create: plaintext prefix mismatch\ngot:  %q\nwant: %q",
+			plaintext, apiTokenPrefix,
 		)
 	}
 	if got, want := len(plaintext), len(apiTokenPrefix)+apiTokenBytes*2; got != want {
-		t.Errorf(
-			"%s token length mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Errorf("after create: len(plaintext) mismatch\ngot:  %d\nwant: %d", got, want)
 	}
-	if token.Name != tokenName ||
-		token.UserID != user.ID ||
-		token.Prefix != plaintext[:apiTokenDisplayLength] ||
-		token.ExpiresAt != nil ||
-		token.LastUsedAt != nil {
-		t.Errorf(
-			"%s token record mismatch\ngot: %+v",
-			prefix, *token,
-		)
+	if testErr := test.AssertFields(t, []test.FieldAssertion{
+		{Name: "Name", Got: token.Name, Want: tokenName, Mode: test.CompareEqual},
+		{Name: "UserID", Got: token.UserID, Want: user.ID, Mode: test.CompareEqual},
+		{Name: "Prefix", Got: token.Prefix, Want: plaintext[:apiTokenDisplayLength], Mode: test.CompareEqual},
+		{Name: "ExpiresAt", Got: test.StringifyPtr(token.ExpiresAt), Want: "nil", Mode: test.CompareEqual},
+		{Name: "LastUsedAt", Got: test.StringifyPtr(token.LastUsedAt), Want: "nil", Mode: test.CompareEqual},
+	}, "APIToken"); testErr != nil {
+		t.Errorf("after create: %v", testErr)
 	}
 
-	// AND: the plaintext is never stored.
+	// The plaintext is never stored.
 	var count int
 	if err := store.db.QueryRow(
-		`SELECT COUNT(*) FROM api_tokens WHERE token_hash = ?;`,
+		`SELECT COUNT(*) FROM api_tokens
+		WHERE ? IN (id, user_id, name, token_hash, prefix, created_at, expires_at, last_used_at);`,
 		plaintext,
 	).Scan(&count); err != nil || count != 0 {
 		t.Errorf(
-			"%s plaintext must not be a storage key\ngot:  %d rows, err=%v",
-			prefix, count, err,
+			"after create: api_tokens row count mismatch\ngot:  %d, err=%v\nwant: 0, err=nil",
+			count, err,
 		)
 	}
 
-	// AND: the token resolves by plaintext.
 	got, err := store.APITokenByToken(t.Context(), plaintext)
-	if err != nil || got.ID != token.ID {
-		t.Fatalf(
-			"%s APITokenByToken mismatch\ngot:  %+v, err=%v",
-			prefix, got, err,
-		)
+	if err != nil {
+		t.Fatalf("after create: Store.APITokenByToken() failed: %v", err)
+	}
+	if got.ID != token.ID {
+		t.Fatalf("after create: APIToken.ID mismatch\ngot:  %q\nwant: %q", got.ID, token.ID)
 	}
 
-	// AND: TouchAPIToken records usage.
 	used := timeNow().Add(time.Minute)
-	if err := store.TouchAPIToken(
-		t.Context(),
-		token.ID,
-		used,
-	); err != nil {
-		t.Fatalf(
-			"%s TouchAPIToken failed: %v",
-			prefix, err,
-		)
+	if err := store.TouchAPIToken(t.Context(), token.ID, used); err != nil {
+		t.Fatalf("Store.TouchAPIToken() failed: %v", err)
 	}
 	got, err = store.APITokenByToken(t.Context(), plaintext)
-	if err != nil || got.LastUsedAt == nil || !got.LastUsedAt.Equal(used) {
+	if err != nil {
+		t.Fatalf("after touch: Store.APITokenByToken() failed: %v", err)
+	}
+	if got.LastUsedAt == nil || !got.LastUsedAt.Equal(used) {
 		t.Errorf(
-			"%s last_used_at mismatch\ngot:  %+v, err=%v\nwant: %v",
-			prefix, got.LastUsedAt, err, used,
+			"after touch: APIToken.LastUsedAt mismatch\ngot:  %v\nwant: %v",
+			test.StringifyPtr(got.LastUsedAt), used,
 		)
 	}
 
-	// AND: DeleteAPIToken removes it.
-	if err := store.DeleteAPIToken(
-		t.Context(),
-		user.ID,
-		token.ID,
-	); err != nil {
-		t.Fatalf(
-			"%s DeleteAPIToken failed: %v",
-			prefix, err,
-		)
+	if err := store.DeleteAPIToken(t.Context(), user.ID, token.ID); err != nil {
+		t.Fatalf("Store.DeleteAPIToken() failed: %v", err)
 	}
 	if _, err := store.APITokenByToken(
 		t.Context(),
 		plaintext,
 	); !errors.Is(err, ErrNotFound) {
 		t.Errorf(
-			"%s token should be gone\ngot: %v",
-			prefix, err,
+			"after delete: Store.APITokenByToken() error type mismatch\ngot:  %v\nwant: %v",
+			err, ErrNotFound,
 		)
 	}
 }
 
 func TestStore_CreateAPIToken__perUserCap(t *testing.T) {
-	// GIVEN: a user already holding the maximum number of API tokens.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	other := mustCreateUser(t, store, "other", "")
-	prefix := fmt.Sprintf("%s\nAPI token per-user cap", packageName)
-
 	for i := range maxAPITokensPerUser {
 		if _, _, err := store.CreateAPIToken(
 			t.Context(), user.ID, fmt.Sprintf("t%d", i), nil,
 		); err != nil {
-			t.Fatalf(
-				"%s\nseeding token %d failed: %v",
-				prefix, i, err,
-			)
+			t.Fatalf("Store.CreateAPIToken(t%d) failed: %v", i, err)
 		}
 	}
 
-	// WHEN: one more token is created for the capped user.
 	_, _, err := store.CreateAPIToken(t.Context(), user.ID, "over", nil)
 
-	// THEN: it is rejected with [ErrTokenLimitReached].
 	if !errors.Is(err, ErrTokenLimitReached) {
-		t.Errorf(
-			"%s\nover-cap create should fail with ErrTokenLimitReached\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("at cap: error type mismatch\ngot:  %v\nwant: %v", err, ErrTokenLimitReached)
 	}
 
-	// AND: the cap is per-user, so another user can still create one.
 	if _, _, err := store.CreateAPIToken(t.Context(), other.ID, "ok", nil); err != nil {
-		t.Errorf(
-			"%s\na different user should not be capped\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("other user: Store.CreateAPIToken() failed: %v", err)
 	}
 }
 
 func TestStore_APIToken__expiry(t *testing.T) {
-	// GIVEN: a Store with a user.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	expires := timeNow().Add(time.Hour)
 
-	prefix := fmt.Sprintf("%s\nAPI token expiry", packageName)
-
-	// WHEN: a token is created with an expiry.
 	plaintext, _, err := store.CreateAPIToken(t.Context(), user.ID, "short-lived", &expires)
 	if err != nil {
-		t.Fatalf(
-			"%s CreateAPIToken failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.CreateAPIToken() failed: %v", err)
 	}
 
-	// THEN: the expiry round-trips.
 	got, err := store.APITokenByToken(t.Context(), plaintext)
-	if err != nil || got.ExpiresAt == nil || !got.ExpiresAt.Equal(expires) {
+	if err != nil {
+		t.Fatalf("Store.APITokenByToken() failed: %v", err)
+	}
+	if got.ExpiresAt == nil || !got.ExpiresAt.Equal(expires) {
 		t.Errorf(
-			"%s expiry mismatch\ngot:  %+v, err=%v\nwant: %v",
-			prefix, got.ExpiresAt, err, expires,
+			"APIToken.ExpiresAt mismatch\ngot:  %v\nwant: %v",
+			test.StringifyPtr(got.ExpiresAt), expires,
 		)
 	}
 }
 
 func TestStore_APITokensForUser(t *testing.T) {
-	// GIVEN: two users with tokens, created at distinct times.
 	store := testStore(t)
 	alpha := mustCreateUser(t, store, "alpha", "")
 	beta := mustCreateUser(t, store, "beta", "")
 
+	// Distinct creation times, so newest-first order is observable.
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	timeNowHad := timeNow
 	t.Cleanup(func() { timeNow = timeNowHad })
@@ -221,48 +177,33 @@ func TestStore_APITokensForUser(t *testing.T) {
 		if _, _, err := store.CreateAPIToken(
 			t.Context(),
 			userID, fmt.Sprintf("token-%d", i), nil); err != nil {
-			t.Fatalf(
-				"%s\nsetup CreateAPIToken failed: %v",
-				packageName, err,
-			)
+			t.Fatalf("Store.CreateAPIToken(token-%d) failed: %v", i, err)
 		}
 	}
 
-	prefix := fmt.Sprintf("%s\nAPITokensForUser()", packageName)
-
-	// WHEN: alpha's tokens are listed.
 	tokens, err := store.APITokensForUser(t.Context(), alpha.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("alpha: unexpected error: %v", err)
 	}
 
-	// THEN: only alpha's tokens are returned, newest first.
-	want := []string{"token-1", "token-0"}
-	if len(tokens) != 2 ||
-		tokens[0].Name != want[0] || tokens[1].Name != want[1] {
-		t.Errorf(
-			"%s list mismatch\ngot:  %+v\nwant: [%v]",
-			prefix, tokens, want,
-		)
+	gotNames := make([]string, len(tokens))
+	for i, token := range tokens {
+		gotNames[i] = token.Name
+	}
+	if want := []string{"token-1", "token-0"}; !slices.Equal(gotNames, want) {
+		t.Errorf("alpha: token names mismatch\ngot:  %q\nwant: %q", gotNames, want)
 	}
 
-	// AND: an unknown user has no tokens.
-	if tokens, err := store.APITokensForUser(
-		t.Context(),
-		"no-such-id",
-	); err != nil || len(tokens) != 0 {
+	tokens, err = store.APITokensForUser(t.Context(), "no-such-id")
+	if err != nil || len(tokens) != 0 {
 		t.Errorf(
-			"%s unknown user should list nothing\ngot:  %+v, err=%v",
-			prefix, tokens, err,
+			"unknown user: token count mismatch\ngot:  %d, err=%v\nwant: 0, err=nil",
+			len(tokens), err,
 		)
 	}
 }
 
 func TestStore_DeleteAPIToken__rails(t *testing.T) {
-	// GIVEN: two users, one holding a token.
 	store := testStore(t)
 	owner := mustCreateUser(t, store, "owner", "")
 	other := mustCreateUser(t, store, "other", "")
@@ -273,70 +214,39 @@ func TestStore_DeleteAPIToken__rails(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.CreateAPIToken() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nDeleteAPIToken() rails", packageName)
-
-	// WHEN: another user tries to delete the token.
 	err = store.DeleteAPIToken(t.Context(), other.ID, token.ID)
 
-	// THEN: it reads as not found.
+	// The delete matches only the caller's tokens.
 	if !errors.Is(err, ErrNotFound) {
-		t.Errorf(
-			"%s\ncross-user delete\ngot:  %v\nwant: %v",
-			prefix, err, ErrNotFound,
-		)
+		t.Errorf("cross-user: error type mismatch\ngot:  %v\nwant: %v", err, ErrNotFound)
 	}
 
-	// AND: unknown IDs read as not found.
-	if err := store.DeleteAPIToken(
-		t.Context(),
-		owner.ID,
-		"no-such-id",
-	); !errors.Is(err, ErrNotFound) {
-		t.Errorf(
-			"%s\nunknown ID\ngot:  %v\nwant: %v",
-			prefix, err, ErrNotFound,
-		)
+	err = store.DeleteAPIToken(t.Context(), owner.ID, "no-such-id")
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("unknown ID: error type mismatch\ngot:  %v\nwant: %v", err, ErrNotFound)
 	}
 }
 
 func TestStore_DeleteUser__cascadesAPITokens(t *testing.T) {
-	// GIVEN: a user with a token.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	if _, _, err := store.CreateAPIToken(t.Context(), user.ID, "ci", nil); err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.CreateAPIToken() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nDeleteUser() cascades api_tokens", packageName)
-
-	// WHEN: the user is deleted.
 	if err := store.DeleteUser(t.Context(), user.ID); err != nil {
-		t.Fatalf(
-			"%s DeleteUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.DeleteUser() failed: %v", err)
 	}
 
-	// THEN: their tokens are gone.
-	if got := countRows(t, store, "api_tokens"); got != 0 {
-		t.Errorf(
-			"%s token count mismatch\ngot:  %d\nwant: 0",
-			prefix, got,
-		)
+	if got, want := test.CountRows(t, store.db, "api_tokens"), 0; got != want {
+		t.Errorf("api_tokens row count mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 
 func TestStore_DeleteExpiredAPITokens(t *testing.T) {
-	// GIVEN: a user with expired, live, and non-expiring tokens.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	past := timeNow().Add(-time.Hour)
@@ -350,61 +260,40 @@ func TestStore_DeleteExpiredAPITokens(t *testing.T) {
 		{"eternal", nil},
 	} {
 		if _, _, err := store.CreateAPIToken(t.Context(), user.ID, tc.name, tc.expires); err != nil {
-			t.Fatalf(
-				"%s\nsetup CreateAPIToken(%q) failed: %v",
-				packageName, tc.name, err,
-			)
+			t.Fatalf("Store.CreateAPIToken(%q) failed: %v", tc.name, err)
 		}
 	}
 
-	prefix := fmt.Sprintf("%s\nDeleteExpiredAPITokens()", packageName)
-
-	// WHEN: expired tokens are pruned.
-	if err := store.DeleteExpiredAPITokens(t.Context()); err != nil {
-		t.Fatalf(
-			"%s failed: %v",
-			prefix, err,
-		)
+	err := store.DeleteExpiredAPITokens(t.Context())
+	if err != nil {
+		t.Fatalf("before DropTable: Store.DeleteExpiredAPITokens() failed: %v", err)
 	}
 
-	// THEN: only the expired token is gone.
 	tokens, err := store.APITokensForUser(t.Context(), user.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s APITokensForUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("before DropTable: Store.APITokensForUser() failed: %v", err)
 	}
-	gotNames := make([]string, len(tokens))
-	for i, token := range tokens {
-		gotNames[i] = token.Name
-	}
-	slices.Sort(gotNames)
+	gotNames := test.AttributesSorted(tokens, func(token APIToken) string { return token.Name })
 	if want := []string{"eternal", "live"}; !slices.Equal(gotNames, want) {
-		t.Errorf(
-			"%s remaining tokens mismatch\ngot:  %v\nwant: %v",
-			prefix, gotNames, want,
-		)
+		t.Errorf("before DropTable: token names mismatch\ngot:  %q\nwant: %q", gotNames, want)
 	}
 
-	// AND: a missing table surfaces the failure.
-	dropTable(t, store, "api_tokens")
+	test.DropTable(t, store.db, "api_tokens")
 	err = store.DeleteExpiredAPITokens(t.Context())
-	if !util.RegexCheck(`^delete expired API tokens`, errfmt.FormatError(err)) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, errfmt.FormatError(err), `^delete expired API tokens`,
-		)
+	e := errfmt.FormatError(err)
+	errRegex := `^delete expired API tokens`
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("missing table: error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_APIToken__errors(t *testing.T) {
-	// GIVEN: stores in states that break each token operation.
 	tests := []struct {
-		name    string
-		randErr bool
-		setup   func(t *testing.T, store *Store)
-		invoke  func(t *testing.T, store *Store) error
+		name     string
+		randErr  bool
+		setup    func(t *testing.T, store *Store)
+		invoke   func(t *testing.T, store *Store) error
+		errRegex string
 	}{
 		{
 			name:    "create/random source fails",
@@ -413,60 +302,78 @@ func TestStore_APIToken__errors(t *testing.T) {
 				_, _, err := store.CreateAPIToken(t.Context(), "uid", "x", nil)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^generate API token:
+					rand broke$`),
 		},
 		{
 			name: "create/table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "api_tokens")
+				test.DropTable(t, store.db, "api_tokens")
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, _, err := store.CreateAPIToken(t.Context(), "uid", "x", nil)
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^insert API token:
+					SQL logic error: no such table: api_tokens`),
 		},
 		{
 			name: "list/table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "api_tokens")
+				test.DropTable(t, store.db, "api_tokens")
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.APITokensForUser(t.Context(), "uid")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^list API tokens:
+					SQL logic error: no such table: api_tokens`),
 		},
 		{
 			name: "by-token/table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "api_tokens")
+				test.DropTable(t, store.db, "api_tokens")
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.APITokenByToken(t.Context(), "argus_x")
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan API token:
+					SQL logic error: no such table: api_tokens`),
 		},
 		{
 			name: "touch/table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "api_tokens")
+				test.DropTable(t, store.db, "api_tokens")
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				return store.TouchAPIToken(t.Context(), "id", timeNow())
 			},
+			errRegex: test.TrimYAML(`
+				^touch API token:
+					SQL logic error: no such table: api_tokens`),
 		},
 		{
 			name: "delete/table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "api_tokens")
+				test.DropTable(t, store.db, "api_tokens")
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				return store.DeleteAPIToken(t.Context(), "uid", "id")
 			},
+			errRegex: test.TrimYAML(`
+				^delete API token:
+					SQL logic error: no such table: api_tokens`),
 		},
 		{
 			name: "scan/corrupt created_at",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "argus", "")
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at)
 					VALUES ('x', '%s', 'x', 'hash', 'argus_', 'not-a-time');`, user.ID))
 			},
@@ -474,12 +381,16 @@ func TestStore_APIToken__errors(t *testing.T) {
 				_, err := store.APITokensForUser(t.Context(), mustUserID(t, store, "argus"))
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan API token:
+					.*name "created_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "scan/corrupt expires_at",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "argus", "")
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at, expires_at)
 					VALUES ('x', '%s', 'x', 'hash', 'argus_', '%s', 'not-a-time');`,
 					user.ID, timeNow().Format(timeFormat)))
@@ -488,12 +399,16 @@ func TestStore_APIToken__errors(t *testing.T) {
 				_, err := store.APITokensForUser(t.Context(), mustUserID(t, store, "argus"))
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan API token:
+					.*name "expires_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "scan/corrupt last_used_at",
 			setup: func(t *testing.T, store *Store) {
 				user := mustCreateUser(t, store, "argus", "")
-				mustExec(t, store, fmt.Sprintf(`
+				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at, last_used_at)
 					VALUES ('x', '%s', 'x', 'hash', 'argus_', '%s', 'not-a-time');`,
 					user.ID, timeNow().Format(timeFormat)))
@@ -502,11 +417,17 @@ func TestStore_APIToken__errors(t *testing.T) {
 				_, err := store.APITokensForUser(t.Context(), mustUserID(t, store, "argus"))
 				return err
 			},
+			errRegex: test.TrimYAML(`
+				^scan API token:
+					.*name "last_used_at":
+						parse stored timestamp "not-a-time"`),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: swaps randRead.
+
 			store := testStore(t)
 			if tc.setup != nil {
 				tc.setup(t, store)
@@ -519,21 +440,16 @@ func TestStore_APIToken__errors(t *testing.T) {
 				t.Cleanup(func() { randRead = randReadHad })
 			}
 
-			// WHEN: the operation runs.
 			err := tc.invoke(t, store)
-
-			prefix := fmt.Sprintf("%s\nAPI token errors", packageName)
-
-			// THEN: the failure is surfaced.
-			if err == nil {
-				t.Errorf("%s expected an error, got nil", prefix)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestStore_APIToken__rowsErr_and_rowsAffected(t *testing.T) {
-	// GIVEN: a fault-injecting store with a user and token.
 	store, state := testFaultStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	_, token, err := store.CreateAPIToken(
@@ -543,28 +459,26 @@ func TestStore_APIToken__rowsErr_and_rowsAffected(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.CreateAPIToken() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nAPI token fault injection", packageName)
-
-	// WHEN: list iteration fails.
 	overrideRowsErrOnCall(t, 1)
-	if _, err := store.APITokensForUser(t.Context(), user.ID); err == nil {
-		t.Errorf("%s list iteration failure should surface", prefix)
+	_, err = store.APITokensForUser(t.Context(), user.ID)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^iterate API tokens:
+			injected fault$`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("Store.APITokensForUser() error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 
-	// AND: RowsAffected fails on delete.
 	state.SetRowsAffected(`DELETE FROM api_tokens WHERE id = ?`)
 	err = store.DeleteAPIToken(t.Context(), user.ID, token.ID)
 	state.Set("")
 	if err == nil || errors.Is(err, ErrNotFound) {
 		t.Errorf(
-			"%s RowsAffected failure should surface as an error\ngot: %v",
-			prefix, err,
+			"Store.DeleteAPIToken() error mismatch\ngot:  %v\nwant: non-nil, NOT %v",
+			err, ErrNotFound,
 		)
 	}
 }
@@ -573,12 +487,5 @@ func TestStore_APIToken__rowsErr_and_rowsAffected(t *testing.T) {
 func mustUserID(t *testing.T, store *Store, username string) string {
 	t.Helper()
 
-	creds, err := store.LocalCredentials(t.Context(), username)
-	if err != nil || creds == nil {
-		t.Fatalf(
-			"%s\nlookup %q failed: %v",
-			packageName, username, err,
-		)
-	}
-	return creds.UserID
+	return mustLocalCredentials(t, store, username).UserID
 }

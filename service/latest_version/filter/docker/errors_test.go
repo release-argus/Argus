@@ -21,7 +21,6 @@ import (
 )
 
 func TestErrTagNotFound_Error(t *testing.T) {
-	// GIVEN: a ErrTagNotFound.
 	tests := []struct {
 		name  string
 		input ErrTagNotFound
@@ -65,15 +64,10 @@ func TestErrTagNotFound_Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Error() is called on it.
 			got := tc.input.Error()
 
-			// THEN: the expected error message is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nErrTagNotFound.Error() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

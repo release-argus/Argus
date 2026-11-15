@@ -17,12 +17,12 @@
 package github
 
 import (
-	"fmt"
 	"testing"
+
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -61,43 +61,33 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.data.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a Defaults.
 	defaults := Defaults{}
 	want := Defaults{
 		UsePreRelease: new(false),
 	}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
-	prefix := fmt.Sprintf("%s\nDefaults.Default()", packageName)
-
-	// THEN: it should set the defaults as expected.
 	if defaults.AccessToken != want.AccessToken {
 		t.Errorf(
-			"%s AccessToken mismatch\ngot:  %q\nwant: %q",
-			prefix, defaults.AccessToken, want.AccessToken,
+			"Defaults.AccessToken mismatch\ngot:  %q\nwant: %q",
+			defaults.AccessToken, want.AccessToken,
 		)
 	}
 	if defaults.UsePreRelease == nil || *defaults.UsePreRelease != *want.UsePreRelease {
 		t.Errorf(
-			"%s UsePreRelease mismatch\ngot:  %v\nwant: %v",
-			prefix, defaults.UsePreRelease, want.UsePreRelease,
+			"Defaults.UsePreRelease mismatch\ngot:  %s\nwant: %s",
+			test.StringifyPtr(defaults.UsePreRelease), test.StringifyPtr(want.UsePreRelease),
 		)
 	}
 }

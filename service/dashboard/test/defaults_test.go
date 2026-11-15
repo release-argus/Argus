@@ -19,14 +19,12 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	// WHEN: PlainDefaultsConfig is called.
 	dashCfg := PlainDefaultsConfig(t)
 
-	// THEN: It returns a set of defaults.
-	if dashCfg.Soft == nil || dashCfg.Hard == nil {
-		t.Fatalf(
-			"%s\nPlainDefaultsConfig() returned nil, defaults: %v, hardDefaults: %v",
-			packageName, dashCfg.Soft, dashCfg.Hard,
-		)
+	if dashCfg.Soft == nil {
+		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if dashCfg.Hard == nil {
+		t.Error("DefaultsConfig.Hard mismatch\ngot:  nil\nwant: non-nil")
 	}
 }

@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
 	"github.com/release-argus/Argus/config"
@@ -31,36 +30,29 @@ import (
 )
 
 func TestHTTP_HTTPWebSocketToken(t *testing.T) {
-	// GIVEN: an API without Basic Auth (wsTokens is nil).
-	prefix := fmt.Sprintf("%q\nAPI.httpWebSocketToken()", packageName)
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 
-	// WHEN: a request is made for a WebSocket token.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/ws-token", nil)
 	w := httptest.NewRecorder()
 	api.httpWebSocketToken(w, req)
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
+	resp := w.Result()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
-	// THEN: 204 is returned (no token needed, Basic Auth not configured).
-	if res.StatusCode != http.StatusNoContent {
-		t.Errorf(
-			"%s\nstatus code mismatch\ngot:  %d\nwant: %d",
-			prefix, res.StatusCode, http.StatusNoContent,
-		)
+	// No token needed without Basic Auth.
+	if got, want := resp.StatusCode, http.StatusNoContent; got != want {
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }
 
 func TestHTTP_HTTPWebSocketToken__authGated(t *testing.T) {
-	// GIVEN: an API with Basic Auth, routed through SetupRoutesAPI so that
-	// "/api/v1/ws-token" sits behind the basic-auth middleware.
 	cfg := config.Config{}
 	cfg.Settings.Web.BasicAuth = &config.WebSettingsBasicAuth{
 		Username: "test", Password: "123",
 	}
 	cfg.Settings.Web.BasicAuth.CheckValues()
 	api, _ := NewAPI(&cfg)
+	// Routed through SetupRoutesAPI so "/api/v1/ws-token" sits behind the basic-auth middleware.
 	api.SetupRoutesAPI()
 	ts := httptest.NewServer(api.BaseRouter)
 	t.Cleanup(ts.Close)
@@ -69,7 +61,7 @@ func TestHTTP_HTTPWebSocketToken__authGated(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		authHeader       string // raw "Authorization" header value ("" to omit it).
+		authHeader       string // Raw "Authorization" header value ("" to omit it).
 		wantUnauthorized bool
 	}{
 		{
@@ -89,77 +81,54 @@ func TestHTTP_HTTPWebSocketToken__authGated(t *testing.T) {
 		},
 	}
 
-	prefix := fmt.Sprintf("%q\nAPI.httpWebSocketToken() (auth-gated)", packageName)
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: "/ws-token" is requested with the given credentials.
 			req, err := http.NewRequest(http.MethodGet, tokenURL, nil)
 			if err != nil {
-				t.Fatalf(
-					"%s request creation failed - %v",
-					prefix, err,
-				)
+				t.Fatalf("http.NewRequest() failed: %v", err)
 			}
 			if tc.authHeader != "" {
 				req.Header.Set("Authorization", tc.authHeader)
 			}
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
-				t.Fatalf(
-					"%s request 'Do' failed - %v",
-					prefix, err,
-				)
+				t.Fatalf("Client.Do() failed: %v", err)
 			}
 			t.Cleanup(func() { _ = resp.Body.Close() })
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
+			}
 
 			wantStatusCode := http.StatusOK
 			if tc.wantUnauthorized {
 				wantStatusCode = http.StatusUnauthorized
 			}
-			// THEN: the basic-auth middleware rejects unauthenticated/invalid credential requests
-			// with 401, and a correctly authenticated request passes the middleware.
-			if resp.StatusCode != wantStatusCode {
-				t.Fatalf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, resp.StatusCode, wantStatusCode,
-				)
+
+			if got, want := resp.StatusCode, wantStatusCode; got != want {
+				t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, data, want)
 			}
 			// Rejected requests carry no token body to validate.
 			if tc.wantUnauthorized {
 				return
 			}
 
-			// AND: the body is a well-formed token that validates against the store.
-			data, err := io.ReadAll(resp.Body)
-			if err != nil {
-				t.Fatalf(
-					"%s unexpected error:\n%v",
-					prefix, err,
-				)
-			}
 			bodyRegex := fmt.Sprintf(`{"token":"[a-z0-9]{%d}"}`+"\n$", webSocketTokenLength)
 			if got := string(data); !util.RegexCheck(bodyRegex, got) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, got, bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, bodyRegex)
 			}
 			var tokenResp struct {
 				Token string `json:"token"`
 			}
 			if err := decode.Unmarshal("json", data, &tokenResp); err != nil {
-				t.Fatalf(
-					"%s failed to unmarshal response: %v",
-					prefix, err,
-				)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 			if !api.wsTokens.Validate(tokenResp.Token) {
 				t.Errorf(
-					"%s returned token %q did not validate against the store",
-					prefix, tokenResp.Token,
+					"webSocketTokenStore.Validate(%q) mismatch\ngot:  false\nwant: true",
+					tokenResp.Token,
 				)
 			}
 		})
@@ -167,10 +136,8 @@ func TestHTTP_HTTPWebSocketToken__authGated(t *testing.T) {
 }
 
 func TestHTTP_HTTPRuntimeInfo(t *testing.T) {
-	// GIVEN: an API and a request for the runtime info.
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
-	apiMu := sync.RWMutex{}
 	bodyRegex := test.TrimJSON(`
 		{
 			"start_time":"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[^"]*",
@@ -180,29 +147,17 @@ func TestHTTP_HTTPRuntimeInfo(t *testing.T) {
 		}`,
 	) + "\n$"
 
-	// WHEN: that HTTP request is sent.
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status/runtime", nil)
 	w := httptest.NewRecorder()
-	apiMu.RLock()
 	api.httpRuntimeInfo(w, req)
-	apiMu.RUnlock()
-	res := w.Result()
-	t.Cleanup(func() { _ = res.Body.Close() })
+	resp := w.Result()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
-	prefix := fmt.Sprintf("%q\nAPI.httpRuntimeInfo()", packageName)
-
-	// THEN: the expected body is returned.
-	data, err := io.ReadAll(res.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error:\n%v",
-			prefix, err,
-		)
+		t.Fatalf("io.ReadAll() failed: %v", err)
 	}
 	if got := string(data); !util.RegexCheck(bodyRegex, got) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant %q",
-			prefix, got, bodyRegex,
-		)
+		t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, bodyRegex)
 	}
 }

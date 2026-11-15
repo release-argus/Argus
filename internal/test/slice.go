@@ -12,8 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
 package test
 
-var packageName = "filtertest"
+import "slices"
+
+// Attributes returns selector applied to each item, in input order.
+func Attributes[T any, V ~string](items []T, selector func(T) V) []V {
+	result := make([]V, len(items))
+	for i, item := range items {
+		result[i] = selector(item)
+	}
+	return result
+}
+
+// AttributesSorted returns selector applied to each item, in ascending order.
+func AttributesSorted[T any, V ~string](items []T, selector func(T) V) []V {
+	result := Attributes(items, selector)
+	slices.Sort(result)
+	return result
+}

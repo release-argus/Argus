@@ -17,7 +17,7 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -28,40 +28,7 @@ import (
 	"github.com/release-argus/Argus/webhook"
 )
 
-func TestConfig_UnmarshalYAML(t *testing.T) {
-	// GIVEN: a YAML string to unmarshal into a Config.
-	tests := []struct {
-		name     string
-		data     string
-		want     string
-		errRegex string
-	}{}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-
-			if _, _, testErr := test.AssertDecode(
-				t,
-				func(format string, data []byte) (*Config, error) {
-					var zero Config
-					err := decode.Unmarshal(format, data, &zero)
-					return &zero, err
-				},
-				"yaml", tc.data,
-				func(v *Config) string { return decode.ToYAMLString(v, "") },
-				tc.want,
-				tc.errRegex,
-				packageName,
-				"Config",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-		})
-	}
-}
-
 func TestConfig_Unmarshal(t *testing.T) {
-	// GIVEN: a JSON string to unmarshal into a Config.
 	tests := []struct {
 		name         string
 		format, data string
@@ -240,49 +207,36 @@ func TestConfig_Unmarshal(t *testing.T) {
 		{
 			name:   "YAML/service subtree, ignored in Unmarshal",
 			format: "yaml",
-			data: test.TrimJSON(`{
-				"service": {
-					"a": {
-						"name": "hi",
-						"comment": "hello",
-						"options": {
-							"interval": "10s"
-						},
-						"latest_version": {
-							"type": "github",
-							"url": "` + test.ArgusGitHubRepo + `"
-						},
-						"deployed_version": {
-							"type": "url",
-							"url": "https://example.com"
-						},
-						"notify": {
-							"smtp": {
-								"url_fields": {
-									"host": "smtp.example.com"
-								},
-								"params": {
-									"fromaddress": "test@example.com",
-									"toaddresses": "me@example.com"
-								}
-							}
-						},
-						"command": [
-							"-",
-							"ls"
-						],
-						"webhook": {
-							"hi": {
-								"url": "https://example.com/webhook",
-								"secret": "foo"
-							}
-						},
-						"dashboard": {
-							"icon": "https://example.com/icon.png"
-						}
-					}
-				}
-			}`),
+			data: test.TrimYAML(`
+				service:
+					a:
+						name: hi
+						comment: hello
+						options:
+							interval: 10s
+						latest_version:
+							type: github
+							url: ` + test.ArgusGitHubRepo + `
+						deployed_version:
+							type: url
+							url: https://example.com
+						notify:
+							smtp:
+								url_fields:
+									host: smtp.example.com
+								params:
+									fromaddress: test@example.com
+									toaddresses: me@example.com
+						command:
+							- "-"
+							- ls
+						webhook:
+							hi:
+								url: https://example.com/webhook
+								secret: foo
+						dashboard:
+							icon: https://example.com/icon.png
+			`),
 			want:     "{}\n",
 			errRegex: `^$`,
 		},
@@ -292,20 +246,18 @@ func TestConfig_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Config.
 			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Config, error) {
-					var zero Config
-					err := decode.Unmarshal(format, data, &zero)
-					return &zero, err
+					var cfg Config
+					err := decode.Unmarshal(format, data, &cfg)
+					return &cfg, err
 				},
 				tc.format, tc.data,
 				func(v *Config) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Config",
+				"Config.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -314,7 +266,6 @@ func TestConfig_Unmarshal(t *testing.T) {
 }
 
 func TestConfig_Decode(t *testing.T) {
-	// GIVEN: a string to decode into a Config.
 	tests := []struct {
 		name     string
 		data     string
@@ -482,10 +433,8 @@ func TestConfig_Decode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Config var.
 			cfg := &Config{}
 
-			// WHEN: Decode is called on it.
 			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Config, error) {
@@ -496,7 +445,6 @@ func TestConfig_Decode(t *testing.T) {
 				func(v *Config) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Config.Decode",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -506,17 +454,15 @@ func TestConfig_Decode(t *testing.T) {
 }
 
 func TestConfig_Decode__serviceExtractError(t *testing.T) {
-	// GIVEN: a failing service extract.
 	original := extractServiceSubtree
 	extractServiceSubtree = func(format string, data []byte, key string) ([]byte, error) {
 		return nil, &decode.ErrKeyField{
 			Key: "service",
-			Err: fmt.Errorf("ERROR MESSAGE"),
+			Err: errors.New("ERROR MESSAGE"),
 		}
 	}
 	t.Cleanup(func() { extractServiceSubtree = original })
 
-	// AND: valid config.
 	data := test.TrimYAML(`
 		settings:
 			log:
@@ -532,58 +478,43 @@ func TestConfig_Decode__serviceExtractError(t *testing.T) {
 			ERROR MESSAGE$`,
 	)
 
-	// WHEN: Decode is called on it.
 	cfg := &Config{}
 	err := cfg.Decode([]byte(data))
-
-	prefix := fmt.Sprintf("%s\nConfig.Decode()", packageName)
-
-	// THEN: the extract error is returned.
 	e := errfmt.FormatError(err)
 	if !util.RegexCheck(errRegex, e) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestConfig_GetDefaults(t *testing.T) {
 	name := t.Name()
 
-	// GIVEN: a Config.
 	cfg := testConfig(t)
 
-	// WHEN: GetDefaults is called.
 	svcCfg, notifyCfg, whCfg := cfg.GetDefaults()
 
-	prefix := fmt.Sprintf("%s\nConfig.GetDefaults()", packageName)
-
-	// THEN: Notify/Webhook maps are initially empty at the 'name' key.
 	fieldTests := []test.FieldAssertion{
-		{Name: "Notify.Root (got)", Got: notifyCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Notify.Root (had)", Got: cfg.Notify[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Notify.Defaults (got)", Got: notifyCfg.Defaults[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Notify.Defaults (had)", Got: cfg.Defaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Notify.HardDefaults (got)", Got: notifyCfg.HardDefaults[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Notify.HardDefaults (had)", Got: cfg.HardDefaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Webhook.Root (got)", Got: whCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
-		{Name: "Webhook.Root (had)", Got: cfg.Webhook[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.Root[name]", Got: notifyCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Config.Notify[name]", Got: cfg.Notify[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.Defaults[name]", Got: notifyCfg.Defaults[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Config.Defaults.Notify[name]", Got: cfg.Defaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.HardDefaults[name]", Got: notifyCfg.HardDefaults[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Config.HardDefaults.Notify[name]", Got: cfg.HardDefaults.Notify[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "webhook.Config.Root[name]", Got: whCfg.Root[name], Want: nil, Mode: test.CompareSamePointer},
+		{Name: "Config.Webhook[name]", Got: cfg.Webhook[name], Want: nil, Mode: test.CompareSamePointer},
 	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+	if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
 		t.Fatal(testErr)
 	}
 
-	// THEN: the service defaults are as expected.
 	fieldTests = []test.FieldAssertion{
-		{Name: "Defaults.Service", Got: svcCfg.Soft, Want: &cfg.Defaults.Service, Mode: test.CompareSamePointer},
-		{Name: "HardDefaults.Service", Got: svcCfg.Hard, Want: &cfg.HardDefaults.Service, Mode: test.CompareSamePointer},
+		{Name: "service.DefaultsConfig.Soft", Got: svcCfg.Soft, Want: &cfg.Defaults.Service, Mode: test.CompareSamePointer},
+		{Name: "service.DefaultsConfig.Hard", Got: svcCfg.Hard, Want: &cfg.HardDefaults.Service, Mode: test.CompareSamePointer},
 	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+	if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
 		t.Fatal(testErr)
 	}
 
-	// AND: the notify defaults are as expected.
 	rootNotify := &shoutrrr.Defaults{}
 	defaultNotify := &shoutrrr.Defaults{}
 	hardDefaultNotify := &shoutrrr.Defaults{}
@@ -591,23 +522,22 @@ func TestConfig_GetDefaults(t *testing.T) {
 	cfg.Defaults.Notify[name] = defaultNotify
 	cfg.HardDefaults.Notify[name] = hardDefaultNotify
 	fieldTests = []test.FieldAssertion{
-		{Name: "Notify.Root", Got: notifyCfg.Root[name], Want: rootNotify, Mode: test.CompareSamePointer},
-		{Name: "Notify.Defaults", Got: notifyCfg.Defaults[name], Want: defaultNotify, Mode: test.CompareSamePointer},
-		{Name: "Notify.HardDefaults", Got: notifyCfg.HardDefaults[name], Want: hardDefaultNotify, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.Root[name]", Got: notifyCfg.Root[name], Want: rootNotify, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.Defaults[name]", Got: notifyCfg.Defaults[name], Want: defaultNotify, Mode: test.CompareSamePointer},
+		{Name: "shoutrrr.Config.HardDefaults[name]", Got: notifyCfg.HardDefaults[name], Want: hardDefaultNotify, Mode: test.CompareSamePointer},
 	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+	if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
 		t.Fatal(testErr)
 	}
 
-	// AND: the webhook defaults are as expected.
 	rootWebhook := &webhook.Defaults{}
 	cfg.Webhook[name] = rootWebhook
 	fieldTests = []test.FieldAssertion{
-		{Name: "Webhook.Root", Got: whCfg.Root[name], Want: rootWebhook, Mode: test.CompareSamePointer},
-		{Name: "Webhook.Defaults", Got: whCfg.Defaults, Want: &cfg.Defaults.Webhook, Mode: test.CompareSamePointer},
-		{Name: "Webhook.HardDefaults", Got: whCfg.HardDefaults, Want: &cfg.HardDefaults.Webhook, Mode: test.CompareSamePointer},
+		{Name: "webhook.Config.Root[name]", Got: whCfg.Root[name], Want: rootWebhook, Mode: test.CompareSamePointer},
+		{Name: "webhook.Config.Defaults", Got: whCfg.Defaults, Want: &cfg.Defaults.Webhook, Mode: test.CompareSamePointer},
+		{Name: "webhook.Config.HardDefaults", Got: whCfg.HardDefaults, Want: &cfg.HardDefaults.Webhook, Mode: test.CompareSamePointer},
 	}
-	if testErr := test.AssertFields(t, fieldTests, prefix, ""); testErr != nil {
+	if testErr := test.AssertFields(t, fieldTests, ""); testErr != nil {
 		t.Fatal(testErr)
 	}
 }

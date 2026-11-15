@@ -17,12 +17,11 @@
 package latestver
 
 import (
-	"fmt"
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
-	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
@@ -30,33 +29,27 @@ import (
 )
 
 func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
-	// GIVEN: a Lookup, and overrides that remove it.
 	lookup := testLookup(t, "url", false)
-	overrides := []byte("null")
 
-	// WHEN: Refresh is called with those overrides.
 	version, announce, err := Refresh(
 		lookup,
-		overrides,
+		[]byte("null"),
 		nil,
 		nil,
 		plainDefaultsConfig(t),
 	)
 
-	prefix := fmt.Sprintf("%s\nRefresh()", packageName)
-
-	// THEN: an error is given, rather than a panic on the removed Lookup.
+	// An error, not a panic on the removed Lookup.
 	e := errfmt.FormatError(err)
 	if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
-		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, wantErrRegex,
-		)
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
 	}
 
-	// AND: nothing is returned to announce.
 	if version != "" || announce {
-		t.Errorf("%s mismatch on the values returned\ngot:  %q, %t\nwant: %q, %t",
-			prefix, version, announce, "", false,
+		t.Errorf(
+			"version, announce mismatch\ngot:  %q, %t\nwant: %q, %t",
+			version, announce,
+			"", false,
 		)
 	}
 }
@@ -66,7 +59,7 @@ func TestApplyOverridesJSON(t *testing.T) {
 
 	tLookupInterface := testLookup(t, "url", false)
 	tLookup := tLookupInterface.(*web.Lookup)
-	// GIVEN: a Lookup and a possible JSON string to override parts of it.
+
 	type args struct {
 		lookup             Lookup
 		overrides          []byte
@@ -74,12 +67,13 @@ func TestApplyOverridesJSON(t *testing.T) {
 		semanticVersioning *string
 	}
 	tests := []struct {
-		name               string
-		args               args
-		lookupRequire      *filter.Require
-		wantStr            string
-		wantRequireInherit bool
-		errRegex           string
+		name                   string
+		args                   args
+		lookupRequire          *filter.Require
+		wantStr                string
+		wantSemanticVersioning *bool
+		wantRequireInherit     bool
+		errRegex               string
 	}{
 		{
 			name: "no overrides, no semantic versioning change",
@@ -114,8 +108,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: new("true"),
 			},
-			wantStr:  tLookup.String(""),
-			errRegex: `^$`,
+			wantStr:                tLookup.String(""),
+			wantSemanticVersioning: new(true),
+			errRegex:               `^$`,
 		},
 		{
 			name: "valid overrides JSON",
@@ -333,16 +328,18 @@ func TestApplyOverridesJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			var hadToken, hadQueryToken string
 			if tc.lookupRequire != nil {
-				switch lv := tc.args.lookup.(type) {
-				case *web.Lookup:
-					lv.Require = tc.lookupRequire
-				case *github.Lookup:
-					lv.Require = tc.lookupRequire
+				tc.args.lookup.(*web.Lookup).Require = tc.lookupRequire
+				if tc.lookupRequire.Docker != nil {
+					auth := tc.lookupRequire.Docker.GetAuth()
+					hadToken = auth.GetTokenSelf()
+					// Seeded so inheritance has a query token to copy without a live token request.
+					hadQueryToken = "seed-token"
+					auth.SetQueryToken(hadQueryToken, time.Now().Add(time.Hour))
 				}
 			}
 
-			// WHEN: we call applyOverridesJSON.
 			got, err := applyOverridesJSON(
 				tc.args.lookup,
 				tc.args.overrides,
@@ -350,63 +347,53 @@ func TestApplyOverridesJSON(t *testing.T) {
 				tc.args.semanticVersioning,
 				lvCfg,
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\napplyOverridesJSON(%q)",
-				packageName, tc.args.overrides,
-			)
-
-			// THEN: we get an error matching the format expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the result is as expected.
 			if got == nil {
-				t.Errorf(
-					"%s result mismatch\ngot:  nil\nwant: non-nil (%v)",
-					prefix, got,
-				)
+				t.Error("lookup mismatch\ngot:  nil\nwant: non-nil")
 				return
 			}
 			if gotStr := got.String(""); gotStr != tc.wantStr {
+				t.Errorf("Lookup.String() mismatch\ngot:  %q\nwant: %q", gotStr, tc.wantStr)
+			}
+
+			gotSemVer := test.StringifyPtr(got.GetOptions().SemanticVersioning)
+			if wantSemVer := test.StringifyPtr(tc.wantSemanticVersioning); gotSemVer != wantSemVer {
 				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, tc.wantStr,
+					"Lookup.GetOptions().SemanticVersioning mismatch\ngot:  %s\nwant: %s",
+					gotSemVer, wantSemVer,
 				)
 			}
 
-			// AND: Require.Docker.* is inherited when expected.
 			gotRequire := got.GetRequire()
 			if tc.wantRequireInherit {
 				if gotRequire == nil || gotRequire.Docker == nil {
-					t.Errorf("%s .Require result mismatch\ngot:  nil\nwant: non-nil", prefix)
+					t.Error("Lookup.GetRequire().Docker mismatch\ngot:  nil\nwant: non-nil")
 				} else {
-					gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryToken(gotRequire.Docker.Detail())
-					wantQueryToken, _ := tc.lookupRequire.Docker.GetAuth().GetQueryToken(tc.lookupRequire.Docker.Detail())
-					if gotRequire.Docker.GetAuth().GetTokenSelf() != tc.lookupRequire.Docker.GetAuth().GetTokenSelf() ||
-						gotQueryToken != wantQueryToken {
+					gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryTokenSelf()
+					gotToken := gotRequire.Docker.GetAuth().GetTokenSelf()
+					if gotToken != hadToken || gotQueryToken != hadQueryToken {
 						t.Errorf(
-							"%s .Require.Docker result mismatch\ngot:  %+v\nwant: %+v",
-							prefix, gotRequire.Docker.GetAuth(), tc.lookupRequire.Docker.GetAuth(),
+							"Lookup.GetRequire().Docker token, queryToken mismatch\n"+
+								"got:  %q, %q\nwant: %q, %q",
+							gotToken, gotQueryToken,
+							hadToken, hadQueryToken,
 						)
 					}
 				}
 			} else if gotRequire != nil && gotRequire.Docker != nil &&
 				tc.lookupRequire != nil && tc.lookupRequire.Docker != nil {
-				gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryToken(gotRequire.Docker.Detail())
-				avoidQueryToken, _ := tc.lookupRequire.Docker.GetAuth().GetQueryToken(tc.lookupRequire.Docker.Detail())
-				if gotQueryToken == avoidQueryToken {
+				gotQueryToken, _ := gotRequire.Docker.GetAuth().GetQueryTokenSelf()
+				if gotQueryToken == hadQueryToken {
 					t.Errorf(
-						"%s .Require.Docker copied over unexpectedly\ngot:  %+v\nhad: %+v",
-						prefix, gotRequire.Docker.GetAuth(), tc.lookupRequire.Docker.GetAuth(),
+						"Lookup.GetRequire().Docker queryToken mismatch\ngot:  %q\nwant: NOT %q",
+						gotQueryToken, hadQueryToken,
 					)
 				}
 			}

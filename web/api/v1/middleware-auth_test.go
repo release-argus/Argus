@@ -43,62 +43,42 @@ import (
 )
 
 func TestAPI_EnableAuth(t *testing.T) {
-	// GIVEN: a bare API and auth dependencies.
 	api := &API{}
 	deps := &AuthDeps{}
 
-	// WHEN: auth is enabled.
 	api.EnableAuth(deps)
 
-	prefix := fmt.Sprintf("%s\nAPI.EnableAuth()", packageName)
-
-	// THEN: the dependencies and login limiter are armed.
 	if api.auth != deps {
-		t.Errorf("%s\nauth deps not stored", prefix)
+		t.Errorf("API.auth mismatch\ngot:  %p\nwant: %p", api.auth, deps)
 	}
 	if api.loginLimiter == nil {
-		t.Errorf("%s\nlogin limiter not initialised", prefix)
+		t.Error("API.loginLimiter mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 
 func TestAuthContextFrom(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nauthContextFrom()", packageName)
-
-	// GIVEN: an auth Context.
 	authCtx := &auth.Context{
 		Identity: auth.Identity{
 			Username: "argus",
 		},
 	}
 
-	// GIVEN: a request without an auth context.
-	plain := httptest.NewRequest(http.MethodGet, "/", nil)
-	// WHEN/THEN: no context is returned only.
-	if got := authContextFrom(plain); got != nil {
-		t.Errorf(
-			"%s\ncontext mismatch\ngot:  %+v\nwant: nil",
-			prefix, got,
-		)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	if got := authContextFrom(req); got != nil {
+		t.Error("without context: authContextFrom() mismatch\ngot:  non-nil\nwant: nil")
 	}
 
-	// GIVEN: a request with an auth context.
 	carrying := withAuthCtx(httptest.NewRequest(http.MethodGet, "/", nil), authCtx)
-	// WHEN/THEN: the context is returned.
 	if got := authContextFrom(carrying); got != authCtx {
-		t.Errorf(
-			"%s\ncontext mismatch\ngot:  %+v\nwant: %+v",
-			prefix, got, authCtx,
-		)
+		t.Errorf("with context: authContextFrom() mismatch\ngot:  %p\nwant: %p", got, authCtx)
 	}
 }
 
 func TestAPI_AuthMiddleware(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
-	// AND: requests on various endpoints with/without auth.
 	tests := []struct {
 		name       string
 		path       string
@@ -134,7 +114,6 @@ func TestAPI_AuthMiddleware(t *testing.T) {
 				}),
 			)
 
-			// WHEN: a request passes through the middleware.
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			if tc.withCookie {
 				req.AddCookie(cookie)
@@ -142,19 +121,16 @@ func TestAPI_AuthMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 
-			prefix := fmt.Sprintf("%s\nauthMiddleware", packageName)
-
-			// THEN: the status and context match expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if (gotCtx != nil) != tc.wantCtx {
 				t.Errorf(
-					"%s\ncontext presence mismatch\ngot:  %t\nwant: %t",
-					prefix, gotCtx != nil, tc.wantCtx,
+					"authContextFrom() != nil mismatch\ngot:  %t\nwant: %t",
+					gotCtx != nil, tc.wantCtx,
 				)
 			}
 		})
@@ -162,7 +138,6 @@ func TestAPI_AuthMiddleware(t *testing.T) {
 }
 
 func TestFailAuthenticationError(t *testing.T) {
-	// GIVEN: authentication failures of both classifications (401/500).
 	tests := []struct {
 		name       string
 		err        error
@@ -193,81 +168,62 @@ func TestFailAuthenticationError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the failure is written.
 			w := httptest.NewRecorder()
-			failAuthenticationError(w, httptest.NewRequest(http.MethodGet, "/", nil), tc.err)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			failAuthenticationError(w, req, tc.err)
 
-			prefix := fmt.Sprintf("%s\nfailAuthenticationError()", packageName)
-
-			// THEN: the status and message match expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if !util.RegexCheck(tc.bodyRegex, w.Body.String()) {
-				t.Errorf(
-					"%s\nbody mismatch\ngot:  %q\nwant: %q",
-					prefix, w.Body.String(), tc.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", w.Body.String(), tc.bodyRegex)
 			}
 
-			// AND: internal detail is never leaked.
 			if strings.Contains(w.Body.String(), "db exploded") {
-				t.Errorf(
-					"%s\ninternal error detail leaked\ngot:  %q",
-					prefix, w.Body.String(),
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: NOT %q", w.Body.String(), "db exploded")
 			}
 		})
 	}
 }
 
 func TestAPI_AuthCtxOr401(t *testing.T) {
-	// GIVEN: requests with and without a resolved auth context.
 	api := &API{}
 	authCtx := &auth.Context{Identity: auth.Identity{Username: "argus"}}
 
-	prefix := fmt.Sprintf("%s\nauthCtxOr401()", packageName)
-
-	// WHEN: the context is absent.
 	w := httptest.NewRecorder()
-	got := api.authCtxOr401(w, httptest.NewRequest(http.MethodGet, "/", nil))
-	// THEN: nil is returned and the request is failed with 401.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	got := api.authCtxOr401(w, req)
+
 	if got != nil || w.Code != http.StatusUnauthorized {
 		t.Errorf(
-			"%s\nwithout context\ngot:  ctx=%+v, status=%d\nwant: nil, 401",
-			prefix, got, w.Code,
+			"without context: mismatch\ngot:  ctx=%p, status=%d\nwant: ctx=nil, status=401",
+			got, w.Code,
 		)
 	}
 
-	// WHEN: the context is present.
 	w = httptest.NewRecorder()
-	got = api.authCtxOr401(w, withAuthCtx(httptest.NewRequest(http.MethodGet, "/", nil), authCtx))
-	// THEN: it is returned without failing the request.
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	req = withAuthCtx(req, authCtx)
+	got = api.authCtxOr401(w, req)
+
 	if got != authCtx || w.Code != http.StatusOK {
 		t.Errorf(
-			"%s\nwith context\ngot:  ctx=%+v, status=%d\nwant: the context, 200",
-			prefix, got, w.Code,
+			"with context: mismatch\ngot:  ctx=%p, status=%d\nwant: ctx=%p, status=200",
+			got, w.Code, authCtx,
 		)
 	}
 }
 
 func TestAPI_Authenticate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a session cookie and API token.
+
 	cookie := loginCookie(t, api, "admin", "admin-password")
 	adminCtx := adminContext(t, api, deps)
-	token, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "probe", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
+	token, _ := createAPIToken(t, deps, adminCtx.User.ID, "probe", nil)
 
 	tests := []struct {
 		name         string
@@ -280,12 +236,14 @@ func TestAPI_Authenticate(t *testing.T) {
 			name:         "valid session cookie",
 			cookie:       "valid",
 			wantProvider: "local",
+			errRegex:     `^$`,
 		},
 		{
 			name:         "stale cookie falls through to a valid Bearer",
 			cookie:       "stale",
 			bearer:       token,
 			wantProvider: "api_token",
+			errRegex:     `^$`,
 		},
 		{
 			name:     "stale cookie alone",
@@ -305,8 +263,8 @@ func TestAPI_Authenticate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: shares deps.Sessions, which the parent swaps after the loop.
 
-			// AND: a request to an endpoint requiring auth.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/flags", nil)
 			switch tc.cookie {
 			case "valid":
@@ -318,35 +276,24 @@ func TestAPI_Authenticate(t *testing.T) {
 				req.Header.Set("Authorization", "Bearer "+tc.bearer)
 			}
 
-			// WHEN: the request is authenticated.
 			authCtx, err := api.authenticate(req)
-
-			prefix := fmt.Sprintf("%s\nauthenticate()", packageName)
-
-			// THEN: the error matches expectation.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s\nerror mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the context reflects how it authenticated.
 			if authCtx.Identity.Provider != tc.wantProvider {
 				t.Errorf(
-					"%s\nprovider mismatch\ngot:  %q\nwant: %q",
-					prefix, authCtx.Identity.Provider, tc.wantProvider,
+					"Context.Identity.Provider mismatch\ngot:  %q\nwant: %q",
+					authCtx.Identity.Provider, tc.wantProvider,
 				)
 			}
 		})
 	}
 
-	// AND: a session infrastructure failure is not read as unauthorised.
 	deps.Sessions = session.New(
 		failingSessionStore{},
 		session.Config{
@@ -356,16 +303,16 @@ func TestAPI_Authenticate(t *testing.T) {
 	)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/flags", nil)
 	req.AddCookie(&http.Cookie{Name: authCookieName, Value: "anything"})
-	if _, err := api.authenticate(req); err == nil || errors.Is(err, errUnauthorised) {
+	_, err := api.authenticate(req)
+	if err == nil || errors.Is(err, errUnauthorised) {
 		t.Errorf(
-			"%s\nauthenticate() infrastructure failure\ngot:  %v\nwant: a non-unauthorised error",
-			packageName, err,
+			"session store failure: error type mismatch\ngot:  %v\nwant: NOT %v",
+			err, errUnauthorised,
 		)
 	}
 }
 
 func TestBearerToken(t *testing.T) {
-	// GIVEN: Authorization headers of varying shapes.
 	tests := []struct {
 		name   string
 		header string
@@ -409,128 +356,98 @@ func TestBearerToken(t *testing.T) {
 				req.Header.Set("Authorization", tc.header)
 			}
 
-			// WHEN: the Bearer token is extracted.
 			got, ok := bearerToken(req)
 
-			prefix := fmt.Sprintf("%s\nbearerToken(%q)", packageName, tc.header)
-
-			// THEN: the extraction matches expectations.
 			if got != tc.want || ok != tc.wantOK {
-				t.Errorf(
-					"%s\nmismatch\ngot:  %q, %t\nwant: %q, %t",
-					prefix, got, ok, tc.want, tc.wantOK,
-				)
+				t.Errorf("mismatch\ngot:  %q, %t\nwant: %q, %t", got, ok, tc.want, tc.wantOK)
 			}
 		})
 	}
 }
 
 func TestAPI_AuthenticateAPIToken(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a live token.
+
 	adminCtx := adminContext(t, api, deps)
-	live, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "live", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
-	// AND: an expired token.
+	live, _ := createAPIToken(t, deps, adminCtx.User.ID, "live", nil)
+
 	past := timeNow().UTC().Add(-time.Hour)
-	expired, _, err := deps.Store.CreateAPIToken(t.Context(), adminCtx.User.ID, "expired", &past)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
+	expired, _ := createAPIToken(t, deps, adminCtx.User.ID, "expired", &past)
 
-	prefix := fmt.Sprintf("%s\nauthenticateAPIToken()", packageName)
-
-	// WHEN: a live token authenticates while usage recording is broken.
 	if _, err := dbConn.Exec(`
 		CREATE TRIGGER fail_touch BEFORE UPDATE ON api_tokens
 		BEGIN SELECT RAISE(ABORT, 'touch broke'); END;`,
 	); err != nil {
-		t.Fatalf(
-			"%s\nsetup trigger failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("create trigger: DB.Exec() failed: %v", err)
 	}
+
+	// A failed usage touch does not fail authentication.
 	authCtx, err := api.authenticateAPIToken(t.Context(), live)
-	// THEN: the touch failure is only logged - authentication still succeeds.
-	if err != nil || authCtx.Identity.Provider != "api_token" {
-		t.Errorf(
-			"%s\ntouch failure\ngot:  %+v, err=%v\nwant: authenticated",
-			prefix, authCtx, err,
-		)
+	if err != nil {
+		t.Errorf("touch failure: unexpected error: %v", err)
+	} else if got, want := authCtx.Identity.Provider, "api_token"; got != want {
+		t.Errorf("touch failure: Context.Identity.Provider mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 	if _, err := dbConn.Exec(`DROP TRIGGER fail_touch;`); err != nil {
-		t.Fatalf(
-			"%s\ndrop trigger failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("drop trigger: DB.Exec() failed: %v", err)
 	}
 
-	// WHEN: a live token authenticates.
 	authCtx, err = api.authenticateAPIToken(t.Context(), live)
-	// THEN: the owning user's context is resolved via the api_token provider.
-	if err != nil || authCtx.Identity.Provider != "api_token" ||
-		authCtx.User.ID != adminCtx.User.ID {
+	if err != nil {
+		t.Errorf("live token: unexpected error: %v", err)
+	} else if authCtx.Identity.Provider != "api_token" || authCtx.User.ID != adminCtx.User.ID {
 		t.Errorf(
-			"%s\nlive token\ngot:  %+v, err=%v\nwant: admin via api_token",
-			prefix, authCtx, err,
+			"live token: Context mismatch\n"+
+				"got:  provider=%q, userID=%q\nwant: provider=%q, userID=%q",
+			authCtx.Identity.Provider, authCtx.User.ID,
+			"api_token", adminCtx.User.ID,
 		)
 	}
 
-	// AND: usage was recorded.
 	tokens, err := deps.Store.APITokensForUser(t.Context(), adminCtx.User.ID)
 	if err != nil {
+		t.Fatalf("live token: Store.APITokensForUser() failed: %v", err)
+	}
+	i := slices.IndexFunc(tokens, func(token store.APIToken) bool { return token.Name == "live" })
+	if i == -1 {
 		t.Fatalf(
-			"%s\nAPITokensForUser failed: %v",
-			prefix, err,
+			"live token: Store.APITokensForUser() mismatch\n"+
+				"got:  %d tokens\nwant: one named \"live\"",
+			len(tokens),
 		)
 	}
-	for _, token := range tokens {
-		if token.Name == "live" && token.LastUsedAt == nil {
-			t.Errorf("%s\nlast_used_at should have been recorded", prefix)
-		}
+	if tokens[i].LastUsedAt == nil {
+		t.Error("live token: APIToken.LastUsedAt mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// AND: expired and unknown tokens read as unauthorised.
 	for _, tc := range []struct {
 		name, value string
 	}{
 		{name: "expired", value: expired},
 		{name: "unknown", value: "argus_" + strings.Repeat("0", 64)},
 	} {
-		if _, err := api.authenticateAPIToken(t.Context(), tc.value); !errors.Is(err, errUnauthorised) {
-			t.Errorf(
-				"%s\n%s token\ngot:  %v\nwant: %v",
-				prefix, tc.name, err, errUnauthorised,
-			)
-		}
+		t.Run("invalid/"+tc.name+" token", func(t *testing.T) {
+			// Serial: shares dbConn, which the parent closes after the loop.
+
+			_, err := api.authenticateAPIToken(t.Context(), tc.value)
+			if !errors.Is(err, errUnauthorised) {
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errUnauthorised)
+			}
+		})
 	}
 
-	// AND: a store failure is not read as unauthorised.
 	_ = dbConn.Close()
 	_, err = api.authenticateAPIToken(t.Context(), live)
 	if err == nil || errors.Is(err, errUnauthorised) {
-		t.Errorf(
-			"%s\nstore failure\ngot:  %v\nwant: a non-unauthorised error",
-			prefix, err,
-		)
+		t.Errorf("store failure: error type mismatch\ngot:  %v\nwant: NOT %v", err, errUnauthorised)
 	}
 }
 
 func TestAPI_AuthenticateSession(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a live session.
+
 	adminCtx := adminContext(t, api, deps)
 	token, _, err := deps.Sessions.Start(
 		t.Context(),
@@ -539,37 +456,26 @@ func TestAPI_AuthenticateSession(t *testing.T) {
 		"go-test",
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nsetup Start failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Manager.Start() failed: %v", err)
 	}
 
-	// WHEN: the session token authenticates.
 	authCtx, err := api.authenticateSession(t.Context(), token)
-
-	prefix := fmt.Sprintf("%s\nauthenticateSession()", packageName)
-
-	// THEN: the owning user's context is resolved via the local provider.
-	if err != nil ||
-		authCtx.Identity.Provider != "local" ||
-		authCtx.User.ID != adminCtx.User.ID {
+	if err != nil {
+		t.Errorf("live session: unexpected error: %v", err)
+	} else if authCtx.Identity.Provider != "local" || authCtx.User.ID != adminCtx.User.ID {
 		t.Errorf(
-			"%s\nlive session\ngot:  %+v, err=%v\nwant: admin via local",
-			prefix, authCtx, err,
+			"live session: Context mismatch\n"+
+				"got:  provider=%q, userID=%q\nwant: provider=%q, userID=%q",
+			authCtx.Identity.Provider, authCtx.User.ID,
+			"local", adminCtx.User.ID,
 		)
 	}
 
-	// AND: an unknown token reads as unauthorised.
 	_, err = api.authenticateSession(t.Context(), "never-issued")
 	if !errors.Is(err, errUnauthorised) {
-		t.Errorf(
-			"%s\nunknown token\ngot:  %v\nwant: %v",
-			prefix, err, errUnauthorised,
-		)
+		t.Errorf("unknown token: error type mismatch\ngot:  %v\nwant: %v", err, errUnauthorised)
 	}
 
-	// AND: a session-store failure is not read as unauthorised.
 	deps.Sessions = session.New(
 		failingSessionStore{},
 		session.Config{
@@ -579,38 +485,27 @@ func TestAPI_AuthenticateSession(t *testing.T) {
 	)
 	_, err = api.authenticateSession(t.Context(), token)
 	if err == nil || errors.Is(err, errUnauthorised) {
-		t.Errorf(
-			"%s\nstore failure\ngot:  %v\nwant: a non-unauthorised error",
-			prefix, err,
-		)
+		t.Errorf("store failure: error type mismatch\ngot:  %v\nwant: NOT %v", err, errUnauthorised)
 	}
 }
 
 func TestAPI_VerifyLocalCredentials(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	prefix := fmt.Sprintf("%s\nverifyLocalCredentials()", packageName)
-
-	// WHEN: valid credentials verify.
 	identity, err := api.verifyLocalCredentials(
 		t.Context(),
 		"admin",
 		"admin-password",
 		"ip",
 	)
-
-	// THEN: the identity is resolved.
-	if err != nil || identity.Username != "admin" {
-		t.Errorf(
-			"%s\nvalid credentials\ngot:  %+v, err=%v\nwant: admin",
-			prefix, identity, err,
-		)
+	if err != nil {
+		t.Errorf("valid credentials: unexpected error: %v", err)
+	} else if got, want := identity.Username, "admin"; got != want {
+		t.Errorf("valid credentials: Identity.Username mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: bad credentials return ErrInvalidCredentials, spending the budget.
-	for range loginLimitAttempts {
+	for i := range loginLimitAttempts {
 		if _, err := api.verifyLocalCredentials(
 			t.Context(),
 			"admin",
@@ -618,13 +513,12 @@ func TestAPI_VerifyLocalCredentials(t *testing.T) {
 			"ip",
 		); !errors.Is(err, auth.ErrInvalidCredentials) {
 			t.Fatalf(
-				"%s\nbad credentials\ngot:  %v\nwant: %v",
-				prefix, err, auth.ErrInvalidCredentials,
+				"attempt %d: bad credentials: error type mismatch\ngot:  %v\nwant: %v",
+				i, err, auth.ErrInvalidCredentials,
 			)
 		}
 	}
 
-	// AND: an exhausted budget rejects even valid credentials, unverified.
 	if _, err := api.verifyLocalCredentials(
 		t.Context(),
 		"admin",
@@ -632,12 +526,11 @@ func TestAPI_VerifyLocalCredentials(t *testing.T) {
 		"ip",
 	); !errors.Is(err, errTooManyAttempts) {
 		t.Errorf(
-			"%s\nexhausted budget\ngot:  %v\nwant: %v",
-			prefix, err, errTooManyAttempts,
+			"exhausted budget: error type mismatch\ngot:  %v\nwant: %v",
+			err, errTooManyAttempts,
 		)
 	}
 
-	// AND: an empty provider registry reads as invalid credentials.
 	deps.Providers = provider.NewRegistry()
 	if _, err := api.verifyLocalCredentials(
 		t.Context(),
@@ -646,96 +539,68 @@ func TestAPI_VerifyLocalCredentials(t *testing.T) {
 		"other-ip",
 	); !errors.Is(err, auth.ErrInvalidCredentials) {
 		t.Errorf(
-			"%s\nno providers\ngot:  %v\nwant: %v",
-			prefix, err, auth.ErrInvalidCredentials,
+			"no providers: error type mismatch\ngot:  %v\nwant: %v",
+			err, auth.ErrInvalidCredentials,
 		)
 	}
 }
 
 func TestAPI_ContextForUser(t *testing.T) {
-	// GIVEN: an auth-enabled API with enabled and disabled users.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
 	adminCtx := adminContext(t, api, deps)
-	sleeper := createAuthUser(t, deps, "sleeper", "sleeper-password")
+	disabled := createAuthUser(t, deps, "disabled", "disabled-password")
 	if _, err := deps.Store.UpdateUser(
 		t.Context(),
-		sleeper.ID,
+		disabled.ID,
 		store.UserPatch{
 			Enabled: new(false),
 		},
 	); err != nil {
-		t.Fatalf(
-			"%s\ndisable user: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.UpdateUser() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\ncontextForUser()", packageName)
-
-	// WHEN: an enabled user's context is built.
 	authCtx, err := api.contextForUser(t.Context(), adminCtx.User.ID, "local")
-	// THEN: it carries the identity, user, grants, and permissions.
-	if err != nil ||
-		authCtx.Identity.Username != "admin" ||
+	if err != nil {
+		t.Errorf("enabled user: unexpected error: %v", err)
+	} else if authCtx.Identity.Username != "admin" ||
 		authCtx.User.ID != adminCtx.User.ID ||
 		len(authCtx.Grants) == 0 ||
 		authCtx.Permissions == nil {
 		t.Errorf(
-			"%s\nenabled user\ngot:  %+v, err=%v",
-			prefix, authCtx, err,
+			"enabled user: Context mismatch\n"+
+				"got:  username=%q, userID=%q, %d grants, permissions set=%t\n"+
+				"want: username=%q, userID=%q, >0 grants, permissions set=true",
+			authCtx.Identity.Username, authCtx.User.ID,
+			len(authCtx.Grants), authCtx.Permissions != nil,
+			"admin", adminCtx.User.ID,
 		)
 	}
 
-	// AND: disabled and unknown users read as unauthorised.
 	for _, tc := range []struct {
 		name, id string
 	}{
-		{name: "disabled", id: sleeper.ID},
+		{name: "disabled", id: disabled.ID},
 		{name: "unknown", id: "no-such-id"},
 	} {
-		_, err := api.contextForUser(t.Context(), tc.id, "local")
-		if !errors.Is(err, errUnauthorised) {
-			t.Errorf(
-				"%s\n%s user\ngot:  %v\nwant: %v",
-				prefix, tc.name, err, errUnauthorised,
-			)
-		}
+		t.Run("invalid/"+tc.name+" user", func(t *testing.T) {
+			// Serial: shares the users table, which the parent drops after the loop.
+
+			_, err := api.contextForUser(t.Context(), tc.id, "local")
+			if !errors.Is(err, errUnauthorised) {
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, errUnauthorised)
+			}
+		})
 	}
 
-	// AND: a grant-load failure is not read as unauthorised.
-	if _, err := dbConn.Exec(`DROP TABLE permissions;`); err != nil {
-		t.Fatalf(
-			"%s\nsetup drop failed: %v",
-			packageName, err,
-		)
-	}
+	test.DropTable(t, dbConn, "users")
 	_, err = api.contextForUser(t.Context(), adminCtx.User.ID, "local")
 	if err == nil || errors.Is(err, errUnauthorised) {
-		t.Errorf(
-			"%s\ngrant-load failure\ngot:  %v\nwant: a non-unauthorised error",
-			prefix, err,
-		)
-	}
-
-	// AND: a user-load failure is not read as unauthorised.
-	if _, err := dbConn.Exec(`DROP TABLE users;`); err != nil {
-		t.Fatalf(
-			"%s\nsetup drop failed: %v",
-			packageName, err,
-		)
-	}
-	_, err = api.contextForUser(t.Context(), adminCtx.User.ID, "local")
-	if err == nil || errors.Is(err, errUnauthorised) {
-		t.Errorf(
-			"%s\nuser-load failure\ngot:  %v\nwant: a non-unauthorised error",
-			prefix, err,
-		)
+		t.Errorf("store failure: error type mismatch\ngot:  %v\nwant: NOT %v", err, errUnauthorised)
 	}
 }
 
 func TestAPI__auth__scopedGrants(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
@@ -748,39 +613,18 @@ func TestAPI__auth__scopedGrants(t *testing.T) {
 	}
 	api.Config.OrderMu.Unlock()
 
-	// AND: a user whose only grants are scoped to one service and two tags.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"scoped",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-			},
-			{
-				Resource: rbac.ResourceVersionRefresh,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-			},
-			{
-				Resource: rbac.ResourceVersionRefresh,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "staging"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
+			{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
+			{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "staging"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate scoped group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
 	cookie := loginCookie(t, api, "scoped-user", "scoped-password")
 
@@ -818,18 +662,13 @@ func TestAPI__auth__scopedGrants(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			req := authedRequest(http.MethodGet, tc.target, "", cookie)
+			w := serveAuth(api, req)
 
-			// WHEN: the route is requested.
-			w := serveAuth(api,
-				authedRequest(http.MethodGet, tc.target, "", cookie))
-
-			prefix := fmt.Sprintf("%s\nscoped grants", packageName)
-
-			// THEN: the guard's verdict matches expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -837,50 +676,32 @@ func TestAPI__auth__scopedGrants(t *testing.T) {
 }
 
 func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: a user whose only grant is a single service-scoped service:update -
-	// the defaults are for authoring a service, so editing one reaches them.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	// The defaults are for authoring a service, so editing one reaches them.
+	createAuthGroup(
+		t,
+		deps,
 		"scoped",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionUpdate,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionUpdate, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate scoped group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
-	// AND: a reader, who has no need to author one.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+
+	createAuthGroup(
+		t,
+		deps,
 		"reader",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate reader group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "reader-user", "reader-password", "reader")
-	// AND: a user with no grants.
+
 	createAuthUser(t, deps, "loner", "loner-password")
 
 	tests := []struct {
@@ -913,17 +734,13 @@ func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cookie := loginCookie(t, api, tc.username, tc.password)
 
-			// WHEN: the guardAnyScopeOf-protected /service/defaults route is requested.
-			w := serveAuth(api,
-				authedRequest(http.MethodGet, "/api/v1/service/defaults", "", cookie))
+			req := authedRequest(http.MethodGet, "/api/v1/service/defaults", "", cookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nguardAnyScopeOf", packageName)
-
-			// THEN: the guard's verdict matches expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -931,72 +748,51 @@ func TestAPI__auth__GuardAnyScopeOf(t *testing.T) {
 }
 
 func TestAPI__auth__permissionChangesApplyImmediately(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: a logged-in user in a group with grants.
-	group, err := deps.Store.CreateGroup(
-		t.Context(),
+	group := createAuthGroup(
+		t,
+		deps,
 		"readers",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceConfig,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
+			{Resource: rbac.ResourceConfig, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 		},
 	)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncreate group: %v",
-			packageName, err,
-		)
-	}
 	createAuthUser(t, deps, "reader", "reader-password", "readers")
 	cookie := loginCookie(t, api, "reader", "reader-password")
 
-	prefix := fmt.Sprintf("%s\nlive grant changes", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
+	w := serveAuth(api, req)
 
-	// WHEN: the user reads flags.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/flags", "", cookie))
-
-	// THEN: they are returned successfully.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ninitial read\ngot:  %d\nwant: 200",
-			prefix, got,
+			"read before revoking permissions: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the group's grants are emptied.
 	empty := []rbac.Grant{}
 	if _, err := deps.Store.UpdateGroup(
 		t.Context(),
 		group.ID,
 		store.GroupPatch{Grants: &empty},
 	); err != nil {
-		t.Fatalf(
-			"%s\nupdate group: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.UpdateGroup() failed: %v", err)
 	}
 
-	// THEN: the same request is now denied.
-	w = serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/flags", "", cookie))
+	req = authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
+	w = serveAuth(api, req)
 	if got, want := w.Code, http.StatusForbidden; got != want {
 		t.Errorf(
-			"%s\nread after revoke\ngot:  %d\nwant: 403",
-			prefix, got,
+			"read after revoking permissions: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
-	// GIVEN: an auth-enabled API and a logged-in session.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	cookie := loginCookie(t, api, "admin", "admin-password")
@@ -1004,7 +800,6 @@ func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
 	tests := []struct {
 		name          string
 		secFetchSite  string
-		origin        string
 		wantForbidden bool
 	}{
 		{
@@ -1037,31 +832,18 @@ func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a request with the given Sec-Fetch-Site/Origin headers.
 			req := authedRequest(http.MethodGet, "/api/v1/flags", "", cookie)
 			if tc.secFetchSite != "" {
 				req.Header.Set("Sec-Fetch-Site", tc.secFetchSite)
 			}
-			if tc.origin != "" {
-				req.Header.Set("Origin", tc.origin)
-			}
 
-			prefix := fmt.Sprintf(
-				"%s\nAPI.originCheckMiddleware(Sec-Fetch-Site=%q, Origin=%q)",
-				packageName, tc.secFetchSite, tc.origin,
-			)
-
-			// WHEN: the request passes through the middleware.
 			w := serveAuth(api, req)
 
-			// THEN: only the request is forbidden as expected.
 			gotForbidden := w.Code == http.StatusForbidden
 			if gotForbidden != tc.wantForbidden {
 				t.Errorf(
-					"%s\nforbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
-					prefix,
-					gotForbidden, w.Code, w.Body.String(),
-					tc.wantForbidden,
+					"forbidden mismatch\ngot:  %t (status %d - %q)\nwant: %t",
+					gotForbidden, w.Code, w.Body.String(), tc.wantForbidden,
 				)
 			}
 		})
@@ -1069,7 +851,6 @@ func TestAPI_OriginCheckMiddleware__secFetchSite(t *testing.T) {
 }
 
 func TestOriginCheckMiddleware(t *testing.T) {
-	// GIVEN: requests with varying Origin headers against host example.com.
 	tests := []struct {
 		name          string
 		method        string
@@ -1147,7 +928,6 @@ func TestOriginCheckMiddleware(t *testing.T) {
 				}),
 			)
 
-			// WHEN: a request carries the Origin header.
 			method := util.ValueOr(tc.method, http.MethodPost)
 			req := httptest.NewRequest(method, "http://example.com/api/v1/flags", nil)
 			if tc.origin != "" {
@@ -1159,13 +939,10 @@ func TestOriginCheckMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 
-			prefix := fmt.Sprintf("%s\noriginCheckMiddleware()", packageName)
-
-			// THEN: the verdict matches expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -1173,36 +950,24 @@ func TestOriginCheckMiddleware(t *testing.T) {
 }
 
 func TestAPI_Guard(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: an admin.
+
 	adminCtx := adminContext(t, api, deps)
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"scoped",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate scoped group: %v",
-			packageName, err,
-		)
-	}
-	// AND: a user scoped to one service.
+	)
+
 	scopedUser := createAuthUser(t, deps, "scoped-user", "scoped-password", "scoped")
 	scopedCtx, err := api.contextForUser(t.Context(), scopedUser.ID, "local")
 	if err != nil {
-		t.Fatalf(
-			"%s\nscoped context: %v",
-			packageName, err,
-		)
+		t.Fatalf("API.contextForUser() failed: %v", err)
 	}
 
 	serviceTarget := func(id string) func(*http.Request) *rbac.Target {
@@ -1253,20 +1018,19 @@ func TestAPI_Guard(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testAPI := api
+			guarded := api
 			if tc.disableAuth {
-				testAPI = &API{}
+				guarded = &API{}
 			}
 
 			called := false
-			handler := testAPI.guard(rbac.ResourceService, rbac.ActionRead, tc.target,
+			handler := guarded.guard(rbac.ResourceService, rbac.ActionRead, tc.target,
 				func(w http.ResponseWriter, _ *http.Request) {
 					called = true
 					w.WriteHeader(http.StatusOK)
 				},
 			)
 
-			// WHEN: a request hits the guarded handler.
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.authCtx != nil {
 				req = withAuthCtx(req, tc.authCtx)
@@ -1274,40 +1038,29 @@ func TestAPI_Guard(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler(w, req)
 
-			prefix := fmt.Sprintf("%s\nguard()", packageName)
-
-			// THEN: the response code and handler invocation match expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if called != tc.wantCalled {
-				t.Errorf(
-					"%s\nhandler called mismatch\ngot:  %t\nwant: %t",
-					prefix, called, tc.wantCalled,
-				)
+				t.Errorf("handler called mismatch\ngot:  %t\nwant: %t", called, tc.wantCalled)
 			}
 		})
 	}
 }
 
 func TestAPI_RequireAdmin(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: an admin.
 	adminCtx := adminContext(t, api, deps)
-	// AND: a viewer.
+
 	viewer := createAuthUser(t, deps, "viewer-user", "viewer-password", store.GroupViewer)
 	viewerCtx, err := api.contextForUser(t.Context(), viewer.ID, "local")
 	if err != nil {
-		t.Fatalf(
-			"%s\nviewer context: %v",
-			packageName, err,
-		)
+		t.Fatalf("API.contextForUser() failed: %v", err)
 	}
 
 	tests := []struct {
@@ -1346,18 +1099,17 @@ func TestAPI_RequireAdmin(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			testAPI := api
+			guarded := api
 			if tc.disableAuth {
-				testAPI = &API{}
+				guarded = &API{}
 			}
 
 			called := false
-			handler := testAPI.requireAdmin(func(w http.ResponseWriter, _ *http.Request) {
+			handler := guarded.requireAdmin(func(w http.ResponseWriter, _ *http.Request) {
 				called = true
 				w.WriteHeader(http.StatusOK)
 			})
 
-			// WHEN: a request hits the guarded handler.
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.authCtx != nil {
 				req = withAuthCtx(req, tc.authCtx)
@@ -1365,27 +1117,20 @@ func TestAPI_RequireAdmin(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler(w, req)
 
-			prefix := fmt.Sprintf("%s\nrequireAdmin()", packageName)
-
-			// THEN: the response code and handler invocation match expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 			if called != tc.wantCalled {
-				t.Errorf(
-					"%s\nhandler called mismatch\ngot:  %t\nwant: %t",
-					prefix, called, tc.wantCalled,
-				)
+				t.Errorf("handler called mismatch\ngot:  %t\nwant: %t", called, tc.wantCalled)
 			}
 		})
 	}
 }
 
 func TestAPI_ReadableServices(t *testing.T) {
-	// GIVEN: an auth-enabled API with tagged services
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
@@ -1396,7 +1141,6 @@ func TestAPI_ReadableServices(t *testing.T) {
 	api.Config.Order = append(api.Config.Order, "tagged")
 	api.Config.OrderMu.Unlock()
 
-	// AND: users of differing grant scopes.
 	groups := []struct {
 		name   string
 		grants []rbac.Grant
@@ -1404,52 +1148,26 @@ func TestAPI_ReadableServices(t *testing.T) {
 		{
 			name: "full-scoped",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceService,
-					Action:   rbac.ActionRead,
-					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-				},
-				{
-					Resource: rbac.ResourceService,
-					Action:   rbac.ActionRead,
-					Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-				},
+				{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
+				{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
 			},
 		},
 		{
 			name: "service-scoped",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceService,
-					Action:   rbac.ActionRead,
-					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-				},
+				{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 			},
 		},
 		{
 			name: "tag-scoped",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceService,
-					Action:   rbac.ActionRead,
-					Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"},
-				},
+				{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "prod"}},
 			},
 		},
 	}
 
 	for _, group := range groups {
-		if _, err := deps.Store.CreateGroup(
-			t.Context(),
-			group.name,
-			"",
-			group.grants,
-		); err != nil {
-			t.Fatalf(
-				"%s\ncreate group %q: %v",
-				packageName, group.name, err,
-			)
-		}
+		createAuthGroup(t, deps, group.name, "", group.grants)
 	}
 	createAuthUser(t, deps, "full-scoped-user", "scoped-password", "full-scoped")
 	createAuthUser(t, deps, "service-scoped-user", "scoped-password", "service-scoped")
@@ -1460,7 +1178,7 @@ func TestAPI_ReadableServices(t *testing.T) {
 		name     string
 		username string // "" = the bootstrap admin.
 		wantNil  bool
-		want     []string
+		want     map[string]bool
 	}{
 		{
 			name:    "global service:read is unrestricted (nil)",
@@ -1469,22 +1187,22 @@ func TestAPI_ReadableServices(t *testing.T) {
 		{
 			name:     "full-scoped grants",
 			username: "full-scoped-user",
-			want:     []string{"test", "tagged"},
+			want:     map[string]bool{"test": true, "tagged": true},
 		},
 		{
 			name:     "service-scoped grants",
 			username: "service-scoped-user",
-			want:     []string{"test"},
+			want:     map[string]bool{"test": true},
 		},
 		{
 			name:     "tag-scoped grants",
 			username: "tag-scoped-user",
-			want:     []string{"tagged"},
+			want:     map[string]bool{"tagged": true},
 		},
 		{
 			name:     "no grants allow nothing",
 			username: "loner",
-			want:     []string{},
+			want:     map[string]bool{},
 		},
 	}
 
@@ -1494,59 +1212,42 @@ func TestAPI_ReadableServices(t *testing.T) {
 
 			username := util.ValueOr(tc.username, "admin")
 			creds, err := deps.Store.LocalCredentials(t.Context(), username)
-			if err != nil || creds == nil {
-				t.Fatalf(
-					"%s\nlookup %q failed: %v",
-					packageName, username, err,
-				)
+			if err != nil {
+				t.Fatalf("Store.LocalCredentials() failed: %v", err)
+			}
+			if creds == nil {
+				t.Fatal("Store.LocalCredentials() mismatch\ngot:  nil\nwant: non-nil")
 			}
 			authCtx, err := api.contextForUser(t.Context(), creds.UserID, "local")
 			if err != nil {
-				t.Fatalf(
-					"%s\ncontext failed: %v",
-					packageName, err,
-				)
+				t.Fatalf("API.contextForUser() failed: %v", err)
 			}
 
-			// WHEN: the permitted-service set is derived.
 			readable := api.readableServices(authCtx)
 
-			prefix := fmt.Sprintf("%s\nreadableServices()", packageName)
-
-			// THEN: it matches expectations.
 			if tc.wantNil {
 				if readable != nil {
 					t.Errorf(
-						"%s\nexpected nil (unrestricted)\ngot: %v",
-						prefix, readable,
+						"API.readableServices() mismatch\ngot:  %v\nwant: nil (unrestricted)",
+						readable,
 					)
 				}
 				return
 			}
-			if readable == nil || len(readable) != len(tc.want) {
-				t.Fatalf(
-					"%s\nset mismatch\ngot:  %v\nwant: %v",
-					prefix, readable, tc.want,
-				)
+			if readable == nil {
+				t.Fatal("API.readableServices() mismatch\ngot:  nil (unrestricted)\nwant: non-nil")
 			}
-			for _, serviceID := range tc.want {
-				if !readable[serviceID] {
-					t.Errorf(
-						"%s\nmissing %q\ngot: %v",
-						prefix, serviceID, readable,
-					)
-				}
+			if testErr := test.AssertMapEqual(t, readable, tc.want, "API.readableServices()"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
 func TestAPI_ActionableServices(t *testing.T) {
-	// GIVEN: an auth-enabled API with a service.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: users of differing service_action:execute scopes.
 	groups := []struct {
 		name   string
 		grants []rbac.Grant
@@ -1554,43 +1255,24 @@ func TestAPI_ActionableServices(t *testing.T) {
 		{
 			name: "global-actioner",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-					Scope: rbac.Scope{Type: rbac.ScopeGlobal},
-				},
+				{Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 			},
 		},
 		{
 			name: "scoped-actioner",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute,
-					Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-				},
+				{Resource: rbac.ResourceServiceAction, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 			},
 		},
 		{
 			name: "reader",
 			grants: []rbac.Grant{
-				{
-					Resource: rbac.ResourceService, Action: rbac.ActionRead,
-					Scope: rbac.Scope{Type: rbac.ScopeGlobal},
-				},
+				{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 			},
 		},
 	}
 	for _, group := range groups {
-		if _, err := deps.Store.CreateGroup(
-			t.Context(),
-			group.name,
-			"",
-			group.grants,
-		); err != nil {
-			t.Fatalf(
-				"%s\ncreate group %q: %v",
-				packageName, group.name, err,
-			)
-		}
+		createAuthGroup(t, deps, group.name, "", group.grants)
 	}
 	createAuthUser(t, deps, "global-actioner-user", "actioner-password", "global-actioner")
 	createAuthUser(t, deps, "scoped-actioner-user", "actioner-password", "scoped-actioner")
@@ -1629,51 +1311,41 @@ func TestAPI_ActionableServices(t *testing.T) {
 
 			username := util.ValueOr(tc.username, "admin")
 			creds, err := deps.Store.LocalCredentials(t.Context(), username)
-			if err != nil || creds == nil {
-				t.Fatalf(
-					"%s\nlookup %q failed: %v",
-					packageName, username, err,
-				)
+			if err != nil {
+				t.Fatalf("Store.LocalCredentials() failed: %v", err)
+			}
+			if creds == nil {
+				t.Fatal("Store.LocalCredentials() mismatch\ngot:  nil\nwant: non-nil")
 			}
 			authCtx, err := api.contextForUser(t.Context(), creds.UserID, "local")
 			if err != nil {
-				t.Fatalf(
-					"%s\ncontext failed: %v",
-					packageName, err,
-				)
+				t.Fatalf("API.contextForUser() failed: %v", err)
 			}
 
-			// WHEN: the action-permitted service set is derived.
 			permitted := api.actionableServices(authCtx)
 
-			prefix := fmt.Sprintf("%s\nactionableServices()", packageName)
-
-			// THEN: it matches expectations.
 			if tc.wantNil {
 				if permitted != nil {
 					t.Errorf(
-						"%s\nexpected nil (unrestricted)\ngot: %v",
-						prefix, permitted,
+						"API.actionableServices() mismatch\ngot:  %v\nwant: nil (unrestricted)",
+						permitted,
 					)
 				}
 				return
 			}
-			if testErr := test.AssertMapEqual(
-				t,
-				permitted,
-				tc.want,
-				prefix,
-				"",
-			); testErr != nil {
-				t.Fatal(testErr)
+			if permitted == nil {
+				t.Fatal(
+					"API.actionableServices() mismatch\ngot:  nil (unrestricted)\nwant: non-nil",
+				)
+			}
+			if testErr := test.AssertMapEqual(t, permitted, tc.want, "API.actionableServices()"); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
 }
 
-func TestAPI_KickWebSocketClients(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nkick*WebSocketClients()", packageName)
-
+func TestAPI_KickWebSocketClients__noAuth(t *testing.T) {
 	// kickAll exercises every kick helper against the client's identity.
 	kickAll := func(api *API, client *Client) {
 		api.kickUserWebSocketClients(client.userID)
@@ -1681,7 +1353,6 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 		api.kickRestrictedWebSocketClients()
 	}
 
-	// GIVEN: an API without auth/hub wiring.
 	file := t.Name() + ".yml"
 	apiValue := testAPI(t, file)
 	apiNoAuth := &apiValue
@@ -1690,12 +1361,12 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 		sessionHash:      "hash-1",
 		readableServices: map[string]bool{"svc": true},
 	}
-	// WHEN/THEN: no auth -> no-op.
+	// Without a hub, kicking need only not panic.
 	kickAll(apiNoAuth, client)
-	// AND: API without a hub -> no-op too.
+
 	apiNoAuth.auth = &AuthDeps{}
 	kickAll(apiNoAuth, client)
-	// AND: API without auth (but a hub) -> no-op too.
+
 	apiNoAuth.auth = nil
 	apiNoAuth.hub = NewHub()
 	go apiNoAuth.hub.Run(t.Context())
@@ -1704,41 +1375,35 @@ func TestAPI_KickWebSocketClients(t *testing.T) {
 	apiNoAuth.hub.register <- client
 	kickAll(apiNoAuth, client)
 	if !apiNoAuth.hub.hasClient(client) {
-		t.Errorf("%s\nno-auth API should not kick clients", prefix)
-	}
-
-	// GIVEN: API with auth and hub wired, with connected clients.
-	apiWired := &API{auth: &AuthDeps{}}
-	newClient := wireHub(t, apiWired)
-
-	// WHEN: a user's clients are kicked.
-	target := newClient("user-a", "hash-1")
-	other := newClient("user-b", "hash-2")
-	apiWired.kickUserWebSocketClients("user-a")
-	// THEN: only that user's client is kicked.
-	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
-		t.Errorf("%s\nwired API should kick exactly user-a's clients", prefix)
-	}
-
-	// WHEN: a session's clients are kicked.
-	target = newClient("user-b", "hash-3")
-	apiWired.kickSessionWebSocketClients("hash-3")
-	// THEN: only that session's client is kicked.
-	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
-		t.Errorf("%s\nwired API should kick exactly hash-3's clients", prefix)
-	}
-
-	// WHEN: the restricted clients are kicked.
-	target = newClient("user-c", "hash-4", map[string]bool{"svc": true})
-	apiWired.kickRestrictedWebSocketClients()
-	// THEN: only the restricted client is kicked.
-	if apiWired.hub.hasClient(target) || !apiWired.hub.hasClient(other) {
-		t.Errorf("%s\nwired API should kick exactly the restricted clients", prefix)
+		t.Error("Hub.hasClient() mismatch\ngot:  false\nwant: true")
 	}
 }
 
+func TestAPI_KickWebSocketClients__auth(t *testing.T) {
+	apiWired := &API{auth: &AuthDeps{}}
+	newClient := wireHub(t, apiWired)
+
+	userA, userB := "user-a", "user-b"
+
+	target := newClient(userA, "hash-1")
+	other := newClient(userB, "hash-2")
+	apiWired.kickUserWebSocketClients(userA)
+
+	assertKicked(t, apiWired.hub, []*Client{target}, []*Client{other})
+
+	sessionHash := "hash-3"
+	target = newClient(userB, sessionHash)
+	apiWired.kickSessionWebSocketClients(sessionHash)
+
+	assertKicked(t, apiWired.hub, []*Client{target}, []*Client{other})
+
+	target = newClient("user-c", "hash-4", map[string]bool{"svc": true})
+	apiWired.kickRestrictedWebSocketClients()
+
+	assertKicked(t, apiWired.hub, []*Client{target}, []*Client{other})
+}
+
 func TestAPI_ServiceTarget(t *testing.T) {
-	// GIVEN: an auth-enabled API whose config holds a tagged service.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 	api.Config.OrderMu.Lock()
@@ -1777,29 +1442,27 @@ func TestAPI_ServiceTarget(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the target is extracted from a request.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/service/summary?"+tc.query, nil)
 			target := api.serviceTarget(req)
 
-			prefix := fmt.Sprintf(
-				"%s\nserviceTarget(%s)",
-				packageName, tc.query,
-			)
-
-			// THEN: the target matches expectations.
 			if tc.wantNil {
 				if target != nil {
 					t.Errorf(
-						"%s\nexpected nil target\ngot: %+v",
-						prefix, target,
+						"API.serviceTarget() mismatch\ngot:  id=%q with %d tags\nwant: nil",
+						target.ServiceID, len(target.Tags),
 					)
 				}
 				return
 			}
-			if target == nil || target.ServiceID != tc.wantID || len(target.Tags) != tc.wantTags {
+			if target == nil {
+				t.Fatal("API.serviceTarget() mismatch\ngot:  nil\nwant: non-nil")
+			}
+			if target.ServiceID != tc.wantID || len(target.Tags) != tc.wantTags {
 				t.Errorf(
-					"%s\ntarget mismatch\ngot:  %+v\nwant: id=%q with %d tags",
-					prefix, target, tc.wantID, tc.wantTags,
+					"API.serviceTarget() mismatch\n"+
+						"got:  id=%q with %d tags\nwant: id=%q with %d tags",
+					target.ServiceID, len(target.Tags),
+					tc.wantID, tc.wantTags,
 				)
 			}
 		})
@@ -1807,11 +1470,9 @@ func TestAPI_ServiceTarget(t *testing.T) {
 }
 
 func TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, _, _ := testAuthServer(t, file)
 
-	// AND: the routes that answer without a session, and ones that must not.
 	tests := []struct {
 		name   string
 		method string
@@ -1860,27 +1521,20 @@ func TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the route is called with no session.
-			w := serveAuth(api,
-				httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)))
+			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf(
-				"%s\nopen route split for %s %s",
-				packageName, tc.method, tc.path,
-			)
-
-			// THEN: only the routes behind the auth middleware are refused.
 			got := w.Code
 			if tc.open && got == http.StatusUnauthorized {
 				t.Errorf(
-					"%s\nrefused, so the auth middleware is still in its chain\ngot: %d - %s",
-					prefix, got, w.Body.String(),
+					"status code mismatch\ngot:  %d - %q\nwant: NOT %d",
+					got, w.Body.String(), http.StatusUnauthorized,
 				)
 			}
 			if !tc.open && got != http.StatusUnauthorized {
 				t.Errorf(
-					"%s\nanswered without a session\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), http.StatusUnauthorized,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), http.StatusUnauthorized,
 				)
 			}
 		})
@@ -1888,7 +1542,6 @@ func TestAPI_SetupRoutesAPI__openRoutesSkipAuthentication(t *testing.T) {
 }
 
 func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
-	// GIVEN: an auth-enabled API, and a user with zero grants.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	createAuthUser(t, deps, "loner", "loner-password")
@@ -1918,7 +1571,6 @@ func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 		methods []string
 	}
 	var routes []route
-	// Build a list of all /api/v1 routes.
 	if err := api.Router.Walk(
 		func(r *mux.Route, _ *mux.Router, _ []*mux.Route) error {
 			path, err := r.GetPathTemplate()
@@ -1933,45 +1585,31 @@ func TestAPI_SetupRoutesAPI__everyRouteIsGuarded(t *testing.T) {
 			return nil
 		},
 	); err != nil {
-		t.Fatalf(
-			"%s\nWalk() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Router.Walk() failed: %v", err)
 	}
 
-	// AND: the walk found the API endpoints.
 	if got := len(routes); got < 20 {
-		t.Fatalf(
-			"%s\nWalk() found only %d /api/v1 routes\n%+v",
-			packageName, got, routes,
-		)
+		t.Fatalf("len(routes) mismatch\ngot:  %d\nwant: >= 20", got)
 	}
 
 	for _, rt := range routes {
 		for _, method := range rt.methods {
 			name := fmt.Sprintf("method=%s path=%s", method, rt.path)
 			t.Run(name, func(t *testing.T) {
-				// SKIP: grantless routes are not expected to be guarded.
+				// Grantless routes are not expected to be guarded.
 				selfServiceRouteKey := method + strings.Repeat(" ", methodLen-len(method)) + " " + rt.path
 				if selfServiceRoutes[selfServiceRouteKey] {
-					t.Skipf("grantless route")
+					t.Skip("grantless route")
 				}
 
-				// WHEN: a grantless session calls route that should be guarded.
 				target := strings.ReplaceAll(rt.path, "{id}", "no-such-id")
-				w := serveAuth(api, authedRequest(method, target, "{}", cookie))
+				req := authedRequest(method, target, "{}", cookie)
+				w := serveAuth(api, req)
 
-				prefix := fmt.Sprintf(
-					"%s\nroute guard for %s %s",
-					packageName, method, rt.path,
-				)
-
-				// THEN: it is refused, never answered.
 				if wants := []int{http.StatusUnauthorized, http.StatusForbidden}; !slices.Contains(wants, w.Code) {
 					t.Errorf(
-						"%s\nreachable without any grant\ngot:  %d - %s\nwant: %v",
-						prefix, w.Code, w.Body.String(),
-						wants,
+						"status code mismatch\ngot:  %d - %q\nwant: %v",
+						w.Code, w.Body.String(), wants,
 					)
 				}
 			})
@@ -1986,21 +1624,14 @@ func demoGrants() []rbac.Grant {
 	grants := make([]rbac.Grant, 0, 16)
 	for _, rp := range rbac.Catalogue() {
 		for _, ap := range rp.Actions {
-			grants = append(grants, rbac.Grant{
-				Permission: rbac.Permission{Resource: rp.Resource, Action: ap.Action},
-				Scope:      global,
-			})
+			grants = append(grants, rbac.Grant{Permission: rbac.Permission{Resource: rp.Resource, Action: ap.Action}, Scope: global})
 		}
 	}
 	return grants
 }
 
 func TestAPI_DemoMiddleware(t *testing.T) {
-	// GIVEN: the reads a demo instance deliberately refuses - each one makes
-	// the instance issue an outbound request - and the routes served without a
-	// session, which the guard never sees. Every other route is expected to
-	// follow from the guard's rule, so a new one that nobody allow-listed
-	// fails here rather than silently breaking the demo.
+	// Each refused read makes an outbound request.
 	refusedReads := map[string]bool{
 		"/api/v1/latest_version/refresh":             true,
 		"/api/v1/deployed_version/refresh":           true,
@@ -2030,33 +1661,21 @@ func TestAPI_DemoMiddleware(t *testing.T) {
 
 	for _, srv := range servers {
 		t.Run(srv.name, func(t *testing.T) {
-			// AND: a demo instance serving there, and a member of its group.
 			opts := []func(*config.Config){withDemoGroup("demo")}
 			if srv.routePrefix != "" {
 				opts = append(opts, withRoutePrefix(srv.routePrefix))
 			}
 			file := strings.ReplaceAll(t.Name(), "/", "_") + ".yml"
 			api, deps, _ := testAuthServer(t, file, opts...)
-			if _, err := deps.Store.CreateGroup(
-				t.Context(), "demo", "", demoGrants(),
-			); err != nil {
-				t.Fatalf(
-					"%s\ncreate demo group: %v",
-					packageName, err,
-				)
-			}
+			createAuthGroup(t, deps, "demo", "", demoGrants())
 			createAuthUser(t, deps, "demo-user", "demo-password", "demo")
 			cookie := loginCookie(t, api, "demo-user", "demo-password")
 
 			prefix := strings.TrimSuffix(api.RoutePrefix, "/")
 			if got, want := prefix, srv.routePrefix; got != want {
-				t.Fatalf(
-					"%s\nroute prefix mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Fatalf("API.RoutePrefix mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: every route the API serves.
 			type route struct {
 				path    string
 				methods []string
@@ -2076,45 +1695,34 @@ func TestAPI_DemoMiddleware(t *testing.T) {
 					return nil
 				},
 			); err != nil {
-				t.Fatalf(
-					"%s\nWalk() failed: %v",
-					packageName, err,
-				)
+				t.Fatalf("Router.Walk() failed: %v", err)
 			}
 			if got := len(routes); got < 20 {
-				t.Fatalf(
-					"%s\nWalk() found only %d /api/v1 routes\n%+v",
-					packageName, got, routes,
-				)
+				t.Fatalf("len(routes) mismatch\ngot:  %d\nwant: >= 20", got)
 			}
 
+			// Walking every route makes an unlisted new one fail here, not in the demo.
 			for _, rt := range routes {
 				for _, method := range rt.methods {
 					t.Run(method+" "+rt.path, func(t *testing.T) {
 						unprefixed := strings.TrimPrefix(rt.path, prefix)
-						// SKIP: no session reaches these, so the guard cannot
-						// apply - and calling logout would end this one.
+						// No session reaches these, so the guard cannot apply, and
+						// calling logout would end this one.
 						if openRoutes[unprefixed] {
 							t.Skip("served without a session")
 						}
 
-						// A demo user may only read, and only the reads that
-						// cost the instance nothing.
+						// A demo user may only read, and only reads that cost the instance nothing.
 						wantRefused := !safeMethod(method) || refusedReads[unprefixed]
 
-						// WHEN: the demo user calls the route.
 						target := strings.ReplaceAll(rt.path, "{id}", "no-such-id")
-						w := serveAuth(api, authedRequest(method, target, "{}", cookie))
+						req := authedRequest(method, target, "{}", cookie)
+						w := serveAuth(api, req)
 
-						// THEN: it is refused, or not, as the rule says.
-						// Nothing else runs: a refusal never reaches a handler,
-						// and the reads left do not change state.
 						if got := isDemoRefusal(w); got != wantRefused {
 							t.Errorf(
-								"%s\ndemo guard for %s %s\nrefused mismatch"+
-									"\ngot:  %t\nwant: %t\n%d - %s",
-								packageName, method, rt.path,
-								got, wantRefused, w.Code, w.Body.String(),
+								"isDemoRefusal() mismatch\ngot:  %t (status %d - %q)\nwant: %t",
+								got, w.Code, w.Body.String(), wantRefused,
 							)
 						}
 					})
@@ -2125,26 +1733,25 @@ func TestAPI_DemoMiddleware(t *testing.T) {
 }
 
 func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
-	// GIVEN: the ways a state-changing request escapes the demo guard.
 	tests := []struct {
-		name  string
-		group string
+		name      string
+		demoGroup string
 		// Member of "demo" group, whether it is the configured one or not.
 		asMemberOfDemo bool
 	}{
 		{
 			name:           "the caller is not a member",
-			group:          "demo",
+			demoGroup:      "demo",
 			asMemberOfDemo: false,
 		},
 		{
 			name:           "no group configured",
-			group:          "",
+			demoGroup:      "",
 			asMemberOfDemo: true,
 		},
 		{
 			name:           "another group is configured",
-			group:          "not-the-demo-group",
+			demoGroup:      "not-the-demo-group",
 			asMemberOfDemo: true,
 		},
 	}
@@ -2176,19 +1783,11 @@ func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: writes the package-level flag vars via testAuthServer's Config.Load.
 
-			// AND: an API configured that way, with a member and a non-member.
 			file := strings.ReplaceAll(t.Name(), "/", "_") + ".yml"
-			api, deps, _ := testAuthServer(t, file, withDemoGroup(tc.group))
-			if _, err := deps.Store.CreateGroup(
-				t.Context(), "demo", "", demoGrants(),
-			); err != nil {
-				t.Fatalf(
-					"%s\ncreate demo group: %v",
-					packageName, err,
-				)
-			}
+			api, deps, _ := testAuthServer(t, file, withDemoGroup(tc.demoGroup))
+			createAuthGroup(t, deps, "demo", "", demoGrants())
 			createAuthUser(t, deps, "demo-user", "demo-password", "demo")
 
 			cookie := loginCookie(t, api, "admin", "admin-password")
@@ -2198,15 +1797,12 @@ func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
 
 			for _, route := range routes {
 				t.Run(route.name, func(t *testing.T) {
-					// WHEN: a state-changing route is called.
-					w := serveAuth(api, authedRequest(
-						route.method, apiPath(api, route.path), route.body, cookie))
+					req := authedRequest(route.method, apiPath(api, route.path), route.body, cookie)
+					w := serveAuth(api, req)
 
-					// THEN: the demo guard stays out of the way.
 					if isDemoRefusal(w) {
 						t.Errorf(
-							"%s\ndemo guard refused %s %s\ngot: %d - %s",
-							packageName, route.method, route.path,
+							"isDemoRefusal() mismatch\ngot:  true (status %d - %q)\nwant: false",
 							w.Code, w.Body.String(),
 						)
 					}
@@ -2217,30 +1813,18 @@ func TestAPI_DemoMiddleware__disarmed(t *testing.T) {
 }
 
 func TestAPI_DemoMiddleware__logoutStillWorks(t *testing.T) {
-	// GIVEN: an auth-enabled API and a logged-in demo user.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file, withDemoGroup("demo"))
-	if _, err := deps.Store.CreateGroup(
-		t.Context(), "demo", "", demoGrants(),
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate demo group: %v",
-			packageName, err,
-		)
-	}
+	createAuthGroup(t, deps, "demo", "", demoGrants())
 	createAuthUser(t, deps, "demo-user", "demo-password", "demo")
 	cookie := loginCookie(t, api, "demo-user", "demo-password")
 
-	// WHEN: they log out.
-	w := serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/auth/logout", "", cookie))
+	// Logout sits outside the demo guard.
+	req := authedRequest(http.MethodPost, "/api/v1/auth/logout", "", cookie)
+	w := serveAuth(api, req)
 
-	// THEN: the read-only guard does not hold them in their session.
 	if got, want := w.Code, http.StatusNoContent; got != want {
-		t.Errorf(
-			"%s\nlogout refused for a demo user\ngot:  %d - %s\nwant: %d",
-			packageName, got, w.Body.String(), want,
-		)
+		t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
 }
 
@@ -2251,8 +1835,6 @@ func isDemoRefusal(w *httptest.ResponseRecorder) bool {
 }
 
 func TestCurrentRoutePath(t *testing.T) {
-	// GIVEN: a request matched by a route with a path template, by a route
-	// without one, and by no router at all.
 	tests := []struct {
 		name     string
 		register func(*mux.Router, http.Handler)
@@ -2282,13 +1864,12 @@ func TestCurrentRoutePath(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var got string
+			got := "handler not reached"
 			capture := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 				got = currentRoutePath(r)
 			})
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/users/abc", nil)
 
-			// WHEN: the handler asks for the path it matched.
 			if tc.register == nil {
 				capture.ServeHTTP(httptest.NewRecorder(), req)
 			} else {
@@ -2297,12 +1878,8 @@ func TestCurrentRoutePath(t *testing.T) {
 				router.ServeHTTP(httptest.NewRecorder(), req)
 			}
 
-			// THEN: only a route with a path template gives one.
 			if got != tc.want {
-				t.Errorf(
-					"%s\ncurrentRoutePath() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

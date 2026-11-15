@@ -24,36 +24,75 @@ import (
 	"testing"
 )
 
+func TestRecordedRequest_String(t *testing.T) {
+	tests := []struct {
+		name       string
+		header     http.Header
+		wantMasked bool
+		wantAuth   string
+	}{
+		{
+			name:       "a credential is masked",
+			header:     http.Header{"Authorization": []string{"token s3cret"}},
+			wantMasked: true,
+			wantAuth:   "token s3cret",
+		},
+		{
+			name:       "no credential leaves nothing to mask",
+			header:     http.Header{"If-None-Match": []string{`"abc"`}},
+			wantMasked: false,
+			wantAuth:   "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			request := RecordedRequest{Path: "/repos/o/r/releases", Header: tc.header}
+
+			got := fmt.Sprintf("%v", request)
+
+			if strings.Contains(got, "s3cret") {
+				t.Errorf("RecordedRequest.String() mismatch\ngot:  %q\nwant: NOT %q", got, "s3cret")
+			}
+			if gotMasked := strings.Contains(got, "<redacted>"); gotMasked != tc.wantMasked {
+				t.Errorf(
+					"RecordedRequest.String() masking mismatch\n"+
+						"got:  masked=%t (%q)\nwant: masked=%t",
+					gotMasked, got, tc.wantMasked,
+				)
+			}
+
+			if auth := request.Header.Get("Authorization"); auth != tc.wantAuth {
+				t.Errorf(
+					"RecordedRequest.Header[Authorization] mismatch\ngot:  %q\nwant: %q",
+					auth, tc.wantAuth,
+				)
+			}
+		})
+	}
+}
+
 func TestStart(t *testing.T) {
-	// GIVEN: a Server left with no replies configured.
 	server := &Server{Endpoints: map[string]Endpoint{}}
 
-	// WHEN: it is started.
 	startServing(t, server)
 
-	prefix := packageName + "\nStart()"
-
-	// THEN: the empty-page body falls back to the compact encoding.
 	if got, want := server.EmptyPageBody, "[]"; got != want {
-		t.Errorf(
-			"%s EmptyPageBody mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("Server.EmptyPageBody mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: a Link builder is supplied.
 	if server.NextPageLink == nil {
-		t.Errorf("%s left NextPageLink nil", prefix)
+		t.Error("Server.NextPageLink mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// AND: it is listening.
 	if server.URL == "" {
-		t.Errorf("%s did not set a URL", prefix)
+		t.Error("Server.URL mismatch\ngot:  \"\"\nwant: non-empty")
 	}
 }
 
 func TestStart_doesNotOverrideWhatTheCallerSet(t *testing.T) {
-	// GIVEN: a Server whose replies the caller configured.
 	wantEmptyPage := "[]\n"
 	server := &Server{
 		Endpoints:     map[string]Endpoint{},
@@ -63,30 +102,18 @@ func TestStart_doesNotOverrideWhatTheCallerSet(t *testing.T) {
 		},
 	}
 
-	// WHEN: it is started.
 	startServing(t, server)
 
-	prefix := packageName + "\nStart()"
-
-	// THEN: the caller's empty-page body survives.
 	if got := server.EmptyPageBody; got != wantEmptyPage {
-		t.Errorf(
-			"%s overwrote EmptyPageBody\ngot:  %q\nwant: %q",
-			prefix, got, wantEmptyPage,
-		)
+		t.Errorf("Server.EmptyPageBody mismatch\ngot:  %q\nwant: %q", got, wantEmptyPage)
 	}
 
-	// AND: so does the caller's Link builder.
 	if got, want := server.NextPageLink(nil, 4, 9), "page=4"; got != want {
-		t.Errorf(
-			"%s overwrote NextPageLink\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("Server.NextPageLink() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestRelativeNextPageLink(t *testing.T) {
-	// GIVEN: a request, and the pages to name.
 	tests := []struct {
 		name       string
 		next, last int
@@ -118,16 +145,10 @@ func TestRelativeNextPageLink(t *testing.T) {
 
 			request := httptest.NewRequest(http.MethodGet, "/repos/o/r/releases", nil)
 
-			// WHEN: the Link header is built.
 			got := RelativeNextPageLink(request, tc.next, tc.last)
 
-			// THEN: it names the pages as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRelativeNextPageLink(next=%d, last=%d) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.next, tc.last,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -140,7 +161,6 @@ func TestServer_Serve(t *testing.T) {
 		refusedBody  = `{"message":"no scope"}`
 	)
 
-	// GIVEN: a fixture serving the configured endpoints.
 	tests := []struct {
 		name        string
 		endpoints   map[string]Endpoint
@@ -340,37 +360,19 @@ func TestServer_Serve(t *testing.T) {
 				UnauthorizedBody: refusedBody,
 			})
 
-			// WHEN: the endpoint is requested.
 			response, body := get(t, server, tc.path, tc.header)
 
-			prefix := fmt.Sprintf(
-				"%s\nServer.serve(%q)",
-				packageName, tc.path,
-			)
-
-			// THEN: the status code is as expected.
-			if got := response.StatusCode; got != tc.wantStatus {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.wantStatus,
-				)
+			if got, want := response.StatusCode, tc.wantStatus; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 
-			// AND: the body is as expected.
 			if body != tc.wantBody {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, body, tc.wantBody,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", body, tc.wantBody)
 			}
 
-			// AND: the response headers are as expected.
 			for key, want := range tc.wantHeaders {
 				if got := response.Header.Get(key); got != want {
-					t.Errorf(
-						"%s %s header mismatch\ngot:  %q\nwant: %q",
-						prefix, key, got, want,
-					)
+					t.Errorf("Response.Header[%q] mismatch\ngot:  %q\nwant: %q", key, got, want)
 				}
 			}
 		})
@@ -378,154 +380,74 @@ func TestServer_Serve(t *testing.T) {
 }
 
 func TestServer_Requests(t *testing.T) {
-	// GIVEN: a fixture that has answered a request.
 	server := startServing(t, &Server{
 		Endpoints: map[string]Endpoint{"releases": {Body: "[]"}},
 	})
 	header := http.Header{"If-None-Match": []string{`"abc"`}}
 	get(t, server, "/repos/o/r/releases?page=2&limit=50", header)
 
-	prefix := packageName + "\nServer.Requests()"
-
-	// WHEN: the requests are read.
 	requests := server.Requests()
 
-	// THEN: the one request was recorded.
 	if got, want := len(requests), 1; got != want {
-		t.Fatalf(
-			"%s count mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
+		t.Fatalf("before mutation: len(Server.Requests()) mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// AND: its path, query and headers were all captured.
 	if got, want := requests[0].Path, "/repos/o/r/releases"; got != want {
-		t.Errorf(
-			"%s Path mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("before mutation: RecordedRequest.Path mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 	if got, want := requests[0].Query.Get("page"), "2"; got != want {
 		t.Errorf(
-			"%s Query[page] mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
+			"before mutation: RecordedRequest.Query[page] mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
 	if got, want := requests[0].Header.Get("If-None-Match"), `"abc"`; got != want {
 		t.Errorf(
-			"%s Header[If-None-Match] mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
+			"before mutation: RecordedRequest.Header[If-None-Match] mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
 
-	// AND: the slice is a copy, so a caller cannot disturb the record.
 	requests[0].Path = "mutated"
 	if got, want := server.Requests()[0].Path, "/repos/o/r/releases"; got != want {
 		t.Errorf(
-			"%s handed out the backing slice\ngot:  %q\nwant: %q",
-			prefix, got, want,
+			"after mutation: Server.Requests()[0].Path mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
-	}
-}
-
-func TestRecordedRequest_String(t *testing.T) {
-	// GIVEN: requests carrying a credential, or not.
-	tests := []struct {
-		name       string
-		header     http.Header
-		wantMasked bool
-	}{
-		{
-			name:       "a credential is masked",
-			header:     http.Header{"Authorization": []string{"token s3cret"}},
-			wantMasked: true,
-		},
-		{
-			name:       "no credential leaves nothing to mask",
-			header:     http.Header{"If-None-Match": []string{`"abc"`}},
-			wantMasked: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			request := RecordedRequest{Path: "/repos/o/r/releases", Header: tc.header}
-
-			// WHEN: it is printed the way a failure message does.
-			got := fmt.Sprintf("%v", request)
-
-			prefix := fmt.Sprintf("%s\nRecordedRequest.String()", packageName)
-
-			// THEN: the credential never appears.
-			if strings.Contains(got, "s3cret") {
-				t.Errorf(
-					"%s leaked the credential\ngot:  %s",
-					prefix, got,
-				)
-			}
-			if gotMasked := strings.Contains(got, "<redacted>"); gotMasked != tc.wantMasked {
-				t.Errorf(
-					"%s masking mismatch\ngot:  %s\nwant: masked=%t",
-					prefix, got, tc.wantMasked,
-				)
-			}
-
-			// AND: reading the header still gives the real value.
-			if g, w := request.Header.Get("Authorization"), tc.header.Get("Authorization"); g != w {
-				t.Errorf(
-					"%s must not alter the recorded header\ngot:  %q\nwant: %q",
-					prefix, g, w,
-				)
-			}
-		})
 	}
 }
 
 func TestServer_NotModifiedCount(t *testing.T) {
-	// GIVEN: a fixture serving an endpoint with an ETag.
 	server := startServing(t, &Server{
 		Endpoints: map[string]Endpoint{"releases": {Body: "[]", ETag: `W/"abc"`}},
 	})
 	conditional := http.Header{"If-None-Match": []string{`"abc"`}}
 
-	prefix := packageName + "\nServer.NotModifiedCount()"
-
-	// THEN: it starts at zero.
-	if got := server.NotModifiedCount(); got != 0 {
+	if got, want := server.NotModifiedCount(), 0; got != want {
 		t.Errorf(
-			"%s should start at 0\ngot:  %d",
-			prefix, got,
+			"before any request: Server.NotModifiedCount() mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
 	}
 
-	// WHEN: a request that does not match the ETag is made.
 	get(t, server, "/repos/o/r/releases", nil)
 
-	// THEN: it is not counted.
-	if got := server.NotModifiedCount(); got != 0 {
-		t.Errorf(
-			"%s counted a 200\ngot:  %d\nwant: 0",
-			prefix, got,
-		)
+	if got, want := server.NotModifiedCount(), 0; got != want {
+		t.Errorf("after a 200: Server.NotModifiedCount() mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// WHEN: two conditional requests that do match are made.
 	get(t, server, "/repos/o/r/releases", conditional)
 	get(t, server, "/repos/o/r/releases", conditional)
 
-	// THEN: both are counted.
 	if got, want := server.NotModifiedCount(), 2; got != want {
 		t.Errorf(
-			"%s mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
+			"after two 304s: Server.NotModifiedCount() mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
 	}
 }
 
 func TestStrongETag(t *testing.T) {
-	// GIVEN: an ETag in either spelling.
 	tests := []struct {
 		name string
 		eTag string
@@ -557,16 +479,10 @@ func TestStrongETag(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is normalised.
 			got := StrongETag(tc.eTag)
 
-			// THEN: the value compares as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nStrongETag(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.eTag,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

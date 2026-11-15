@@ -17,12 +17,10 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestMapJoin(t *testing.T) {
-	// GIVEN: a map to join with a separator.
 	tests := []struct {
 		name string
 		m    map[string]string
@@ -52,7 +50,7 @@ func TestMapJoin(t *testing.T) {
 			want: []string{"key:value"},
 		},
 		{
-			name: "multiple entires",
+			name: "multiple entries",
 			m: map[string]string{
 				"a": "5",
 				"b": "6",
@@ -67,21 +65,13 @@ func TestMapJoin(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: MapJoin is called on them.
 			got := MapJoin(tc.m, tc.sep)
 
-			prefix := fmt.Sprintf(
-				"%s\nMapJoin(m=%v, sep=%q)",
-				packageName, tc.m, tc.sep,
-			)
-
-			// THEN: they are joined as expected.
 			if testErr := AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a, b string) bool { return a == b },
-				prefix,
 				"",
 			); testErr != nil {
 				t.Fatal(testErr)

@@ -17,7 +17,7 @@
 package docker
 
 import (
-	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -31,7 +31,6 @@ import (
 // #########################
 
 func TestGHCRRegistry_Check(t *testing.T) {
-	// GIVEN: a GHCRRegistry, and version to check for.
 	tests := []struct {
 		name     string
 		registry GHCRRegistry
@@ -72,7 +71,7 @@ func TestGHCRRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^release-argus\/argus:latest-unknown - tag not found$`,
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerGHCRRepo) + `:latest-unknown - tag not found$`,
 		},
 		{
 			name: "auth, unknown image",
@@ -85,7 +84,7 @@ func TestGHCRRegistry_Check(t *testing.T) {
 				},
 			},
 			version:  "latest",
-			errRegex: `^release-argus\/argus-unknown:latest - tag not found$`,
+			errRegex: `^` + regexp.QuoteMeta(test.ArgusDockerGHCRRepo) + `-unknown:latest - tag not found$`,
 		},
 	}
 
@@ -93,28 +92,16 @@ func TestGHCRRegistry_Check(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nGHCRRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestGHCRRegistry_Check__errors(t *testing.T) {
-	// GIVEN: a GHCRRegistry, and version to check for.
 	tests := []struct {
 		name             string
 		ghcrTokenAddress string
@@ -168,10 +155,10 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 			},
 			version: "latest",
 			errRegex: test.TrimYAML(`
-				^` + test.ArgusDockerGHCRRepo + `:latest
+				^` + regexp.QuoteMeta(test.ArgusDockerGHCRRepo) + `:latest
 					Get "https://.*
 						dial tcp:
-							lookup .* no such host$`,
+							lookup .*$`,
 			),
 		},
 	}
@@ -180,7 +167,7 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps ghcrTokenAddress and ghcrQueryURL.
 
 			if tc.ghcrTokenAddress != "" {
 				ghcrTokenAddress = tc.ghcrTokenAddress
@@ -195,21 +182,10 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 				})
 			}
 
-			// WHEN: Check is called with this version.
 			err := tc.registry.Check(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nGHCRRegistry.Check(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %s",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
@@ -220,7 +196,6 @@ func TestGHCRRegistry_Check__errors(t *testing.T) {
 // #######################
 
 func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
-	// GIVEN: a GHCRAuth and ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name     string
 		data     *GHCRAuth
@@ -254,39 +229,23 @@ func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetQueryToken() is called on it.
 			queryToken, err := tc.data.GetQueryToken(tc.detail)
-
-			prefix := fmt.Sprintf(
-				"%s\nGHCRAuth.GetQueryToken(%+v)",
-				packageName, tc.detail,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s mismatch on queryToken\ngot:  %q\nwant: %q",
-					prefix, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  len=%d\nwant: %q", len(queryToken), tc.want)
 			}
 
-			// AND: the query token expiry time is always valid.
 			if tc.data.queryToken != "" && !isUsable(tc.data.queryToken, tc.data.validUntil) {
 				t.Errorf(
-					"%s returned a queryToken that shouldn't be used\nnow:       %s\nvalidUntil: %s",
-					prefix, time.Now().UTC(), tc.data.validUntil,
+					"isUsable() mismatch\ngot:  false (validUntil=%s, now=%s)\nwant: true",
+					tc.data.validUntil, time.Now().UTC(),
 				)
 			}
 		})
@@ -294,7 +253,6 @@ func TestGHCRAuth_GetQueryToken__integration(t *testing.T) {
 }
 
 func TestGHCRAuth_RefreshQueryToken__integration(t *testing.T) {
-	// GIVEN: a ContainerDetail to fetch a queryToken for.
 	tests := []struct {
 		name         string
 		detail       ContainerDetail
@@ -335,7 +293,7 @@ func TestGHCRAuth_RefreshQueryToken__integration(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're modifying shared vars.
+			// Serial: swaps ghcrTokenAddress.
 
 			if tc.tokenAddress != nil {
 				ghcrTokenAddress = *tc.tokenAddress
@@ -344,29 +302,16 @@ func TestGHCRAuth_RefreshQueryToken__integration(t *testing.T) {
 				})
 			}
 
-			// AND: a GHCRAuth to fetch it with.
 			data := &GHCRAuth{}
 
-			// WHEN: refreshQueryToken() is called on it.
 			queryToken, err := data.refreshQueryToken(tc.detail)
-
-			prefix := fmt.Sprintf(
-				"%s\nGHCRAuth.refreshQueryToken(%+v)",
-				packageName, tc.detail,
-			)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nerror mismatch:\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: if we didn't error, then we received a query token.
 			if err == nil && queryToken == "" {
-				t.Errorf("%s returned an empty queryToken\nwant: non-empty", prefix)
+				t.Error("queryToken mismatch\ngot:  \"\"\nwant: non-empty")
 			}
 		})
 	}

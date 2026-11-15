@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+
+	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestShoutrrrsDefaults_Init(t *testing.T) {
-	// GIVEN: ShoutrrrsDefaults.
 	tests := []struct {
 		name  string
 		dflts ShoutrrrsDefaults
@@ -35,18 +36,9 @@ func TestShoutrrrsDefaults_Init(t *testing.T) {
 		{
 			name: "non-empty",
 			dflts: ShoutrrrsDefaults{
-				"foo": NewDefaults(
-					"discord",
-					nil, nil, nil,
-				),
-				"bar": NewDefaults(
-					"discord",
-					nil, nil, nil,
-				),
-				"charlie": NewDefaults(
-					"discord",
-					nil, nil, nil,
-				),
+				"foo":     &Defaults{},
+				"bar":     &Defaults{},
+				"charlie": &Defaults{},
 			},
 		},
 	}
@@ -55,78 +47,59 @@ func TestShoutrrrsDefaults_Init(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Init() is called on it.
 			tc.dflts.Init()
 
-			// THEN: all options, url_fields, and params are non-nil.
 			for typ, d := range tc.dflts {
-				if d.Options == nil || d.URLFields == nil || d.Params == nil {
-					t.Errorf(
-						"%s didn't initialise maps for %q (%+v)",
-						packageName, typ, d,
-					)
-				}
+				assertMapsInitialised(t, typ, d)
 			}
 		})
 	}
 }
 
 func TestShoutrrrsDefaults_Defaults(t *testing.T) {
-	// GIVEN: ShoutrrrsDefaults.
 	var defaults ShoutrrrsDefaults
 
-	// WHEN: Default() is called on it.
 	defaults.Default()
 
-	prefix := fmt.Sprintf("%s\nShoutrrrsDefaults.Default()", packageName)
-
-	// THEN: the defaults is given keys of all shoutrrr types.
 	for _, typ := range SupportedTypes {
 		if defaults[typ] == nil {
-			t.Errorf(
-				"%s didn't set defaults for %q",
-				prefix, typ,
-			)
+			t.Errorf("ShoutrrrsDefaults[%q] mismatch\ngot:  nil\nwant: non-nil", typ)
 		}
 	}
 
-	// AND: no unexpected types are initialised.
 	for typ := range defaults {
 		if !slices.Contains(SupportedTypes, typ) {
-			t.Errorf(
-				"%s initialised an unexpected notify type: %q",
-				prefix, typ,
-			)
+			t.Errorf("ShoutrrrsDefaults[%q] mismatch\ngot:  present\nwant: absent", typ)
 		}
 	}
 
-	// AND: all options, url_fields, and params are non-nil.
 	for typ, d := range defaults {
-		if d.Options == nil || d.URLFields == nil || d.Params == nil {
-			t.Errorf(
-				"%s didn't initialise the options/url_fields/params for %q correctly:\ngot: %+v",
-				prefix, typ, d,
-			)
-		}
+		assertMapsInitialised(t, typ, d)
+	}
+}
+
+func assertMapsInitialised(t *testing.T, typ string, d *Defaults) {
+	t.Helper()
+
+	fieldTests := []test.FieldAssertion{
+		{Name: "Options", Got: d.Options, Mode: test.CompareNotNil},
+		{Name: "URLFields", Got: d.URLFields, Mode: test.CompareNotNil},
+		{Name: "Params", Got: d.Params, Mode: test.CompareNotNil},
+	}
+	if testErr := test.AssertFields(t, fieldTests, fmt.Sprintf("ShoutrrrsDefaults[%q]", typ)); testErr != nil {
+		t.Error(testErr)
 	}
 }
 
 func TestNotifyDefaultOptions(t *testing.T) {
-	// WHEN: notifyDefaultOptions() is called.
 	got := notifyDefaultOptions()
 
-	prefix := fmt.Sprintf("%s\nnotifyDefaultOptions()", packageName)
-
-	// THEN: we get a map[string]string with some keys/values.
 	if len(got) == 0 {
-		t.Fatalf("%s gave 0 keys. want 1+", prefix)
+		t.Fatal("length mismatch\ngot:  0\nwant: 1+")
 	}
 	for k, v := range got {
 		if v == "" {
-			t.Errorf(
-				"%s gave empty value for key %q. want non-empty",
-				prefix, k,
-			)
+			t.Errorf("options[%q] mismatch\ngot:  \"\"\nwant: non-empty", k)
 		}
 	}
 }

@@ -18,8 +18,7 @@ package test
 
 import "slices"
 
-// MapJoin returns a slice containing each key-value pair in m joined by sep.
-// The returned elements are sorted by key.
+// MapJoin returns a slice containing each key-value pair in m joined by sep, sorted.
 func MapJoin[K, V ~string](m map[K]V, sep string) []string {
 	out := make([]string, 0, len(m))
 

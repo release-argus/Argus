@@ -17,7 +17,6 @@
 package command
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -33,7 +32,6 @@ import (
 )
 
 func TestNewController(t *testing.T) {
-	// GIVEN: a Command.
 	tests := []struct {
 		name              string
 		command           Commands
@@ -60,24 +58,12 @@ func TestNewController(t *testing.T) {
 			},
 		},
 		{
-			name: "nil Notifiers",
-			command: Commands{
-				{"date", "+%m-%d-%Y"},
-			},
-		},
-		{
 			name: "non-nil Notifiers",
 			command: Commands{
 				{"date", "+%m-%d-%Y"},
 			},
 			shoutrrrNotifiers: shoutrrr.Shoutrrrs{
 				"test": shoutrrrtest.Shoutrrr(t, false, false),
-			},
-		},
-		{
-			name: "nil parentInterval",
-			command: Commands{
-				{"date", "+%m-%d-%Y"},
 			},
 		},
 		{
@@ -93,14 +79,12 @@ func TestNewController(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Status.
 			svcStatus := status.Status{
 				ServiceInfo: serviceinfo.ServiceInfo{
 					ID: "TestNewController",
 				},
 			}
 
-			// WHEN: a controller is created with NewController.
 			controller := NewController(
 				&svcStatus,
 				tc.command,
@@ -108,197 +92,95 @@ func TestNewController(t *testing.T) {
 				tc.parentInterval,
 			)
 
-			prefix := fmt.Sprintf("%s\nNewController()", packageName)
-
-			// THEN: the result is expected.
-			if controller == nil {
-				if !tc.expectNil {
-					t.Fatalf(
-						"%s result mismatch\ngot:  nil\nwant: non-nil",
-						prefix,
-					)
+			if tc.expectNil {
+				if controller != nil {
+					t.Fatal("controller mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
-			// 	command:
-			if err := test.AssertSlicesEqualFunc(
+			if controller == nil {
+				t.Fatal("controller mismatch\ngot:  nil\nwant: non-nil")
+			}
+
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				controller.Command,
 				tc.command,
 				func(a, b Command) bool { return util.AreSlicesEqual(a, b) },
-				prefix,
-				"Command",
-			); err != nil {
-				t.Fatal(err)
+				"Controller.Command",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
-			// Pointers:
+
 			fieldTests := []test.FieldAssertion{
 				{Name: "ServiceStatus", Got: controller.ServiceStatus, Want: &svcStatus, Mode: test.CompareSamePointer},
 				{Name: "ParentInterval", Got: controller.ParentInterval, Want: tc.parentInterval, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Controller"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Controller"); testErr != nil {
+				t.Fatal(testErr)
 			}
-			// Notifiers.
-			if err := test.AssertMapEqual(
+
+			if testErr := test.AssertMapEqual(
 				t,
 				controller.Notifiers.Shoutrrr,
 				tc.shoutrrrNotifiers,
-				prefix,
-				"Notifier",
-			); err != nil {
-				t.Fatal(err)
+				"Controller.Notifiers.Shoutrrr",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestController_Metrics(t *testing.T) {
-	// GIVEN: a Controller with multiple Commands.
-	controller := NewController(
-		&status.Status{
-			ServiceInfo: serviceinfo.ServiceInfo{
-				ID: t.Name(),
-			},
-		},
-		Commands{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"},
-		},
-		nil,
-		new("11m"),
-	)
-	controller.Failed.Set(1, false)
-	controller.Failed.Set(2, true)
-	nextRunnables := []time.Time{
-		time.Now().UTC(),
-		time.Now().UTC().Add(-time.Minute),
-		time.Now().UTC().Add(time.Minute),
-	}
-	for i := range nextRunnables {
-		controller.SetNextRunnable(i, nextRunnables[i])
-	}
+	controller, _ := testRunnableController(t.Name())
 
-	// WHEN: the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.CommandResultTotal)
 	hadG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
 	controller.InitMetrics()
 
-	prefix := fmt.Sprintf("%s\nInitMetrics()", packageName)
+	test.AssertMetricCount(
+		t, "non-nil: Controller.InitMetrics() CommandResultTotal",
+		metric.CommandResultTotal, hadC+2*len(controller.Command),
+	)
+	test.AssertMetricCount(
+		t, "non-nil: Controller.InitMetrics() LatestVersionIsDeployed",
+		metric.LatestVersionIsDeployed, hadG,
+	)
 
-	// THEN: it can be collected.
-	// 	Counters:
-	gotC := testutil.CollectAndCount(metric.CommandResultTotal)
-	wantC := 2 * len(controller.Command)
-	if delta := gotC - hadC; delta != wantC {
-		t.Errorf(
-			"%s Counter metrics mismatch\ngot:  %d\nwant:  %d",
-			prefix, delta, wantC,
-		)
-	}
-	// 	Gauges:
-	gotG := testutil.CollectAndCount(metric.LatestVersionIsDeployed)
-	wantG := 0
-	if delta := gotG - hadG; delta != wantG {
-		t.Errorf(
-			"%s Gauge metrics mismatch\ngot:	%d\nwant:  %d",
-			prefix, delta, wantG,
-		)
-	}
-
-	prefix = fmt.Sprintf("%s\nDeleteMetrics()", packageName)
-
-	// AND: it can be deleted.
-	// 	Counters:
 	controller.DeleteMetrics()
-	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
-	if gotC != hadC {
-		t.Errorf(
-			"%s\nCounter metrics mismatch\ngot:	%d\nwant: %d",
-			prefix, gotC, hadC,
-		)
-	}
-	// 	Gauges:
-	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
-	if gotG != hadG {
-		t.Errorf(
-			"%s Gauge metrics mismatch\ngot:  %d\nwant: %d",
-			prefix, gotG, hadG,
-		)
-	}
+	test.AssertMetricCount(
+		t, "non-nil: Controller.DeleteMetrics() CommandResultTotal",
+		metric.CommandResultTotal, hadC,
+	)
+	test.AssertMetricCount(
+		t, "non-nil: Controller.DeleteMetrics() LatestVersionIsDeployed",
+		metric.LatestVersionIsDeployed, hadG,
+	)
 
-	prefix = fmt.Sprintf("%s\nInitMetrics()", packageName)
-
-	// AND: a nil Controller doesn't panic.
 	controller = nil
-	// InitMetrics:
 	controller.InitMetrics()
-	// 	Counter:
-	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
-	if gotC != hadC {
-		t.Errorf(
-			"%s on nil Controller shouldn't have changed the Counter metrics\ngot:  %d\nwant: %d",
-			prefix, gotC, hadC,
-		)
-	}
-	// 	Gauges:
-	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
-	if gotG != hadG {
-		t.Errorf(
-			"%s on nil Controller shouldn't have changed the Gauge metrics\ngot:  %d\nwant: %d",
-			prefix, gotG, hadG,
-		)
-	}
-
-	prefix = fmt.Sprintf("%s\nDeleteMetrics()", packageName)
-
-	// DeleteMetrics:
+	test.AssertMetricCount(
+		t, "nil: Controller.InitMetrics() CommandResultTotal",
+		metric.CommandResultTotal, hadC,
+	)
+	test.AssertMetricCount(
+		t, "nil: Controller.InitMetrics() LatestVersionIsDeployed",
+		metric.LatestVersionIsDeployed, hadG,
+	)
 	controller.DeleteMetrics()
-	// 	Counters:
-	gotC = testutil.CollectAndCount(metric.CommandResultTotal)
-	if gotC != hadC {
-		t.Errorf(
-			"%s on nil Controller shouldn't have changed the Counter metrics\ngot:  %d\nwant: %d",
-			prefix, gotC, hadC,
-		)
-	}
-	// 	Gauges:
-	gotG = testutil.CollectAndCount(metric.LatestVersionIsDeployed)
-	if gotG != hadG {
-		t.Errorf(
-			"%s on nil Controller shouldn't have changed the Gauge metrics\ngot:  %d\nwant: %d",
-			prefix, gotG, hadG,
-		)
-	}
+	test.AssertMetricCount(
+		t, "nil: Controller.DeleteMetrics() CommandResultTotal",
+		metric.CommandResultTotal, hadC,
+	)
+	test.AssertMetricCount(
+		t, "nil: Controller.DeleteMetrics() LatestVersionIsDeployed",
+		metric.LatestVersionIsDeployed, hadG,
+	)
 }
 
 func TestController_IsRunnable(t *testing.T) {
-	// GIVEN: a Controller with various Commands.
-	controller := NewController(
-		&status.Status{
-			ServiceInfo: serviceinfo.ServiceInfo{
-				ID: "service_id",
-			},
-		},
-		Commands{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"},
-		},
-		nil,
-		new("11m"),
-	)
-	controller.Failed.Set(1, false)
-	controller.Failed.Set(2, true)
-	nextRunnables := []time.Time{
-		time.Now().UTC(),
-		time.Now().UTC().Add(-time.Minute),
-		time.Now().UTC().Add(time.Minute),
-	}
-	for i := range nextRunnables {
-		controller.SetNextRunnable(i, nextRunnables[i])
-	}
+	controller, _ := testRunnableController("service_id")
 	tests := []struct {
 		name  string
 		index int
@@ -331,15 +213,12 @@ func TestController_IsRunnable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsRunnable is called.
 			got := controller.IsRunnable(tc.index)
 
-			// THEN: the result is expected.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nController IsRunnable(%d) mismatch (%+v)\ngot:  %t\nwant: %t",
-					packageName, tc.index, controller.nextRunnable,
-					got, tc.want,
+					"mismatch (NextRunnable=%s)\ngot:  %t\nwant: %t",
+					controller.NextRunnable(tc.index), got, tc.want,
 				)
 			}
 		})
@@ -347,58 +226,28 @@ func TestController_IsRunnable(t *testing.T) {
 }
 
 func TestController_NextRunnable(t *testing.T) {
-	// GIVEN: a Controller with various Commands.
-	controller := NewController(
-		&status.Status{
-			ServiceInfo: serviceinfo.ServiceInfo{
-				ID: "service_id",
-			},
-		},
-		Commands{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"},
-		},
-		nil,
-		new("11m"),
-	)
-	controller.Failed.Set(1, false)
-	controller.Failed.Set(2, true)
-	nextRunnables := []time.Time{
-		time.Now().UTC(),
-		time.Now().UTC().Add(-time.Minute),
-		time.Now().UTC().Add(time.Minute),
-	}
-	for i := range nextRunnables {
-		controller.SetNextRunnable(i, nextRunnables[i])
-	}
+	controller, nextRunnables := testRunnableController("service_id")
 	tests := []struct {
 		name       string
 		index      int
-		setTo      time.Time
-		want       bool
 		outOfRange bool
 	}{
 		{
 			name:  "NextRunnable just passed",
 			index: 0,
-			want:  true,
 		},
 		{
 			name:  "NextRunnable a minute ago",
 			index: 1,
-			want:  true,
 		},
 		{
 			name:  "NextRunnable in a minute",
 			index: 2,
-			want:  false,
 		},
 		{
 			name:       "NextRunnable out of range",
 			index:      3,
 			outOfRange: true,
-			want:       false,
 		},
 	}
 
@@ -406,55 +255,21 @@ func TestController_NextRunnable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: NextRunnable is called.
 			got := controller.NextRunnable(tc.index)
 
-			// THEN: the result is expected.
-			if tc.outOfRange {
-				var defaultTime time.Time
-				// out-of-range index should return the default time.
-				if got != defaultTime {
-					t.Fatalf(
-						"%s\nController.NextRunnable(%d) out of range index (length=%d)\ngot:  %s\nwant:  %s",
-						packageName, tc.index, len(controller.Command),
-						got, defaultTime,
-					)
-				}
-			} else if want := controller.nextRunnable[tc.index]; got != want {
-				t.Fatalf(
-					"%s\nController.NextRunnable(%d) mismatch\ngot:  %s\nwant: %s",
-					packageName, tc.index,
-					got, want,
-				)
+			var want time.Time
+			if !tc.outOfRange {
+				want = nextRunnables[tc.index]
+			}
+			if !got.Equal(want) {
+				t.Fatalf("mismatch\ngot:  %s\nwant: %s", got, want)
 			}
 		})
 	}
 }
 
 func TestController_SetNextRunnable(t *testing.T) {
-	// GIVEN: a Controller with various Commands.
-	controller := NewController(
-		&status.Status{
-			ServiceInfo: serviceinfo.ServiceInfo{
-				ID: "service_id",
-			},
-		},
-		Commands{
-			{"date", "+%m-%d-%Y"},
-			{"true"},
-			{"false"},
-		},
-		nil,
-		new("11m"),
-	)
-	controller.Failed.Set(1, false)
-	controller.Failed.Set(2, true)
-	nextRunnables := []time.Time{
-		time.Now().UTC(),
-		time.Now().UTC().Add(-time.Minute),
-		time.Now().UTC().Add(time.Minute),
-	}
-
+	controller, nextRunnables := testRunnableController("service_id")
 	tests := []struct {
 		name  string
 		index int
@@ -484,39 +299,30 @@ func TestController_SetNextRunnable(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: shares controller and resets its NextRunnables.
 
-			// Reset nextRunnables.
 			for i := range nextRunnables {
 				controller.SetNextRunnable(i, nextRunnables[i])
 			}
 
-			// WHEN: SetNextRunnable is called.
 			controller.SetNextRunnable(tc.index, tc.setTo)
 
-			prefix := fmt.Sprintf(
-				"%s\nController.SetNextRunnable(index=%d, value=%q)",
-				packageName, tc.index, tc.setTo,
-			)
-
-			// THEN: the NextRunnable is changed if the index is in range.
 			if tc.index < len(controller.Command) {
 				got := controller.NextRunnable(tc.index)
 				if !got.Equal(tc.setTo) {
 					t.Errorf(
-						"%s NextRunnable[%d] not set correctly\ngot:  %s\nwant: %s",
-						prefix, tc.index,
+						"Controller.NextRunnable() mismatch\ngot:  %s\nwant: %s",
 						got, tc.setTo,
 					)
 				}
 			} else {
-				// Ensure an out of range index does not panic and does not change anything.
+				// An out-of-range index changes nothing.
 				for i := range nextRunnables {
 					got := controller.NextRunnable(i)
 					if !got.Equal(nextRunnables[i]) {
 						t.Errorf(
-							"%s index out of range should not change nextRunnable (len=%d)\ngot:  %s\nwant: %s",
-							packageName, len(controller.Command),
-							got, nextRunnables[i],
+							"Controller.NextRunnable(%d) mismatch\ngot:  %s\nwant: %s",
+							i, got, nextRunnables[i],
 						)
 					}
 				}
@@ -526,7 +332,6 @@ func TestController_SetNextRunnable(t *testing.T) {
 }
 
 func TestController_SetExecuting(t *testing.T) {
-	// GIVEN: a Controller with various Commands.
 	controller := NewController(
 		&status.Status{
 			ServiceInfo: serviceinfo.ServiceInfo{
@@ -555,10 +360,8 @@ func TestController_SetExecuting(t *testing.T) {
 		timeDifferenceMin, timeDifferenceMax time.Duration
 	}{
 		{
-			name:              "index out of range",
-			index:             6,
-			timeDifferenceMin: -time.Second,
-			timeDifferenceMax: time.Second,
+			name:  "index out of range",
+			index: 6,
 		},
 		{
 			name:              "command that hasn't been run and isn't currently running",
@@ -576,14 +379,14 @@ func TestController_SetExecuting(t *testing.T) {
 		{
 			name:              "command that didn't fail and isn't currently running",
 			index:             1,
-			timeDifferenceMin: 22*time.Minute - time.Second,
+			timeDifferenceMin: 22*time.Minute - time.Second, // 2× the 11m interval.
 			timeDifferenceMax: 22*time.Minute + time.Second,
 		},
 		{
 			name:              "command that didn't fail and is currently running",
 			index:             4,
 			executing:         true,
-			timeDifferenceMin: time.Hour + (22*time.Minute - time.Second),
+			timeDifferenceMin: time.Hour + (22*time.Minute - time.Second), // 2× the 11m interval.
 			timeDifferenceMax: time.Hour + (22*time.Minute + time.Second),
 		},
 		{
@@ -603,26 +406,39 @@ func TestController_SetExecuting(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: reads every NextRunnable, which the parallel rows change.
+
+			if tc.index >= len(controller.Command) {
+				before := make([]time.Time, len(controller.Command))
+				for i := range before {
+					before[i] = controller.NextRunnable(i)
+				}
+
+				controller.SetExecuting(tc.index, tc.executing)
+
+				for i := range before {
+					if got := controller.NextRunnable(i); !got.Equal(before[i]) {
+						t.Errorf(
+							"Controller.NextRunnable(%d) mismatch\ngot:  %s\nwant: %s",
+							i, got, before[i],
+						)
+					}
+				}
+				return
+			}
 			t.Parallel()
 
-			// WHEN: SetNextRunnable is called.
 			ranAt := time.Now().UTC()
 			controller.SetExecuting(tc.index, tc.executing)
 
-			// THEN: the result is expected.
-			got := ranAt
-			if tc.index < len(controller.Command) {
-				got = controller.NextRunnable(tc.index)
-			}
+			got := controller.NextRunnable(tc.index)
 			minTime := ranAt.Add(tc.timeDifferenceMin)
 			maxTime := ranAt.Add(tc.timeDifferenceMax)
 			if !(minTime.Before(got)) || !(maxTime.After(got)) {
 				t.Fatalf(
-					"%s\n[%d]NextRunnable not set correctly\nran at\n%s\ngot:\n%s\nwant between:\n%s and\n%s",
-					packageName, tc.index,
-					ranAt,
-					got,
-					minTime, maxTime,
+					"Controller.NextRunnable() mismatch (ran at %s)\n"+
+						"got:  %s\nwant: between %s and %s",
+					ranAt, got, minTime, maxTime,
 				)
 			}
 		})

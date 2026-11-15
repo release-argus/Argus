@@ -18,7 +18,7 @@ package decode
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 
@@ -33,27 +33,24 @@ type testChild struct {
 	C string `yaml:"c"`
 }
 
-func TestNewYAMLEncoder_Indent(t *testing.T) {
-	// GIVEN: an amount of spaces to indent with.
+func TestNewYAMLEncoder__indent(t *testing.T) {
 	tests := []struct {
+		name   string
 		spaces int
 	}{
-		{spaces: 2},
-		{spaces: 4},
-		{spaces: 8},
-		{spaces: 16},
+		{name: "2 spaces", spaces: 2},
+		{name: "4 spaces", spaces: 4},
+		{name: "8 spaces", spaces: 8},
+		{name: "16 spaces", spaces: 16},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("%d spaces", tc.spaces)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a NewYAMLEncoder created with this indent count.
 			var buf bytes.Buffer
 			enc := NewYAMLEncoder(&buf, tc.spaces)
 
-			// AND: a struct to encode with it.
 			txt := "hello"
 			a := testParent{
 				A: txt,
@@ -62,27 +59,19 @@ func TestNewYAMLEncoder_Indent(t *testing.T) {
 				},
 			}
 
-			// WHEN: the struct is encoded.
-			if err := enc.Encode(a); err != nil {
-				t.Fatalf(
-					"%s\nNewYAMLEncoder.Encode() error = %v",
-					packageName, err,
-				)
+			err := enc.Encode(a)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
-			baseResult := "a: hello\nb:\n  c: hello\n"
 
-			// THEN: the result is as expected.
 			got := buf.String()
 			want := strings.ReplaceAll(
-				baseResult,
+				"a: hello\nb:\n  c: hello\n",
 				"b:\n  ",
 				"b:\n"+strings.Repeat(" ", tc.spaces),
 			)
 			if got != want {
-				t.Errorf(
-					"%s\nNewYAMLEncoder.Encode() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -101,41 +90,32 @@ func (m testInterfaceMarshaler) MarshalYAML() (any, error) {
 	}, nil
 }
 
-func TestNewYAMLEncoder__NestedMarshaler(t *testing.T) {
-	// GIVEN: an amount of spaces to indent with.
+func TestNewYAMLEncoder__nestedMarshaler(t *testing.T) {
 	tests := []struct {
+		name   string
 		spaces int
 	}{
-		{spaces: 2},
-		{spaces: 4},
-		{spaces: 8},
+		{name: "2 spaces", spaces: 2},
+		{name: "4 spaces", spaces: 4},
+		{name: "8 spaces", spaces: 8},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("%d spaces", tc.spaces)
-		t.Run(name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a NewYAMLEncoder created with this indent count.
 			var buf bytes.Buffer
 			enc := NewYAMLEncoder(&buf, tc.spaces)
 
-			// AND: a struct containing a type with a custom yaml.Marshaler.
 			a := struct {
 				Service testInterfaceMarshaler `yaml:"service"`
 			}{}
 
-			prefix := fmt.Sprintf("%s\nNewYAMLEncoder.Encode()", packageName)
-
-			// WHEN: the struct is encoded.
-			if err := enc.Encode(a); err != nil {
-				t.Fatalf(
-					"%s error = %v",
-					prefix, err,
-				)
+			err := enc.Encode(a)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// THEN: the custom-marshaled subtree indents uniformly with the document.
 			indent := strings.Repeat(" ", tc.spaces)
 			got := buf.String()
 			want := "service:\n" +
@@ -143,98 +123,71 @@ func TestNewYAMLEncoder__NestedMarshaler(t *testing.T) {
 				indent + "b:\n" +
 				indent + indent + "c: hello\n"
 			if got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
 
-func TestNewYAMLEncoder_IndentSequence(t *testing.T) {
-	// GIVEN: a YAML encoder.
+func TestNewYAMLEncoder__indentSequence(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewYAMLEncoder(&buf, 2)
 
-	// WHEN: a sequence is encoded.
 	seq := []string{"hello", "world"}
-	if err := enc.Encode(seq); err != nil {
-		t.Fatalf(
-			"%s\nNewYAMLEncoder.Encode() error = %v",
-			packageName, err,
-		)
+	err := enc.Encode(seq)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the result is as expected.
 	got := buf.String()
 	want := "  - hello\n  - world\n"
 	if got != want {
-		t.Errorf(
-			"%s\nNewYAMLEncoder.Encode() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
-func TestNewYAMLEncoder_UseLiteralStyleIfMultiline(t *testing.T) {
-	// GIVEN: a YAML encoder.
+func TestNewYAMLEncoder__useLiteralStyleIfMultiline(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewYAMLEncoder(&buf, 2)
 
-	// WHEN: a multiline string is encoded.
 	str := "hello\nworld"
-	if err := enc.Encode(str); err != nil {
-		t.Fatalf(
-			"%s\nNewYAMLEncoder.Encode() error = %v",
-			packageName, err,
-		)
+	err := enc.Encode(str)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the result is as expected.
 	got := buf.String()
 	want := "|-\n  hello\n  world\n"
 	if got != want {
-		t.Errorf(
-			"%s\nNewYAMLEncoder.Encode() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
-func TestNewYAMLEncoder_UseSingleQuote(t *testing.T) {
-	// GIVEN: a YAML encoder.
+func TestNewYAMLEncoder__useSingleQuote(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewYAMLEncoder(&buf, 2)
 
-	// WHEN: a string of numbers is encoded.
 	str := "123"
-	if err := enc.Encode(str); err != nil {
-		t.Fatalf(
-			"%s\nNewYAMLEncoder.Encode() error = %v",
-			packageName, err,
-		)
+	err := enc.Encode(str)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the result is as expected.
 	got := buf.String()
+	// Quoted so it is not read back as a number.
 	want := "'123'\n"
 	if got != want {
-		t.Errorf(
-			"%s\nNewYAMLEncoder.Encode() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 type customErrorMarshal struct{}
 
 func (c customErrorMarshal) MarshalYAML() (any, error) {
-	return nil, fmt.Errorf("intentional marshal error")
+	return nil, errors.New("intentional marshal error")
 }
 
 func TestToYAMLString(t *testing.T) {
-	// GIVEN: a struct to print in YAML format.
 	tests := []struct {
 		name     string
 		input    any
@@ -282,7 +235,7 @@ func TestToYAMLString(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"ToYAMLString",
 				func(prefix string) string {
 					return ToYAMLString(tc.input, prefix)
 				},

@@ -17,25 +17,24 @@
 package web
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	dockertest "github.com/release-argus/Argus/service/latest_version/filter/docker/test"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
 
 func TestLookup_Init(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 
 	type want struct {
 		requireHasDockerDefaults bool
 	}
 
-	// GIVEN: a YAML string.
 	tests := []struct {
 		name      string
 		overrides string
@@ -119,62 +118,53 @@ func TestLookup_Init(t *testing.T) {
 			options := &opt.Options{}
 			svcStatus := &status.Status{}
 			l := &Lookup{}
-			// overrides.
 			err := l.UnmarshalYAML([]byte(tc.overrides))
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal overrides: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.UnmarshalYAML() failed: %v", err)
 			}
-			requireData, _ := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			requireData, err := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+			if err != nil {
+				t.Fatalf("polymorphic.Extract() failed: %v", err)
+			}
 			req, err := filter.Decode(
 				"yaml", requireData,
 				l.Status,
 				&lvCfg.Soft.Require,
 			)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal require overrides: %v",
-					packageName, err,
-				)
+				t.Fatalf("filter.Decode() failed: %v", err)
 			}
 			l.SetRequire(req)
 
-			// WHEN: Init is called with it.
 			l.Init(options, svcStatus, lvCfg)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Init(options=%p, status=%p, defaults=%v)",
-				packageName, options, &svcStatus, lvCfg,
-			)
-
-			// THEN: pointers to those vars are handed out to the Lookup.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: l.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: l.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: the Require is given the correct defaults.
 			if l.Require != nil && l.Require.Docker != nil {
-				dockerType := l.Require.Docker.GetType()
-				wantDefaults, _ := dockertest.GetDefaultOfDockerType(t, dockerType, &lvCfg.Soft.Require.Docker)
+				wantDefaults, err := dockertest.GetDefaultOfDockerType(
+					t,
+					l.Require.Docker.GetType(),
+					&lvCfg.Soft.Require.Docker,
+				)
+				if err != nil {
+					t.Fatalf("dockertest.GetDefaultOfDockerType() failed: %v", err)
+				}
 				if got := l.Require.Docker.Defaults(); got != wantDefaults {
 					t.Errorf(
-						"%s .Require.Docker.Defaults was not handed to the Lookup correctly\ngot:  %v\nwant: %v",
-						prefix, got, wantDefaults,
+						"Lookup.Require.Docker.Defaults() mismatch\ngot:  %p\nwant: %p",
+						got, wantDefaults,
 					)
 				}
 			} else if tc.want.requireHasDockerDefaults {
-				t.Errorf(
-					"%s .Require.Docker was not handed to the Lookup\ngot: Require=%v",
-					prefix, l.Require,
-				)
+				t.Error("Lookup.Require.Docker mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}

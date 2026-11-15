@@ -17,15 +17,13 @@
 package util
 
 import (
-	"fmt"
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestCopySlice(t *testing.T) {
-	// GIVEN: a set of int slices.
 	tests := []struct {
 		name      string
 		had, want []int
@@ -51,34 +49,23 @@ func TestCopySlice(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: CopySlice is called on a list.
 			result := CopySlice(tc.had)
 
-			prefix := fmt.Sprintf("%s\nCopySlice()", packageName)
-
-			// THEN: the copy is successful.
-			if gotLen, wantLen := len(result), len(tc.want); gotLen != wantLen {
-				t.Fatalf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
+			if !slices.Equal(result, tc.want) {
+				t.Fatalf("copy mismatch\ngot:  %v\nwant: %v", result, tc.want)
 			}
-			for i := range result {
-				if got, want := result[i], tc.want[i]; got != want {
-					t.Fatalf(
-						"%s mismatch at index %d\ngot:  %v (%+v)\nwant: %v (%+v)",
-						prefix, i,
-						got, result,
-						want, tc.want,
-					)
-				}
+
+			if len(result) != 0 && &result[0] == &tc.had[0] {
+				t.Errorf(
+					"copy aliases the original\ngot:  %p\nwant: NOT %p",
+					&result[0], &tc.had[0],
+				)
 			}
 		})
 	}
 }
 
 func TestSliceReplace(t *testing.T) {
-	// GIVEN: a slice and an element to replace at a given index.
 	tests := []struct {
 		name      string
 		had, want []int
@@ -86,56 +73,56 @@ func TestSliceReplace(t *testing.T) {
 		index     int
 	}{
 		{
-			name:   "insert at beginning",
+			name:   "replace at beginning",
 			had:    []int{1, 2, 3},
 			insert: []int{0},
 			index:  0,
 			want:   []int{0, 2, 3},
 		},
 		{
-			name:   "insert at end",
+			name:   "replace at end",
 			had:    []int{1, 2, 3},
 			insert: []int{4},
 			index:  2,
 			want:   []int{1, 2, 4},
 		},
 		{
-			name:   "insert in middle",
+			name:   "replace in middle",
 			had:    []int{1, 2, 4, 5},
 			insert: []int{3},
 			index:  2,
 			want:   []int{1, 2, 3, 5},
 		},
 		{
-			name:   "insert multiple elements",
+			name:   "replace with multiple elements",
 			had:    []int{1, 2, 5, 6},
 			insert: []int{3, 4, 5},
 			index:  2,
 			want:   []int{1, 2, 3, 4, 5, 6},
 		},
 		{
-			name:   "insert single into empty list",
+			name:   "single into empty list",
 			had:    []int{},
 			insert: []int{1},
 			index:  0,
 			want:   []int{1},
 		},
 		{
-			name:   "insert multiple into empty list",
+			name:   "multiple into empty list",
 			had:    []int{},
 			insert: []int{1, 2, 3},
 			index:  0,
 			want:   []int{1, 2, 3},
 		},
 		{
-			name:   "insert at out of range index",
+			name:   "replace at out of range index",
 			had:    []int{1, 2, 3},
 			insert: []int{4, 5},
 			index:  5,
 			want:   []int{1, 2, 4, 5},
 		},
 		{
-			name:   "insert at negative index",
+			name:   "replace at negative index",
 			had:    []int{1, 2, 3},
 			insert: []int{0},
 			index:  -1,
@@ -147,23 +134,9 @@ func TestSliceReplace(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: SliceReplace is called on a slice.
 			got := SliceReplace(tc.had, tc.index, tc.insert)
 
-			prefix := fmt.Sprintf(
-				"%s\nSliceReplace(slice=%v, index=%d, insert=%v)",
-				packageName, tc.had, tc.index, tc.insert,
-			)
-
-			// THEN: the replacement is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				got,
-				tc.want,
-				func(a, b int) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, got, tc.want, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -171,7 +144,6 @@ func TestSliceReplace(t *testing.T) {
 }
 
 func TestSwapRanges(t *testing.T) {
-	// GIVEN: a set of slices.
 	tests := []struct {
 		name         string
 		had, want    []int
@@ -179,7 +151,7 @@ func TestSwapRanges(t *testing.T) {
 		bStart, bEnd int
 	}{
 		{
-			name:   "handles []int",
+			name:   "indices wrong way round",
 			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			want:   []int{0, 7, 8, 9, 2, 3, 4, 5, 6, 1},
 			aStart: 7, aEnd: 9,
@@ -213,39 +185,15 @@ func TestSwapRanges(t *testing.T) {
 			aStart: 1, aEnd: 1,
 			bStart: 7, bEnd: 9,
 		},
-		{
-			name:   "indices wrong way round",
-			had:    []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
-			want:   []int{0, 7, 8, 9, 2, 3, 4, 5, 6, 1},
-			aStart: 7, aEnd: 9,
-			bStart: 1, bEnd: 1,
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: SwapRanges is called on them.
 			result := SwapRanges(tc.had, tc.aStart, tc.aEnd, tc.bStart, tc.bEnd)
 
-			prefix := fmt.Sprintf(
-				"%s\nSwapRanges(%v, indexes %d-%d with %d-%d)",
-				packageName,
-				tc.had,
-				tc.aEnd, tc.bStart,
-				tc.bEnd, tc.aEnd,
-			)
-
-			// THEN: the swap is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				result,
-				tc.want,
-				func(a, b int) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, result, tc.want, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -253,7 +201,6 @@ func TestSwapRanges(t *testing.T) {
 }
 
 func TestReplaceFirst_String(t *testing.T) {
-	// GIVEN: a slice and a new value for a given element in it.
 	tests := []struct {
 		name          string
 		had, want     []string
@@ -293,23 +240,9 @@ func TestReplaceFirst_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ReplaceFirst is called on a list.
 			result := ReplaceFirst(tc.had, tc.replace, tc.with)
 
-			prefix := fmt.Sprintf(
-				"%s\nReplaceFirst(slice=%v, old=%v, new=%v)",
-				packageName, tc.had, tc.replace, tc.with,
-			)
-
-			// THEN: the Replacement is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				result,
-				tc.want,
-				func(a, b string) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, result, tc.want, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -317,7 +250,6 @@ func TestReplaceFirst_String(t *testing.T) {
 }
 
 func TestRemoveFirst_Int(t *testing.T) {
-	// GIVEN: a set of lists.
 	tests := []struct {
 		name            string
 		removeInt       int
@@ -353,23 +285,9 @@ func TestRemoveFirst_Int(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RemoveFirst is called on a list.
 			gotInt := RemoveFirst(tc.hadInt, tc.removeInt)
 
-			prefix := fmt.Sprintf(
-				"%s\nRemoveElement(from=%v, target=%v)",
-				packageName, tc.hadInt, tc.removeInt,
-			)
-
-			// THEN: the Removal is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				gotInt,
-				tc.wantInt,
-				func(a, b int) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, gotInt, tc.wantInt, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -377,7 +295,6 @@ func TestRemoveFirst_Int(t *testing.T) {
 }
 
 func TestRemoveFirst_String(t *testing.T) {
-	// GIVEN: a string slice.
 	tests := []struct {
 		name      string
 		remove    string
@@ -407,23 +324,9 @@ func TestRemoveFirst_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RemoveFirst is called on a list.
 			got := RemoveFirst(tc.had, tc.remove)
 
-			prefix := fmt.Sprintf(
-				"%s\nRemoveElement(from=%v, target=%v)",
-				packageName, tc.had, tc.remove,
-			)
-
-			// THEN: the Removal is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				got,
-				tc.want,
-				func(a, b string) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, got, tc.want, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -431,7 +334,6 @@ func TestRemoveFirst_String(t *testing.T) {
 }
 
 func TestRemoveAt_Int(t *testing.T) {
-	// GIVEN: a slice and an index to remove in it.
 	tests := []struct {
 		name      string
 		had, want []int
@@ -467,23 +369,9 @@ func TestRemoveAt_Int(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: RemoveAt is called on it.
 			result := RemoveAt(tc.had, tc.index)
 
-			prefix := fmt.Sprintf(
-				"%s\nRemoveIndex(from=%v, imdex=%d)",
-				packageName, tc.index, tc.index,
-			)
-
-			// THEN: the Removal is successful.
-			if testErr := test.AssertSlicesEqualFunc(
-				t,
-				result,
-				tc.want,
-				func(a, b int) bool { return a == b },
-				prefix,
-				"",
-			); testErr != nil {
+			if testErr := test.AssertSlicesEqual(t, result, tc.want, ""); testErr != nil {
 				t.Error(testErr)
 			}
 		})
@@ -491,7 +379,6 @@ func TestRemoveAt_Int(t *testing.T) {
 }
 
 func TestAreSlicesEqual(t *testing.T) {
-	// GIVEN: different slices.
 	tests := []struct {
 		name           string
 		slice1, slice2 []string
@@ -533,27 +420,16 @@ func TestAreSlicesEqual(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: AreSlicesEqual is called.
 			got := AreSlicesEqual(tc.slice1, tc.slice2)
 
-			prefix := fmt.Sprintf(
-				"%s\nAreSlicesEqual(a=%v, b=%v)",
-				packageName, tc.slice1, tc.slice2,
-			)
-
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestFirstNonNilPtr(t *testing.T) {
-	// GIVEN: a bunch of pointers.
 	tests := []struct {
 		name      string
 		pointers  []*string
@@ -601,36 +477,22 @@ func TestFirstNonNilPtr(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FirstNonNilPtr is run on a slice of pointers.
 			got := FirstNonNilPtr(tc.pointers...)
 
-			prefix := fmt.Sprintf(
-				"%s\nFirstNonNilPtr(%v)",
-				packageName, tc.pointers,
-			)
-
-			// THEN: the correct pointer (or nil) is returned.
 			if tc.allNil {
 				if got != nil {
-					t.Fatalf(
-						"%s pointer mismatch\ngot:  %v\nwant: nil",
-						prefix, got,
-					)
+					t.Fatalf("mismatch\ngot:  %s\nwant: nil", test.StringifyPtr(got))
 				}
 				return
 			}
 			if got != tc.pointers[tc.wantIndex] {
-				t.Errorf(
-					"%s pointer mismatch\ngot:  %p\nwant: %p",
-					prefix, got, tc.pointers[tc.wantIndex],
-				)
+				t.Errorf("mismatch\ngot:  %p\nwant: %p", got, tc.pointers[tc.wantIndex])
 			}
 		})
 	}
 }
 
 func TestFirstNonDefault(t *testing.T) {
-	// GIVEN: a bunch of comparables.
 	tests := []struct {
 		name       string
 		slice      []string
@@ -678,37 +540,23 @@ func TestFirstNonDefault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FirstNonDefault is run on a slice of slice.
 			got := FirstNonDefault(tc.slice...)
 
-			prefix := fmt.Sprintf(
-				"%s\nFirstNonDefault(%v)",
-				packageName, tc.slice,
-			)
-
-			// THEN: the correct var (or "") is returned.
 			if tc.allDefault {
 				want := ""
 				if got != want {
-					t.Fatalf(
-						"%s mismatch\ngot:  %v\nwant: %q",
-						prefix, got, want,
-					)
+					t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, want)
 				}
 				return
 			}
 			if got != tc.slice[tc.wantIndex] {
-				t.Errorf(
-					"%s mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.slice[tc.wantIndex],
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.slice[tc.wantIndex])
 			}
 		})
 	}
 }
 
 func TestFirstNonEmptySlice(t *testing.T) {
-	// GIVEN: a bunch of slices.
 	tests := []struct {
 		name      string
 		slices    [][]string
@@ -745,38 +593,22 @@ func TestFirstNonEmptySlice(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FirstNonEmptySlice is run on a slice of slices.
 			got := FirstNonEmptySlice(tc.slices...)
 
-			prefix := fmt.Sprintf(
-				"%s\nFirstNonEmptySlice(%v)",
-				packageName, tc.slices,
-			)
-
-			// THEN: the first non-empty slice is returned.
-			if got == nil {
-				if tc.wantIndex != -1 {
-					t.Errorf(
-						"%s mismatch\ngot:  nil\nwant: %v",
-						prefix, tc.slices[tc.wantIndex],
-					)
+			if tc.wantIndex == -1 {
+				if got != nil {
+					t.Errorf("mismatch\ngot:  %q\nwant: nil", got)
 				}
-			} else {
-				gotStr := strings.Join(got, ",")
-				wantStr := strings.Join(tc.slices[tc.wantIndex], ",")
-				if gotStr != wantStr {
-					t.Errorf(
-						"%s mismatch\ngot:  %v\nwant: %v",
-						prefix, gotStr, wantStr,
-					)
-				}
+				return
+			}
+			if want := tc.slices[tc.wantIndex]; got == nil || !AreSlicesEqual(got, want) {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
 
 func TestNormaliseNewlines(t *testing.T) {
-	// GIVEN: different byte strings.
 	tests := []struct {
 		name        string
 		input, want []byte
@@ -808,12 +640,12 @@ func TestNormaliseNewlines(t *testing.T) {
 		},
 		{
 			name:  "string with mac newlines",
-			input: []byte("hello\r\nthere"),
+			input: []byte("hello\rthere"),
 			want:  []byte("hello\nthere"),
 		},
 		{
 			name:  "string with multiple mac newlines",
-			input: []byte("hello\r\nthere\r\n"),
+			input: []byte("hello\rthere\r"),
 			want:  []byte("hello\nthere\n"),
 		},
 		{
@@ -832,20 +664,10 @@ func TestNormaliseNewlines(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: NormaliseNewlines is called.
 			result := NormaliseNewlines(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nNormaliseNewlines(%q)",
-				packageName, tc.input,
-			)
-
-			// THEN: the newlines are normalised correctly.
 			if got, want := string(result), string(tc.want); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}

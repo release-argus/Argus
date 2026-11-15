@@ -17,7 +17,9 @@
 package docker
 
 import (
-	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -32,7 +34,6 @@ import (
 // #######################
 
 func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a HubRegistryDefaults and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -166,25 +167,19 @@ func TestHubRegistryDefaults_Unmarshal(t *testing.T) {
 				func(v *HubRegistryDefaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"HubRegistryDefaults",
+				"HubRegistryDefaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nHubRegistryDefaults.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("HubRegistryDefaults.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestHubRegistry_Unmarshal(t *testing.T) {
-	// GIVEN: a HubRegistry and JSON/YAML to unmarshal into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -342,25 +337,19 @@ func TestHubRegistry_Unmarshal(t *testing.T) {
 				func(v *HubRegistry) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"HubRegistry",
+				"HubRegistry.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: Auth should never be nil.
 			if tc.registry.Auth == nil {
-				t.Errorf(
-					"%s\nHubRegistry.Unmarshal(format=%q, data=%q) - Auth should not be nil",
-					packageName, tc.format, tc.data,
-				)
+				t.Error("HubRegistry.Auth mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestHubRegistry_ApplyOverrides(t *testing.T) {
-	// GIVEN: a HubRegistry and JSON/YAML to decode into it.
 	tests := []struct {
 		name     string
 		format   string
@@ -547,7 +536,6 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is decoded into itself.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.registry,
@@ -560,7 +548,6 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
 				"HubRegistry.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -574,7 +561,6 @@ func TestHubRegistry_ApplyOverrides(t *testing.T) {
 // ####################
 
 func TestHubRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: a HubRegistryDefaults.
 	tests := []struct {
 		name     string
 		registry *HubRegistryDefaults
@@ -616,7 +602,7 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 					validUntil: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
-			want: true,
+			want: true, // IsZero ignores the cached query token.
 		},
 		{
 			name: "non-empty/all",
@@ -636,22 +622,16 @@ func TestHubRegistryDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called with it.
 			got := tc.registry.IsZero()
 
-			// THEN: true is returned if all fields are empty.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nHubRegistryDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHubRegistry_IsZero(t *testing.T) {
-	// GIVEN: a HubRegistry.
 	tests := []struct {
 		name string
 		data *HubRegistry
@@ -698,22 +678,16 @@ func TestHubRegistry_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nHubRegistry IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHubRegistry_Copy(t *testing.T) {
-	// GIVEN: a HubRegistry.
 	tests := []struct {
 		name     string
 		registry *HubRegistry
@@ -735,10 +709,13 @@ func TestHubRegistry_Copy(t *testing.T) {
 				Image: "i1",
 				Tag:   "t1",
 				Auth: &HubAuth{
-					Username: "u1",
-					Token:    "t1",
-					defaults: &HubAuthDefaults{},
+					Username:   "u1",
+					Token:      "t1",
+					queryToken: "qT",
+					validUntil: time.Now().Add(time.Hour),
+					defaults:   &HubAuthDefaults{},
 				},
+				defaults: &HubRegistryDefaults{},
 			},
 			want: test.TrimYAML(`
 				image: i1
@@ -754,49 +731,47 @@ func TestHubRegistry_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.registry.Copy()
 
-			prefix := fmt.Sprintf("%s\nHubRegistry.Copy()", packageName)
-
-			// THEN: the returned Registry unmarshals the same.
 			if g := decode.ToYAMLString(gotInterface, ""); g != tc.want {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, g, tc.want,
-				)
+				t.Fatalf("HubRegistry mismatch\ngot:  %q\nwant: %q", g, tc.want)
 			}
 
-			// AND: the returned Registry is a HubRegistry.
 			got, ok := gotInterface.(*HubRegistry)
 			if !ok {
 				if gotInterface == nil {
 					return
 				}
 				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, gotInterface,
+					"HubRegistry.Copy() type mismatch\ngot:  %T\nwant: *HubRegistry",
+					gotInterface,
 				)
 			}
 
-			// AND: the unmarshaled values are the same.
 			gotAuth, ok := got.GetAuth().(*HubAuth)
 			hadAuth, _ := tc.registry.GetAuth().(*HubAuth)
-			if !ok ||
-				gotAuth.queryToken != hadAuth.queryToken ||
+			if !ok {
+				t.Fatalf(
+					"HubRegistry.GetAuth() type mismatch\ngot:  %T\nwant: *HubAuth",
+					got.GetAuth(),
+				)
+			}
+			if gotAuth.queryToken != hadAuth.queryToken ||
 				gotAuth.validUntil != hadAuth.validUntil ||
 				got.defaults != tc.registry.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got, tc.want,
+					"HubRegistry mismatch\n"+
+						"got:  Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p\n"+
+						"want: Auth.queryToken=%q, Auth.validUntil=%s, defaults=%p",
+					gotAuth.queryToken, gotAuth.validUntil, got.defaults,
+					hadAuth.queryToken, hadAuth.validUntil, tc.registry.defaults,
 				)
 			}
 
-			// AND: the returned HubAuth is at a different address.
 			if gotAuth == hadAuth {
 				t.Fatalf(
-					"%s returned pointer to same Auth for instance %q",
-					prefix, tc.name,
+					"HubRegistry.GetAuth(): copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotAuth, hadAuth,
 				)
 			}
 		})
@@ -808,7 +783,6 @@ func TestHubRegistry_Copy(t *testing.T) {
 // ########################
 
 func TestHubRegistryDefaults_String(t *testing.T) {
-	// GIVEN: a HubRegistryDefaults.
 	tests := []struct {
 		name string
 		data *HubRegistryDefaults
@@ -850,7 +824,7 @@ func TestHubRegistryDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"HubRegistryDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -859,7 +833,6 @@ func TestHubRegistryDefaults_String(t *testing.T) {
 }
 
 func TestHubRegistry_String(t *testing.T) {
-	// GIVEN: a HubRegistry.
 	tests := []struct {
 		name string
 		data *HubRegistry
@@ -912,7 +885,7 @@ func TestHubRegistry_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"HubRegistry.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -925,23 +898,16 @@ func TestHubRegistry_String(t *testing.T) {
 // #######################
 
 func TestHubRegistryDefaults_GetType(t *testing.T) {
-	// GIVEN: a HubRegistryDefaults.
 	var registry HubRegistryDefaults
 
-	// WHEN: GetType is called on it.
 	got := registry.GetType()
 
-	// THEN: the type is returned.
 	if want := "hub"; got != want {
-		t.Errorf(
-			"%s\ngot %q, want %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestHubRegistry_GetType(t *testing.T) {
-	// GIVEN: a HubRegistry.
 	tests := []struct {
 		name     string
 		registry *HubRegistry
@@ -962,15 +928,10 @@ func TestHubRegistry_GetType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetType is called on it.
 			got := tc.registry.GetType()
 
-			// THEN: the type is returned.
 			if want := "hub"; got != want {
-				t.Errorf(
-					"%s\ngot %q, want %q",
-					packageName, got, want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -981,14 +942,14 @@ func TestHubRegistry_GetType(t *testing.T) {
 // #########################
 
 func TestHubRegistry_CheckValues(t *testing.T) {
-	// GIVEN: a HubRegistry.
 	tests := []struct {
-		name     string
-		input    *HubRegistry
-		errRegex string
+		name      string
+		input     *HubRegistry
+		wantImage string
+		errRegex  string
 	}{
 		{
-			name: "valid",
+			name: "valid/official image gets library namespace",
 			input: &HubRegistry{
 				Image: "i",
 				Tag:   "t",
@@ -997,7 +958,21 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 					Token:    "token",
 				},
 			},
-			errRegex: `^$`,
+			wantImage: "library/i",
+			errRegex:  `^$`,
+		},
+		{
+			name: "valid/namespaced image unchanged",
+			input: &HubRegistry{
+				Image: "org/i",
+				Tag:   "t",
+				Auth: &HubAuth{
+					Username: "username",
+					Token:    "token",
+				},
+			},
+			wantImage: "org/i",
+			errRegex:  `^$`,
 		},
 		{
 			name: "CommonRegistry: no image",
@@ -1019,7 +994,8 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 					Username: "username",
 				},
 			},
-			errRegex: `^token: <required> \([^\)]+\)$`,
+			wantImage: "i", // library/ is added only once validation passes.
+			errRegex:  `^token: <required> \([^\)]+\)$`,
 		},
 		{
 			name: "Auth: no username",
@@ -1030,7 +1006,8 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 					Token: "token",
 				},
 			},
-			errRegex: `^username: <required> \([^\)]+\)$`,
+			wantImage: "i", // library/ is added only once validation passes.
+			errRegex:  `^username: <required> \([^\)]+\)$`,
 		},
 		{
 			name: "CommonRegistry err and Auth err",
@@ -1053,10 +1030,16 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
+
+			if tc.input.Image != tc.wantImage {
+				t.Errorf(
+					"HubRegistry.Image mismatch\ngot:  %q\nwant: %q",
+					tc.input.Image, tc.wantImage,
+				)
+			}
 		})
 	}
 }
@@ -1066,7 +1049,6 @@ func TestHubRegistry_CheckValues(t *testing.T) {
 // #########################
 
 func TestHubRegistry_NewRequest(t *testing.T) {
-	// GIVEN: a HubRegistry, and a tag.
 	tests := []struct {
 		name     string
 		registry *HubRegistry
@@ -1120,24 +1102,102 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: newRequest() is called on it.
 			_, err := tc.registry.newRequest(tc.tag)
-
-			prefix := fmt.Sprintf(
-				"%s\nHubRegistry.newRequest(%s)",
-				packageName, tc.tag,
-			)
-
-			// THEN: The error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if err != nil {
-				return
+		})
+	}
+}
+
+// ###################
+// # AUTH | DECODING #
+// ###################
+
+func TestHubAuthDefaults_Unmarshal(t *testing.T) {
+	tests := []struct {
+		name         string
+		format, data string
+		want         *HubAuthDefaults
+		errRegex     string
+	}{
+		{
+			name:     "JSON/empty",
+			format:   "json",
+			data:     "{}",
+			errRegex: `^$`,
+			want:     &HubAuthDefaults{},
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     "{}\n",
+			errRegex: `^$`,
+			want:     &HubAuthDefaults{},
+		},
+		{
+			name:   "JSON/filled",
+			format: "json",
+			data: test.TrimJSON(`{
+				"username": "u1",
+				"token": "t1"
+			}`),
+			errRegex: `^$`,
+			want: &HubAuthDefaults{
+				Username: "u1",
+				Token:    "t1",
+			},
+		},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				username: u1
+				token: t1
+			`),
+			errRegex: `^$`,
+			want: &HubAuthDefaults{
+				Username: "u1",
+				Token:    "t1",
+			},
+		},
+		{
+			name:     "JSON/invalid",
+			format:   "json",
+			data:     "invalid",
+			errRegex: `invalid character`,
+		},
+		{
+			name:   "YAML/invalid",
+			format: "yaml",
+			data:   "invalid",
+			errRegex: test.TrimYAML(`
+				^[^\s]+ string was used where mapping is expected
+				[^\s]+ .+
+				\s*\^$`,
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if _, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*HubAuthDefaults, error) {
+					var decoded HubAuthDefaults
+					err := decode.Unmarshal(format, data, &decoded)
+					return &decoded, err
+				},
+				tc.format, tc.data,
+				func(v *HubAuthDefaults) string { return v.String("") },
+				decode.ToYAMLString(tc.want, ""),
+				tc.errRegex,
+				"HubAuthDefaults.Unmarshal",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -1148,7 +1208,6 @@ func TestHubRegistry_NewRequest(t *testing.T) {
 // ################
 
 func TestHubAuthDefaults_IsZero(t *testing.T) {
-	// GIVEN: a HubAuthDefaults.
 	tests := []struct {
 		name string
 		data *HubAuthDefaults
@@ -1192,22 +1251,16 @@ func TestHubAuthDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nHubAuthDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHubAuth_Copy(t *testing.T) {
-	// GIVEN: a HubAuth.
 	tests := []struct {
 		name string
 		auth *HubAuth
@@ -1243,50 +1296,37 @@ func TestHubAuth_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Copy() is called on it.
 			authCopy := tc.auth.Copy()
 
-			prefix := fmt.Sprintf("%s\nHubAuth.Copy()", packageName)
-
-			// THEN: the returned RegistryAuth unmarshals the same.
 			if got := decode.ToYAMLString(authCopy, ""); got != tc.want {
-				t.Fatalf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Fatalf("HubAuth mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// AND: the returned RegistryAuth is a HubAuth.
 			got, ok := authCopy.(*HubAuth)
 			if !ok {
 				if authCopy == nil {
 					return
 				}
-				t.Fatalf(
-					"%s returned wrong type: %T",
-					prefix, authCopy,
-				)
+				t.Fatalf("HubAuth.Copy() type mismatch\ngot:  %T\nwant: *HubAuth", authCopy)
 			}
 			if tc.auth == nil {
 				return
 			}
 
-			// AND: the unmarshaled values are the same.
 			if got.queryToken != tc.auth.queryToken ||
 				got.validUntil != tc.auth.validUntil ||
 				got.defaults != tc.auth.defaults {
 				t.Fatalf(
-					"%s mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got, tc.auth,
+					"HubAuth mismatch\n"+
+						"got:  queryToken=%q, validUntil=%s, defaults=%p\n"+
+						"want: queryToken=%q, validUntil=%s, defaults=%p",
+					got.queryToken, got.validUntil, got.defaults,
+					tc.auth.queryToken, tc.auth.validUntil, tc.auth.defaults,
 				)
 			}
 
-			// AND: the returned GHCRAuth is at a different address.
 			if got == tc.auth {
-				t.Fatalf(
-					"%s returned pointer to the same Auth for instance %q",
-					prefix, tc.name,
-				)
+				t.Fatalf("copy aliases the original\ngot:  %p\nwant: NOT %p", got, tc.auth)
 			}
 		})
 	}
@@ -1297,7 +1337,6 @@ func TestHubAuth_Copy(t *testing.T) {
 // ####################
 
 func TestHubAuthDefaults_String(t *testing.T) {
-	// GIVEN: a HubAuthDefaults.
 	tests := []struct {
 		name string
 		data *HubAuthDefaults
@@ -1332,7 +1371,7 @@ func TestHubAuthDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"HubAuthDefaults.String",
 				tc.data.String,
 				tc.want,
 			)
@@ -1345,7 +1384,6 @@ func TestHubAuthDefaults_String(t *testing.T) {
 // ###################
 
 func TestHubAuthDefaults_Defaults(t *testing.T) {
-	// GIVEN: a HubAuthDefaults.
 	tests := []struct {
 		name         string
 		data         *HubAuthDefaults
@@ -1371,22 +1409,16 @@ func TestHubAuthDefaults_Defaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Defaults is called on it.
 			got := tc.data.Defaults()
 
-			// THEN: Defaults are returned when expected.
 			if gotDefaults := got != nil; gotDefaults != tc.haveDefaults {
-				t.Errorf(
-					"%s\nHubAuthDefaults.Defaults() mismatch\ngot:  %t\nwant: %t",
-					packageName, gotDefaults, tc.haveDefaults,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", gotDefaults, tc.haveDefaults)
 			}
 		})
 	}
 }
 
 func TestHubAuthDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: a RegistryAuthDefaults.
 	tests := []struct {
 		name        string
 		newDefaults RegistryAuthDefaults
@@ -1418,17 +1450,18 @@ func TestHubAuthDefaults_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: and HubAuthDefaults to take them.
 			data := &HubAuthDefaults{}
 
-			// WHEN: SetDefaults() is called to give these defaults.
 			data.SetDefaults(tc.newDefaults)
 
-			// THEN: they are set when expected.
-			if got := data.defaults == tc.newDefaults; got != tc.doesSet {
+			var want *HubAuthDefaults
+			if tc.doesSet {
+				want = tc.newDefaults.(*HubAuthDefaults)
+			}
+			if data.defaults != want {
 				t.Errorf(
-					"%s\nHubAuthDefaults.SetDefaults() .defaults mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.doesSet,
+					"HubAuthDefaults.defaults mismatch\ngot:  %p\nwant: %p",
+					data.defaults, want,
 				)
 			}
 		})
@@ -1440,7 +1473,6 @@ func TestHubAuthDefaults_SetDefaults(t *testing.T) {
 // #####################
 
 func TestHubAuth_CheckValues(t *testing.T) {
-	// GIVEN: a HubAuth.
 	tests := []struct {
 		name     string
 		input    *HubAuth
@@ -1481,7 +1513,6 @@ func TestHubAuth_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -1494,7 +1525,6 @@ func TestHubAuth_CheckValues(t *testing.T) {
 // ######################
 
 func TestHubAuth_GetUsernameSelf(t *testing.T) {
-	// GIVEN: a HubAuth.
 	tests := []struct {
 		name string
 		auth *HubAuth
@@ -1529,25 +1559,18 @@ func TestHubAuth_GetUsernameSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: env vars have been set.
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: GetUsernameSelf is called.
 			got := tc.auth.GetUsernameSelf()
 
-			// THEN: the username returned is correct.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nHubAuthDefaults.GetUsernameSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHubAuth_GetUsername(t *testing.T) {
-	// GIVEN: a HubAuth with/without defaults.
 	tests := []struct {
 		name string
 		data *HubAuth
@@ -1601,38 +1624,35 @@ func TestHubAuth_GetUsername(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetUsername() is called on it.
 			got := tc.data.GetUsername()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nHubAuth.GetUsername() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHubAuth_GetToken(t *testing.T) {
-	// GIVEN: a HubAuth with/without defaults.
 	tests := []struct {
-		name string
-		data *HubAuth
-		want string
+		name     string
+		data     *HubAuth
+		want     string
+		wantSelf string
 	}{
 		{
-			name: "empty",
-			data: &HubAuth{},
-			want: "",
+			name:     "empty",
+			data:     &HubAuth{},
+			want:     "",
+			wantSelf: "",
 		},
 		{
 			name: "no defaults",
 			data: &HubAuth{
 				Token: "root",
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
 		},
 		{
 			name: "defaults fallback",
@@ -1642,17 +1662,22 @@ func TestHubAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "defaults",
+			want:     "defaults",
+			wantSelf: "",
 		},
 		{
 			name: "defaults fallback recursive",
 			data: &HubAuth{
 				Token: "",
 				defaults: &HubAuthDefaults{
-					Token: "hard-defaults",
+					Token: "",
+					defaults: &HubAuthDefaults{
+						Token: "hard-defaults",
+					},
 				},
 			},
-			want: "hard-defaults",
+			want:     "hard-defaults",
+			wantSelf: "",
 		},
 		{
 			name: "root Token prioritised",
@@ -1662,7 +1687,8 @@ func TestHubAuth_GetToken(t *testing.T) {
 					Token: "defaults",
 				},
 			},
-			want: "root",
+			want:     "root",
+			wantSelf: "root",
 		},
 	}
 
@@ -1670,26 +1696,16 @@ func TestHubAuth_GetToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetToken() is called on it.
 			got := tc.data.GetToken()
 
-			// THEN: the expected result is returned.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nHubAuth.GetToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("HubAuth.GetToken() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// WHEN: GetTokenSelf() is called on it.
 			got = tc.data.GetTokenSelf()
 
-			// THEN: the expected result is returned.
-			if got != tc.data.Token {
-				t.Fatalf(
-					"%s\nHubAuth.GetTokenSelf() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.data.Token,
-				)
+			if got != tc.wantSelf {
+				t.Fatalf("HubAuth.GetTokenSelf() mismatch\ngot:  %q\nwant: %q", got, tc.wantSelf)
 			}
 		})
 	}
@@ -1700,7 +1716,6 @@ func TestHubAuth_GetToken(t *testing.T) {
 // #######################
 
 func TestHubAuthDefaults_GetQueryTokenSelf(t *testing.T) {
-	// GIVEN: a HubAuthDefaults.
 	tests := []struct {
 		name string
 		data *HubAuthDefaults
@@ -1732,37 +1747,25 @@ func TestHubAuthDefaults_GetQueryTokenSelf(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			usable := isUsable(tc.data.queryToken, tc.data.validUntil)
 
-			// WHEN: GetQueryTokenSelf() is called on it.
 			queryToken, validUntil := tc.data.GetQueryTokenSelf()
 
-			prefix := fmt.Sprintf("%s\nHubAuthDefaults.GetQueryTokenSelf()", packageName)
-
-			// THEN: the query token is returned as expected.
 			if queryToken != tc.want {
-				t.Errorf(
-					"%s queryToken mismatch\ngot:  %q\nwant: %q",
-					prefix, queryToken, tc.want,
-				)
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
 			}
 
-			// AND: the validUntil is returned as before if it was usable.
 			if !validUntil.Equal(tc.data.validUntil) && usable {
-				t.Errorf(
-					"%s validUntil mismatch\ngot:  %q\nwant: %q",
-					prefix, validUntil, tc.data.validUntil,
-				)
+				t.Errorf("validUntil mismatch\ngot:  %s\nwant: %s", validUntil, tc.data.validUntil)
 			}
 		})
 	}
 }
+
 func TestHubAuth_GetQueryToken(t *testing.T) {
-	// GIVEN: a HubAuth.
 	tests := []struct {
 		name     string
 		data     *HubAuth
@@ -1774,7 +1777,7 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 			data: &HubAuth{
 				Token: "token",
 			},
-			want:     "",
+			want:     "", // No Username, so refreshQueryToken returns before any request.
 			errRegex: `^$`,
 		},
 		{
@@ -1805,38 +1808,146 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: an image:tag to query on.
 			detail := ContainerDetail{
 				Image: test.ArgusDockerHubRepo,
 				Tag:   "v1.2.3",
 			}
 
-			// WHEN: GetQueryToken() is called on it.
 			queryToken, err := tc.data.GetQueryToken(detail)
-
-			// THEN: any error case is expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nHubAuth.GetQueryToken(%+v) error mismatch:\ngot:  %q\nwant: %q",
-					packageName, detail,
-					e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the query token is returned as expected.
 			if queryToken != tc.want {
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
+			}
+		})
+	}
+}
+
+func TestHubAuth_GetQueryToken__refresh(t *testing.T) {
+	tests := []struct {
+		name            string
+		username, token string
+		status          int
+		wantRequests    int
+		want            string
+		errRegex        string
+	}{
+		{
+			name:         "refreshed",
+			username:     "username",
+			token:        "token",
+			status:       http.StatusOK,
+			wantRequests: 1,
+			want:         "fresh-query-token",
+			errRegex:     `^$`,
+		},
+		{
+			name:         "no token - not refreshed",
+			username:     "username",
+			status:       http.StatusOK,
+			wantRequests: 0,
+			want:         "",
+			errRegex:     `^$`,
+		},
+		{
+			name:         "refresh fails",
+			username:     "username",
+			token:        "token",
+			status:       http.StatusInternalServerError,
+			wantRequests: 1,
+			errRegex:     `^docker-hub token request failed \(status=500\)`,
+		},
+	}
+	_hubTokenAddress := hubTokenAddress
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: swaps hubTokenAddress.
+
+			type tokenRequest struct {
+				method, contentType string
+				body                []byte
+			}
+			requests := make(chan tokenRequest, 1)
+			handler := func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Errorf("io.ReadAll() failed: %v", err)
+				}
+				requests <- tokenRequest{
+					method:      r.Method,
+					contentType: r.Header.Get("Content-Type"),
+					body:        body,
+				}
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(`{"access_token":"fresh-query-token"}`))
+			}
+			srv := httptest.NewServer(http.HandlerFunc(handler))
+			t.Cleanup(srv.Close)
+			hubTokenAddress = srv.URL
+			t.Cleanup(func() {
+				hubTokenAddress = _hubTokenAddress
+			})
+			data := &HubAuth{
+				Username: tc.username,
+				Token:    tc.token,
+			}
+
+			queryToken, err := data.GetQueryToken(ContainerDetail{Image: test.ArgusDockerHubRepo})
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if got := len(requests); got != tc.wantRequests {
+				t.Fatalf("len(requests) mismatch\ngot:  %d\nwant: %d", got, tc.wantRequests)
+			}
+			if tc.wantRequests > 0 {
+				req := <-requests
+				if req.method != http.MethodPost {
+					t.Errorf(
+						"Request.Method mismatch\ngot:  %q\nwant: %q",
+						req.method, http.MethodPost,
+					)
+				}
+				if req.contentType != "application/json" {
+					t.Errorf(
+						"Request.Header[\"Content-Type\"] mismatch\ngot:  %q\nwant: %q",
+						req.contentType, "application/json",
+					)
+				}
+				var body hubTokenRequest
+				if decodeErr := decode.Unmarshal("json", req.body, &body); decodeErr != nil {
+					t.Fatalf("decode.Unmarshal() failed: %v", decodeErr)
+				}
+				if body.Identifier != tc.username || body.Secret != tc.token {
+					t.Errorf(
+						"hubTokenRequest mismatch\n"+
+							"got:  identifier=%q, secret=%q\nwant: identifier=%q, secret=%q",
+						body.Identifier, body.Secret,
+						tc.username, tc.token,
+					)
+				}
+			}
+			if err != nil {
+				return
+			}
+
+			if queryToken != tc.want {
+				t.Errorf("queryToken mismatch\ngot:  %q\nwant: %q", queryToken, tc.want)
+			}
+			if cached, _ := data.GetQueryTokenSelf(); cached != tc.want {
 				t.Errorf(
-					"%s\nHubAuth.GetQueryToken(%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, detail,
-					queryToken, tc.want,
+					"HubAuth.GetQueryTokenSelf() mismatch\ngot:  %q\nwant: %q",
+					cached, tc.want,
 				)
 			}
 		})
@@ -1844,11 +1955,10 @@ func TestHubAuth_GetQueryToken(t *testing.T) {
 }
 
 func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
-	// GIVEN: a HubAuthDefaults.
 	tests := []struct {
-		name                                               string
-		data                                               *HubAuth
-		setRootToken, setDefaultToken, setHardDefaultToken bool
+		name                                 string
+		data                                 *HubAuth
+		setDefaultToken, setHardDefaultToken bool
 	}{
 		{
 			name: "root only",
@@ -1857,7 +1967,6 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 				queryToken: "query-token",
 				validUntil: time.Now().Add(10 * time.Second),
 			},
-			setRootToken: true,
 		},
 		{
 			name: "defaults - hardDefaults ignored",
@@ -1876,7 +1985,6 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 					},
 				},
 			},
-			setRootToken: true,
 		},
 		{
 			name: "set in defaults",
@@ -1895,7 +2003,19 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 					},
 				},
 			},
-			setRootToken:    true,
+			setDefaultToken: true,
+		},
+		{
+			name: "no root credentials - set in defaults",
+			data: &HubAuth{
+				queryToken: "query-token",
+				validUntil: time.Now().Add(11 * time.Second),
+				defaults: &HubAuthDefaults{
+					Token:      "token",
+					queryToken: "query-token",
+					validUntil: time.Now().Add(12 * time.Second),
+				},
+			},
 			setDefaultToken: true,
 		},
 		{
@@ -1915,7 +2035,6 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 					},
 				},
 			},
-			setRootToken: true,
 		},
 		{
 			name: "set in defaults and hard defaults",
@@ -1934,7 +2053,6 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 					},
 				},
 			},
-			setRootToken:        true,
 			setDefaultToken:     true,
 			setHardDefaultToken: true,
 		},
@@ -1947,40 +2065,28 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 			queryToken := "new-query-token"
 			validUntil := time.Now().Add(10 * time.Second)
 
-			// WHEN: SetQueryToken() is called on it.
 			tc.data.SetQueryToken(queryToken, validUntil)
 
-			check := func(name string, d *HubAuthDefaults, wantMatch bool) {
+			check := func(d *HubAuthDefaults, wantMatch bool) {
+				t.Helper()
 				if d == nil {
+					if wantMatch {
+						t.Error("HubAuthDefaults mismatch\ngot:  nil\nwant: non-nil")
+					}
 					return
 				}
-
-				prefix := fmt.Sprintf(
-					"%s\nHubAuthDefaults.SetQueryToken(%queryToken=q, validUntil=%q) (%s - wantMatch=%t)",
-					packageName, queryToken, validUntil, name, wantMatch,
+				assertQueryTokenSet(
+					t, "HubAuthDefaults",
+					d.queryToken, d.validUntil,
+					queryToken, validUntil,
+					wantMatch,
 				)
-
-				// THEN: the queryToken is set only when expected.
-				if (d.queryToken == queryToken) != wantMatch {
-					t.Errorf(
-						"%s .queryToken\ngot:  %q\nwant: %q",
-						prefix, queryToken, d.queryToken,
-					)
-				}
-
-				// AND: the validUntil is set only when expected.
-				if d.validUntil.Equal(validUntil) != wantMatch {
-					t.Errorf(
-						"%s .validUntil\ngot:  %q\nwant: %q",
-						prefix, validUntil, d.validUntil,
-					)
-				}
 			}
 
-			check("root", &tc.data.HubAuthDefaults, tc.setRootToken)
-			check("defaults", tc.data.defaults, tc.setDefaultToken)
+			check(&tc.data.HubAuthDefaults, true)
+			check(tc.data.defaults, tc.setDefaultToken)
 			if tc.data.defaults != nil {
-				check("hardDefaults", tc.data.defaults.defaults, tc.setHardDefaultToken)
+				check(tc.data.defaults.defaults, tc.setHardDefaultToken)
 			}
 		})
 	}
@@ -1991,7 +2097,6 @@ func TestHubAuthDefaults_SetQueryToken(t *testing.T) {
 // ######################
 
 func TestHubAuth_Inherit(t *testing.T) {
-	// GIVEN: a HubAuth, and a RegistryAuth to try and inherit from.
 	tests := []struct {
 		name                 string
 		auth                 *HubAuth
@@ -2096,37 +2201,11 @@ func TestHubAuth_Inherit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			hadToken, hadQueryToken, hadValidUntil := getTokenData(t, tc.auth)
+			had := getTokenData(tc.auth)
 
-			// WHEN: Inherit is called on it.
 			tc.auth.Inherit(tc.from, tc.srcDetail, tc.dstDetail)
 
-			prefix := fmt.Sprintf(
-				"%s\nHubAuth.Inherit(from=%T, srcDetail=%+v, dstDetail=%+v)",
-				packageName, tc.from, tc.srcDetail, tc.dstDetail,
-			)
-
-			// THEN: the expected inheritance has occurred.
-			gotToken, gotQueryToken, gotValidUntil := getTokenData(t, tc.auth)
-			wantToken, wantQueryToken, wantValidUntil := getTokenData(t, tc.from)
-			tokenInherited := hadToken != gotToken
-			queryTokenInherited := hadQueryToken != gotQueryToken
-			validUntilInherited := !hadValidUntil.Equal(gotValidUntil)
-			if (tokenInherited != tc.inherit && hadToken != gotToken) ||
-				(queryTokenInherited != tc.inherit && hadQueryToken != gotQueryToken) ||
-				(validUntilInherited != tc.inherit && !hadValidUntil.Equal(gotValidUntil)) {
-				msg := "%s expected to inherit but did not\ntoken inherited: %t (had %q, got %q, want %q)\nqueryToken inherited: %t (had %q, got %q, want %q)\nvalidUntil inherited: %t (had %q, got %q, want %q)"
-				if !tc.inherit {
-					msg = "%s expected not to inherit but did\ntoken inherited: %t (had: %q, got: %q, want: NOT %q)\nqueryToken inherited: %t (had: %q, got: %q, want: NOT %q)\nvalidUntil inherited: %t (had: %q, got: %q, want: NOT %q)"
-				}
-				t.Errorf(
-					msg,
-					prefix,
-					tokenInherited, hadToken, gotToken, wantToken,
-					queryTokenInherited, hadQueryToken, gotQueryToken, wantQueryToken,
-					validUntilInherited, hadValidUntil, gotValidUntil, wantValidUntil,
-				)
-			}
+			assertInherited(t, "HubAuth", had, tc.auth, tc.from, tc.inherit)
 		})
 	}
 }

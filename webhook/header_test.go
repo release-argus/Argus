@@ -17,9 +17,9 @@
 package webhook
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -31,7 +31,6 @@ import (
 )
 
 func TestHeaders_UnmarshalYAML(t *testing.T) {
-	// GIVEN: a string to unmarshal as a Headers.
 	tests := []struct {
 		name     string
 		data     string
@@ -110,36 +109,21 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			// WHEN: the string is unmarshaled.
 			var headers Headers
 			err := decode.Unmarshal("yaml", []byte(tc.data), &headers)
-
-			prefix := fmt.Sprintf(
-				"%s\nHeaders.UnmarshalYAML(%q)",
-				packageName, tc.data,
-			)
-
-			// THEN: we get an error if expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the Headers are as expected.
-			if testErr := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqual(
 				t,
 				headers,
 				tc.expected,
-				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
-				prefix,
-				"Header",
+				"Headers",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -148,14 +132,13 @@ func TestHeaders_UnmarshalYAML(t *testing.T) {
 }
 
 func TestWebhook_SetHeaders(t *testing.T) {
-	// GIVEN: a Webhook with Headers.
 	latestVersion := "1.2.3"
 	serviceID := "service"
 	tests := []struct {
 		name                                                 string
 		env                                                  map[string]string
 		rootValue, mainValue, defaultValue, hardDefaultValue Headers
-		want                                                 map[string]string
+		want                                                 http.Header
 	}{
 		{
 			name:      "nil root",
@@ -171,15 +154,18 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Something", Value: "foo"},
 				{Key: "X-Service", Value: "test"},
 			},
-			want: map[string]string{},
+			want: http.Header{
+				"X-Something": {"foo"},
+				"X-Service":   {"test"},
+			},
 		},
 		{
 			name: "header with django expression",
 			rootValue: Headers{
 				{Key: "X-Service", Value: "{% if 'a' == 'a' %}foo{% endif %}"},
 			},
-			want: map[string]string{
-				"X-Service": "foo",
+			want: http.Header{
+				"X-Service": {"foo"},
 			},
 		},
 		{
@@ -187,8 +173,8 @@ func TestWebhook_SetHeaders(t *testing.T) {
 			rootValue: Headers{
 				{Key: "X-Service", Value: "{{ service_id }}"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
+			want: http.Header{
+				"X-Service": {serviceID},
 			},
 		},
 		{
@@ -197,9 +183,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -208,9 +194,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -219,9 +205,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -230,9 +216,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "{{ service_id }}"},
 				{Key: "X-Version", Value: "{{ version }}"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -245,9 +231,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "===="},
 				{Key: "X-Version", Value: "----"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -260,9 +246,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "===="},
 				{Key: "X-Version", Value: "----"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -275,9 +261,9 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Service", Value: "===="},
 				{Key: "X-Version", Value: "----"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
 			},
 		},
 		{
@@ -290,10 +276,10 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				{Key: "X-Version", Value: "{{ version }}"},
 				{Key: "X-Foo", Value: "_${FOO}-"},
 			},
-			want: map[string]string{
-				"X-Service": serviceID,
-				"X-Version": latestVersion,
-				"X-Foo":     "_bar-",
+			want: http.Header{
+				"X-Service": {serviceID},
+				"X-Version": {latestVersion},
+				"X-Foo":     {"_bar-"},
 			},
 		},
 	}
@@ -302,7 +288,7 @@ func TestWebhook_SetHeaders(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 			req := httptest.NewRequest(http.MethodGet, "/approvals", nil)
 			webhook := Webhook{
 				ServiceStatus: &status.Status{},
@@ -310,15 +296,13 @@ func TestWebhook_SetHeaders(t *testing.T) {
 				Defaults:      &Defaults{},
 				HardDefaults:  &Defaults{},
 			}
-			webhook.ServiceStatus.ServiceInfo.ID = serviceID
-			url := "https://example.com"
 			webhook.ServiceStatus.Init(
 				0, 0, 0,
 				status.ServiceInfo{
 					ID: serviceID,
 				},
 				&dashboard.Options{
-					WebURL: url,
+					WebURL: "https://example.com",
 				},
 			)
 			webhook.ServiceStatus.SetLatestVersion(latestVersion, "", false)
@@ -327,46 +311,16 @@ func TestWebhook_SetHeaders(t *testing.T) {
 			webhook.Defaults.Headers = tc.defaultValue
 			webhook.HardDefaults.Headers = tc.hardDefaultValue
 
-			// WHEN: setHeaders is called on this request.
 			webhook.setHeaders(req)
 
-			prefix := fmt.Sprintf(
-				"%s\nWebhook.SetHeaders(%+v)",
-				packageName, webhook.Headers,
-			)
-
-			// THEN: the function returns the correct result.
-			if tc.rootValue == nil && tc.mainValue == nil && tc.defaultValue == nil && tc.hardDefaultValue == nil {
-				if len(req.Header) != 0 {
-					t.Fatalf(
-						"%s Webhook.Headers are nil but request.Headers aren't\ngot: %v",
-						prefix, req.Header,
-					)
-				}
-				return
-			}
-			if tc.want == nil {
-				for _, header := range tc.rootValue {
-					tc.want[header.Key] = header.Value
-				}
-			}
-			for header, val := range tc.want {
-				if req.Header[header] == nil {
-					t.Fatalf(
-						"%s key=%q, value=%q was not given to the request\ngot: headers=%+v",
-						prefix,
-						header, val,
-						req.Header,
-					)
-				}
-				if req.Header[header][0] != val {
-					t.Fatalf(
-						"%s key=%q, value=%q was not given to the request\ngot: value=%q, headers=%+v",
-						prefix,
-						header, val,
-						req.Header[header][0], req.Header,
-					)
-				}
+			if testErr := test.AssertMapEqualFunc(
+				t,
+				req.Header,
+				tc.want,
+				slices.Equal,
+				"http.Request.Header",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}

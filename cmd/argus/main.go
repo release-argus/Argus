@@ -20,6 +20,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -155,27 +156,30 @@ func run() (exitCode int) {
 	// Begin shutdown.
 	logx.Info("Shutting down...", logx.LogFrom{}, true)
 	// Give goroutines time to finish.
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutdownCancel()
+	exitCode = max(exitCode, awaitShutdown(g.Wait, 10*time.Second))
+	if api != nil {
+		api.CloseDB()
+	}
 
+	return
+}
+
+// awaitShutdown waits up to timeout for wait to return, and returns the exit code.
+func awaitShutdown(wait func() error, timeout time.Duration) int {
 	done := make(chan struct{})
 	go func() {
-		_ = g.Wait()
+		_ = wait()
 		close(done)
 	}()
 
 	select {
 	case <-done:
 		logx.Info("Shutdown complete", logx.LogFrom{}, true)
-	case <-shutdownCtx.Done():
-		logx.Error(shutdownCtx.Err(), logx.LogFrom{}, true)
-		exitCode = 1
+		return 0
+	case <-time.After(timeout):
+		logx.Error(errors.New("shutdown timed out"), logx.LogFrom{}, true)
+		return 1
 	}
-	if api != nil {
-		api.CloseDB()
-	}
-
-	return
 }
 
 func main() {

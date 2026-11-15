@@ -17,7 +17,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +29,6 @@ import (
 )
 
 func TestNewAPI(t *testing.T) {
-	// GIVEN: a config.
 	tests := []struct {
 		name        string
 		routePrefix string
@@ -57,251 +55,194 @@ func TestNewAPI(t *testing.T) {
 		},
 	}
 	basicAuthTests := []struct {
+		name               string
 		username, password string
 	}{
-		{"", ""},
-		{"user", "pass"},
-		{"foo", "bar"},
+		{name: "no basic auth"},
+		{name: "basic auth/user", username: "user", password: "pass"},
+		{name: "basic auth/foo", username: "foo", password: "bar"},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// with/without basic auth.
+			// NewAPI trims a trailing slash, so requests use the trimmed prefix.
+			routePrefix := strings.TrimSuffix(tc.routePrefix, "/")
+
 			for _, basicAuthTest := range basicAuthTests {
-				t.Logf(
-					"%s - Testing with basic auth %+v",
-					packageName, basicAuthTest,
-				)
-				cfg := &config.Config{
-					Settings: config.Settings{
-						Web: config.WebSettings{
-							RoutePrefix: tc.routePrefix,
+				t.Run(basicAuthTest.name, func(t *testing.T) {
+					cfg := &config.Config{
+						Settings: config.Settings{
+							Web: config.WebSettings{
+								RoutePrefix: tc.routePrefix,
+							},
 						},
-					},
-				}
-				if basicAuthTest.username != "" {
-					cfg.Settings.Web.BasicAuth = &config.WebSettingsBasicAuth{
-						Username: basicAuthTest.username,
-						Password: basicAuthTest.password,
 					}
-					cfg.Settings.Web.BasicAuth.CheckValues()
-				}
-				// Test as if the routePrefix is always without a trailing slash.
-				tc.routePrefix = strings.TrimSuffix(tc.routePrefix, "/")
+					if basicAuthTest.username != "" {
+						cfg.Settings.Web.BasicAuth = &config.WebSettingsBasicAuth{
+							Username: basicAuthTest.username,
+							Password: basicAuthTest.password,
+						}
+						cfg.Settings.Web.BasicAuth.CheckValues()
+					}
 
-				// WHEN: a new API is created.
-				api, _ := NewAPI(cfg)
+					api, _ := NewAPI(cfg)
 
-				// THEN: the healthcheck endpoint is accessible.
-				req, _ := http.NewRequest(
-					http.MethodGet,
-					tc.routePrefix+"/api/v1/healthcheck",
-					nil,
-				)
-				resp := httptest.NewRecorder()
-				api.BaseRouter.ServeHTTP(resp, req)
+					// Served by the base router, outside basic auth.
+					req := httptest.NewRequest(http.MethodGet, routePrefix+"/api/v1/healthcheck", nil)
+					w := httptest.NewRecorder()
+					api.BaseRouter.ServeHTTP(w, req)
 
-				prefix := fmt.Sprintf(
-					"%s\nNewAPI() %s",
-					packageName, req.URL.Path,
-				)
-
-				// 200.
-				if http.StatusOK != resp.Code {
-					t.Errorf(
-						"%s status code mismatch\ngot:  %d\nwant: %d",
-						prefix, resp.Code, http.StatusOK,
-					)
-				}
-				// Alive.
-				if gotBody, wantBody := resp.Body.String(), "Alive"; gotBody != wantBody {
-					t.Errorf(
-						"%s body mismatch\ngot:  %q\nwant: %q",
-						prefix, resp.Body.String(), wantBody,
-					)
-				}
-
-				// AND: the route prefix always has a trailing slash.
-				req, _ = http.NewRequest(http.MethodGet, tc.routePrefix, nil)
-				resp = httptest.NewRecorder()
-				api.BaseRouter.ServeHTTP(resp, req)
-				// 308.
-				expectedStatusCode := http.StatusPermanentRedirect
-				if tc.routePrefix == "" {
-					// 301.
-					expectedStatusCode = http.StatusMovedPermanently
-				}
-				if expectedStatusCode != resp.Code {
-					t.Errorf(
-						"%s status code mismatch\ngot:  %d\nwant: %d",
-						prefix, resp.Code, expectedStatusCode,
-					)
-				}
-				// Location.
-				if got, want := resp.Header().Get("Location"), tc.routePrefix+"/"; got != want {
-					t.Errorf(
-						"%s (trailing slash), Header['Location'] mismatch\ngot:  %s\nwant: %s",
-						prefix, got, want,
-					)
-				}
-
-				prefix = fmt.Sprintf(
-					"%s\nNewAPI() %s SetupRoutes() basicAuth middleware",
-					packageName, req.URL.Path,
-				)
-
-				// AND: basic auth middleware is added when set.
-				api.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-					_, _ = w.Write([]byte("OK"))
-				}).Methods(http.MethodGet)
-				authMiddlewareWanted := basicAuthTest.username != ""
-				req, _ = http.NewRequest(
-					http.MethodGet,
-					tc.routePrefix+"/",
-					nil,
-				)
-				resp = httptest.NewRecorder()
-				api.BaseRouter.ServeHTTP(resp, req)
-
-				middlewareUsed := resp.Body.String() != "OK"
-				if middlewareUsed != authMiddlewareWanted {
-					t.Errorf(
-						"%s mismatch\ngot:  used=%t\nwant: used=%t",
-						prefix, middlewareUsed, authMiddlewareWanted,
-					)
-				}
-
-				// Verify the basicAuth middleware is working.
-				if authMiddlewareWanted {
-					req.SetBasicAuth(basicAuthTest.username, basicAuthTest.password)
-					resp = httptest.NewRecorder()
-					api.BaseRouter.ServeHTTP(resp, req)
-					if got, want := resp.Body.String(), "OK"; got != want {
+					if got, want := w.Code, http.StatusOK; got != want {
 						t.Errorf(
-							"%s failed\ngot: body=%q\nwant: body=%q",
-							prefix, got, want,
+							"healthcheck: status code mismatch\ngot:  %d - %q\nwant: %d",
+							got, w.Body.String(), want,
 						)
 					}
-				}
+					if got, want := w.Body.String(), "Alive"; got != want {
+						t.Errorf("healthcheck: body mismatch\ngot:  %q\nwant: %q", got, want)
+					}
+
+					req, err := http.NewRequest(http.MethodGet, routePrefix, nil)
+					if err != nil {
+						t.Fatalf("http.NewRequest() failed: %v", err)
+					}
+					w = httptest.NewRecorder()
+					api.BaseRouter.ServeHTTP(w, req)
+					wantStatusCode := http.StatusPermanentRedirect
+					if routePrefix == "" {
+						wantStatusCode = http.StatusMovedPermanently
+					}
+					if got, want := w.Code, wantStatusCode; got != want {
+						t.Errorf(
+							"redirect: status code mismatch\ngot:  %d - %q\nwant: %d",
+							got, w.Body.String(), want,
+						)
+					}
+					if got, want := w.Header().Get("Location"), routePrefix+"/"; got != want {
+						t.Errorf(
+							"redirect: Location header mismatch\ngot:  %q\nwant: %q",
+							got, want,
+						)
+					}
+
+					api.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+						_, _ = w.Write([]byte("OK"))
+					}).Methods(http.MethodGet)
+					authMiddlewareWanted := basicAuthTest.username != ""
+					req = httptest.NewRequest(http.MethodGet, routePrefix+"/", nil)
+					w = httptest.NewRecorder()
+					api.BaseRouter.ServeHTTP(w, req)
+
+					wantStatusCode = http.StatusOK
+					if authMiddlewareWanted {
+						wantStatusCode = http.StatusUnauthorized
+					}
+					if got, want := w.Code, wantStatusCode; got != want {
+						t.Errorf(
+							"unauthenticated: status code mismatch\ngot:  %d - %q\nwant: %d",
+							got, w.Body.String(), want,
+						)
+					}
+
+					if authMiddlewareWanted {
+						req.SetBasicAuth(basicAuthTest.username, basicAuthTest.password)
+						w = httptest.NewRecorder()
+						api.BaseRouter.ServeHTTP(w, req)
+						if got, want := w.Body.String(), "OK"; got != want {
+							t.Errorf("authenticated: body mismatch\ngot:  %q\nwant: %q", got, want)
+						}
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestAPI__ServiceOp(t *testing.T) {
-	// GIVEN: an API with no in-flight service operations.
 	api := &API{}
+	idA, idB := "A", "B"
 
-	// WHEN: the op lock is acquired twice for one id and once for another.
-	opA1 := api.acquireServiceOp("A")
-	opA2 := api.acquireServiceOp("A")
-	opB := api.acquireServiceOp("B")
+	opA1 := api.acquireServiceOp(idA)
+	opA2 := api.acquireServiceOp(idA)
+	opB := api.acquireServiceOp(idB)
 
-	// THEN: the same lock is returned for the same id, a distinct one otherwise.
 	if opA1 != opA2 {
-		t.Errorf(
-			"%s\nacquireServiceOp(%q) returned different locks for the same id",
-			packageName, "A",
-		)
+		t.Errorf("same ID: API.acquireServiceOp() mismatch\ngot:  %p\nwant: %p", opA2, opA1)
 	}
 	if opA1 == opB {
-		t.Errorf("%s\nacquireServiceOp returned the same lock for different ids", packageName)
+		t.Errorf(
+			"different IDs: API.acquireServiceOp() mismatch\ngot:  %p\nwant: NOT %p",
+			opB, opA1,
+		)
 	}
 
-	// AND: the map and reference counts reflect the acquisitions.
 	if got, want := len(api.serviceOps), 2; got != want {
-		t.Errorf(
-			"%s\nserviceOps length mismatch\ngot:  %d\nwant: %d",
-			packageName, got, want,
-		)
+		t.Errorf("acquired: API.serviceOps length mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 	if got, want := opA1.refs, 2; got != want {
-		t.Errorf(
-			"%s\nrefs for %q mismatch\ngot:  %d\nwant: %d",
-			packageName, "A", got, want,
-		)
+		t.Errorf("acquired: serviceOp.refs mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// WHEN: one of "A"'s two references is released.
-	api.releaseServiceOp("A", opA1)
+	api.releaseServiceOp(idA, opA1)
 
-	// THEN: the entry survives (still referenced).
-	if _, ok := api.serviceOps["A"]; !ok {
-		t.Errorf(
-			"%s\nserviceOps[%q] removed while still referenced",
-			packageName, "A",
-		)
+	if _, ok := api.serviceOps[idA]; !ok {
+		t.Error("one released: API.serviceOps[idA] mismatch\ngot:  absent\nwant: present")
 	}
 	if got, want := opA2.refs, 1; got != want {
-		t.Errorf(
-			"%s\nrefs for %q mismatch\ngot:  %d\nwant: %d",
-			packageName, "A", got, want,
-		)
+		t.Errorf("one released: serviceOp.refs mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 
-	// WHEN: the last reference to "A" is released.
-	api.releaseServiceOp("A", opA2)
-	// THEN: the entry is removed.
-	if _, ok := api.serviceOps["A"]; ok {
-		t.Errorf(
-			"%s\nserviceOps[%q] not removed after last reference released",
-			packageName, "A",
-		)
+	api.releaseServiceOp(idA, opA2)
+
+	if _, ok := api.serviceOps[idA]; ok {
+		t.Error("last released: API.serviceOps[idA] mismatch\ngot:  present\nwant: absent")
 	}
-	// AND: a fresh acquire creates a new lock rather than reusing the removed one.
-	opA3 := api.acquireServiceOp("A")
+
+	opA3 := api.acquireServiceOp(idA)
 	if opA3 == opA1 {
 		t.Errorf(
-			"%s\nacquireServiceOp(%q) reused a removed lock",
-			packageName, "A",
+			"fresh acquire: API.acquireServiceOp() mismatch\ngot:  %p\nwant: NOT %p",
+			opA3, opA1,
 		)
 	}
 
-	// WHEN: every reference is released.
-	api.releaseServiceOp("A", opA3)
-	api.releaseServiceOp("B", opB)
-	// THEN: the map is empty.
-	if got := len(api.serviceOps); got != 0 {
-		t.Errorf(
-			"%s\nserviceOps not empty after all releases\ngot: %d",
-			packageName, got,
-		)
+	api.releaseServiceOp(idA, opA3)
+	api.releaseServiceOp(idB, opB)
+
+	if got, want := len(api.serviceOps), 0; got != want {
+		t.Errorf("all released: API.serviceOps length mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 
 func TestWriteJSON(t *testing.T) {
-	// GIVEN: different input strings to write.
 	tests := []struct {
 		name          string
-		response      *http.Response
 		statusCode    int
-		expectedBody  string
+		bodyRegex     string
 		input         any
 		errRegex      string
 		useFailWriter bool
 	}{
 		{
-			name:         "successful JSON encoding",
-			response:     &http.Response{},
-			statusCode:   http.StatusOK,
-			expectedBody: `^{"key":"value"}` + "\n$",
-			input:        map[string]string{"key": "value"},
-			errRegex:     `^$`,
+			name:       "successful JSON encoding",
+			statusCode: http.StatusOK,
+			bodyRegex:  `^{"key":"value"}` + "\n$",
+			input:      map[string]string{"key": "value"},
+			errRegex:   `^$`,
 		},
 		{
-			name:         "JSON encoding failure",
-			response:     &http.Response{},
-			statusCode:   http.StatusInternalServerError,
-			expectedBody: `^{"message":"json: .* marshal from Go chan int"}$`,
-			input:        make(chan int), // Invalid type for JSON encoding.
-			errRegex:     `^ERROR: json: .* marshal from Go chan int\s$`,
+			name:       "JSON encoding failure",
+			statusCode: http.StatusInternalServerError,
+			bodyRegex:  `^{"message":"json: .* marshal from Go chan int"}$`,
+			input:      make(chan int), // Invalid type for JSON encoding.
+			errRegex:   `^ERROR: json: .* marshal from Go chan int\s$`,
 		},
 		{
 			name:          "response write failure",
-			statusCode:    http.StatusOK,
-			expectedBody:  "^$",
+			statusCode:    http.StatusOK, // Sent before the write failed.
+			bodyRegex:     `^{"key":"value"}` + "\n$",
 			input:         map[string]string{"key": "value"},
 			errRegex:      `^ERROR: write failed\s$`,
 			useFailWriter: true,
@@ -310,7 +251,8 @@ func TestWriteJSON(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			var rw http.ResponseWriter = httptest.NewRecorder()
@@ -319,12 +261,8 @@ func TestWriteJSON(t *testing.T) {
 			}
 			api := &API{}
 
-			// WHEN: writeJSON is called with this input.
 			api.writeJSON(rw, tc.input, logx.LogFrom{})
 
-			prefix := fmt.Sprintf("%s\nwriteJSON()", packageName)
-
-			// THEN: the status code is as expected.
 			var code int
 			var body string
 			if rec, ok := rw.(*httptest.ResponseRecorder); ok {
@@ -334,26 +272,17 @@ func TestWriteJSON(t *testing.T) {
 				code = fw.code
 				body = fw.body
 			}
-			if code != tc.statusCode {
-				t.Errorf(
-					"%s status code mismatch\ngot:  %d\nwant: %d",
-					prefix, code, tc.statusCode,
-				)
+			if got, want := code, tc.statusCode; got != want {
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 
-			if !util.RegexCheck(tc.expectedBody, body) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, body, tc.expectedBody,
-				)
+			if !util.RegexCheck(tc.bodyRegex, body) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", body, tc.bodyRegex)
 			}
 
 			stdout := releaseStdout()
 			if !util.RegexCheck(tc.errRegex, stdout) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.errRegex,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.errRegex)
 			}
 		})
 	}

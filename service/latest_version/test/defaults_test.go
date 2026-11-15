@@ -19,23 +19,21 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	// WHEN: PlainDefaultsConfig is called.
 	lvCfg := PlainDefaultsConfig(t)
 
-	// THEN: It returns a set of defaults.
 	if lvCfg.Soft == nil || lvCfg.Hard == nil {
 		t.Fatalf(
-			"%s\nPlainDefaultsConfig() returned nil, defaults: %v, hardDefaults: %v",
-			packageName, lvCfg.Soft, lvCfg.Hard,
+			"DefaultsConfig mismatch\n"+
+				"got:  Soft nil=%t, Hard nil=%t\nwant: Soft nil=false, Hard nil=false",
+			lvCfg.Soft == nil, lvCfg.Hard == nil,
 		)
 	}
 
-	// AND: the defaults of the defaults.Require are the hardDefaults.Require.
 	want := &lvCfg.Hard.Common.Require.Docker
 	if got := lvCfg.Soft.Common.Require.Docker.Defaults; got != want {
 		t.Errorf(
-			"%s\nPlainDefaultsConfig() defaults.Require.Default() not set to expected HardDefaults mismatch\ngot:  %p\nwant %p",
-			packageName, got, want,
+			"DefaultsConfig.Soft.Common.Require.Docker.Defaults mismatch\ngot:  %p\nwant: %p",
+			got, want,
 		)
 	}
 }

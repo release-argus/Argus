@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -32,7 +31,7 @@ func TestNew(t *testing.T) {
 		info.ServiceInfo
 		statusTimestamps
 	}
-	// GIVEN: arguments to create a Service with.
+
 	tests := []struct {
 		name     string
 		format   string
@@ -44,7 +43,7 @@ func TestNew(t *testing.T) {
 			name:     "JSON/empty",
 			format:   "json",
 			data:     "",
-			errRegex: `failed to unmarshal`,
+			errRegex: `^failed to unmarshal ServiceInfo:`,
 			wants:    wants{},
 		},
 		{
@@ -62,8 +61,9 @@ func TestNew(t *testing.T) {
 			wants:    wants{},
 		},
 		{
-			name:   "JSON/filled",
-			format: "json",
+			name:     "JSON/filled",
+			format:   "json",
+			errRegex: `^$`,
 			data: test.TrimJSON(`{
 				"approved_version": "a",
 				"deployed_version": "d",
@@ -82,8 +82,9 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
-			name:   "YAML/filled",
-			format: "yaml",
+			name:     "YAML/filled",
+			format:   "yaml",
+			errRegex: `^$`,
 			data: test.TrimYAML(`
 				approved_version: a
 				deployed_version: d
@@ -123,51 +124,45 @@ func TestNew(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Status is created with them.
 			result, err := New(tc.format, []byte(tc.data))
-
-			prefix := fmt.Sprintf(
-				"%s\nNew(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the values are set as expected.
 			gotServiceInfo := decode.ToYAMLString(result.ServiceInfo, "")
 			wantServiceInfo := decode.ToYAMLString(tc.wants.ServiceInfo, "")
 			if gotServiceInfo != wantServiceInfo {
 				t.Errorf(
-					"%s\nstringified ServiceInfo mismatch\ngot:  %q\nwant: %q",
-					prefix, gotServiceInfo, wantServiceInfo,
+					"Status.ServiceInfo mismatch\ngot:  %q\nwant: %q",
+					gotServiceInfo, wantServiceInfo,
 				)
 			}
 			if got := result.ApprovedVersion(); got != tc.wants.ApprovedVersion {
 				t.Errorf(
-					"%s\n .ApprovedVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.ApprovedVersion,
+					"Status.ApprovedVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wants.ApprovedVersion,
 				)
 			}
 			if got := result.DeployedVersionTimestamp(); got != tc.wants.DeployedVersionTimestamp {
 				t.Errorf(
-					"%s\n .DeployedVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.DeployedVersionTimestamp,
+					"Status.DeployedVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wants.DeployedVersionTimestamp,
 				)
 			}
 			if got := result.LatestVersionTimestamp(); got != tc.wants.LatestVersionTimestamp {
 				t.Errorf(
-					"%s .LatestVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.LatestVersionTimestamp,
+					"Status.LatestVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wants.LatestVersionTimestamp,
+				)
+			}
+			if got := result.LastQueried(); got != tc.wants.LastQueried {
+				t.Errorf(
+					"Status.LastQueried() mismatch\ngot:  %q\nwant: %q",
+					got, tc.wants.LastQueried,
 				)
 			}
 		})

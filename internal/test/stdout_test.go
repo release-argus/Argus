@@ -48,7 +48,6 @@ func (l *Log) Write(msg string) {
 }
 
 func TestCaptureLog(t *testing.T) {
-	// GIVEN: a function that writes to stdout.
 	tests := []struct {
 		name string
 		fn   func(logger *Log)
@@ -80,29 +79,22 @@ func TestCaptureLog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a logger.
 			buf := &bytes.Buffer{}
 			logger := NewLog()
 			logger.SetOutput(buf)
 
-			// WHEN: CaptureLog is called.
 			capture := CaptureLog(t, logger)
 			tc.fn(logger)
 			result := capture()
 
-			// THEN: the result should be the expected stdout output.
 			if result != tc.want {
-				t.Errorf(
-					"%s\nCaptureLog() stdout mismatch\ngot:  %q\nwant: %q",
-					packageName, result, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.want)
 			}
 		})
 	}
 }
 
 func TestCaptureStdout(t *testing.T) {
-	// GIVEN: a function that writes to stdout.
 	tests := []struct {
 		name string
 		fn   func()
@@ -132,19 +124,14 @@ func TestCaptureStdout(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
 
-			// WHEN: CaptureStdout is called.
 			capture := CaptureStdout(t)
 			tc.fn()
 			result := capture()
 
-			// THEN: the result should be the expected stdout output.
 			if result != tc.want {
-				t.Errorf(
-					"%s\nCaptureStdout() stdout mismatch\ngot:  %q\nwant: %q",
-					packageName, result, tc.want,
-				)
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", result, tc.want)
 			}
 		})
 	}

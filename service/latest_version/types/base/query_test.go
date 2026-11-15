@@ -18,12 +18,13 @@
 package base
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestLookup_HandleNewVersion(t *testing.T) {
@@ -32,7 +33,6 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		newVersion, releaseDate                      string
 	}
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name         string
 		versions     versions
@@ -83,14 +83,14 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantNotify: true,
 		},
 		{
-			name: "same version found", // shouldn't occur in practice.
+			name: "same version found, which shouldn't occur in practice",
 			versions: versions{
 				initialLatestVersion:   "1.0.0",
 				initialDeployedVersion: "1.0.0",
 				newVersion:             "1.0.0",
 				releaseDate:            "2024-01-01",
 			},
-			wantNotify: true,
+			wantNotify: true, // Not compared here, so it still notifies.
 		},
 	}
 
@@ -102,8 +102,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup := &Lookup{
 				Status: &status.Status{},
 			}
-			announceChannel := make(chan []byte, 2)
-			lookup.Status.AnnounceChannel = announceChannel
+			lookup.Status.AnnounceChannel = make(chan []byte, 2)
 			lookup.Status.Init(
 				0, 0, 0,
 				status.ServiceInfo{
@@ -114,55 +113,38 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup.Status.SetLatestVersion(tc.versions.initialLatestVersion, "", false)
 			lookup.Status.SetDeployedVersion(tc.versions.initialDeployedVersion, "", false)
 
-			// WHEN: HandleNewVersion is called on it.
 			notify, err := lookup.HandleNewVersion(tc.versions.newVersion, tc.versions.releaseDate, logFrom)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.HandleNewVersion(version=%q, releaseDate=%s)",
-				packageName, tc.versions.newVersion, tc.versions.releaseDate,
-			)
-
-			// THEN: the error should always be nil.
 			if err != nil {
-				t.Errorf(
-					"%s unexpected error\n%v",
-					prefix, err,
-				)
+				t.Errorf("Lookup.HandleNewVersion() failed: %v", err)
 			}
 
-			// AND: the notify value should match the expected value.
 			if notify != tc.wantNotify {
-				t.Errorf(
-					"%s notify bool mismatch\ngot:  %t\nwant: %t",
-					prefix, notify, tc.wantNotify,
-				)
+				t.Errorf("notify mismatch\ngot:  %t\nwant: %t", notify, tc.wantNotify)
 			}
 
-			// AND: an announcement should be made if expected.
 			wantLen := 0
 			if tc.wantAnnounce {
 				wantLen = 1
 			}
 			if gotLen := len(lookup.Status.AnnounceChannel); gotLen != wantLen {
 				t.Errorf(
-					"%s Announce channel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotLen, wantLen,
 				)
 			}
 
-			// AND: the LatestVersion should be set to the new version.
 			if got := lookup.Status.LatestVersion(); got != tc.versions.newVersion {
 				t.Errorf(
-					"%s LatestVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.versions.newVersion,
+					"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.versions.newVersion,
 				)
 			}
 
-			// AND: the DeployedVersion should be set to the new version if it was previously unset.
-			if got := lookup.Status.DeployedVersion(); got != tc.versions.newVersion && tc.versions.initialDeployedVersion == "" {
+			wantDeployedVersion := util.ValueOr(tc.versions.initialDeployedVersion, tc.versions.newVersion)
+			if got := lookup.Status.DeployedVersion(); got != wantDeployedVersion {
 				t.Errorf(
-					"%s DeployedVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.versions.newVersion,
+					"Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					got, wantDeployedVersion,
 				)
 			}
 		})
@@ -170,24 +152,26 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 }
 
 func TestLookup_HandleNoVersionChange(t *testing.T) {
-	// GIVEN: a Lookup already on the version just found.
 	tests := []struct {
 		name        string
 		checkNumber int
+		stdoutRegex string
 	}{
 		{
 			name:        "the first check",
 			checkNumber: 0,
+			stdoutRegex: `^$`,
 		},
 		{
 			name:        "the second check, which also logs that it is staying put",
 			checkNumber: 1,
+			stdoutRegex: `^VERBOSE: .*Staying on "1\.2\.3" as that's the latest version in the second check\n$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: captures stdout.
 
 			lookup := &Lookup{Status: &status.Status{}}
 			lookup.Status.AnnounceChannel = make(chan []byte, 2)
@@ -201,30 +185,26 @@ func TestLookup_HandleNoVersionChange(t *testing.T) {
 			for len(lookup.Status.AnnounceChannel) > 0 {
 				<-lookup.Status.AnnounceChannel
 			}
+			releaseLog := test.CaptureLog(t, logx.Default())
 
-			// WHEN: HandleNoVersionChange is called on it.
 			lookup.HandleNoVersionChange(
 				tc.checkNumber, "1.2.3",
 				logx.LogFrom{Primary: "TestLookup_HandleNoVersionChange", Secondary: tc.name},
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.HandleNoVersionChange(%d)",
-				packageName, tc.checkNumber,
-			)
-
-			// THEN: the query is announced, and the version is left alone.
-			if got := len(lookup.Status.AnnounceChannel); got != 1 {
-				t.Fatalf(
-					"%s announcement count mismatch\ngot:  %d\nwant: 1",
-					prefix, got,
+			stdout := releaseLog()
+			if got, want := len(lookup.Status.AnnounceChannel), 1; got != want {
+				t.Errorf(
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, want,
 				)
 			}
 			if got, want := lookup.Status.LatestVersion(), "1.2.3"; got != want {
-				t.Fatalf(
-					"%s latest version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, want)
+			}
+
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}

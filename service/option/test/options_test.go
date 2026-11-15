@@ -23,11 +23,9 @@ import (
 )
 
 func TestPlainOptions(t *testing.T) {
-	// GIVEN: defaults and hardDefaults.
 	defaults := &opt.Defaults{}
 	hardDefaults := &opt.Defaults{}
 
-	// WHEN: PlainOptions is called with them.
 	got := PlainOptions(
 		t,
 		opt.DefaultsConfig{
@@ -36,34 +34,26 @@ func TestPlainOptions(t *testing.T) {
 		},
 	)
 
-	// THEN: got should be non-nil.
 	if got == nil {
-		t.Errorf("%s\nPlainOptions returned nil, expected non-nil", packageName)
+		t.Fatal("PlainOptions() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// AND: the defaults should be a pointer to the defaults provided.
 	if got.Defaults != defaults {
-		t.Errorf(
-			"%s\nPlainOptions defaults pointer mismatch on PlainDefaults()\ngot:  %p\nwant: %p",
-			packageName, got.Defaults, defaults,
-		)
+		t.Errorf("Options.Defaults mismatch\ngot:  %p\nwant: %p", got.Defaults, defaults)
 	}
 
-	// AND: the hardDefaults should be a pointer to the hardDefaults provided.
 	if got.HardDefaults != hardDefaults {
 		t.Errorf(
-			"%s\nPlainOptions hardDefaults pointer mismatch on PlainDefaults()\ngot:  %p\nwant: %p",
-			packageName, got.HardDefaults, hardDefaults,
+			"Options.HardDefaults mismatch\ngot:  %p\nwant: %p",
+			got.HardDefaults, hardDefaults,
 		)
 	}
 }
 
 func TestOptions(t *testing.T) {
-	// WHEN: Options is called.
 	got := Options(t)
 
-	// THEN: the Options should be non-nil.
-	if got == nil {
-		t.Errorf("%s\nOptions() = nil, want non-nil", packageName)
+	if want := "1m"; got.Interval != want {
+		t.Errorf("Options.Interval mismatch\ngot:  %q\nwant: %q", got.Interval, want)
 	}
 }

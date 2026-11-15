@@ -17,129 +17,72 @@
 package web
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/internal/test"
 
+	"github.com/release-argus/Argus/internal/test"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Init(t *testing.T) {
-	dvCfg := plainDefaultsConfig(t)
+	dvCfg := plainDefaultsConfig()
 
-	// GIVEN: a Lookup and vars for the Init.
-	l := testLookup(t, false)
+	l := testLookup(t)
 	svcStatus := &status.Status{}
 	svcStatus.ServiceInfo.ID = "TestInit"
 	options := &opt.Options{}
 
-	// WHEN: Init is called on it.
 	l.Init(
 		options,
 		svcStatus,
 		dvCfg,
 	)
 
-	prefix := fmt.Sprintf(
-		"%s\nLookup.Init(options=%p, status=%p, defaults=%v)",
-		packageName, options, &svcStatus, dvCfg,
-	)
-
-	// THEN: pointers to those vars are handed out to the Lookup.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Options", Got: l.Options, Want: options, Mode: test.CompareSamePointer},
 		{Name: "Status", Got: l.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 		{Name: "Defaults", Got: l.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
 		{Name: "HardDefaults", Got: l.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }
 
 func TestLookup_Metrics(t *testing.T) {
-	// GIVEN: a Lookup pointer.
-	tests := []struct {
-		name        string
-		lookup      *Lookup
-		serviceID   string
-		wantMetrics bool
-	}{
-		{
-			name:        "non-nil",
-			lookup:      testLookup(t, false),
-			serviceID:   t.Name(),
-			wantMetrics: true,
-		},
-	}
+	lookup := testLookup(t)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+	hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
+	hadG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
+	lookup.InitMetrics(lookup)
 
-			// WHEN: the Prometheus metrics are initialised with initMetrics.
-			hadC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-			hadG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			tc.lookup.InitMetrics(tc.lookup)
+	test.AssertMetricCount(
+		t, "Lookup.InitMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, hadC+2,
+	)
+	test.AssertMetricCount(
+		t, "Lookup.InitMetrics() DeployedVersionQueryResultLast",
+		metric.DeployedVersionQueryResultLast, hadG,
+	)
 
-			// THEN: they can be collected.
-			// counters:
-			gotC := testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal)
-			wantC := hadC
-			if tc.wantMetrics {
-				wantC += 2
-			}
-			if gotC != wantC {
-				t.Errorf(
-					"%s\nLookup.InitMetrics() Counter metrics mismatch after\ngot:  %d\nwant: %d",
-					packageName, gotC, wantC,
-				)
-			}
-			// gauges - not initialised.
-			gotG := testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			wantG := hadG
-			if gotG != wantG {
-				t.Errorf(
-					"%s\nLookup.InitMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-					packageName, gotG, wantG,
-				)
-			}
-			// But can be added.
-			if tc.lookup != nil {
-				tc.lookup.QueryMetrics(tc.lookup, nil)
-			}
-			gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast)
-			wantG = hadG
-			if tc.wantMetrics {
-				wantG += 1
-			}
-			if gotG != wantG {
-				t.Errorf(
-					"%s\nLookup.QueryMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-					packageName, gotG, wantG,
-				)
-			}
+	lookup.QueryMetrics(lookup, nil)
 
-			// AND: they can be deleted.
-			tc.lookup.DeleteMetrics(tc.lookup)
-			// counters:
-			if gotC = testutil.CollectAndCount(metric.DeployedVersionQueryResultTotal); gotC != hadC {
-				t.Errorf(
-					"%s\nLookup.DeleteMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
-					packageName, gotC, hadC,
-				)
-			}
-			// gauges:
-			if gotG = testutil.CollectAndCount(metric.DeployedVersionQueryResultLast); gotG != hadG {
-				t.Errorf(
-					"%s\nLookup.DeleteMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-					packageName, gotG, hadG,
-				)
-			}
-		})
-	}
+	test.AssertMetricCount(
+		t, "Lookup.QueryMetrics() DeployedVersionQueryResultLast",
+		metric.DeployedVersionQueryResultLast, hadG+1,
+	)
+
+	lookup.DeleteMetrics(lookup)
+
+	test.AssertMetricCount(
+		t, "Lookup.DeleteMetrics() DeployedVersionQueryResultTotal",
+		metric.DeployedVersionQueryResultTotal, hadC,
+	)
+	test.AssertMetricCount(
+		t, "Lookup.DeleteMetrics() DeployedVersionQueryResultLast",
+		metric.DeployedVersionQueryResultLast, hadG,
+	)
 }

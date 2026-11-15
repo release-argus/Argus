@@ -23,7 +23,6 @@ import (
 )
 
 func TestCommands_CheckValues(t *testing.T) {
-	// GIVEN: a Commands.
 	tests := []struct {
 		name     string
 		input    *Commands
@@ -64,7 +63,6 @@ func TestCommands_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
@@ -73,7 +71,6 @@ func TestCommands_CheckValues(t *testing.T) {
 }
 
 func TestCommand_CheckValues(t *testing.T) {
-	// GIVEN: a Command.
 	tests := []struct {
 		name     string
 		input    *Command
@@ -107,10 +104,8 @@ func TestCommand_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: CheckValues is called.
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)

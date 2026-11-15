@@ -17,24 +17,26 @@
 package service
 
 import (
-	"fmt"
+	"errors"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestDecodeServices(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: data in a given format to Decode into Services.
 	tests := []struct {
 		name         string
 		format, data string
@@ -45,7 +47,6 @@ func TestDecodeServices(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^service:
 					jsontext:
@@ -321,8 +322,6 @@ func TestDecodeServices(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", tc.name)
-
 			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (Services, error) {
@@ -335,7 +334,6 @@ func TestDecodeServices(t *testing.T) {
 				func(v Services) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeServices",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -345,31 +343,22 @@ func TestDecodeServices(t *testing.T) {
 }
 
 func TestDecodeServices__marshalError(t *testing.T) {
-	// GIVEN: a failing marshal function.
 	original := marshalServiceRaw
-	customErr := fmt.Errorf("marshal failed")
+	customErr := errors.New("marshal failed")
 	marshalServiceRaw = func(format string, m any) ([]byte, error) {
 		return nil, customErr
 	}
 	t.Cleanup(func() { marshalServiceRaw = original })
 
-	// AND: Service, Notify and Webhook config defaults.
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// AND: data to decode.
-	data := `{"service1": {"comment": "test"}}`
-
-	// WHEN: DecodeServices is called.
 	_, err := DecodeServices(
-		"json", []byte(data),
+		"json", []byte(`{"service1": {"comment": "test"}}`),
 		svcCfg, notifyCfg, whCfg,
 	)
 
-	prefix := fmt.Sprintf("%s\nDecodeServices(marshal error)", packageName)
-
-	// THEN: the marshal error is returned.
 	got := errfmt.FormatError(err)
 	wantErr := &decode.ErrKeyField{
 		Key: "service",
@@ -377,18 +366,61 @@ func TestDecodeServices__marshalError(t *testing.T) {
 	}
 	want := errfmt.FormatError(wantErr)
 	if got != want {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
+func TestDecodeServices__emptyIDWarning(t *testing.T) {
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
+	whCfg := whtest.PlainConfig(t)
+
+	tests := []struct {
+		name                  string
+		data                  string
+		stdoutRegex, errRegex string
+	}{
+		{
+			name:        "empty ID warns",
+			data:        `{"": {"comment": "test"}}`,
+			stdoutRegex: `^WARNING: DecodeServices, Ignoring the service with an empty ID.*\s$`,
+			errRegex:    `^$`,
+		},
+		{
+			name:        "named ID does not warn",
+			data:        `{"service1": {"comment": "test"}}`,
+			stdoutRegex: `^$`,
+			errRegex:    `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			_, err := DecodeServices(
+				"json", []byte(tc.data),
+				svcCfg, notifyCfg, whCfg,
+			)
+
+			stdout := releaseStdout()
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
+			}
+		})
 	}
 }
 
 func TestDecodeService(t *testing.T) {
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: data in a given format to Decode into a Service.
 	tests := []struct {
 		name              string
 		format, data      string
@@ -401,7 +433,6 @@ func TestDecodeService(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					jsontext:
@@ -517,7 +548,7 @@ func TestDecodeService(t *testing.T) {
 					"url": ["` + test.ArgusGitHubRepo + `"]
 				}
 			}`),
-			id: new(""),
+			id: new(""), // With no ID, the error is not wrapped in its key.
 			errRegex: test.TrimYAML(`
 				^latest_version:
 					json: .*unmarshal .* string.*$`,
@@ -626,7 +657,7 @@ func TestDecodeService(t *testing.T) {
 					"url": "https://example.com"
 				}
 			}`),
-			emptyHardDefaults: true,
+			emptyHardDefaults: true, // No hard-default type to fall back on.
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					latest_version:
@@ -670,6 +701,7 @@ func TestDecodeService(t *testing.T) {
 					method: GET
 					url: https://valid.release-argus.io/plain
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/deployed_version/types/url/bare",
@@ -829,7 +861,7 @@ func TestDecodeService(t *testing.T) {
 					"url": "https://example.com"
 				}
 			}`),
-			emptyHardDefaults: true,
+			emptyHardDefaults: true, // No hard-default type to fall back on.
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					deployed_version:
@@ -943,7 +975,7 @@ func TestDecodeService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svcCfg := plainDefaultsConfig(t)
+			svcCfg := plainDefaultsConfig()
 			if tc.emptyHardDefaults {
 				svcCfg.Hard = &Defaults{}
 				svcCfg.Soft.SetDefaults(svcCfg.Hard)
@@ -952,7 +984,7 @@ func TestDecodeService(t *testing.T) {
 			if tc.id != nil {
 				id = *tc.id
 			}
-			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", id)
+			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", regexp.QuoteMeta(id))
 
 			got, err, testErr := test.AssertDecode(
 				t,
@@ -967,7 +999,6 @@ func TestDecodeService(t *testing.T) {
 				func(v *Service) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeService",
 			)
 			if testErr != nil {
@@ -977,21 +1008,16 @@ func TestDecodeService(t *testing.T) {
 				return
 			}
 
-			// THEN: the .ID is set want.
-			if got.ID != tc.name {
-				t.Errorf(
-					"%s\nDecodeService(format=%q, data=%q) .ID mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.format, tc.data,
-					got.ID, tc.name,
-				)
+			if got.ID != id {
+				t.Errorf("Service.ID mismatch\ngot:  %q\nwant: %q", got.ID, id)
 			}
 		})
 	}
 }
 
 func TestApplyOverrides(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	type args struct {
@@ -999,7 +1025,7 @@ func TestApplyOverrides(t *testing.T) {
 		data   string
 		target *Service
 	}
-	// GIVEN: args to apply overrides to a given Service.
+
 	tests := []struct {
 		name     string
 		args     args
@@ -1273,14 +1299,14 @@ func TestApplyOverrides(t *testing.T) {
 			),
 		},
 		{
-			name: "comment - invalid data type",
+			name: "comment/invalid data type",
 			args: args{
 				format: "yaml",
 				data:   `comment: ["array","not","supported"]`,
 				target: test.Must(t, func() (*Service, error) {
 					return DecodeService(
 						"yaml", nil,
-						"comment - invalid data type",
+						"comment/invalid data type",
 						svcCfg, notifyCfg, whCfg,
 					)
 				}),
@@ -1302,9 +1328,8 @@ func TestApplyOverrides(t *testing.T) {
 			if tc.args.target != nil && tc.args.target.ID != "" {
 				id = tc.args.target.ID
 			}
-			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", tc.name)
+			tc.errRegex = strings.ReplaceAll(tc.errRegex, "__name__", regexp.QuoteMeta(id))
 
-			// WHEN: these overrides are applied to the Service.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -1323,7 +1348,6 @@ func TestApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				len(tc.args.data) == 0,
-				packageName,
 				"ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)

@@ -18,13 +18,13 @@ package test
 
 import (
 	"fmt"
-	"testing"
+	"regexp"
 	"time"
 )
 
 // AssertChannelBool waits for a value on the channel and checks it against the expected value.
 func AssertChannelBool(
-	t *testing.T,
+	t TB,
 	want bool,
 	channel chan bool,
 	exitCodeChannel chan string,
@@ -36,15 +36,11 @@ func AssertChannelBool(
 	select {
 	case got := <-channel:
 		drainExitCode(t, exitCodeChannel)
-		// Fatal if ok value not expected.
 		if got != want {
 			if releaseStdout != nil {
 				_ = releaseStdout()
 			}
-			return fmt.Errorf(
-				"ok result mismatch:\ngot:  %t\nwant: %t",
-				got, want,
-			)
+			return fmt.Errorf("channel value mismatch\ngot:  %t\nwant: %t", got, want)
 		}
 	case <-time.After(timeout):
 		if releaseStdout != nil {
@@ -57,12 +53,73 @@ func AssertChannelBool(
 	return nil
 }
 
-func drainExitCode(t *testing.T, ch <-chan string) {
+// AssertCallLog runs call, then checks it returns want and that the log releaseStdout captured
+// matches stdoutRegex. When call returns anything else, the captured log is logged.
+// A nil releaseStdout skips the log check.
+func AssertCallLog(
+	t TB,
+	want bool,
+	call func() bool,
+	exitCodeChannel chan string,
+	releaseStdout func() string,
+	stdoutRegex string,
+) {
+	t.Helper()
+
+	got := call()
+	drainExitCode(t, exitCodeChannel)
+	if releaseStdout == nil {
+		if got != want {
+			t.Fatalf("result mismatch\ngot:  %t\nwant: %t", got, want)
+		}
+		return
+	}
+
+	stdout := releaseStdout()
+	if got != want {
+		t.Logf("stdout: %q", stdout)
+		t.Fatalf("result mismatch\ngot:  %t\nwant: %t", got, want)
+		return
+	}
+
+	if !regexp.MustCompile(stdoutRegex).MatchString(stdout) {
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, stdoutRegex)
+	}
+}
+
+func drainExitCode(t TB, ch <-chan string) {
 	t.Helper()
 
 	select {
 	case msg := <-ch:
-		t.Logf("drained exitCodeChannel - %q", msg)
+		t.Logf("drained %q from the exit code channel", msg)
 	default:
 	}
+}
+
+// LogChannel drains ch without blocking, logging each message under label: a []byte as text,
+// anything else with %+v.
+func LogChannel[T any](t TB, label string, ch chan T) {
+	t.Helper()
+
+	for len(ch) > 0 {
+		switch m := any(<-ch).(type) {
+		case []byte:
+			t.Logf("%s: %s", label, m)
+		default:
+			t.Logf("%s: %+v", label, m)
+		}
+	}
+}
+
+// AssertChannelLen reports whether ch holds want messages; on a mismatch it fails and drains ch into the log.
+func AssertChannelLen[T any](t TB, label string, ch chan T, want int) bool {
+	t.Helper()
+
+	if got := len(ch); got != want {
+		t.Errorf("%s message count mismatch\ngot:  %d\nwant: %d", label, got, want)
+		LogChannel(t, label, ch)
+		return false
+	}
+	return true
 }

@@ -17,7 +17,6 @@
 package service
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -36,7 +35,6 @@ import (
 	lvweb "github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
 	"github.com/release-argus/Argus/service/status"
-	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	apitype "github.com/release-argus/Argus/web/api/types"
@@ -45,8 +43,8 @@ import (
 )
 
 func TestService_Marshal(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	tests := []struct {
@@ -193,6 +191,7 @@ func TestService_Marshal(t *testing.T) {
 					type: github
 					url: ` + test.ArgusGitHubRepo + `
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "CommandFromDefaults",
@@ -225,6 +224,7 @@ func TestService_Marshal(t *testing.T) {
 					type: github
 					url: ` + test.ArgusGitHubRepo + `
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "WebhookFromDefaults",
@@ -258,6 +258,7 @@ func TestService_Marshal(t *testing.T) {
 					type: github
 					url: ` + test.ArgusGitHubRepo + `
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name: "tags/single",
@@ -310,44 +311,32 @@ func TestService_Marshal(t *testing.T) {
 			}
 
 			for _, typ := range util.SortedKeys(results) {
-				want := results[typ]
+				t.Run(typ, func(t *testing.T) {
+					t.Parallel()
 
-				// WHEN: the Service is marshaled to
-				bytes, err := decode.Marshal(typ, tc.svc)
+					want := results[typ]
 
-				prefix := fmt.Sprintf(
-					"%s\nMarshal(format=%q, service=%+v)",
-					packageName, typ, tc.svc,
-				)
+					bytes, err := decode.Marshal(typ, tc.svc)
+					e := errfmt.FormatError(err)
+					if !util.RegexCheck(tc.errRegex, e) {
+						t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+					}
+					if err != nil {
+						return
+					}
 
-				// THEN: The error is as want.
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.errRegex,
-					)
-				}
-				if e != "" {
-					return
-				}
-
-				// AND: the result is as want.
-				if got := string(bytes); got != want {
-					t.Errorf(
-						"%s stringified mismatch\ngot:  %q\nwant: %q",
-						prefix, got, want,
-					)
-				}
+					if got := string(bytes); got != want {
+						t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, want)
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestService_Unmarshal(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
+	svcCfg := plainDefaultsConfig()
 
-	// GIVEN: data to unmarshal into a Service.
 	tests := []struct {
 		name         string
 		format, data string
@@ -358,7 +347,6 @@ func TestService_Unmarshal(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -492,8 +480,6 @@ func TestService_Unmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Service with defaults/hardDefaults.
-
 			if _, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Service, error) {
@@ -508,8 +494,7 @@ func TestService_Unmarshal(t *testing.T) {
 				func(v *Service) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Service",
+				"Service.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -518,9 +503,8 @@ func TestService_Unmarshal(t *testing.T) {
 }
 
 func TestService_UnmarshalLatestVersion(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
+	svcCfg := plainDefaultsConfig()
 
-	// GIVEN: data to unmarshal into LatestVersion.
 	tests := []struct {
 		name         string
 		format, data string
@@ -618,7 +602,7 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/deployed_version, ignored",
+			name:   "JSON/deployed_version/ignored",
 			format: "json",
 			data: test.TrimJSON(`{
 				"deployed_version": {
@@ -657,47 +641,30 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Service with defaults/hardDefaults.
 			svc := Service{
 				Defaults:     svcCfg.Soft,
 				HardDefaults: svcCfg.Hard,
 			}
 
-			// WHEN: the data is unmarshaled into that Service.
 			err := svc.unmarshalLatestVersion(tc.format, []byte(tc.data))
-
-			prefix := fmt.Sprintf(
-				"%s\nunmarshalLatestVersion(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// THEN: The error is as want.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s\nerror mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the Service is as want.
 			if got := svc.String(""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestService_UnmarshalDeployedVersion(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
+	svcCfg := plainDefaultsConfig()
 
-	// GIVEN: data to unmarshal into DeployedVersion.
 	tests := []struct {
 		name         string
 		format, data string
@@ -747,7 +714,7 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			),
 		},
 		{
-			name:   "JSON/latest_version, ignored",
+			name:   "JSON/latest_version/ignored",
 			format: "json",
 			data: test.TrimJSON(`{
 				"latest_version": {
@@ -834,38 +801,22 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Service with defaults/hardDefaults.
 			svc := Service{
 				Defaults:     svcCfg.Soft,
 				HardDefaults: svcCfg.Hard,
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nunmarshalDeployedVersion(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// WHEN: the data is unmarshaled into that Service.
 			err := svc.unmarshalDeployedVersion(tc.format, []byte(tc.data))
-
-			// THEN: The error is as want.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the Service is as want.
 			if got := svc.String(""); got != tc.want {
-				t.Errorf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -874,7 +825,7 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 func TestService_String(t *testing.T) {
 	dashCfg := dashtest.PlainDefaultsConfig(t)
 	lvCfg := lvtest.PlainDefaultsConfig(t)
-	dvCfg := dvtest.PlainDefaultsConfig(t)
+	dvCfg := dvtest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name string
@@ -1033,7 +984,7 @@ func TestService_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Service.String",
 				tc.svc.String,
 				tc.want,
 			)
@@ -1042,11 +993,10 @@ func TestService_String(t *testing.T) {
 }
 
 func TestService_Summary(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a Service.
 	tests := []struct {
 		name string
 		svc  *Service
@@ -1444,20 +1394,10 @@ func TestService_Summary(t *testing.T) {
 					"foo",
 					svcCfg, notifyCfg, whCfg,
 				)
+				if err != nil {
+					return nil, err
+				}
 
-				svcStatus := test.Must(t, func() (*status.Status, error) {
-					return statustest.New(
-						"yaml", []byte(test.TrimYAML(`
-							approved_version: 1
-							deployed_version: 2
-							deployed_version_timestamp: 2-
-							latest_version: 3
-							latest_version_timestamp: 3-
-							last_queried: 4
-						`)),
-					)
-				})
-				svc.Status = *svcStatus.Copy(true)
 				svc.Status = *status.New(
 					nil, nil, nil,
 					"1",
@@ -1478,7 +1418,7 @@ func TestService_Summary(t *testing.T) {
 				)
 				svc.Status.RefreshServiceInfo()
 
-				return svc, err
+				return svc, nil
 			}),
 			want: &apitype.ServiceSummary{
 				ID:                  "foo",
@@ -1509,22 +1449,16 @@ func TestService_Summary(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Service is converted to a ServiceSummary.
 			result := tc.svc.Summary()
 
-			// THEN: the result is as want.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s\nService.Summary() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("ServiceSummary.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
 
 func TestService_UsingDefaults(t *testing.T) {
-	// GIVEN: a Service that may/may not be using defaults.
 	tests := []struct {
 		name                                                            string
 		nilService                                                      bool
@@ -1581,28 +1515,16 @@ func TestService_UsingDefaults(t *testing.T) {
 				svc.WebhookFromDefaults = tc.usingWebhookDefaults
 			}
 
-			// WHEN: UsingDefaults is called.
 			usingNotifyDefaults, usingCommandDefaults, usingWebhookDefaults := svc.UsingDefaults()
 
-			prefix := fmt.Sprintf("%s\nService.UsingDefaults()", packageName)
-
-			// THEN: the Service is using defaults as want.
-			if tc.usingNotifyDefaults != usingNotifyDefaults {
+			if usingNotifyDefaults != tc.usingNotifyDefaults ||
+				usingCommandDefaults != tc.usingCommandDefaults ||
+				usingWebhookDefaults != tc.usingWebhookDefaults {
 				t.Errorf(
-					"%s Notify 'using Defaults' value mismatch\ngot:  %t\nwant: %t",
-					prefix, usingNotifyDefaults, tc.usingNotifyDefaults,
-				)
-			}
-			if tc.usingCommandDefaults != usingCommandDefaults {
-				t.Errorf(
-					"%s Command 'using Defaults' value mismatch\ngot:  %t\nwant: %t",
-					prefix, usingCommandDefaults, tc.usingCommandDefaults,
-				)
-			}
-			if tc.usingWebhookDefaults != usingWebhookDefaults {
-				t.Errorf(
-					"%s Webhook 'using Defaults' value mismatch\ngot:  %t\nwant: %t",
-					prefix, usingWebhookDefaults, tc.usingWebhookDefaults,
+					"mismatch\ngot:  notify=%t, command=%t, webhook=%t\n"+
+						"want: notify=%t, command=%t, webhook=%t",
+					usingNotifyDefaults, usingCommandDefaults, usingWebhookDefaults,
+					tc.usingNotifyDefaults, tc.usingCommandDefaults, tc.usingWebhookDefaults,
 				)
 			}
 		})
@@ -1610,7 +1532,6 @@ func TestService_UsingDefaults(t *testing.T) {
 }
 
 func TestService_GetName(t *testing.T) {
-	// GIVEN: a Service.
 	tests := []struct {
 		name string
 		svc  *Service
@@ -1629,7 +1550,6 @@ func TestService_GetName(t *testing.T) {
 		{
 			name: "Name used when no ID",
 			svc: &Service{
-				ID:   "foo",
 				Name: "bar",
 			},
 			want: "bar",
@@ -1648,15 +1568,10 @@ func TestService_GetName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetName is called on it.
 			got := tc.svc.GetName()
 
-			// THEN: the want string is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nService.GetName() mismatch\ngot:  %s\nwant: %s",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

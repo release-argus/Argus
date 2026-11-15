@@ -21,7 +21,6 @@ import (
 )
 
 func TestCheckWebhookBody(t *testing.T) {
-	// GIVEN: a response body.
 	tests := []struct {
 		name string
 		body string
@@ -43,7 +42,7 @@ func TestCheckWebhookBody(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "adnanh-webhook - defaults hook fail",
+			name: "adnanh-webhook/defaults hook fail",
 			body: `Hook rules were not satisfied.`,
 			want: false,
 		},
@@ -58,16 +57,10 @@ func TestCheckWebhookBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: checkWebhookBody is called on it.
 			got := checkWebhookBody(tc.body)
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\ncheckWebhookBody(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.body,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}

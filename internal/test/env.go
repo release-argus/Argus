@@ -25,48 +25,53 @@ import (
 
 var envMu sync.Mutex // Only one test should modify environment variables at a time.
 
-// SetEnv sets the specified environment variables for the duration of the test,
-// and restores the original values afterwards.
-func SetEnv(t *testing.T, vars map[string]string) {
+// argusEnvPrefix is the prefix of the env vars the config MapEnvToStruct methods read.
+const argusEnvPrefix = "ARGUS_"
+
+// argusTestEnvPrefix marks test-infra vars (e.g. ARGUS_TEST_REQUIRE_SECRETS) that test.IsolateEnv keeps.
+const argusTestEnvPrefix = "ARGUS_TEST_"
+
+// IsolateEnv unsets ARGUS_* env vars (except ARGUS_TEST_*) and sets vars. Cleanup reverts only
+// the keys that changed, so parallel tests reading other vars never see them cleared.
+func IsolateEnv(t *testing.T, vars map[string]string) {
 	t.Helper()
 
 	envMu.Lock()
-	originals := make(map[string]*string)
-
-	for k, v := range vars {
-		if old, ok := os.LookupEnv(k); ok {
-			// Capture existing value.
-			orig := old
-			originals[k] = &orig
-		} else {
-			// Mark previously unset.
-			originals[k] = nil
-		}
-		// Set new value.
-		os.Setenv(k, v)
-	}
-
+	originals := SplitEnvVars(os.Environ())
 	t.Cleanup(func() {
-		for k, v := range originals {
-			if v == nil {
-				// Clear previously unset.
+		for k := range SplitEnvVars(os.Environ()) {
+			if _, ok := originals[k]; !ok {
 				_ = os.Unsetenv(k)
-			} else {
-				// Restore previous value.
-				_ = os.Setenv(k, *v)
+			}
+		}
+		for k, v := range originals {
+			if got, ok := os.LookupEnv(k); !ok || got != v {
+				_ = os.Setenv(k, v)
 			}
 		}
 		envMu.Unlock()
 	})
+
+	for k := range originals {
+		if strings.HasPrefix(k, argusEnvPrefix) && !strings.HasPrefix(k, argusTestEnvPrefix) {
+			_ = os.Unsetenv(k)
+		}
+	}
+	for k, v := range vars {
+		if err := os.Setenv(k, v); err != nil {
+			t.Fatalf("os.Setenv(%q) failed: %v", k, err)
+		}
+	}
 }
 
+// SplitEnvVars maps each KEY=value entry to its value, skipping any without an "=".
 func SplitEnvVars(envVars []string) map[string]string {
 	result := make(map[string]string, len(envVars))
 
 	for _, kv := range envVars {
 		key, value, ok := strings.Cut(kv, "=")
 		if !ok {
-			continue // Skip invalid env var format.
+			continue
 		}
 		result[key] = value
 	}

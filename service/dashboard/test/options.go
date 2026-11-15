@@ -27,10 +27,7 @@ func PlainOptions(t *testing.T) *dashboard.Options {
 
 	dashCfg := PlainDefaultsConfig(t)
 
-	options, _ := dashboard.Decode(
-		"yaml", nil,
-		dashCfg,
-	)
+	options, _ := dashboard.Decode("yaml", nil, dashCfg)
 
 	return options
 }

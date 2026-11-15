@@ -19,60 +19,49 @@ package test
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
 
+// AssertSlicesEqualFunc compares two slices element-wise with eq, distinguishing nil from empty.
 func AssertSlicesEqualFunc[T any, U any](
 	t *testing.T,
 	got []T,
 	want []U,
 	eq func(T, U) bool,
-	prefix, target string,
+	target string,
 ) error {
 	t.Helper()
 
-	// nil vs empty (non-nil).
 	if (got == nil) != (want == nil) {
-		msg := "%s %s nil mismatch\ngot:  %v\nwant: %v"
+		msg := "%s nil mismatch\ngot:  %s\nwant: %s"
+		args := []any{target, formatValue(got), formatValue(want)}
 		if target == "" {
-			msg = "%s%s nil mismatch\ngot:  %v\nwant: %v"
+			msg = strings.Replace(msg, "%s ", "", 1)
+			args = args[1:]
 		}
-
-		return fmt.Errorf(msg, prefix, target, got, want)
+		return fmt.Errorf(msg, args...)
 	}
 
-	// Length.
 	if gotLen, wantLen := len(got), len(want); gotLen != wantLen {
-		msg := "%s %s length mismatch\ngot:  %d (%+v)\nwant: %d (%+v)"
+		msg := "%s length mismatch\ngot:  %d (%s)\nwant: %d (%s)"
+		args := []any{target, gotLen, formatValue(got), wantLen, formatValue(want)}
 		if target == "" {
-			msg = "%s%s length mismatch\ngot:  %d (%+v)\nwant: %d (%+v)"
+			msg = strings.Replace(msg, "%s ", "", 1)
+			args = args[1:]
 		}
-
-		return fmt.Errorf(
-			msg,
-			prefix, target,
-			gotLen, got,
-			wantLen, want,
-		)
+		return fmt.Errorf(msg, args...)
 	}
 
 	var errs []error
 	for i := range want {
 		if !eq(got[i], want[i]) {
-			msg := "%s %s[%d] element mismatch\ngot:  %v (%+v)\nwant: %v (%+v)"
-			if target == "" {
-				msg = "%s%s[%d] element mismatch\ngot:  %v (%+v)\nwant: %v (%+v)"
-			}
-
-			errs = append(
-				errs,
-				fmt.Errorf(
-					msg,
-					prefix, target, i,
-					got[i], got,
-					want[i], want,
-				),
-			)
+			errs = append(errs, fmt.Errorf(
+				"%s[%d] element mismatch\ngot:  %s (%s)\nwant: %s (%s)",
+				target, i,
+				formatValue(got[i]), formatValue(got),
+				formatValue(want[i]), formatValue(want),
+			))
 		}
 	}
 
@@ -88,7 +77,7 @@ func AssertSlicesEqualFunc[T any, U any](
 func AssertSlicesEqual[T comparable](
 	t *testing.T,
 	got, want []T,
-	prefix, target string,
+	target string,
 ) error {
 	t.Helper()
 
@@ -97,7 +86,6 @@ func AssertSlicesEqual[T comparable](
 		got,
 		want,
 		func(a, b T) bool { return a == b },
-		prefix,
 		target,
 	)
 }

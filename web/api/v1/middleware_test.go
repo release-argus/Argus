@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -30,94 +31,7 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-func TestAPI_IsTrustedProxy(t *testing.T) {
-	// GIVEN: set of trusted-proxy CIDRs and a request from na address.
-	tests := []struct {
-		name    string
-		trusted []string
-		addr    string
-		want    bool
-	}{
-		{
-			name: "empty trustedProxies/always false",
-			addr: "10.0.0.5",
-			want: false,
-		},
-		{
-			name:    "single CIDR/matching address",
-			trusted: []string{"10.0.0.0/8"},
-			addr:    "10.0.0.5",
-			want:    true,
-		},
-		{
-			name:    "single CIDR/non-matching address",
-			trusted: []string{"10.0.0.0/8"},
-			addr:    "3.3.3.3",
-			want:    false,
-		},
-		{
-			name:    "multiple CIDRs/matches second entry",
-			trusted: []string{"172.16.0.0/12", "10.0.0.0/8"},
-			addr:    "10.0.0.5",
-			want:    true,
-		},
-		{
-			name:    "IPv4-mapped IPv6 address/matches IPv4 CIDR",
-			trusted: []string{"10.0.0.0/8"},
-			addr:    "::ffff:10.0.0.5",
-			want:    true,
-		},
-		{
-			name:    "IPv6 CIDR/matching IPv6 address",
-			trusted: []string{"::1/128"},
-			addr:    "::1",
-			want:    true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// AND: an API armed with the trusted proxies.
-			proxies := make([]netip.Prefix, 0, len(tc.trusted))
-			for _, p := range tc.trusted {
-				pfx, err := netip.ParsePrefix(p)
-				if err != nil {
-					t.Fatalf(
-						"%s\nparse trusted proxy %q: %v",
-						packageName, p, err,
-					)
-				}
-				proxies = append(proxies, pfx)
-			}
-			api := &API{trustedProxies: proxies}
-
-			addr, err := netip.ParseAddr(tc.addr)
-			if err != nil {
-				t.Fatalf(
-					"%s\nparse addr %q: %v",
-					packageName, tc.addr, err,
-				)
-			}
-
-			// WHEN: isTrustedProxy is called on this address.
-			got := api.isTrustedProxy(addr)
-
-			// THEN: the result matches whether addr falls in a trusted range.
-			if got != tc.want {
-				t.Errorf(
-					"%s\nisTrustedProxy(%s)\ngot:  %t\nwant: %t",
-					packageName, tc.addr,
-					got, tc.want,
-				)
-			}
-		})
-	}
-}
-
 func TestAPI_ClientIPMiddleware(t *testing.T) {
-	// GIVEN: requests reaching the middleware from various peers.
 	tests := []struct {
 		name          string
 		trusted       []string
@@ -156,7 +70,8 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			proxies := make([]netip.Prefix, 0, len(tc.trusted))
@@ -165,14 +80,13 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 			}
 			api := &API{trustedProxies: proxies}
 
-			var gotIP string
+			gotIP := "handler not reached"
 			handler := api.clientIPMiddleware(
 				http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 					gotIP = getIP(r)
 				}),
 			)
 
-			// WHEN: two requests pass through the middleware.
 			for range 2 {
 				req := httptest.NewRequest(http.MethodGet, "/", nil)
 				req.RemoteAddr = tc.remoteAddr
@@ -183,17 +97,11 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 			}
 			stdout := releaseStdout()
 
-			prefix := fmt.Sprintf("%s\nclientIPMiddleware()", packageName)
-
-			// THEN: the client IP is resolved as expected.
 			if gotIP != tc.wantIP {
-				t.Errorf(
-					"%s IP mismatch\ngot:  %q\nwant: %q",
-					prefix, gotIP, tc.wantIP,
-				)
+				t.Errorf("getIP() mismatch\ngot:  %q\nwant: %q", gotIP, tc.wantIP)
 			}
 
-			// AND: the untrusted-proxy warning is logged at most once.
+			// The warning fires once, not per request.
 			wantWarnings := 0
 			if tc.wantWarn {
 				wantWarnings = 1
@@ -201,16 +109,87 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 			got := strings.Count(stdout, "settings.web.trusted_proxies is empty")
 			if got != wantWarnings {
 				t.Errorf(
-					"%s warning count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
-					prefix, got, wantWarnings, stdout,
+					"warning count mismatch\ngot:  %d\nwant: %d\nstdout: %q",
+					got, wantWarnings, stdout,
 				)
 			}
 		})
 	}
 }
 
+func TestAPI_IsTrustedProxy(t *testing.T) {
+	tests := []struct {
+		name    string
+		trusted []string
+		addr    string
+		want    bool
+	}{
+		{
+			name: "empty trustedProxies/always false",
+			addr: "10.0.0.5",
+			want: false,
+		},
+		{
+			name:    "single CIDR/matching address",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "10.0.0.5",
+			want:    true,
+		},
+		{
+			name:    "single CIDR/non-matching address",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "3.3.3.3",
+			want:    false,
+		},
+		{
+			name:    "multiple CIDRs/matches second entry",
+			trusted: []string{"172.16.0.0/12", "10.0.0.0/8"},
+			addr:    "10.0.0.5",
+			want:    true,
+		},
+		{
+			name:    "IPv4-mapped IPv6 address/matches IPv4 CIDR",
+			trusted: []string{"10.0.0.0/8"},
+			addr:    "::ffff:10.0.0.5", // Unmapped to 10.0.0.5 before matching.
+			want:    true,
+		},
+		{
+			name:    "IPv6 CIDR/matching IPv6 address",
+			trusted: []string{"::1/128"},
+			addr:    "::1",
+			want:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			proxies := make([]netip.Prefix, 0, len(tc.trusted))
+			for _, p := range tc.trusted {
+				pfx, err := netip.ParsePrefix(p)
+				if err != nil {
+					t.Fatalf("netip.ParsePrefix(%q) failed: %v", p, err)
+				}
+				proxies = append(proxies, pfx)
+			}
+			api := &API{trustedProxies: proxies}
+
+			addr, err := netip.ParseAddr(tc.addr)
+			if err != nil {
+				t.Fatalf("netip.ParseAddr() failed: %v", err)
+			}
+
+			got := api.isTrustedProxy(addr)
+
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestHTTP_BasicAuthMiddleware(t *testing.T) {
-	// GIVEN: an API with/without Basic Auth credentials.
 	tests := []struct {
 		name                       string
 		basicAuth                  *config.WebSettingsBasicAuth
@@ -219,13 +198,13 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 		noHeader                   bool
 	}{
 		{
-			name:         "No basic auth",
+			name:         "pass/no basic auth configured",
 			basicAuth:    nil,
 			sendUsername: "test", sendPassword: "123",
 			fail: false,
 		},
 		{
-			name: "pass",
+			name: "pass/matching credentials",
 			basicAuth: &config.WebSettingsBasicAuth{
 				Username: "test", Password: "123",
 			},
@@ -284,10 +263,9 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			cfg := config.Config{}
 			cfg.Settings.Web.BasicAuth = tc.basicAuth
-			// Hash the username/password.
+			// The middleware compares the hashes that config.WebSettingsBasicAuth.CheckValues computes.
 			if cfg.Settings.Web.BasicAuth != nil {
 				cfg.Settings.Web.BasicAuth.CheckValues()
 			}
@@ -298,7 +276,6 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 			ts := httptest.NewServer(api.BaseRouter)
 			t.Cleanup(ts.Close)
 
-			// WHEN: a HTTP request is made to this router.
 			client := http.Client{}
 			req, err := http.NewRequest(
 				http.MethodGet,
@@ -306,44 +283,45 @@ func TestHTTP_BasicAuthMiddleware(t *testing.T) {
 				nil,
 			)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("http.NewRequest() failed: %v", err)
 			}
 			if !tc.noHeader {
 				req.SetBasicAuth(tc.sendUsername, tc.sendPassword)
 			}
 			resp, err := client.Do(req)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("Client.Do() failed: %v", err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 
-			// THEN: the request passes only when expected.
-			got := resp.StatusCode
-			want := 200
+			got, want := resp.StatusCode, http.StatusOK
 			if tc.fail {
 				want = http.StatusUnauthorized
 			}
 			if got != want {
-				t.Errorf(
-					"%s\nstatus code mismatch on page with BasicAuth=%t\ngot:  %d\nwant: %d",
-					packageName, tc.basicAuth != nil,
-					got, want,
-				)
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 		})
 	}
 }
 
 func TestLoggerMiddleware(t *testing.T) {
-	// GIVEN: a HTTP route with/without a logger middleware.
-	tests := []bool{
-		true,
-		false,
+	tests := []struct {
+		name       string
+		middleware bool
+	}{
+		{name: "with middleware", middleware: true},
+		{name: "without middleware", middleware: false},
 	}
 
 	for _, tc := range tests {
-		name := fmt.Sprintf("middleware=%t", tc)
-		t.Run(name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			server := httptest.NewServer(
@@ -351,53 +329,43 @@ func TestLoggerMiddleware(t *testing.T) {
 					w.WriteHeader(http.StatusOK)
 				}),
 			)
-			if tc {
+			if tc.middleware {
 				server.Config.Handler = loggerMiddleware(server.Config.Handler)
 			}
 			t.Cleanup(server.Close)
 
-			// WHEN: a HTTP request is made to this router.
 			client := http.Client{}
 			req, err := http.NewRequest(http.MethodGet, server.URL+"/test", nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("http.NewRequest() failed: %v", err)
 			}
 			resp, err := client.Do(req)
 			if err != nil {
-				t.Fatalf(
-					"%s\ncould not make HTTP request to test loggerMiddleware(): %v",
-					packageName, err,
-				)
+				t.Fatalf("Client.Do() failed: %v", err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
 			}
 
-			// THEN: the request always passes.
 			got := resp.StatusCode
 			want := http.StatusOK
 			if got != want {
-				t.Errorf(
-					"%s\nloggerMiddleware() status code mismatch\ngot:  %d\nwant: %d",
-					packageName, got, want,
-				)
+				t.Errorf("status code mismatch\ngot:  %d - %q\nwant: %d", got, body, want)
 			}
 
-			// AND: the stdout is as expected.
 			stdout := releaseStdout()
 			re := fmt.Sprintf(
 				`%s \([0-9a-f.\:]+\) %s .+`,
 				req.Method, strings.ReplaceAll(req.URL.Path, "/", `\/`),
 			)
 			gotLoggerMiddlewareStdout := util.RegexCheck(re, stdout)
-			if tc != gotLoggerMiddlewareStdout {
-				if tc {
-					t.Errorf(
-						"%s\nloggerMiddleware() stdout mismatch\ngot:  %q\nwant: %q",
-						packageName, stdout, re,
-					)
+			if tc.middleware != gotLoggerMiddlewareStdout {
+				if tc.middleware {
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, re)
 				} else {
-					t.Errorf(
-						"%s\nloggerMiddleware() got loggerMiddleware stdout\nwant no loggerMiddleware stdout\nstdout: %q",
-						packageName, stdout,
-					)
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: NOT %q", stdout, re)
 				}
 			}
 		})

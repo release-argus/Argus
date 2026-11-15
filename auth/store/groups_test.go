@@ -19,16 +19,16 @@ package store
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
-	// GIVEN: a Store.
 	tests := []struct {
 		name          string
 		groupName     string
@@ -36,10 +36,12 @@ func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
 		existingGroup string
 		setup         func(t *testing.T, store *Store)
 		wantErr       error
+		errRegex      string
 	}{
 		{
 			name:      "group without grants",
 			groupName: "empty-handed",
+			errRegex:  `^$`,
 		},
 		{
 			name:      "group with grants across scopes",
@@ -48,41 +50,43 @@ func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
 				globalGrant(rbac.ResourceService, rbac.ActionRead),
 				serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "argus"),
 			},
+			errRegex: `^$`,
 		},
 		{
 			name:          "duplicate name rejected",
 			groupName:     "taken",
 			existingGroup: "taken",
 			wantErr:       ErrGroupNameTaken,
+			errRegex:      `^group name already taken$`,
 		},
 		{
 			name:          "duplicate name rejected case-insensitively",
-			groupName:     "TAKEN",
+			groupName:     "TAKEN", // groupIDByName matches COLLATE NOCASE.
 			existingGroup: "taken",
 			wantErr:       ErrGroupNameTaken,
+			errRegex:      `^group name already taken$`,
 		},
 		{
 			name:      "clash with seeded group rejected",
 			groupName: GroupAdmin,
 			wantErr:   ErrGroupNameTaken,
+			errRegex:  `^group name already taken$`,
 		},
 		{
 			name:      "name claimed between the check and the insert",
 			groupName: "raced",
 			setup:     raceOnGroupInsert,
-			wantErr:   ErrGroupNameTaken,
+			wantErr:   ErrGroupNameTaken, // Mapped from the UNIQUE violation.
+			errRegex:  `^group name already taken$`,
 		},
 		{
 			name:      "invalid grant rejected",
 			groupName: "bad-grants",
 			grants: []rbac.Grant{
-				{
-					Resource: "nonsense",
-					Action:   "read",
-					Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-				},
+				{Resource: "nonsense", Action: "read", Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 			},
-			wantErr: ErrInvalidGrant,
+			wantErr:  ErrInvalidGrant,
+			errRegex: `^invalid grant: nonsense:read @ global$`,
 		},
 	}
 
@@ -99,64 +103,40 @@ func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
 			}
 			groupDescription := "A test group."
 
-			// WHEN: CreateGroup is called.
 			group, err := store.CreateGroup(
 				t.Context(),
 				tc.groupName,
 				groupDescription,
 				tc.grants,
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nCreateGroup(%q)",
-				packageName, tc.groupName,
-			)
-
-			// THEN: errors match expectations.
-			if tc.wantErr != nil {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %v\nwant: %v",
-						prefix, err, tc.wantErr,
-					)
-				}
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
+			}
+			if err != nil {
 				return
 			}
-			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
-			}
 
-			// AND: the group is found in GroupByID.
-			got, err := store.GroupByID(t.Context(), group.ID)
-			if err != nil {
-				t.Fatalf(
-					"%s GroupByID failed: %v",
-					prefix, err,
-				)
+			got := mustGroupByID(t, store, group.ID)
+			if testErr := test.AssertFields(t, []test.FieldAssertion{
+				{Name: "Name", Got: got.Name, Want: tc.groupName, Mode: test.CompareEqual},
+				{Name: "Description", Got: got.Description, Want: groupDescription, Mode: test.CompareEqual},
+				{Name: "System", Got: got.System, Want: false, Mode: test.CompareEqual},
+				{Name: "Members", Got: got.Members, Want: 0, Mode: test.CompareEqual},
+			}, "Group"); testErr != nil {
+				t.Error(testErr)
 			}
-			if got.Name != tc.groupName ||
-				got.Description != groupDescription ||
-				got.System ||
-				got.Members != 0 {
-				t.Errorf(
-					"%s group mismatch\ngot:  %+v",
-					prefix, *got,
-				)
-			}
-			if len(got.Grants) != len(tc.grants) {
-				t.Errorf(
-					"%s grant count mismatch\ngot:  %d\nwant: %d",
-					prefix, len(got.Grants), len(tc.grants),
-				)
+			if gotLen, wantLen := len(got.Grants), len(tc.grants); gotLen != wantLen {
+				t.Errorf("len(Group.Grants) mismatch\ngot:  %d\nwant: %d", gotLen, wantLen)
 			}
 			for _, want := range tc.grants {
 				if !slices.Contains(got.Grants, want) {
 					t.Errorf(
-						"%s missing grant: %+v\ngot: %+v",
-						prefix, want, got.Grants,
+						"Group.Grants mismatch\ngot:  %q\nwant: %q",
+						grantStrings(got.Grants), grantString(want),
 					)
 				}
 			}
@@ -165,7 +145,6 @@ func TestStore_CreateGroup_and_GroupByID(t *testing.T) {
 }
 
 func TestStore_Groups(t *testing.T) {
-	// GIVEN: a Store with a custom group and a member.
 	store := testStore(t)
 	mustCreateGroup(
 		t,
@@ -182,66 +161,54 @@ func TestStore_Groups(t *testing.T) {
 		GroupViewer,
 	)
 
-	prefix := fmt.Sprintf("%s\nGroups()", packageName)
-
-	// WHEN: Groups is called.
 	groups, err := store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: seeded groups plus the custom group are returned, ordered by name.
 	wantOrder := []string{GroupAdmin, "custom", GroupOperator, GroupViewer}
-	if testErr := test.AssertSlicesEqualFunc(
-		t,
-		groups,
-		wantOrder,
-		func(g Group, w string) bool {
-			return g.Name == w
-		},
-		prefix,
-		"",
-	); testErr != nil {
+	gotNames := make([]string, len(groups))
+	for i, group := range groups {
+		gotNames[i] = group.Name
+	}
+	if testErr := test.AssertSlicesEqual(t, gotNames, wantOrder, "Group.Name"); testErr != nil {
 		t.Fatal(testErr)
 	}
 
-	// AND: member counts and grants are attached.
 	for _, group := range groups {
 		switch group.Name {
-		case GroupAdmin:
-		case GroupOperator:
 		case "custom":
-			if group.Members != 1 || len(group.Grants) != 1 {
+			if got, want := group.Members, 1; got != want {
+				t.Errorf("Group[%q].Members mismatch\ngot:  %d\nwant: %d", group.Name, got, want)
+			}
+			if got, want := len(group.Grants), 1; got != want {
 				t.Errorf(
-					"%s %s group mismatch\ngot:  members=%d grants=%d\nwant: members=1 grants=1",
-					prefix, group.Name, group.Members, len(group.Grants),
+					"len(Group[%q].Grants) mismatch\ngot:  %d\nwant: %d",
+					group.Name, got, want,
 				)
 			}
 		case GroupViewer:
-			if group.Members != 1 {
-				t.Errorf(
-					"%s viewer member count mismatch\ngot:  %d\nwant: 1",
-					prefix, group.Members,
-				)
+			if got, want := group.Members, 1; got != want {
+				t.Errorf("Group[%q].Members mismatch\ngot:  %d\nwant: %d", group.Name, got, want)
 			}
 		}
 	}
 }
 
 func TestStore_Groups__errors(t *testing.T) {
-	// GIVEN: stores in states that break listing.
 	tests := []struct {
-		name  string
-		setup func(t *testing.T, store *Store)
+		name     string
+		setup    func(t *testing.T, store *Store)
+		errRegex string
 	}{
 		{
 			name: "groups table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "groups")
+				test.DropTable(t, store.db, "groups")
 			},
+			errRegex: test.TrimYAML(`
+				^list groups:
+					SQL logic error: no such table: groups`),
 		},
 		{
 			name: "corrupt group timestamp",
@@ -250,36 +217,41 @@ func TestStore_Groups__errors(t *testing.T) {
 					INSERT INTO groups (id, name, created_at, updated_at)
 					VALUES ('x', 'x', 'not-a-time', 'not-a-time');`,
 				); err != nil {
-					t.Fatalf(
-						"%s\nsetup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.Exec() failed: %v", err)
 				}
 			},
+			errRegex: test.TrimYAML(`
+				^scan group:
+					sql: Scan error on column index \d+, name "created_at":
+						parse stored timestamp "not-a-time"`,
+			),
 		},
 		{
 			name: "group_permissions table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "group_permissions")
+				test.DropTable(t, store.db, "group_permissions")
 			},
+			errRegex: test.TrimYAML(`
+				^attach grants:
+					SQL logic error: no such table: group_permissions`),
 		},
 		{
 			name: "NULL grant row",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "group_permissions")
-				for _, statement := range []string{
+				test.DropTable(t, store.db, "group_permissions")
+				test.ExecSQL(
+					t, store.db,
 					`CREATE TABLE group_permissions (group_id TEXT, permission_id INTEGER, scope_type TEXT, scope_ref TEXT);`,
 					`INSERT INTO group_permissions (group_id, permission_id, scope_type, scope_ref)
 						VALUES (NULL, (SELECT id FROM permissions LIMIT 1), NULL, NULL);`,
-				} {
-					if _, err := store.db.Exec(statement); err != nil {
-						t.Fatalf(
-							"%s\nsetup failed: %v",
-							packageName, err,
-						)
-					}
-				}
+				)
 			},
+			errRegex: test.TrimYAML(`
+				^attach grants:
+					scan grant:
+						sql: Scan error on column index 0, name "group_id":
+							converting NULL to string is unsupported$`,
+			),
 		},
 	}
 
@@ -288,137 +260,121 @@ func TestStore_Groups__errors(t *testing.T) {
 			store := testStore(t)
 			tc.setup(t, store)
 
-			// WHEN: Groups is called.
 			_, err := store.Groups(t.Context())
-
-			prefix := fmt.Sprintf("%s\nGroups()", packageName)
-
-			// THEN: the failure is surfaced.
-			if err == nil {
-				t.Errorf("%s expected an error, got nil", prefix)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestStore_Groups__rowsErr(t *testing.T) {
-	// GIVEN: a Store whose row iteration fails.
 	store := testStore(t)
 	rowsErrHad := rowsErr
 	wantErr := errors.New("iteration broke")
 	rowsErr = func(_ *sql.Rows) error { return wantErr }
 	t.Cleanup(func() { rowsErr = rowsErrHad })
 
-	// WHEN: Groups is called.
 	_, err := store.Groups(t.Context())
 
-	prefix := fmt.Sprintf("%s\nGroups() with failing iteration", packageName)
-
-	// THEN: the iteration failure is surfaced.
 	if !errors.Is(err, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, wantErr,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, wantErr)
 	}
 }
 
 func TestStore_GroupByID__notFound(t *testing.T) {
-	// GIVEN: a Store.
 	store := testStore(t)
 
-	// WHEN: GroupByID is called with an unknown ID.
 	_, err := store.GroupByID(t.Context(), "no-such-id")
 
-	prefix := fmt.Sprintf("%s\nGroupByID(unknown)", packageName)
-
-	// THEN: ErrNotFound is returned.
 	if !errors.Is(err, ErrNotFound) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, ErrNotFound,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrNotFound)
 	}
 }
 
 func TestStore_GroupByID__errors(t *testing.T) {
-	// GIVEN: a Store with a group whose grants are unreadable.
 	store := testStore(t)
 	group := mustCreateGroup(t, store, "custom")
-	dropTable(t, store, "group_permissions")
+	test.DropTable(t, store.db, "group_permissions")
 
-	// WHEN: GroupByID is called.
 	_, err := store.GroupByID(t.Context(), group.ID)
-
-	prefix := fmt.Sprintf("%s\nGroupByID() with unreadable grants", packageName)
-
-	// THEN: the failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^list group's grants:
+			SQL logic error: no such table: group_permissions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_UpdateGroup(t *testing.T) {
 	customTarget := "custom"
-	// GIVEN: a Store with groups in various states.
+
 	tests := []struct {
-		name    string
-		target  string // [customTarget] (created) or a seeded group name.
-		preset  string // Additional group created beforehand.
-		patch   GroupPatch
-		wantErr error
-		check   func(t *testing.T, store *Store, prefix string, groupID string)
+		name     string
+		target   string // customTarget (created) or a seeded group name.
+		preset   string // Additional group created beforehand.
+		patch    GroupPatch
+		wantErr  error
+		errRegex string
+		check    func(t *testing.T, store *Store, groupID string)
 	}{
 		{
-			name:   "rename custom group",
-			target: customTarget,
-			patch:  GroupPatch{Name: new("renamed")},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			name:     "rename custom group",
+			target:   customTarget,
+			patch:    GroupPatch{Name: new("renamed")},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				if group.Name != "renamed" {
-					t.Errorf(
-						"%s name not updated: %+v",
-						prefix, *group,
-					)
+					t.Errorf("Group.Name mismatch\ngot:  %q\nwant: %q", group.Name, "renamed")
 				}
 			},
 		},
 		{
-			name:    "rename to existing name rejected",
-			target:  customTarget,
-			preset:  "occupied",
-			patch:   GroupPatch{Name: new("occupied")},
-			wantErr: ErrGroupNameTaken,
+			name:     "rename to existing name rejected",
+			target:   customTarget,
+			preset:   "occupied",
+			patch:    GroupPatch{Name: new("occupied")},
+			wantErr:  ErrGroupNameTaken,
+			errRegex: `^group name already taken$`,
 		},
 		{
-			name:   "rename to own name is a no-op",
-			target: customTarget,
-			patch:  GroupPatch{Name: new(customTarget)},
+			name:     "rename to own name is a no-op",
+			target:   customTarget,
+			patch:    GroupPatch{Name: new(customTarget)},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
+				if group.Name != customTarget {
+					t.Errorf("Group.Name mismatch\ngot:  %q\nwant: %q", group.Name, customTarget)
+				}
+			},
 		},
 		{
-			name:   "rename to own name in a different case",
-			target: customTarget,
-			patch:  GroupPatch{Name: new("CUSTOM")},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			name:     "rename to own name in a different case",
+			target:   customTarget,
+			patch:    GroupPatch{Name: new("CUSTOM")},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				if group.Name != "CUSTOM" {
-					t.Errorf(
-						"%s name not updated: %+v",
-						prefix, *group,
-					)
+					t.Errorf("Group.Name mismatch\ngot:  %q\nwant: %q", group.Name, "CUSTOM")
 				}
 			},
 		},
 		{
-			name:   "update description",
-			target: customTarget,
-			patch:  GroupPatch{Description: new("updated")},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			name:     "update description",
+			target:   customTarget,
+			patch:    GroupPatch{Description: new("updated")},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				if group.Description != "updated" {
 					t.Errorf(
-						"%s description not updated: %+v",
-						prefix, *group,
+						"Group.Description mismatch\ngot:  %q\nwant: %q",
+						group.Description, "updated",
 					)
 				}
 			},
@@ -429,13 +385,14 @@ func TestStore_UpdateGroup(t *testing.T) {
 			patch: GroupPatch{Grants: new([]rbac.Grant{
 				serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "argus"),
 			})},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				want := serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "argus")
 				if len(group.Grants) != 1 || group.Grants[0] != want {
 					t.Errorf(
-						"%s grants not replaced: %+v",
-						prefix, group.Grants,
+						"Group.Grants mismatch\ngot:  %q\nwant: %q",
+						grantStrings(group.Grants), []string{grantString(want)},
 					)
 				}
 			},
@@ -444,50 +401,49 @@ func TestStore_UpdateGroup(t *testing.T) {
 			name:   "invalid grant rejected",
 			target: customTarget,
 			patch: GroupPatch{Grants: new([]rbac.Grant{
-				{
-					Resource: rbac.Resource("user"),
-					Action:   rbac.ActionRead,
-					Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "argus"}},
+				// Not a catalogued resource.
+				{Resource: rbac.Resource("user"), Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "argus"}},
 			})},
-			wantErr: ErrInvalidGrant,
+			wantErr:  ErrInvalidGrant,
+			errRegex: `^invalid grant: user:read @ service/argus$`,
 		},
 		{
-			name:    "rename admin rejected",
-			target:  GroupAdmin,
-			patch:   GroupPatch{Name: new("superusers")},
-			wantErr: ErrSystemGroup,
+			name:     "rename admin rejected",
+			target:   GroupAdmin,
+			patch:    GroupPatch{Name: new("superusers")},
+			wantErr:  ErrSystemGroup,
+			errRegex: `^system group cannot be modified this way: cannot rename a system group$`,
 		},
 		{
-			name:   "starter group renameable",
-			target: GroupViewer,
-			patch:  GroupPatch{Name: new("watchers")},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			name:     "starter group renameable",
+			target:   GroupViewer,
+			patch:    GroupPatch{Name: new("watchers")},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				if group.Name != "watchers" {
-					t.Errorf(
-						"%s name not updated: %+v",
-						prefix, *group,
-					)
+					t.Errorf("Group.Name mismatch\ngot:  %q\nwant: %q", group.Name, "watchers")
 				}
-				// AND: the seed identity is unchanged by the rename.
+
 				if group.SeedKey != GroupViewer {
 					t.Errorf(
-						"%s seed_key changed: %+v",
-						prefix, *group,
+						"Group.SeedKey mismatch\ngot:  %q\nwant: %q",
+						group.SeedKey, GroupViewer,
 					)
 				}
 			},
 		},
 		{
-			name:   "starter group description editable",
-			target: GroupViewer,
-			patch:  GroupPatch{Description: new("customised")},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
+			name:     "starter group description editable",
+			target:   GroupViewer,
+			patch:    GroupPatch{Description: new("customised")},
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
 				if group.Description != "customised" {
 					t.Errorf(
-						"%s description not updated: %+v",
-						prefix, *group,
+						"Group.Description mismatch\ngot:  %q\nwant: %q",
+						group.Description, "customised",
 					)
 				}
 			},
@@ -498,12 +454,14 @@ func TestStore_UpdateGroup(t *testing.T) {
 			patch: GroupPatch{Grants: new([]rbac.Grant{
 				globalGrant(rbac.ResourceService, rbac.ActionRead),
 			})},
-			check: func(t *testing.T, store *Store, prefix, groupID string) {
-				group, _ := store.GroupByID(t.Context(), groupID)
-				if len(group.Grants) != 1 {
+			errRegex: `^$`,
+			check: func(t *testing.T, store *Store, groupID string) {
+				group := mustGroupByID(t, store, groupID)
+				want := globalGrant(rbac.ResourceService, rbac.ActionRead)
+				if len(group.Grants) != 1 || group.Grants[0] != want {
 					t.Errorf(
-						"%s grants not replaced: %+v",
-						prefix, group.Grants,
+						"Group.Grants mismatch\ngot:  %q\nwant: %q",
+						grantStrings(group.Grants), []string{grantString(want)},
 					)
 				}
 			},
@@ -514,7 +472,8 @@ func TestStore_UpdateGroup(t *testing.T) {
 			patch: GroupPatch{Grants: new([]rbac.Grant{
 				globalGrant(rbac.ResourceService, rbac.ActionRead),
 			})},
-			wantErr: ErrSystemGroup,
+			wantErr:  ErrSystemGroup,
+			errRegex: `^system group cannot be modified this way: admin grants are fixed$`,
 		},
 	}
 
@@ -527,61 +486,33 @@ func TestStore_UpdateGroup(t *testing.T) {
 				mustCreateGroup(t, store, tc.preset)
 			}
 
-			// Resolve the target group's ID.
 			var groupID string
 			if tc.target == customTarget {
 				groupID = mustCreateGroup(t, store, customTarget).ID
 			} else {
-				groups, err := store.Groups(t.Context())
-				if err != nil {
-					t.Fatalf(
-						"%s setup Groups failed: %v",
-						packageName, err,
-					)
-				}
-				for _, group := range groups {
-					if group.Name == tc.target {
-						groupID = group.ID
-						break
-					}
-				}
+				groupID = mustGroupByName(t, store, tc.target).ID
 			}
 
-			// WHEN: UpdateGroup is called.
 			_, err := store.UpdateGroup(t.Context(), groupID, tc.patch)
-
-			prefix := fmt.Sprintf(
-				"%s UpdateGroup(id=%q, patch=%+v)",
-				packageName, groupID, tc.patch,
-			)
-
-			// THEN: errors match expectations.
-			if tc.wantErr != nil {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %v\nwant: %v",
-						prefix, err, tc.wantErr,
-					)
-				}
-				return
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
 			}
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
+				return
 			}
 
-			// AND: the patch took effect.
 			if tc.check != nil {
-				tc.check(t, store, prefix, groupID)
+				tc.check(t, store, groupID)
 			}
 		})
 	}
 }
 
 func TestStore_UpdateGroup__permissionLoadRowsErr(t *testing.T) {
-	// GIVEN: a Store with a group whose row iteration fails.
 	store := testStore(t)
 	group := mustCreateGroup(t, store, "custom")
 	rowsErrHad := rowsErr
@@ -589,65 +520,56 @@ func TestStore_UpdateGroup__permissionLoadRowsErr(t *testing.T) {
 	rowsErr = func(_ *sql.Rows) error { return wantErr }
 	t.Cleanup(func() { rowsErr = rowsErrHad })
 
-	// WHEN: grants are set (permissionIDsByPair iterates the permissions).
+	// permissionIDsByPair iterates the permissions.
 	_, err := store.UpdateGroup(t.Context(), group.ID,
 		GroupPatch{Grants: new([]rbac.Grant{
 			globalGrant(rbac.ResourceService, rbac.ActionRead),
-		})})
+		})},
+	)
 
-	prefix := fmt.Sprintf("%s\nUpdateGroup() with failing permission iteration", packageName)
-
-	// THEN: the iteration failure is surfaced.
 	if !errors.Is(err, wantErr) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, wantErr,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, wantErr)
 	}
 }
 
 func TestStore_UpdateGroup__notFound(t *testing.T) {
-	// GIVEN: a Store.
 	store := testStore(t)
 
-	// WHEN: UpdateGroup is called with an unknown ID.
 	_, err := store.UpdateGroup(
 		t.Context(),
 		"no-such-id",
 		GroupPatch{},
 	)
 
-	prefix := fmt.Sprintf("%s\nUpdateGroup(unknown)", packageName)
-
-	// THEN: ErrNotFound is returned.
 	if !errors.Is(err, ErrNotFound) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, ErrNotFound,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrNotFound)
 	}
 }
 
 func TestStore_DeleteGroup(t *testing.T) {
 	customGroup := "custom"
-	// GIVEN: a Store with a member-carrying 'custom' group and the seeded groups.
+
 	tests := []struct {
-		name    string
-		target  string
-		wantErr error
+		name     string
+		target   string
+		wantErr  error
+		errRegex string
 	}{
 		{
-			name:   "custom group",
-			target: customGroup,
+			name:     "custom group",
+			target:   customGroup,
+			errRegex: `^$`,
 		},
 		{
-			name:   "starter group deletable",
-			target: GroupOperator,
+			name:     "starter group deletable",
+			target:   GroupOperator,
+			errRegex: `^$`,
 		},
 		{
-			name:    "admin rejected",
-			target:  GroupAdmin,
-			wantErr: ErrSystemGroup,
+			name:     "admin rejected",
+			target:   GroupAdmin,
+			wantErr:  ErrSystemGroup,
+			errRegex: `^system group cannot be modified this way: cannot delete a system group$`,
 		},
 	}
 
@@ -672,54 +594,28 @@ func TestStore_DeleteGroup(t *testing.T) {
 					customGroup,
 				)
 			} else {
-				groups, err := store.Groups(t.Context())
-				if err != nil {
-					t.Fatalf(
-						"%s\nsetup Groups failed: %v",
-						packageName, err,
-					)
-				}
-				for _, group := range groups {
-					if group.Name == tc.target {
-						groupID = group.ID
-						break
-					}
-				}
+				groupID = mustGroupByName(t, store, tc.target).ID
 			}
 
-			// WHEN: DeleteGroup is called.
 			err := store.DeleteGroup(t.Context(), groupID)
-
-			prefix := fmt.Sprintf(
-				"%s\nDeleteGroup()",
-				packageName,
-			)
-
-			// THEN: errors match expectations.
-			if tc.wantErr != nil {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf(
-						"%s error mismatch\ngot:  %v\nwant: %v",
-						prefix, err, tc.wantErr,
-					)
-				}
-				return
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
 			}
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
+				return
 			}
 
-			// AND: the group, its memberships and its grants are gone.
 			if _, err := store.GroupByID(
 				t.Context(),
 				groupID,
 			); !errors.Is(err, ErrNotFound) {
 				t.Errorf(
-					"%s group should be gone\ngot: %v",
-					prefix, err,
+					"Store.GroupByID() error type mismatch\ngot:  %v\nwant: %v",
+					err, ErrNotFound,
 				)
 			}
 			var count int
@@ -728,8 +624,8 @@ func TestStore_DeleteGroup(t *testing.T) {
 				groupID,
 			).Scan(&count); err != nil || count != 0 {
 				t.Errorf(
-					"%s memberships should be cascade-deleted\ngot:  %d, err=%v",
-					prefix, count, err,
+					"user_groups row count mismatch\ngot:  %d, err=%v\nwant: 0, err=nil (deleted)",
+					count, err,
 				)
 			}
 			if err := store.db.QueryRow(
@@ -737,8 +633,8 @@ func TestStore_DeleteGroup(t *testing.T) {
 				groupID,
 			).Scan(&count); err != nil || count != 0 {
 				t.Errorf(
-					"%s grants should be cascade-deleted\ngot:  %d, err=%v",
-					prefix, count, err,
+					"group_permissions row count mismatch\ngot:  %d, err=%v\nwant: 0, err=nil (deleted)",
+					count, err,
 				)
 			}
 		})
@@ -746,25 +642,16 @@ func TestStore_DeleteGroup(t *testing.T) {
 }
 
 func TestStore_DeleteGroup__notFound(t *testing.T) {
-	// GIVEN: a Store.
 	store := testStore(t)
 
-	// WHEN: DeleteGroup is called with an unknown ID.
 	err := store.DeleteGroup(t.Context(), "no-such-id")
 
-	prefix := fmt.Sprintf("%s\nDeleteGroup(unknown)", packageName)
-
-	// THEN: ErrNotFound is returned.
 	if !errors.Is(err, ErrNotFound) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %v\nwant: %v",
-			prefix, err, ErrNotFound,
-		)
+		t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, ErrNotFound)
 	}
 }
 
 func TestStore_UserIDsInGroup(t *testing.T) {
-	// GIVEN: groups with two, one, and no members.
 	store := testStore(t)
 	crew := mustCreateGroup(t, store, "crew")
 	empty := mustCreateGroup(t, store, "empty")
@@ -773,28 +660,17 @@ func TestStore_UserIDsInGroup(t *testing.T) {
 	userB := mustCreateUser(t, store, "user-b", "", "crew", "other")
 	mustCreateUser(t, store, "user-c", "", "other")
 
-	prefix := fmt.Sprintf("%s\nUserIDsInGroup()", packageName)
-
-	// WHEN: the two-member group's users are listed.
 	got, err := store.UserIDsInGroup(t.Context(), crew.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("before DropTable: unexpected error: %v", err)
 	}
 
-	// THEN: exactly its members are returned, sorted by ID.
 	want := []string{userA.ID, userB.ID}
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
-		t.Errorf(
-			"%s members mismatch\ngot:  %v\nwant: %v",
-			prefix, got, want,
-		)
+		t.Errorf("before DropTable: user IDs mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: memberless and unknown groups list nobody, without error.
 	noMembersTests := []struct {
 		name    string
 		groupID string
@@ -803,23 +679,27 @@ func TestStore_UserIDsInGroup(t *testing.T) {
 		{name: "unknown", groupID: "no-such-id"},
 	}
 	for _, tc := range noMembersTests {
-		if got, err := store.UserIDsInGroup(t.Context(), tc.groupID); err != nil || got != nil {
-			t.Errorf(
-				"%s %s group\ngot:  %v, err=%v\nwant: no members, no error",
-				prefix, tc.name, got, err,
-			)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: shares the user_groups table, which the parent drops after the loop.
+
+			if ids, err := store.UserIDsInGroup(t.Context(), tc.groupID); err != nil || ids != nil {
+				t.Errorf("user IDs mismatch\ngot:  %q, err=%v\nwant: nil, err=nil", ids, err)
+			}
+		})
 	}
 
-	// AND: it errors when the table is unreadable.
-	dropTable(t, store, "user_groups")
-	if _, err := store.UserIDsInGroup(t.Context(), crew.ID); err == nil {
-		t.Errorf("%s expected an error after dropping user_groups", prefix)
+	test.DropTable(t, store.db, "user_groups")
+	_, err = store.UserIDsInGroup(t.Context(), crew.ID)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^list group's users:
+			SQL logic error: no such table: user_groups`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("missing table: error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_GrantsForUser(t *testing.T) {
-	// GIVEN: users spread across groups.
 	store := testStore(t)
 	mustCreateGroup(
 		t,
@@ -834,10 +714,7 @@ func TestStore_GrantsForUser(t *testing.T) {
 	if _, err := store.db.Exec(
 		`UPDATE users SET enabled = 0 WHERE id = ?;`, disabled.ID,
 	); err != nil {
-		t.Fatalf(
-			"%s\nsetup disable failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("DB.Exec() failed: %v", err)
 	}
 
 	viewerGrantCount := seedGrantCount(t, GroupViewer)
@@ -868,7 +745,7 @@ func TestStore_GrantsForUser(t *testing.T) {
 		},
 		{
 			name:   "disabled user gets nothing",
-			userID: disabled.ID,
+			userID: disabled.ID, // The query filters out disabled users.
 		},
 		{
 			name:   "unknown user gets nothing",
@@ -880,34 +757,22 @@ func TestStore_GrantsForUser(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GrantsForUser is called.
 			grants, err := store.GrantsForUser(t.Context(), tc.userID)
-
-			prefix := fmt.Sprintf(
-				"%s\nGrantsForUser()",
-				packageName,
-			)
-
-			// THEN: no error occurs.
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// AND: the union of the user's groups' grants is returned.
 			if len(grants) != tc.wantCount {
 				t.Errorf(
-					"%s grant count mismatch\ngot:  %d (%+v)\nwant: %d",
-					prefix, len(grants), grants, tc.wantCount,
+					"len(grants) mismatch\ngot:  %d - %q\nwant: %d",
+					len(grants), grantStrings(grants), tc.wantCount,
 				)
 			}
 			for _, want := range tc.wantHas {
 				if !slices.Contains(grants, want) {
 					t.Errorf(
-						"%s missing grant %+v\ngot: %+v",
-						prefix, want, grants,
+						"grants mismatch\ngot:  %q\nwant: %q",
+						grantStrings(grants), grantString(want),
 					)
 				}
 			}
@@ -916,24 +781,21 @@ func TestStore_GrantsForUser(t *testing.T) {
 }
 
 func TestStore_GrantsForUser__errors(t *testing.T) {
-	// GIVEN: a Store whose grants are unreadable.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "member", "", GroupViewer)
-	dropTable(t, store, "group_permissions")
+	test.DropTable(t, store.db, "group_permissions")
 
-	// WHEN: GrantsForUser is called.
 	_, err := store.GrantsForUser(t.Context(), user.ID)
-
-	prefix := fmt.Sprintf("%s\nGrantsForUser() with unreadable grants", packageName)
-
-	// THEN: the failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^list user's grants:
+			SQL logic error: no such table: group_permissions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_ServiceScopeRefs(t *testing.T) {
-	// GIVEN: a Store with service-scoped and global grants.
 	store := testStore(t)
 	group := mustCreateGroup(t, store, "scoped",
 		globalGrant(rbac.ResourceService, rbac.ActionRead),
@@ -941,240 +803,119 @@ func TestStore_ServiceScopeRefs(t *testing.T) {
 		serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "other-service"),
 	)
 
-	prefix := fmt.Sprintf("%s\nRename/DeleteServiceScopeRefs()", packageName)
-
-	// WHEN: a service is renamed.
-	if _, err := store.RenameServiceScopeRefs(
-		t.Context(),
-		"old-name",
-		"new-name",
-	); err != nil {
-		t.Fatalf(
-			"%s rename failed: %v",
-			prefix, err,
-		)
+	oldID, newID := "old-name", "new-name"
+	_, err := store.RenameServiceScopeRefs(t.Context(), oldID, newID)
+	if err != nil {
+		t.Fatalf("rename: Store.RenameServiceScopeRefs() failed: %v", err)
 	}
 
-	// THEN: only the matching service-scoped grant follows the rename.
 	got, err := store.GroupByID(t.Context(), group.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s GroupByID failed: %v",
-			prefix, err,
+		t.Fatalf("rename: Store.GroupByID() failed: %v", err)
+	}
+	renamed := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, newID)
+	if !slices.Contains(got.Grants, renamed) {
+		t.Errorf(
+			"rename: Group.Grants mismatch\ngot:  %q\nwant: %q",
+			grantStrings(got.Grants), grantString(renamed),
 		)
 	}
-	if !slices.Contains(
-		got.Grants,
-		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
-	) {
+	unrelated := serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "other-service")
+	if !slices.Contains(got.Grants, unrelated) {
 		t.Errorf(
-			"%s grant should follow the rename\ngot: %+v",
-			prefix, got.Grants,
-		)
-	}
-	if !slices.Contains(
-		got.Grants,
-		serviceGrant(rbac.ResourceVersionRefresh, rbac.ActionExecute, "other-service"),
-	) {
-		t.Errorf(
-			"%s unrelated grant should be untouched\ngot: %+v",
-			prefix, got.Grants,
+			"rename: Group.Grants mismatch\ngot:  %q\nwant: %q",
+			grantStrings(got.Grants), grantString(unrelated),
 		)
 	}
 
-	// WHEN: the service is deleted.
-	if err := store.DeleteServiceScopeRefs(t.Context(), "new-name"); err != nil {
-		t.Fatalf(
-			"%s delete failed: %v",
-			prefix, err,
-		)
+	err = store.DeleteServiceScopeRefs(t.Context(), newID)
+	if err != nil {
+		t.Fatalf("delete: Store.DeleteServiceScopeRefs() failed: %v", err)
 	}
 
-	// THEN: its scoped grant is pruned; global and unrelated grants remain.
 	got, err = store.GroupByID(t.Context(), group.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s GroupByID failed: %v",
-			prefix, err,
+		t.Fatalf("delete: Store.GroupByID() failed: %v", err)
+	}
+	wantRemaining := []rbac.Grant{globalGrant(rbac.ResourceService, rbac.ActionRead), unrelated}
+	if len(got.Grants) != len(wantRemaining) {
+		t.Errorf(
+			"delete: len(Group.Grants) mismatch\ngot:  %d - %q\nwant: %d - %q",
+			len(got.Grants), grantStrings(got.Grants),
+			len(wantRemaining), grantStrings(wantRemaining),
 		)
 	}
-	if len(got.Grants) != 2 {
+	var missing []rbac.Grant
+	for _, want := range wantRemaining {
+		if !slices.Contains(got.Grants, want) {
+			missing = append(missing, want)
+		}
+	}
+	if len(missing) != 0 {
 		t.Errorf(
-			"%s grant count mismatch after delete\ngot:  %+v\nwant: 2 grants",
-			prefix, got.Grants,
+			"delete: Group.Grants mismatch\ngot:  %q\nwant: %q",
+			grantStrings(got.Grants), grantStrings(missing),
 		)
 	}
 
-	// AND: both maintenance calls error once the table is unreadable.
-	dropTable(t, store, "group_permissions")
-	if _, err := store.RenameServiceScopeRefs(t.Context(), "a", "b"); err == nil {
-		t.Errorf("%s rename should error after drop", prefix)
+	test.DropTable(t, store.db, "group_permissions")
+	_, err = store.RenameServiceScopeRefs(t.Context(), "a", "b")
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^list service-scoped grants:
+			SQL logic error: no such table: group_permissions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf(
+			"missing table: Store.RenameServiceScopeRefs() error mismatch\ngot:  %q\nwant: %q",
+			e, errRegex,
+		)
 	}
-	if err := store.DeleteServiceScopeRefs(t.Context(), "a"); err == nil {
-		t.Errorf("%s delete should error after drop", prefix)
+	e = errfmt.FormatError(store.DeleteServiceScopeRefs(t.Context(), "a"))
+	errRegex = test.TrimYAML(`
+		^delete service scope refs:
+			SQL logic error: no such table: group_permissions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf(
+			"missing table: Store.DeleteServiceScopeRefs() error mismatch\ngot:  %q\nwant: %q",
+			e, errRegex,
+		)
 	}
 }
 
 func TestStore_RenameServiceScopeRefs__collision(t *testing.T) {
-	// GIVEN: a group already holding the same service-scoped grant for both the
-	// rename source and the rename target.
 	store := testStore(t)
-	group := mustCreateGroup(t, store,
+	oldID, newID := "old-name", "new-name"
+	group := mustCreateGroup(
+		t,
+		store,
 		"collide",
-		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "old-name"),
-		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, oldID),
+		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, newID),
 	)
 
-	prefix := fmt.Sprintf("%s\nRenameServiceScopeRefs() collision", packageName)
-
-	// WHEN: old-name is renamed onto the existing new-name
-	// (a primary-key collision the UPDATE OR REPLACE must absorb).
-	if _, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name"); err != nil {
-		t.Fatalf(
-			"%s rename failed: %v",
-			prefix, err,
-		)
-	}
-
-	// THEN: the two colliding grants collapse into one.
-	got, err := store.GroupByID(t.Context(), group.ID)
+	// A primary-key collision the UPDATE OR REPLACE must absorb.
+	_, err := store.RenameServiceScopeRefs(t.Context(), oldID, newID)
 	if err != nil {
-		t.Fatalf(
-			"%s GroupByID failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.RenameServiceScopeRefs() failed: %v", err)
 	}
-	if !slices.Contains(
-		got.Grants,
-		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "new-name"),
-	) {
+
+	got := mustGroupByID(t, store, group.ID)
+	want := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, newID)
+	if !slices.Contains(got.Grants, want) {
 		t.Errorf(
-			"%s renamed grant should be present\ngot: %+v",
-			prefix, got.Grants,
+			"Group.Grants mismatch\ngot:  %q\nwant: %q",
+			grantStrings(got.Grants), grantString(want),
 		)
 	}
 	if len(got.Grants) != 1 {
 		t.Errorf(
-			"%s colliding grants should collapse to one\ngot: %+v",
-			prefix, got.Grants,
+			"len(Group.Grants) mismatch\ngot:  %d - %q\nwant: 1",
+			len(got.Grants), grantStrings(got.Grants),
 		)
-	}
-}
-
-func TestSetGroupGrants__lookupError(t *testing.T) {
-	// GIVEN: a valid grant whose permission row is missing
-	// (permissions table emptied behind the catalogue's back).
-	store := testStore(t)
-	if _, err := store.db.Exec(`DELETE FROM permissions;`); err != nil {
-		t.Fatalf(
-			"%s\nsetup failed: %v",
-			packageName, err,
-		)
-	}
-
-	// WHEN: a group is created with a catalogue-valid grant.
-	_, err := store.CreateGroup(
-		t.Context(),
-		"custom",
-		"",
-		[]rbac.Grant{
-			globalGrant(rbac.ResourceService, rbac.ActionRead),
-		},
-	)
-
-	prefix := fmt.Sprintf("%s\nCreateGroup() with missing permission rows", packageName)
-
-	// THEN: the lookup failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
-	}
-}
-
-func TestPermissionIDsByPair(t *testing.T) {
-	// GIVEN: an initialised store, its permissions synced to the catalogue.
-	store := testStore(t)
-	tx, err := store.db.BeginTx(t.Context(), nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nbegin tx: %v",
-			packageName, err,
-		)
-	}
-	t.Cleanup(func() { _ = tx.Rollback() })
-
-	prefix := fmt.Sprintf("%s\npermissionIDsByPair()", packageName)
-
-	// WHEN: the permission catalogue is loaded into a map.
-	ids, err := permissionIDsByPair(t.Context(), tx)
-	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
-	}
-
-	// THEN: every catalogue (resource, action) pair maps to an ID.
-	for _, rp := range rbac.Catalogue() {
-		for _, ap := range rp.Actions {
-			perm := rbac.Permission{Resource: rp.Resource, Action: ap.Action}
-			if _, ok := ids[perm]; !ok {
-				t.Errorf(
-					"%s missing id for %s:%s",
-					prefix, perm.Resource, perm.Action,
-				)
-				continue
-			}
-		}
-	}
-
-	// AND: it holds exactly the catalogue's pairs, no more.
-	if got, want := len(ids), cataloguePairCount(); got != want {
-		t.Errorf(
-			"%s map size mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
-	}
-}
-
-func TestPermissionIDsByPair__scanError(t *testing.T) {
-	// GIVEN: a permissions row whose id cannot scan into an int64.
-	store := testStore(t)
-	dropTable(t, store, "permissions")
-	for _, statement := range []string{
-		`CREATE TABLE permissions (id TEXT, resource TEXT, action TEXT);`,
-		`INSERT INTO permissions (id, resource, action) VALUES ('not-an-int', 'service', 'read');`,
-	} {
-		if _, err := store.db.Exec(statement); err != nil {
-			t.Fatalf(
-				"%s\nsetup failed: %v",
-				packageName, err,
-			)
-		}
-	}
-
-	tx, err := store.db.BeginTx(t.Context(), nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nbegin tx: %v",
-			packageName, err,
-		)
-	}
-	t.Cleanup(func() { _ = tx.Rollback() })
-
-	prefix := fmt.Sprintf("%s\npermissionIDsByPair() scan error", packageName)
-
-	// WHEN: the permissions are loaded.
-	_, err = permissionIDsByPair(t.Context(), tx)
-
-	// THEN: the scan failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
 	}
 }
 
 func TestStore_UndoServiceScopeMove(t *testing.T) {
-	// GIVEN: groups whose grants span the rename source, the rename target, or
-	// both - the last being the collision the rename absorbs.
 	tests := []struct {
 		name   string
 		grants []rbac.Grant
@@ -1214,63 +955,43 @@ func TestStore_UndoServiceScopeMove(t *testing.T) {
 
 			before, err := store.GroupByID(t.Context(), group.ID)
 			if err != nil {
-				t.Fatalf(
-					"%s\nGroupByID failed: %v",
-					packageName, err,
-				)
+				t.Fatalf("before: Store.GroupByID() failed: %v", err)
 			}
 
-			prefix := fmt.Sprintf("%s\nUndoServiceScopeMove()", packageName)
-
-			// WHEN: the rename is applied and then undone.
-			move, err := store.RenameServiceScopeRefs(t.Context(), "old-name", "new-name")
+			oldID, newID := "old-name", "new-name"
+			move, err := store.RenameServiceScopeRefs(t.Context(), oldID, newID)
 			if err != nil {
-				t.Fatalf(
-					"%s rename failed: %v",
-					prefix, err,
-				)
+				t.Fatalf("rename: Store.RenameServiceScopeRefs() failed: %v", err)
 			}
-			if err := store.UndoServiceScopeMove(t.Context(), move); err != nil {
-				t.Fatalf(
-					"%s undo failed: %v",
-					prefix, err,
-				)
+			err = store.UndoServiceScopeMove(t.Context(), move)
+			if err != nil {
+				t.Fatalf("undo: Store.UndoServiceScopeMove() failed: %v", err)
 			}
 
-			// AND: the move names the rename it reversed.
-			if got, want := move.From(), "old-name"; got != want {
-				t.Errorf(
-					"%s From() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+			if got, want := move.From(), oldID; got != want {
+				t.Errorf("ServiceScopeMove.From() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
-			if got, want := move.To(), "new-name"; got != want {
-				t.Errorf(
-					"%s To() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+			if got, want := move.To(), newID; got != want {
+				t.Errorf("ServiceScopeMove.To() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// THEN: every grant is back exactly where it started - nothing lost
-			// to the absorb, and nothing dragged off a scope it already held.
+			// The undo re-creates any absorbed row.
 			got, err := store.GroupByID(t.Context(), group.ID)
 			if err != nil {
-				t.Fatalf(
-					"%s GroupByID failed: %v",
-					prefix, err,
-				)
+				t.Fatalf("after UndoServiceScopeMove: Store.GroupByID() failed: %v", err)
 			}
-			if len(got.Grants) != len(before.Grants) {
+			if gotLen, wantLen := len(got.Grants), len(before.Grants); gotLen != wantLen {
 				t.Fatalf(
-					"%s grant count mismatch\ngot:  %+v\nwant: %+v",
-					prefix, got.Grants, before.Grants,
+					"len(Group.Grants) mismatch\ngot:  %d - %q\nwant: %d - %q",
+					gotLen, grantStrings(got.Grants),
+					wantLen, grantStrings(before.Grants),
 				)
 			}
 			for _, want := range before.Grants {
 				if !slices.Contains(got.Grants, want) {
 					t.Errorf(
-						"%s grant not restored: %+v\ngot: %+v",
-						prefix, want, got.Grants,
+						"Group.Grants mismatch\ngot:  %q\nwant: %q",
+						grantStrings(got.Grants), grantString(want),
 					)
 				}
 			}
@@ -1279,55 +1000,117 @@ func TestStore_UndoServiceScopeMove(t *testing.T) {
 }
 
 func TestStore_UndoServiceScopeMove__leavesUnmovedGrantsAlone(t *testing.T) {
-	// GIVEN: a group holding a grant scoped to an ID that no rename touches,
-	// and which happens to be the rename's target.
 	store := testStore(t)
+	// Scoped to an ID no rename touches, which happens to be the rename's target.
 	group := mustCreateGroup(t, store,
 		"bystander",
 		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "target"),
 	)
 
-	prefix := fmt.Sprintf("%s\nUndoServiceScopeMove() bystander", packageName)
-
-	// WHEN: an unrelated service is renamed onto that ID and the move is undone.
 	// The rename matches no rows, so the undo must move nothing.
-	move, err := store.RenameServiceScopeRefs(t.Context(), "absent", "target")
+	oldID, newID := "absent", "target"
+	move, err := store.RenameServiceScopeRefs(t.Context(), oldID, newID)
 	if err != nil {
-		t.Fatalf(
-			"%s rename failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.RenameServiceScopeRefs() failed: %v", err)
 	}
-	if err := store.UndoServiceScopeMove(t.Context(), move); err != nil {
-		t.Fatalf(
-			"%s undo failed: %v",
-			prefix, err,
-		)
+	err = store.UndoServiceScopeMove(t.Context(), move)
+	if err != nil {
+		t.Fatalf("Store.UndoServiceScopeMove() failed: %v", err)
 	}
 
-	// THEN: the bystander grant still points at the ID it was granted on -
-	// an undo must never hand a group a scope it was never given.
-	got, err := store.GroupByID(t.Context(), group.ID)
-	if err != nil {
-		t.Fatalf(
-			"%s GroupByID failed: %v",
-			prefix, err,
-		)
-	}
-	want := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "target")
+	got := mustGroupByID(t, store, group.ID)
+	want := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, newID)
 	if !slices.Contains(got.Grants, want) {
 		t.Errorf(
-			"%s grant was moved off its own scope\ngot:  %+v\nwant: %+v",
-			prefix, got.Grants, want,
+			"Group.Grants mismatch\ngot:  %q\nwant: %q",
+			grantStrings(got.Grants), grantString(want),
 		)
 	}
-	if slices.Contains(
-		got.Grants,
-		serviceGrant(rbac.ResourceService, rbac.ActionUpdate, "absent"),
-	) {
+	neverHeld := serviceGrant(rbac.ResourceService, rbac.ActionUpdate, oldID)
+	if slices.Contains(got.Grants, neverHeld) {
 		t.Errorf(
-			"%s undo granted a scope that was never held\ngot: %+v",
-			prefix, got.Grants,
+			"Group.Grants mismatch\ngot:  %q\nwant: NOT %q",
+			grantStrings(got.Grants), grantString(neverHeld),
 		)
+	}
+}
+
+func TestSetGroupGrants__lookupError(t *testing.T) {
+	store := testStore(t)
+	// Emptied behind the catalogue's back, so the grant still validates.
+	if _, err := store.db.Exec(`DELETE FROM permissions;`); err != nil {
+		t.Fatalf("DB.Exec() failed: %v", err)
+	}
+
+	_, err := store.CreateGroup(
+		t.Context(),
+		"custom",
+		"",
+		[]rbac.Grant{
+			globalGrant(rbac.ResourceService, rbac.ActionRead),
+		},
+	)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^look up permission service:read:
+			not found$`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
+	}
+}
+
+func TestPermissionIDsByPair(t *testing.T) {
+	store := testStore(t)
+	tx, err := store.db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("DB.BeginTx() failed: %v", err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+
+	ids, err := permissionIDsByPair(t.Context(), tx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, rp := range rbac.Catalogue() {
+		for _, ap := range rp.Actions {
+			perm := rbac.Permission{Resource: rp.Resource, Action: ap.Action}
+			if _, ok := ids[perm]; !ok {
+				t.Errorf(
+					"ids[%s:%s] mismatch\ngot:  absent\nwant: present",
+					perm.Resource, perm.Action,
+				)
+			}
+		}
+	}
+
+	if got, want := len(ids), cataloguePairCount(); got != want {
+		t.Errorf("len(ids) mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+}
+
+func TestPermissionIDsByPair__scanError(t *testing.T) {
+	store := testStore(t)
+	test.DropTable(t, store.db, "permissions")
+	test.ExecSQL(
+		t, store.db,
+		`CREATE TABLE permissions (id TEXT, resource TEXT, action TEXT);`,
+		`INSERT INTO permissions (id, resource, action) VALUES ('not-an-int', 'service', 'read');`,
+	)
+
+	tx, err := store.db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("DB.BeginTx() failed: %v", err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+
+	_, err = permissionIDsByPair(t.Context(), tx)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^scan permission:
+			[^\s]+.*name "id":
+				converting driver.Value type string \("not-an-int"\)`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }

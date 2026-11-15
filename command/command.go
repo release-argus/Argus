@@ -121,7 +121,7 @@ func (c *Controller) ExecIndex(
 // Exec executes the command and returns any error encountered.
 func (c *Command) Exec(logFrom logx.LogFrom) error {
 	logx.Info(
-		fmt.Sprintf("Executing '%s'", c),
+		fmt.Sprintf("Executing %q", c),
 		logFrom,
 		true,
 	)

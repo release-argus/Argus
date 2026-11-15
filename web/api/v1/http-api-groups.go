@@ -110,9 +110,9 @@ func (api *API) httpGroupGet(w http.ResponseWriter, r *http.Request) {
 // Response:
 //
 //	200 OK: JSON of the updated group.
-//	400 Bad Request: on a malformed body, duplicate name, or invalid grant.
+//	400 Bad Request: on a malformed body or invalid grant.
 //	404 Not Found: on an unknown ID.
-//	409 Conflict: when modifying the admin system group.
+//	409 Conflict: on a duplicate name, or when modifying the admin system group.
 //	500 Internal Server Error: on a store failure.
 func (api *API) httpGroupUpdate(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpGroupUpdate", Secondary: getIP(r)}

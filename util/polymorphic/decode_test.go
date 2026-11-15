@@ -17,7 +17,8 @@
 package polymorphic
 
 import (
-	"fmt"
+	"maps"
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -27,7 +28,6 @@ import (
 )
 
 type dummyType struct {
-	Type string `json:"type" yaml:"type"`
 	Name string `json:"name" yaml:"name"`
 }
 
@@ -42,7 +42,6 @@ func (d dummyType) DecodeSelf(s string, bytes []byte) error {
 }
 
 func TestToInheritableMap(t *testing.T) {
-	// GIVEN: a map of constructors.
 	tests := []struct {
 		name         string
 		constructors map[string]func() Inheritable
@@ -54,14 +53,14 @@ func TestToInheritableMap(t *testing.T) {
 		{
 			name: "single constructor",
 			constructors: map[string]func() Inheritable{
-				"dummy": func() Inheritable { return &dummyType{} },
+				"dummy": func() Inheritable { return &dummyType{Name: "dummy"} },
 			},
 		},
 		{
 			name: "dual constructors",
 			constructors: map[string]func() Inheritable{
-				"github": func() Inheritable { return &dummyType{} },
-				"web":    func() Inheritable { return &dummyType{} },
+				"github": func() Inheritable { return &dummyType{Name: "github"} },
+				"web":    func() Inheritable { return &dummyType{Name: "web"} },
 			},
 		},
 	}
@@ -70,17 +69,21 @@ func TestToInheritableMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ToInheritableMap is called.
 			got := ToInheritableMap(tc.constructors)
 
-			// THEN: we can construct all the keys in the map.
+			gotKeys := slices.Sorted(maps.Keys(got))
+			wantKeys := slices.Sorted(maps.Keys(tc.constructors))
+			if !slices.Equal(gotKeys, wantKeys) {
+				t.Fatalf("keys mismatch\ngot:  %q\nwant: %q", gotKeys, wantKeys)
+			}
+
 			for key := range tc.constructors {
-				g := got[key]()
-				if g == nil {
-					t.Errorf(
-						"%s\nToInheritableMap[%q] gave nil",
-						packageName, key,
-					)
+				var name string
+				if d, ok := got[key]().(*dummyType); ok {
+					name = d.Name
+				}
+				if name != key {
+					t.Errorf("got[%q]().Name mismatch\ngot:  %q\nwant: %q", key, name, key)
 				}
 			}
 		})
@@ -94,7 +97,7 @@ func TestResolveType(t *testing.T) {
 		previous    Inheritable
 		defaultType string
 	}
-	// GIVEN: data to extract a type from, the default type, and an Inheritable to fallback on.
+
 	tests := []struct {
 		name     string
 		args     Args
@@ -107,7 +110,7 @@ func TestResolveType(t *testing.T) {
 				format:      "json",
 				data:        []byte{},
 				previous:    &dummyType{},
-				defaultType: "test",
+				defaultType: "something",
 			},
 			want:     "test",
 			errRegex: `^$`,
@@ -141,7 +144,8 @@ func TestResolveType(t *testing.T) {
 				previous:    &dummyType{},
 				defaultType: "something",
 			},
-			want: "test",
+			want:     "test",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/type present",
@@ -154,7 +158,8 @@ func TestResolveType(t *testing.T) {
 				previous:    &dummyType{},
 				defaultType: "something",
 			},
-			want: "hello",
+			want:     "hello",
+			errRegex: `^$`,
 		},
 		{
 			name: "YAML/type present",
@@ -167,7 +172,8 @@ func TestResolveType(t *testing.T) {
 				previous:    &dummyType{},
 				defaultType: "something",
 			},
-			want: "hello",
+			want:     "hello",
+			errRegex: `^$`,
 		},
 	}
 
@@ -175,30 +181,18 @@ func TestResolveType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: ResolveType is called.
 			got, err := ResolveType(
 				tc.args.format, tc.args.data,
 				tc.args.previous,
 				tc.args.defaultType,
 			)
-
-			prefix := fmt.Sprintf("%s\nResolveType()", packageName)
-
-			// THEN: the result is as expected.
-			if got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
-			}
-
-			// AND: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if got != tc.want {
+				t.Errorf("type mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -235,7 +229,6 @@ var constructors = map[string]func() Inheritable{
 }
 
 func TestConstruct(t *testing.T) {
-	// GIVEN: a set of constructors and a type to construct.
 	tests := []struct {
 		name     string
 		typ      string
@@ -257,38 +250,20 @@ func TestConstruct(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Construct is called to produce this struct.
 			got, err := Construct(tc.typ, constructors)
-
-			prefix := fmt.Sprintf(
-				"%s\nConstruct(%s)",
-				packageName, tc.typ,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				if got != nil {
-					t.Errorf(
-						"%s expected nil to be constructed with an error (type=%T): %q",
-						prefix, got, e,
-					)
+					t.Errorf("result mismatch\ngot:  %T\nwant: nil", got)
 				}
 				return
 			}
 
-			// AND: the result is as expected.
 			if gotType := got.GetType(); gotType != tc.typ {
-				t.Errorf(
-					"%s type mismatch\ngot:  %q\nwant: %q",
-					prefix, gotType, tc.typ,
-				)
+				t.Errorf("Inheritable.GetType() mismatch\ngot:  %q\nwant: %q", gotType, tc.typ)
 			}
 		})
 	}
@@ -301,11 +276,10 @@ func TestInstantiate(t *testing.T) {
 		previous    Inheritable
 		defaultType string
 	}
-	// GIVEN: a type to instantiate into an object.
+
 	tests := []struct {
 		name     string
 		args     args
-		wantNil  bool
 		wantType string
 		errRegex string
 	}{
@@ -315,9 +289,8 @@ func TestInstantiate(t *testing.T) {
 				format:      "json",
 				data:        []byte{},
 				previous:    &dummyType{},
-				defaultType: "test",
+				defaultType: "something",
 			},
-			wantNil:  true,
 			errRegex: `^type: "test" <invalid>.*$`,
 		},
 		{
@@ -326,9 +299,8 @@ func TestInstantiate(t *testing.T) {
 				format:      "json",
 				data:        []byte("null"),
 				previous:    &dummyType{},
-				defaultType: "test1",
+				defaultType: "something",
 			},
-			wantNil:  true,
 			errRegex: `^type: "test" <invalid>.*$`,
 		},
 		{
@@ -364,9 +336,9 @@ func TestInstantiate(t *testing.T) {
 				format:      "json",
 				data:        []byte(`{"name":"test"}`),
 				previous:    &dummyType{},
-				defaultType: "test",
+				defaultType: "something",
 			},
-			errRegex: `^type: "[^"]+" <invalid> .*$`,
+			errRegex: `^type: "test" <invalid> .*$`,
 		},
 		{
 			name: "type from defaultType",
@@ -391,36 +363,19 @@ func TestInstantiate(t *testing.T) {
 				tc.args.defaultType,
 				constructors,
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nInstantiate(format=%q, data=%q)",
-				packageName, tc.args.format, tc.args.data,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if tc.wantNil && got != nil {
-				t.Fatalf(
-					"%s expected nil to be instantiated:\ngot: %T",
-					prefix, got,
-				)
-			}
-			if e != "" || tc.wantNil {
+			if err != nil {
+				if got != nil {
+					t.Errorf("result mismatch\ngot:  %T\nwant: nil", got)
+				}
 				return
 			}
 
-			// AND: the struct type is as expected.
 			if gotType := got.GetType(); gotType != tc.wantType {
-				t.Errorf(
-					"%s type mismatch\ngot:  %q\nwant: %q",
-					prefix, gotType, tc.wantType,
-				)
+				t.Errorf("Inheritable.GetType() mismatch\ngot:  %q\nwant: %q", gotType, tc.wantType)
 			}
 		})
 	}
@@ -432,15 +387,17 @@ func TestApplyOverrides(t *testing.T) {
 		data   string
 		target Inheritable
 	}
-	// GIVEN: overrides to apply to a struct.
+
 	tests := []struct {
-		name     string
-		args     args
-		want     string
-		errRegex string
+		name        string
+		args        args
+		sameAddress bool
+		want        string
+		errRegex    string
 	}{
 		{
-			name: "empty overrides",
+			name:        "empty overrides",
+			sameAddress: true,
 			args: args{
 				format: "yaml",
 				data:   "",
@@ -548,7 +505,8 @@ func TestApplyOverrides(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name: "type unchanged, all vars changed",
+			name:        "type unchanged, all vars changed",
+			sameAddress: true,
 			args: args{
 				format: "yaml",
 				data: test.TrimYAML(`
@@ -572,8 +530,7 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the ApplyOverrides is called.
-			test.AssertApplyOverrides(
+			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
 				func(format string, data []byte, target Inheritable) (Inheritable, error) {
@@ -588,10 +545,11 @@ func TestApplyOverrides(t *testing.T) {
 				func(v Inheritable) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				true,
-				packageName,
+				tc.sameAddress,
 				"ApplyOverrides",
-			)
+			); testErr != nil {
+				t.Error(testErr)
+			}
 		})
 	}
 }

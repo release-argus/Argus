@@ -26,30 +26,25 @@ import (
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "option"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
 func testOptions(t *testing.T) *Options {
 	t.Helper()
 
-	optCfg := plainDefaultsConfig(t)
+	optCfg := plainDefaultsConfig()
 
-	o, _ := Decode(
+	o, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			active: true
 			interval: 10m
@@ -57,6 +52,9 @@ func testOptions(t *testing.T) *Options {
 		`)),
 		optCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
 
 	return o
 }
@@ -64,19 +62,20 @@ func testOptions(t *testing.T) *Options {
 func testDefaults(t *testing.T) *Defaults {
 	t.Helper()
 
-	defaults, _ := DecodeDefaults(
+	defaults, err := DecodeDefaults(
 		"yaml", []byte(test.TrimYAML(`
 			interval: 1h
 			semantic_versioning: false
 		`)),
 	)
+	if err != nil {
+		t.Fatalf("DecodeDefaults() failed: %v", err)
+	}
 	return defaults
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
+func plainDefaultsConfig() DefaultsConfig {
 	defaults := Defaults{}
 	hardDefaults := Defaults{}
 	hardDefaults.Default()

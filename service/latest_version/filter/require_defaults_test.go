@@ -17,7 +17,6 @@
 package filter
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -25,7 +24,6 @@ import (
 )
 
 func TestRequireDefaults_IsZero(t *testing.T) {
-	// GIVEN: a RequireDefaults.
 	tests := []struct {
 		name string
 		req  *RequireDefaults
@@ -51,44 +49,33 @@ func TestRequireDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.req.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nRequireDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestRequireDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: RequireDefaults, and RequireDefaults to give it.
 	defaults, _ := plainDefaults(t)
 	req, _ := DecodeDefaults("yaml", nil)
 
-	// WHEN: SetDefaults is called.
 	req.SetDefaults(defaults)
 
-	prefix := fmt.Sprintf("%s\nRequireDefaults.SetDefaults()", packageName)
-
-	// THEN: defaults are set.
 	fieldTests := []test.FieldAssertion{
 		{Name: "Docker.Defaults", Got: req.Docker.Defaults, Want: &defaults.Docker, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.GHCR.Auth.Defaults", Got: req.Docker.Registry.GHCR.Auth.Defaults(), Want: defaults.Docker.Registry.GHCR.Auth, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.Hub.Auth.Defaults", Got: req.Docker.Registry.Hub.Auth.Defaults(), Want: defaults.Docker.Registry.Hub.Auth, Mode: test.CompareSamePointer},
-		{Name: "Docker.Registry.Quay.Auth.Defaults", Got: req.Docker.Registry.Quay.Auth.Defaults(), Want: defaults.Docker.Registry.Quay.Auth, Mode: test.CompareSamePointer},
+		{Name: "Docker.Registry.GHCR.Auth.Defaults()", Got: req.Docker.Registry.GHCR.Auth.Defaults(), Want: defaults.Docker.Registry.GHCR.Auth, Mode: test.CompareSamePointer},
+		{Name: "Docker.Registry.Hub.Auth.Defaults()", Got: req.Docker.Registry.Hub.Auth.Defaults(), Want: defaults.Docker.Registry.Hub.Auth, Mode: test.CompareSamePointer},
+		{Name: "Docker.Registry.Quay.Auth.Defaults()", Got: req.Docker.Registry.Quay.Auth.Defaults(), Want: defaults.Docker.Registry.Quay.Auth, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "RequireDefaults"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "RequireDefaults"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }
 
 func TestRequireDefaults_CheckValues(t *testing.T) {
-	// GIVEN: RequireDefaults.
 	tests := []struct {
 		name     string
 		req      *RequireDefaults
@@ -128,7 +115,6 @@ func TestRequireDefaults_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.req.CheckValues,
 			)

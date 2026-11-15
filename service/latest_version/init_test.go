@@ -17,7 +17,6 @@
 package latestver
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -29,14 +28,11 @@ import (
 func TestLookup_Init(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: a Lookup and vars for the Init.
 	lookup := testLookup(t, "github", false)
-	lookup.GetStatus().ServiceInfo.ID += "TestInit"
 	svcStatus := status.Status{}
 	svcStatus.ServiceInfo.ID = "test"
 	var options opt.Options
 
-	// WHEN: Init is called on it.
 	lookup.Init(
 		&options,
 		&svcStatus,
@@ -46,16 +42,13 @@ func TestLookup_Init(t *testing.T) {
 		},
 	)
 
-	prefix := fmt.Sprintf("%s\nLookup.Init()", packageName)
-
-	// THEN: pointers to those vars are handed out to the Lookup.
 	fieldTests := []test.FieldAssertion{
-		{Name: "Options", Got: lookup.GetOptions(), Want: &options, Mode: test.CompareSamePointer},
-		{Name: "Status", Got: lookup.GetStatus(), Want: &svcStatus, Mode: test.CompareSamePointer},
-		{Name: "Defaults", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
-		{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
+		{Name: "GetOptions()", Got: lookup.GetOptions(), Want: &options, Mode: test.CompareSamePointer},
+		{Name: "GetStatus()", Got: lookup.GetStatus(), Want: &svcStatus, Mode: test.CompareSamePointer},
+		{Name: "GetDefaults()", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
+		{Name: "GetHardDefaults()", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }

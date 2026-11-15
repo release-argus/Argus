@@ -32,12 +32,12 @@ const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
 
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 )
+
+// pongWait is the time allowed to read the next pong message from the peer.
+var pongWait = 60 * time.Second
 
 // pingPeriod is the interval between WebSocket ping frames. Must occur before pongWait.
 var pingPeriod = (pongWait * 9) / 10

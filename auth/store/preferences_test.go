@@ -22,144 +22,134 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestStore_Preferences__roundTrip(t *testing.T) {
-	// GIVEN: a Store with a user who has saved no preferences.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 
-	prefix := fmt.Sprintf("%s\npreferences round-trip", packageName)
-
-	// WHEN: their preferences are read.
 	got, err := store.PreferencesForUser(t.Context(), user.ID)
-
-	// THEN: they have none.
-	if err != nil || got != nil {
+	if err != nil {
+		t.Fatalf("before set: unexpected error: %v", err)
+	}
+	if got != nil {
 		t.Fatalf(
-			"%s expected no preferences\ngot:  %+v, err=%v\nwant: nil, nil",
-			prefix, got, err,
+			"before set: Store.PreferencesForUser() mismatch\n"+
+				"got:  View=%q, Hide=%q, Timestamps=%q\nwant: nil",
+			got.View, got.Hide, got.Timestamps,
 		)
 	}
 
-	// WHEN: preferences are saved, out of catalogue order and with a duplicate.
-	want := DashboardPreferences{
+	// Out of catalogue order, with a duplicate.
+	prefs := DashboardPreferences{
 		Hide:       []string{HideInactive, HideUpToDate, HideInactive},
 		View:       ViewTable,
 		Timestamps: []string{TimestampQueried, TimestampDeployed},
 	}
-	stored, err := store.SetPreferences(t.Context(), user.ID, want)
+	stored, err := store.SetPreferences(t.Context(), user.ID, prefs)
 	if err != nil {
-		t.Fatalf(
-			"%s SetPreferences failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("first: Store.SetPreferences() failed: %v", err)
 	}
 
-	// AND: it reports what it stored, so a caller need not re-read.
 	if testErr := test.AssertSlicesEqual(
-		t, stored.Hide, []string{HideUpToDate, HideInactive}, prefix, "stored hide",
+		t,
+		stored.Hide,
+		[]string{HideUpToDate, HideInactive},
+		"DashboardPreferences.Hide",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("first: stored: %v", testErr)
 	}
 	if testErr := test.AssertSlicesEqual(
-		t, stored.Timestamps, []string{TimestampDeployed, TimestampQueried}, prefix, "stored timestamps",
+		t,
+		stored.Timestamps,
+		[]string{TimestampDeployed, TimestampQueried},
+		"DashboardPreferences.Timestamps",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("first: stored: %v", testErr)
 	}
 
 	got, err = store.PreferencesForUser(t.Context(), user.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s PreferencesForUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("first: Store.PreferencesForUser() failed: %v", err)
+	}
+	if got == nil {
+		t.Fatal("first: Store.PreferencesForUser() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// THEN: they come back deduplicated, in catalogue order.
 	if testErr := test.AssertSlicesEqual(
-		t, got.Hide, []string{HideUpToDate, HideInactive}, prefix, "hide",
+		t, got.Hide, []string{HideUpToDate, HideInactive}, "DashboardPreferences.Hide",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("first: %v", testErr)
 	}
 	if testErr := test.AssertSlicesEqual(
-		t, got.Timestamps, []string{TimestampDeployed, TimestampQueried}, prefix, "timestamps",
+		t, got.Timestamps, []string{TimestampDeployed, TimestampQueried}, "DashboardPreferences.Timestamps",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("first: %v", testErr)
 	}
 	if got.View != ViewTable {
 		t.Errorf(
-			"%s view mismatch\ngot:  %q\nwant: %q",
-			prefix, got.View, ViewTable,
+			"first: DashboardPreferences.View mismatch\ngot:  %q\nwant: %q",
+			got.View, ViewTable,
 		)
 	}
 
-	// AND: saving again replaces the row rather than adding one.
-	if _, err := store.SetPreferences(t.Context(), user.ID, DashboardPreferences{
+	_, err = store.SetPreferences(t.Context(), user.ID, DashboardPreferences{
 		Hide:       []string{},
 		View:       ViewGrid,
 		Timestamps: []string{TimestampFound},
-	}); err != nil {
-		t.Fatalf(
-			"%s second SetPreferences failed: %v",
-			prefix, err,
-		)
+	})
+	if err != nil {
+		t.Fatalf("second: Store.SetPreferences() failed: %v", err)
 	}
-	if got := countRows(t, store, "user_preferences"); got != 1 {
-		t.Errorf(
-			"%s row count mismatch\ngot:  %d\nwant: 1",
-			prefix, got,
-		)
+	if rows := test.CountRows(t, store.db, "user_preferences"); rows != 1 {
+		t.Errorf("second: user_preferences row count mismatch\ngot:  %d\nwant: 1", rows)
 	}
 	got, err = store.PreferencesForUser(t.Context(), user.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s PreferencesForUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("second: Store.PreferencesForUser() failed: %v", err)
+	}
+	if got == nil {
+		t.Fatal("second: Store.PreferencesForUser() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// AND: an explicitly empty list stays empty rather than reverting to nil.
+	// An explicitly empty list stays empty, not nil.
 	if testErr := test.AssertSlicesEqual(
-		t, got.Hide, []string{}, prefix, "hide",
+		t, got.Hide, []string{}, "DashboardPreferences.Hide",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("second: %v", testErr)
 	}
 	if testErr := test.AssertSlicesEqual(
-		t, got.Timestamps, []string{TimestampFound}, prefix, "timestamps",
+		t, got.Timestamps, []string{TimestampFound}, "DashboardPreferences.Timestamps",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("second: %v", testErr)
 	}
 
-	// AND: DeletePreferences returns them to inheriting everything.
-	if err := store.DeletePreferences(t.Context(), user.ID); err != nil {
-		t.Fatalf(
-			"%s DeletePreferences failed: %v",
-			prefix, err,
-		)
+	err = store.DeletePreferences(t.Context(), user.ID)
+	if err != nil {
+		t.Fatalf("delete: Store.DeletePreferences() failed: %v", err)
 	}
 	got, err = store.PreferencesForUser(t.Context(), user.ID)
-	if err != nil || got != nil {
+	if err != nil {
+		t.Fatalf("after delete: Store.PreferencesForUser() failed: %v", err)
+	}
+	if got != nil {
 		t.Errorf(
-			"%s preferences should be gone\ngot:  %+v, err=%v\nwant: nil, nil",
-			prefix, got, err,
+			"after delete: Store.PreferencesForUser() mismatch\n"+
+				"got:  View=%q, Hide=%q, Timestamps=%q\nwant: nil",
+			got.View, got.Hide, got.Timestamps,
 		)
 	}
 
-	// AND: deleting again is not an error.
 	if err := store.DeletePreferences(t.Context(), user.ID); err != nil {
-		t.Errorf(
-			"%s second DeletePreferences failed: %v",
-			prefix, err,
-		)
+		t.Errorf("second delete: Store.DeletePreferences() failed: %v", err)
 	}
 }
 
 func TestStore_Preferences__nilFieldsInherit(t *testing.T) {
-	// GIVEN: preferences with some fields set.
 	tests := []struct {
 		name           string
 		saved          DashboardPreferences
@@ -177,6 +167,11 @@ func TestStore_Preferences__nilFieldsInherit(t *testing.T) {
 			saved:    DashboardPreferences{Hide: []string{HideSkipped}},
 			wantHide: []string{HideSkipped},
 		},
+		{
+			name:           "timestamps alone",
+			saved:          DashboardPreferences{Timestamps: []string{TimestampFound}},
+			wantTimestamps: []string{TimestampFound},
+		},
 	}
 
 	for _, tc := range tests {
@@ -186,38 +181,32 @@ func TestStore_Preferences__nilFieldsInherit(t *testing.T) {
 			store := testStore(t)
 			user := mustCreateUser(t, store, "argus", "")
 
-			prefix := fmt.Sprintf("%s\npreferences with nil fields", packageName)
-
-			// WHEN: they are saved and read back.
-			if _, err := store.SetPreferences(t.Context(), user.ID, tc.saved); err != nil {
-				t.Fatalf(
-					"%s SetPreferences failed: %v",
-					prefix, err,
-				)
+			_, err := store.SetPreferences(t.Context(), user.ID, tc.saved)
+			if err != nil {
+				t.Fatalf("Store.SetPreferences() failed: %v", err)
 			}
 			got, err := store.PreferencesForUser(t.Context(), user.ID)
 			if err != nil {
-				t.Fatalf(
-					"%s PreferencesForUser failed: %v",
-					prefix, err,
-				)
+				t.Fatalf("Store.PreferencesForUser() failed: %v", err)
+			}
+			if got == nil {
+				t.Fatal("Store.PreferencesForUser() mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// THEN: the fields left unset come back nil, so they keep inheriting.
 			if testErr := test.AssertSlicesEqual(
-				t, got.Hide, tc.wantHide, prefix, "hide",
+				t, got.Hide, tc.wantHide, "DashboardPreferences.Hide",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 			if testErr := test.AssertSlicesEqual(
-				t, got.Timestamps, tc.wantTimestamps, prefix, "timestamps",
+				t, got.Timestamps, tc.wantTimestamps, "DashboardPreferences.Timestamps",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 			if got.View != tc.wantView {
 				t.Errorf(
-					"%s view mismatch\ngot:  %q\nwant: %q",
-					prefix, got.View, tc.wantView,
+					"DashboardPreferences.View mismatch\ngot:  %q\nwant: %q",
+					got.View, tc.wantView,
 				)
 			}
 		})
@@ -225,57 +214,52 @@ func TestStore_Preferences__nilFieldsInherit(t *testing.T) {
 }
 
 func TestStore_Preferences__deletedWithTheirUser(t *testing.T) {
-	// GIVEN: a Store with two users, both holding preferences.
 	store := testStore(t)
 	target := mustCreateUser(t, store, "target", "")
 	other := mustCreateUser(t, store, "other", "")
 
-	prefix := fmt.Sprintf("%s\npreferences cascade", packageName)
-
-	for _, user := range []string{target.ID, other.ID} {
-		if _, err := store.SetPreferences(t.Context(), user, DashboardPreferences{
-			View: ViewTable,
-		}); err != nil {
-			t.Fatalf(
-				"%s SetPreferences failed: %v",
-				prefix, err,
-			)
+	for _, user := range []*auth.User{target, other} {
+		prefs := DashboardPreferences{View: ViewTable}
+		if _, err := store.SetPreferences(t.Context(), user.ID, prefs); err != nil {
+			t.Fatalf("Store.SetPreferences(%q) failed: %v", user.Username, err)
 		}
 	}
 
-	// WHEN: one user is deleted.
-	if err := store.DeleteUser(t.Context(), target.ID); err != nil {
-		t.Fatalf(
-			"%s DeleteUser failed: %v",
-			prefix, err,
-		)
+	err := store.DeleteUser(t.Context(), target.ID)
+	if err != nil {
+		t.Fatalf("Store.DeleteUser() failed: %v", err)
 	}
 
-	// THEN: their preferences go with them, and nobody else's do.
-	if got, err := store.PreferencesForUser(t.Context(), target.ID); err != nil || got != nil {
+	got, err := store.PreferencesForUser(t.Context(), target.ID)
+	if err != nil {
+		t.Fatalf("target: Store.PreferencesForUser() failed: %v", err)
+	}
+	if got != nil {
 		t.Errorf(
-			"%s preferences outlived their user\ngot:  %+v, err=%v\nwant: nil, nil",
-			prefix, got, err,
+			"target: Store.PreferencesForUser() mismatch\n"+
+				"got:  View=%q, Hide=%q, Timestamps=%q\nwant: nil",
+			got.View, got.Hide, got.Timestamps,
 		)
 	}
-	if got, err := store.PreferencesForUser(t.Context(), other.ID); err != nil || got == nil {
-		t.Errorf(
-			"%s the other user's preferences were taken too\ngot:  %+v, err=%v",
-			prefix, got, err,
-		)
+	got, err = store.PreferencesForUser(t.Context(), other.ID)
+	if err != nil {
+		t.Fatalf("other: Store.PreferencesForUser() failed: %v", err)
+	}
+	if got == nil {
+		t.Error("other: Store.PreferencesForUser() mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
 
 func TestDashboardPreferences_CheckValues(t *testing.T) {
-	// GIVEN: preferences to validate.
 	tests := []struct {
 		name     string
 		prefs    DashboardPreferences
 		errRegex string
 	}{
 		{
-			name:  "valid/everything unset",
-			prefs: DashboardPreferences{},
+			name:     "valid/everything unset",
+			prefs:    DashboardPreferences{},
+			errRegex: `^$`,
 		},
 		{
 			name: "valid/every field set",
@@ -288,6 +272,7 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 					TimestampDeployed, TimestampFound, TimestampQueried,
 				},
 			},
+			errRegex: `^$`,
 		},
 		{
 			name: "valid/explicitly empty lists",
@@ -295,6 +280,7 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 				Hide:       []string{},
 				Timestamps: []string{},
 			},
+			errRegex: `^$`,
 		},
 		{
 			name:     "invalid/unknown hide name",
@@ -344,7 +330,7 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: test.TrimYAML(`
-				hide: "nope1", "nope2", "nope3", "nope4", "nope5", and 2 more <invalid> \(.*
+				^hide: "nope1", "nope2", "nope3", "nope4", "nope5", and 2 more <invalid> \(.*
 				timestamps: "nope1", "nope2", "nope3", "nope4", "nope5", and 1 more <invalid> \(.*$`,
 			),
 		},
@@ -352,130 +338,25 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			prefix := fmt.Sprintf("%s\nCheckValues()", packageName)
+			t.Parallel()
 
-			// WHEN: they are validated.
 			err := tc.prefs.CheckValues()
-
-			// THEN: it errors when expected.
-			if err == nil && tc.errRegex == "" {
-				return
-			}
-
-			// AND: it errors as expected.
-			if !errors.Is(err, ErrInvalidPreference) {
-				t.Fatalf(
-					"%s error doesn't wrap the expected error\ngot:  %v\nwant: %v",
-					prefix, err, ErrInvalidPreference,
-				)
+			if err != nil && !errors.Is(err, ErrInvalidPreference) {
+				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, ErrInvalidPreference)
 			}
 			e := errfmt.FormatError(err)
 			e = strings.TrimPrefix(e, ErrInvalidPreference.Error()+"\n")
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\nwant: %v\ngot: %v",
-					prefix, tc.errRegex, e,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
-func TestStore_SetPreferences__rejectsUnknownValues(t *testing.T) {
-	// GIVEN: a Store with a user.
-	store := testStore(t)
-	user := mustCreateUser(t, store, "argus", "")
-
-	// WHEN: a name outside the catalogue is saved.
-	invalidHide := "upToDate"
-	prefs := DashboardPreferences{
-		Hide: []string{HideSkipped, invalidHide},
-	}
-	stored, err := store.SetPreferences(t.Context(), user.ID, prefs)
-
-	prefix := fmt.Sprintf(
-		"%s\nSetPreferences(prefs=%+v) unknown value",
-		packageName, prefs,
-	)
-
-	// THEN: it is refused with an error.
-	if err == nil {
-		t.Fatalf(
-			"%s expected an error\ngot: %+v",
-			prefix, stored,
-		)
-	}
-	if !strings.Contains(err.Error(), invalidHide) {
-		t.Errorf(
-			"%s error should name the offending value\ngot: %v",
-			prefix, err,
-		)
-	}
-
-	// AND: nothing was written.
-	if got := countRows(t, store, "user_preferences"); got != 0 {
-		t.Errorf(
-			"%s row written despite the error\ngot:  %d\nwant: 0",
-			prefix, got,
-		)
-	}
-}
-
-func TestStore_SetPreferences__zeroSetDiscards(t *testing.T) {
-	// GIVEN: a Store with a user who has saved preferences.
-	store := testStore(t)
-	user := mustCreateUser(t, store, "argus", "")
-
-	prefix := fmt.Sprintf("%s\nSetPreferences() zero set", packageName)
-
-	prefs := DashboardPreferences{
-		View: ViewTable,
-	}
-	if _, err := store.SetPreferences(t.Context(), user.ID, prefs); err != nil {
-		t.Fatalf(
-			"%s setup SetPreferences(prefs=%+v) failed: %v",
-			prefix, prefs, err,
-		)
-	}
-
-	// WHEN: a set with nothing in it is saved.
-	prefs = DashboardPreferences{}
-	stored, err := store.SetPreferences(t.Context(), user.ID, prefs)
-	if err != nil {
-		t.Fatalf(
-			"%s SetPreferences(prefs=%+v) failed: %v",
-			prefix, prefs, err,
-		)
-	}
-
-	// THEN: it reports nothing saved.
-	if stored != nil {
-		t.Errorf(
-			"%s expected no preferences\ngot: %+v",
-			prefix, *stored,
-		)
-	}
-
-	// AND: the row is gone, so a read agrees.
-	if got := countRows(t, store, "user_preferences"); got != 0 {
-		t.Errorf(
-			"%s row survived a zero set\ngot:  %d\nwant: 0",
-			prefix, got,
-		)
-	}
-	if got, err := store.PreferencesForUser(t.Context(), user.ID); err != nil || got != nil {
-		t.Errorf(
-			"%s read should find none\ngot:  %+v, err=%v",
-			prefix, got, err,
-		)
-	}
-}
-
 func TestStore_PreferencesForUser__canonicalisesOnRead(t *testing.T) {
-	// GIVEN: a Store holding a row written from an earlier build's catalogues.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
-	mustExec(t, store, fmt.Sprintf(`
+	test.ExecSQL(t, store.db, fmt.Sprintf(`
 		INSERT INTO user_preferences
 			(user_id, hide, view, timestamps, created_at, updated_at)
 		VALUES
@@ -483,32 +364,81 @@ func TestStore_PreferencesForUser__canonicalisesOnRead(t *testing.T) {
 		user.ID, HideSkipped, TimestampFound, timeNow().Format(timeFormat), timeNow().Format(timeFormat),
 	))
 
-	prefix := fmt.Sprintf("%s\nPreferencesForUser() canonicalise", packageName)
-
-	// WHEN: they are read.
 	got, err := store.PreferencesForUser(t.Context(), user.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s PreferencesForUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.PreferencesForUser() failed: %v", err)
+	}
+	if got == nil {
+		t.Fatal("Store.PreferencesForUser() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// THEN: values this build no longer knows are dropped.
 	if testErr := test.AssertSlicesEqual(
-		t, got.Hide, []string{HideSkipped}, prefix, "hide",
+		t, got.Hide, []string{HideSkipped}, "DashboardPreferences.Hide",
 	); testErr != nil {
 		t.Error(testErr)
 	}
 	if testErr := test.AssertSlicesEqual(
-		t, got.Timestamps, []string{TimestampFound}, prefix, "timestamps",
+		t, got.Timestamps, []string{TimestampFound}, "DashboardPreferences.Timestamps",
 	); testErr != nil {
 		t.Error(testErr)
 	}
 	if got.View != "" {
+		t.Errorf("DashboardPreferences.View mismatch\ngot:  %q\nwant: %q", got.View, "")
+	}
+}
+
+func TestStore_SetPreferences__rejectsUnknownValues(t *testing.T) {
+	store := testStore(t)
+	user := mustCreateUser(t, store, "argus", "")
+
+	invalidHide := "upToDate"
+	prefs := DashboardPreferences{
+		Hide: []string{HideSkipped, invalidHide},
+	}
+	_, err := store.SetPreferences(t.Context(), user.ID, prefs)
+	e := errfmt.FormatError(err)
+	errRegex := fmt.Sprintf(`^invalid preference value\nhide: %q <invalid> \(.*$`, invalidHide)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
+	}
+
+	if got := test.CountRows(t, store.db, "user_preferences"); got != 0 {
+		t.Errorf("user_preferences row count mismatch\ngot:  %d\nwant: 0", got)
+	}
+}
+
+func TestStore_SetPreferences__zeroSetDiscards(t *testing.T) {
+	store := testStore(t)
+	user := mustCreateUser(t, store, "argus", "")
+
+	_, err := store.SetPreferences(t.Context(), user.ID, DashboardPreferences{View: ViewTable})
+	if err != nil {
+		t.Fatalf("seed: Store.SetPreferences() failed: %v", err)
+	}
+
+	stored, err := store.SetPreferences(t.Context(), user.ID, DashboardPreferences{})
+	if err != nil {
+		t.Fatalf("empty set: Store.SetPreferences() failed: %v", err)
+	}
+
+	if stored != nil {
 		t.Errorf(
-			"%s unknown view should be blanked\ngot: %q",
-			prefix, got.View,
+			"Store.SetPreferences() mismatch\ngot:  View=%q, Hide=%q, Timestamps=%q\nwant: nil",
+			stored.View, stored.Hide, stored.Timestamps,
+		)
+	}
+
+	if got := test.CountRows(t, store.db, "user_preferences"); got != 0 {
+		t.Errorf("user_preferences row count mismatch\ngot:  %d\nwant: 0", got)
+	}
+	got, err := store.PreferencesForUser(t.Context(), user.ID)
+	if err != nil {
+		t.Fatalf("Store.PreferencesForUser() failed: %v", err)
+	}
+	if got != nil {
+		t.Errorf(
+			"Store.PreferencesForUser() mismatch\ngot:  View=%q, Hide=%q, Timestamps=%q\nwant: nil",
+			got.View, got.Hide, got.Timestamps,
 		)
 	}
 }

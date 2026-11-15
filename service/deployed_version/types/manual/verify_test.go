@@ -17,7 +17,6 @@
 package manual
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -25,7 +24,6 @@ import (
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name               string
 		version            string
@@ -57,7 +55,7 @@ func TestLookup_CheckValues(t *testing.T) {
 			t.Parallel()
 
 			defaultLookup := testLookup(t, "")
-			input, _ := Decode("yaml", []byte("version: ''"),
+			input, err := Decode("yaml", []byte("version: ''"),
 				defaultLookup.Options,
 				defaultLookup.Status,
 				base.DefaultsConfig{
@@ -65,37 +63,32 @@ func TestLookup_CheckValues(t *testing.T) {
 					Hard: defaultLookup.HardDefaults,
 				},
 			)
+			if err != nil {
+				t.Fatalf("Decode() failed: %v", err)
+			}
 			defaultLookup.Options.SemanticVersioning = &tc.semanticVersioning
 			input.Version = tc.version
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
 
-			prefix := fmt.Sprintf("%s\nLookup.CheckValues()", packageName)
-
-			// AND: CheckValues only validates - it applies nothing.
 			if got := input.Status.DeployedVersion(); got != "" {
-				t.Errorf(
-					"%s should not apply the version\ngot: %q",
-					prefix, got,
-				)
+				t.Errorf("Status.DeployedVersion() mismatch\ngot:  %q\nwant: \"\"", got)
 			}
 
-			// AND: nothing was broadcast to the Announce channel, or the Database channel
 			if got, want := len(input.Status.AnnounceChannel), 0; got != want {
 				t.Errorf(
-					"%s Announce channel length mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, want,
 				)
 			}
 			if got, want := len(input.Status.DatabaseChannel), 0; got != want {
 				t.Errorf(
-					"%s Database channel length mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"Status.DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, want,
 				)
 			}
 		})

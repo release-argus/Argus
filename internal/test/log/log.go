@@ -25,10 +25,11 @@ import (
 
 var once sync.Once
 
+// InitLog initialises logx at DEBUG, once per process.
 func InitLog() {
 	once.Do(func() {
-		// Set the environment variable to "DEBUG" to stop .Load() resetting it.
 		logLevel := "DEBUG"
+		// Set in the env too, so a later Config.Load() outside test.IsolateEnv keeps the level.
 		_ = os.Setenv("ARGUS_LOG_LEVEL", logLevel)
 
 		logx.Init(logLevel, false)

@@ -16,10 +16,12 @@
 
 package test
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestAssertStringWithPrefixes(t *testing.T) {
-	// GIVEN: a function that prefixes a string to another string.
 	tests := []struct {
 		name       string
 		stringify  func(prefix string) string
@@ -27,7 +29,7 @@ func TestAssertStringWithPrefixes(t *testing.T) {
 		shouldFail bool
 	}{
 		{
-			name: "correctly prefixes string",
+			name: "prefixes string",
 			stringify: func(prefix string) string {
 				return prefix + "hello\n"
 			},
@@ -45,22 +47,27 @@ func TestAssertStringWithPrefixes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Helper()
+			t.Parallel()
 
-			// WHEN: AssertStringWithPrefixes is called.
-			var fT FakeT
+			var fakeT FakeT
 			AssertStringWithPrefixes(
-				&fT,
-				"pkg",
+				&fakeT,
+				"stringify",
 				tc.stringify,
 				tc.want,
 			)
-			didFail := len(fT.Errors)+len(fT.Fatals) != 0
 
-			if tc.shouldFail != didFail {
+			didFail := len(fakeT.Errors)+len(fakeT.Fatals) != 0
+			if len(fakeT.Fatals) > 0 && !strings.HasPrefix(fakeT.Fatals[0], `stringify(prefix="") mismatch`) {
 				t.Errorf(
-					"%s\nAssertStringWithPrefixes() didn't pass/fail as expected\ngot  fail: %v\nwant fail: %t",
-					packageName, didFail, tc.shouldFail,
+					"FakeT.Fatals[0] mismatch\ngot:  %q\nwant: %q",
+					fakeT.Fatals[0], `stringify(prefix="") mismatch...`,
+				)
+			}
+			if didFail != tc.shouldFail {
+				t.Errorf(
+					"didFail mismatch\ngot:  %t (errors=%q, fatals=%q)\nwant: %t",
+					didFail, fakeT.Errors, fakeT.Fatals, tc.shouldFail,
 				)
 			}
 		})

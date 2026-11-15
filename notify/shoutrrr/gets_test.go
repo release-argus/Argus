@@ -18,16 +18,15 @@ package shoutrrr
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
-	"github.com/release-argus/Argus/util"
 )
 
 func TestShoutrrr_GetType(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
@@ -49,13 +48,13 @@ func TestShoutrrr_GetType(t *testing.T) {
 			hardDefaultValue: "other",
 		},
 		{
-			name:         "default is ignored", // uses ID.
-			want:         "test",
+			name:         "default is ignored",
+			want:         "test", // GetType falls back to the ID.
 			defaultValue: "smtp",
 		},
 		{
-			name:             "hardDefaultValue is ignored", // uses ID.
-			want:             "test",
+			name:             "hardDefaultValue is ignored",
+			want:             "test", // GetType falls back to the ID.
 			hardDefaultValue: "smtp",
 		},
 	}
@@ -67,23 +66,41 @@ func TestShoutrrr_GetType(t *testing.T) {
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.Type = tc.rootValue
 			shoutrrr.Main.Type = tc.mainValue
+			shoutrrr.Defaults.Type = tc.defaultValue
+			shoutrrr.HardDefaults.Type = tc.hardDefaultValue
 
-			// WHEN: GetType is called.
 			got := shoutrrr.GetType()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr GetType() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_Title(t *testing.T) {
-	// GIVEN: a Shoutrrr.
+	testTemplatedLayers(
+		t,
+		"title", func(b *Base) MapStringStringOmitNull { return b.Params },
+		(*Shoutrrr).Title,
+	)
+}
+
+func TestShoutrrr_Message(t *testing.T) {
+	testTemplatedLayers(
+		t,
+		"message", func(b *Base) MapStringStringOmitNull { return b.Options },
+		(*Shoutrrr).Message,
+	)
+}
+
+// testTemplatedLayers checks that a templated getter reads the first layer that sets key,
+// root -> main -> defaults -> hardDefaults, and renders it with the ServiceInfo.
+func testTemplatedLayers(
+	t *testing.T,
+	key string, layer func(*Base) MapStringStringOmitNull,
+	call func(*Shoutrrr, serviceinfo.ServiceInfo) string,
+) {
 	svcInfo := serviceinfo.ServiceInfo{
 		ID:            test.ArgusGitHubRepo,
 		URL:           "https://github.com",
@@ -144,241 +161,54 @@ func TestShoutrrr_Title(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := "title"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Params[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Params[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Params[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
-			}
+			setLayers(
+				shoutrrr, key, layer,
+				tc.rootValue, tc.mainValue, tc.defaultValue, tc.hardDefaultValue,
+			)
 
-			// WHEN: Title is called.
-			got := shoutrrr.Title(svcInfo)
+			got := call(shoutrrr, svcInfo)
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr Title(%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, svcInfo, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
-func TestShoutrrr_Message(t *testing.T) {
-	// GIVEN: a Shoutrrr.
-	svcInfo := serviceinfo.ServiceInfo{
-		ID:            test.ArgusGitHubRepo,
-		WebURL:        "https://release-argus.io/demo",
-		LatestVersion: "0.9.0",
-	}
-	tests := []struct {
-		name                                                 string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		{
-			name:             "root overrides all",
-			want:             "New version!",
-			rootValue:        new("New version!"),
-			mainValue:        new("something"),
-			defaultValue:     new("something"),
-			hardDefaultValue: new("something"),
-		},
-		{
-			name:             "main overrides default and hardDefault",
-			want:             "New version!",
-			mainValue:        new("New version!"),
-			defaultValue:     new("something"),
-			hardDefaultValue: new("something"),
-		},
-		{
-			name:             "default overrides hardDefault",
-			want:             "New version!",
-			defaultValue:     new("New version!"),
-			hardDefaultValue: new("something"),
-		},
-		{
-			name:             "hardDefaultValue is last resort",
-			want:             "New version!",
-			hardDefaultValue: new("New version!"),
-		},
-		{
-			name:             "django templating",
-			want:             "New version!",
-			rootValue:        new("{% if 'a' == 'a' %}New version!{% endif %}"),
-			defaultValue:     new("something"),
-			hardDefaultValue: new("something"),
-		},
-		{
-			name: "django vars",
-			want: fmt.Sprintf(
-				"%s or %s/%s/releases/tag/%s",
-				svcInfo.WebURL, svcInfo.URL, svcInfo.ID, svcInfo.LatestVersion,
-			),
-			rootValue:        new("{{ web_url }} or {{ service_url }}/{{ service_id }}/releases/tag/{{ version }}"),
-			defaultValue:     new("something"),
-			hardDefaultValue: new("something"),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "message"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-
-			// WHEN: Message is called.
-			got := shoutrrr.Message(svcInfo)
-
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr Message(%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, svcInfo, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetOption(t *testing.T) {
-	// GIVEN: a Shoutrrr.
-	tests := []struct {
-		name                                                 string
-		env                                                  map[string]string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		{
-			name:             "root overrides all",
-			want:             "this",
-			rootValue:        new("this"),
-			defaultValue:     new("not_this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "main overrides default and hardDefault",
-			want:             "this",
-			mainValue:        new("this"),
-			defaultValue:     new("not_this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "default overrides hardDefault",
-			want:             "this",
-			defaultValue:     new("this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "hardDefaultValue is last resort",
-			want:             "this",
-			hardDefaultValue: new("this"),
-		},
-		{
-			name: "env var is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_OPTION__ONE": "this",
-			},
-			rootValue: new("${TEST_SHOUTRRR__GET_OPTION__ONE}"),
-		},
-		{
-			name: "env var partial is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_OPTION__TWO": "is",
-			},
-			rootValue: new("th${TEST_SHOUTRRR__GET_OPTION__TWO}"),
-		},
-		{
-			name: "empty env var is ignored",
-			want: "that",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_OPTION__THREE": "",
-			},
-			rootValue:    new("${TEST_SHOUTRRR__GET_OPTION__THREE}"),
-			defaultValue: new("that"),
-		},
-		{
-			name:         "undefined env var is used",
-			want:         "${TEST_SHOUTRRR__GET_OPTION__UNSET}",
-			rootValue:    new("${TEST_SHOUTRRR__GET_OPTION__UNSET}"),
-			defaultValue: new("that"),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "test"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
-			test.SetEnv(t, tc.env)
-
-			// WHEN: GetOption is called.
-			got := shoutrrr.GetOption(key)
-
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr GetOption(%q) mismatch:\ngot:  %q\nwant: %q",
-					packageName, key,
-					got, tc.want,
-				)
-			}
-
-			// WHEN: setOption is called.
-			want := got + "-set-test"
-			shoutrrr.setOption(key, want)
-
-			// THEN: the Option is set and can be retrieved with a Get.
-			got = shoutrrr.GetOption(key)
-			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr GetOption(%q) mismatch after setOption(%q):\ngot:  %q\nwant: %q",
-					packageName, key, want,
-					got, want,
-				)
-			}
-		})
-	}
+	testGetSetLayers(
+		t,
+		"OPTION", func(b *Base) MapStringStringOmitNull { return b.Options },
+		(*Shoutrrr).GetOption, (*Shoutrrr).setOption,
+	)
 }
+
 func TestShoutrrr_GetURLField(t *testing.T) {
-	// GIVEN: a Shoutrrr.
+	testGetSetLayers(
+		t,
+		"URL_FIELD", func(b *Base) MapStringStringOmitNull { return b.URLFields },
+		(*Shoutrrr).GetURLField, (*Shoutrrr).setURLField,
+	)
+}
+
+func TestShoutrrr_GetParam(t *testing.T) {
+	testGetSetLayers(
+		t,
+		"PARAM", func(b *Base) MapStringStringOmitNull { return b.Params },
+		(*Shoutrrr).GetParam, (*Shoutrrr).setParam,
+	)
+}
+
+// testGetSetLayers checks that get reads the first layer that sets a key,
+// root -> main -> defaults -> hardDefaults, expanding env vars, and that set writes the root.
+func testGetSetLayers(
+	t *testing.T,
+	envKey string, layer func(*Base) MapStringStringOmitNull,
+	get func(*Shoutrrr, string) string, set func(*Shoutrrr, string, string),
+) {
+	envVar := func(suffix string) string { return "TEST_SHOUTRRR__GET_" + envKey + "__" + suffix }
+
 	tests := []struct {
 		name                                                 string
 		env                                                  map[string]string
@@ -411,34 +241,28 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 			hardDefaultValue: new("this"),
 		},
 		{
-			name: "env var is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_URL_FIELD__ONE": "this",
-			},
-			rootValue: new("${TEST_SHOUTRRR__GET_URL_FIELD__ONE}"),
+			name:      "env var is used",
+			want:      "this",
+			env:       map[string]string{envVar("ONE"): "this"},
+			rootValue: new("${" + envVar("ONE") + "}"),
 		},
 		{
-			name: "env var partial is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_URL_FIELD__TWO": "is",
-			},
-			rootValue: new("th${TEST_SHOUTRRR__GET_URL_FIELD__TWO}"),
+			name:      "env var partial is used",
+			want:      "this",
+			env:       map[string]string{envVar("TWO"): "is"},
+			rootValue: new("th${" + envVar("TWO") + "}"),
 		},
 		{
-			name: "empty env var is ignored",
-			want: "that",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_URL_FIELD__THREE": "",
-			},
-			rootValue:    new("${TEST_SHOUTRRR__GET_URL_FIELD__THREE}"),
+			name:         "empty env var is ignored",
+			want:         "that",
+			env:          map[string]string{envVar("THREE"): ""},
+			rootValue:    new("${" + envVar("THREE") + "}"),
 			defaultValue: new("that"),
 		},
 		{
 			name:         "undefined env var is used",
-			want:         "${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}",
-			rootValue:    new("${TEST_SHOUTRRR__GET_URL_FIELD__UNSET}"),
+			want:         "${" + envVar("UNSET") + "}",
+			rootValue:    new("${" + envVar("UNSET") + "}"),
 			defaultValue: new("that"),
 		},
 	}
@@ -449,165 +273,49 @@ func TestShoutrrr_GetURLField(t *testing.T) {
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.URLFields[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.URLFields[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.URLFields[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.URLFields[key] = *tc.hardDefaultValue
-			}
-			test.SetEnv(t, tc.env)
+			setLayers(
+				shoutrrr, key, layer,
+				tc.rootValue, tc.mainValue, tc.defaultValue, tc.hardDefaultValue,
+			)
+			test.IsolateEnv(t, tc.env)
 
-			// WHEN: GetURLField is called.
-			got := shoutrrr.GetURLField(key)
+			got := get(shoutrrr, key)
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr,GetURLField(%q) mismatch before setURLField():\ngot:  %q\nwant: %q",
-					packageName, key,
-					got, tc.want,
-				)
+				t.Fatalf("before set: get() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// WHEN: setURLField is called.
 			want := got + "-set-test"
-			shoutrrr.setURLField(key, want)
+			set(shoutrrr, key, want)
 
-			// THEN: the URLField is set and can be retrieved with a Get.
-			got = shoutrrr.GetURLField(key)
+			// set writes the root layer.
+			got = get(shoutrrr, key)
 			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetURLField(%q) mismatch after setURLField(%q):\ngot:  %q\nwant: %q",
-					packageName, key, want,
-					got, want,
-				)
+				t.Fatalf("after set: get() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
 }
-func TestShoutrrr_GetParam(t *testing.T) {
-	// GIVEN: a Shoutrrr.
-	tests := []struct {
-		name                                                 string
-		env                                                  map[string]string
-		rootValue, mainValue, defaultValue, hardDefaultValue *string
-		want                                                 string
-	}{
-		{
-			name:             "root overrides all",
-			want:             "this",
-			rootValue:        new("this"),
-			defaultValue:     new("not_this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "main overrides default and hardDefault",
-			want:             "this",
-			mainValue:        new("this"),
-			defaultValue:     new("not_this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "default overrides hardDefault",
-			want:             "this",
-			defaultValue:     new("this"),
-			hardDefaultValue: new("not_this"),
-		},
-		{
-			name:             "hardDefaultValue is last resort",
-			want:             "this",
-			hardDefaultValue: new("this"),
-		},
-		{
-			name: "env var is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_PARAM__ONE": "this",
-			},
-			rootValue: new("${TEST_SHOUTRRR__GET_PARAM__ONE}"),
-		},
-		{
-			name: "env var partial is used",
-			want: "this",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_PARAM__TWO": "is",
-			},
-			rootValue: new("th${TEST_SHOUTRRR__GET_PARAM__TWO}"),
-		},
-		{
-			name: "empty env var is ignored",
-			want: "that",
-			env: map[string]string{
-				"TEST_SHOUTRRR__GET_PARAM__THREE": "",
-			},
-			rootValue:    new("${TEST_SHOUTRRR__GET_PARAM__THREE}"),
-			defaultValue: new("that"),
-		},
-		{
-			name:         "undefined env var is used",
-			want:         "${TEST_SHOUTRRR__GET_PARAM__UNSET}",
-			rootValue:    new("${TEST_SHOUTRRR__GET_PARAM__UNSET}"),
-			defaultValue: new("that"),
-		},
-	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			key := "test"
-			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Params[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Params[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Params[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
-			}
-			test.SetEnv(t, tc.env)
-
-			// WHEN: GetParam is called.
-			got := shoutrrr.GetParam(key)
-
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetParam(%q) mismatch before setParam():\ngot:  %q\nwant: %q",
-					packageName, key,
-					got, tc.want,
-				)
-			}
-
-			// WHEN: setParam is called.
-			want := got + "-set-test"
-			shoutrrr.setParam(key, want)
-
-			// THEN: the Param is set and can be retrieved with a Get.
-			got = shoutrrr.GetParam(key)
-			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr GetParam(%q) mismatch after setParam(%q):\ngot:  %q\nwant: %q",
-					packageName, key, want,
-					got, want,
-				)
-			}
-		})
+// setLayers sets key in each layer of the Shoutrrr whose value is non-nil.
+func setLayers(
+	shoutrrr *Shoutrrr,
+	key string, layer func(*Base) MapStringStringOmitNull,
+	rootValue, mainValue, defaultValue, hardDefaultValue *string,
+) {
+	for base, value := range map[*Base]*string{
+		&shoutrrr.Base:              rootValue,
+		&shoutrrr.Main.Base:         mainValue,
+		&shoutrrr.Defaults.Base:     defaultValue,
+		&shoutrrr.HardDefaults.Base: hardDefaultValue,
+	} {
+		if value != nil {
+			layer(base)[key] = *value
+		}
 	}
 }
 
 func TestShoutrrr_GetDelay(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -652,36 +360,22 @@ func TestShoutrrr_GetDelay(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := "delay"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
+			setLayers(
+				shoutrrr, "delay", func(b *Base) MapStringStringOmitNull { return b.Options },
+				tc.rootValue, tc.mainValue, tc.defaultValue, tc.hardDefaultValue,
+			)
 
-			// WHEN: GetDelay is called.
 			got := shoutrrr.GetDelay()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetDelay() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
+
 func TestShoutrrr_GetDelayDuration(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -719,37 +413,22 @@ func TestShoutrrr_GetDelayDuration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := "delay"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
+			setLayers(
+				shoutrrr, "delay", func(b *Base) MapStringStringOmitNull { return b.Options },
+				tc.rootValue, tc.mainValue, tc.defaultValue, tc.hardDefaultValue,
+			)
 
-			// WHEN: GetDelay is called.
 			got := shoutrrr.GetDelayDuration()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetDelayDuration() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %s\nwant: %s", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_GetMaxTries(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue *string
@@ -787,270 +466,96 @@ func TestShoutrrr_GetMaxTries(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := "max_tries"
 			shoutrrr := testShoutrrr(false, false)
-			if tc.rootValue != nil {
-				shoutrrr.Options[key] = *tc.rootValue
-			}
-			if tc.mainValue != nil {
-				shoutrrr.Main.Options[key] = *tc.mainValue
-			}
-			if tc.defaultValue != nil {
-				shoutrrr.Defaults.Options[key] = *tc.defaultValue
-			}
-			if tc.hardDefaultValue != nil {
-				shoutrrr.HardDefaults.Options[key] = *tc.hardDefaultValue
-			}
+			setLayers(
+				shoutrrr, "max_tries", func(b *Base) MapStringStringOmitNull { return b.Options },
+				tc.rootValue, tc.mainValue, tc.defaultValue, tc.hardDefaultValue,
+			)
 
-			// WHEN: GetMaxTries is called.
 			got := shoutrrr.GetMaxTries()
 
-			// THEN: the function returns the correct result.
 			if int(got) != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetMaxTries() value mismatch\ngot:  %d\nwant: %d",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %d\nwant: %d", got, tc.want)
 			}
 		})
 	}
 }
 
-func TestBase_X_Option(t *testing.T) {
-	// GIVEN: a map[string]string.
+func TestBase_GetSetOption(t *testing.T) {
+	testBaseAccessors(
+		t,
+		func(b *Base) MapStringStringOmitNull { return b.Options },
+		(*Base).getOption, (*Base).setOption, nil,
+	)
+}
+
+func TestBase_GetSetDeleteURLField(t *testing.T) {
+	testBaseAccessors(
+		t,
+		func(b *Base) MapStringStringOmitNull { return b.URLFields },
+		(*Base).getURLField, (*Base).setURLField, (*Base).deleteURLField,
+	)
+}
+
+func TestBase_GetSetDeleteParam(t *testing.T) {
+	testBaseAccessors(
+		t,
+		func(b *Base) MapStringStringOmitNull { return b.Params },
+		(*Base).GetParam, (*Base).setParam, (*Base).deleteParam,
+	)
+}
+
+// testBaseAccessors checks that get reads key from field, that set overwrites it,
+// and that del, when non-nil, removes it.
+func testBaseAccessors(
+	t *testing.T,
+	field func(*Base) MapStringStringOmitNull,
+	get func(*Base, string) string, set func(*Base, string, string), del func(*Base, string),
+) {
 	values := map[string]string{
 		"a":  "foo",
 		"b":  "bar",
 		"hi": "bye",
 	}
-
-	// AND: a set of keys to query for.
 	tests := []struct {
 		name      string
 		key, want string
 	}{
-		{
-			name: "unknown key",
-			key:  "foo",
-			want: "",
-		},
-		{
-			name: "value 1",
-			key:  "a",
-			want: "foo",
-		},
-		{
-			name: "value 2",
-			key:  "b",
-			want: "bar",
-		},
-		{
-			name: "value 3",
-			key:  "hi",
-			want: "bye",
-		},
+		{name: "unknown key", key: "foo", want: ""},
+		{name: "value 1", key: "a", want: "foo"},
+		{name: "value 2", key: "b", want: "bar"},
+		{name: "value 3", key: "hi", want: "bye"},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Base with this Options map.
-			base := Base{
-				Options: util.CopyMap(values),
-			}
+			base := Base{}
+			base.InitMaps()
+			maps.Copy(field(&base), values)
 
-			// WHEN: GetOption is called.
-			got := base.getOption(tc.key)
+			got := get(&base, tc.key)
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetOption(%q) mismatch before setOption():\ngot:  %q\nwant: %q",
-					packageName, tc.key,
-					got, tc.want,
-				)
+				t.Fatalf("before set: get() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 
-			// WHEN: setOption is called.
 			want := got + "-set-test"
-			base.setOption(tc.key, want)
+			set(&base, tc.key, want)
 
-			// THEN: the Option is set and can be retrieved with a Get.
-			got = base.getOption(tc.key)
+			got = get(&base, tc.key)
 			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetOption(%q) mismatch after setOption(%q):\ngot:  %q\nwant: %q",
-					packageName, tc.key, want,
-					got, want,
-				)
-			}
-		})
-	}
-}
-func TestBase_X_URLField(t *testing.T) {
-	// GIVEN: a map[string]string.
-	values := map[string]string{
-		"a":  "foo",
-		"b":  "bar",
-		"hi": "bye",
-	}
-
-	// AND: a set of keys to query for.
-	tests := []struct {
-		name      string
-		key, want string
-	}{
-		{
-			name: "unknown key",
-			key:  "foo",
-			want: "",
-		},
-		{
-			name: "value 1",
-			key:  "a",
-			want: "foo",
-		},
-		{
-			name: "value 2",
-			key:  "b",
-			want: "bar",
-		},
-		{
-			name: "value 3",
-			key:  "hi",
-			want: "bye",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// AND: a Base with this URLFields map.
-			base := Base{
-				URLFields: util.CopyMap(values),
+				t.Fatalf("after set: get() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// WHEN: GetURLField is called.
-			got := base.getURLField(tc.key)
-
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetURLField(%q) mismatch before setURLField():\ngot:  %q\nwant: %q",
-					packageName, tc.key,
-					got, tc.want,
-				)
+			if del == nil {
+				return
 			}
+			del(&base, tc.key)
 
-			// WHEN: setURLField is called.
-			want := got + "-set-test"
-			base.setURLField(tc.key, want)
-
-			// THEN: the Option is set and can be retrieved with a Get.
-			got = base.getURLField(tc.key)
-			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetURLField(%q) mismatch after setURLField(%q):\ngot:  %q\nwant: %q",
-					packageName, tc.key, want,
-					got, want,
-				)
-			}
-
-			// WHEN: deleteURLField is called.
-			base.deleteURLField(tc.key)
-
-			// THEN: the key is removed, rather than left with an empty value.
-			if _, found := base.URLFields[tc.key]; found {
-				t.Fatalf(
-					"%s\nShoutrrr.deleteURLField(%q) left the key in place",
-					packageName, tc.key,
-				)
-			}
-		})
-	}
-}
-func TestBase_X_Param(t *testing.T) {
-	// GIVEN: a map[string]string.
-	values := map[string]string{
-		"a":  "foo",
-		"b":  "bar",
-		"hi": "bye",
-	}
-
-	// AND: a set of keys to query for.
-	tests := []struct {
-		name      string
-		key, want string
-	}{
-		{
-			name: "unknown key",
-			key:  "foo",
-			want: "",
-		},
-		{
-			name: "value 1",
-			key:  "a",
-			want: "foo",
-		},
-		{
-			name: "value 2",
-			key:  "b",
-			want: "bar",
-		},
-		{
-			name: "value 3",
-			key:  "hi",
-			want: "bye",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// AND: a Base with this Params map.
-			base := Base{
-				Params: util.CopyMap(values),
-			}
-
-			// WHEN: GetParam is called.
-			got := base.GetParam(tc.key)
-
-			// THEN: the function returns the correct result.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetParam(%q) mismatch before setParam():\ngot:  %q\nwant: %q",
-					packageName, tc.key,
-					got, tc.want,
-				)
-			}
-
-			// WHEN: setParam is called.
-			want := got + "-set-test"
-			base.setParam(tc.key, want)
-
-			// THEN: the Option is set and can be retrieved with a Get.
-			got = base.GetParam(tc.key)
-			if got != want {
-				t.Fatalf(
-					"%s\nShoutrrr.GetParam(%q) mismatch after setParam(%q):\ngot:  %q\nwant: %q",
-					packageName, tc.key, want,
-					got, want,
-				)
-			}
-
-			// WHEN: deleteParam is called.
-			base.deleteParam(tc.key)
-
-			// THEN: the key is removed, rather than left with an empty value.
-			// Shoutrrr rejects an unknown key and an empty value alike.
-			if _, found := base.Params[tc.key]; found {
-				t.Fatalf(
-					"%s\nShoutrrr.deleteParam(%q) left the key in place",
-					packageName, tc.key,
-				)
+			if _, found := field(&base)[tc.key]; found {
+				t.Fatalf("after del: field()[%q] mismatch\ngot:  present\nwant: absent", tc.key)
 			}
 		})
 	}

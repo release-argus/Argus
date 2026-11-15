@@ -41,7 +41,7 @@ func Decode(
 		format, data,
 		nil,
 		defaults.GetType(),
-		RegistryMapInheritable,
+		registryMapInheritable,
 	)
 	if err != nil {
 		return nil, &decode.ErrKeyField{
@@ -104,7 +104,7 @@ func ApplyOverrides(
 		format, data,
 		target,
 		defaults.GetType(),
-		RegistryMapInheritable,
+		registryMapInheritable,
 	)
 	if err != nil {
 		return nil, &decode.ErrKeyField{

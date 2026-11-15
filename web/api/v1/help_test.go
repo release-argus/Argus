@@ -25,17 +25,20 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/sync/errgroup"
 	_ "modernc.org/sqlite"
 
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/password"
 	"github.com/release-argus/Argus/auth/provider"
 	"github.com/release-argus/Argus/auth/provider/local"
+	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/command"
@@ -56,20 +59,17 @@ import (
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
 	whtest "github.com/release-argus/Argus/webhook/test"
-	"golang.org/x/sync/errgroup"
 )
 
 // dummyGitHubToken stands in for a real token where no request is made.
 const dummyGitHubToken = "dummy-github-token"
 
 var (
-	packageName          = "api_v1"
 	secretValueMarshaled string
 	testTempDir          string // Process-lifetime home of test config files.
 )
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,48 +77,50 @@ func TestMain(m *testing.M) {
 
 	// Shorten the WebSocket ping interval so writePump tests don't wait out the production default.
 	pingPeriod = 10 * time.Millisecond
+	// Shorten the pong wait so a missed pong ends readPump within a test.
+	pongWait = 500 * time.Millisecond
 
 	config.DebounceDuration = 500 * time.Millisecond
 	flags := make(map[string]bool)
-	// Sweep strays from earlier killed runs.
-	strays, _ := filepath.Glob(filepath.Join(os.TempDir(), "argus-api-v1-test*"))
-	for _, stray := range strays {
-		_ = os.RemoveAll(stray)
-	}
 	tempDir, err := os.MkdirTemp("", "argus-api-v1-test")
 	if err != nil {
-		fmt.Printf("%s\ncreate temp dir: %v", packageName, err)
+		fmt.Printf("os.MkdirTemp() failed: %v\n", err)
 		os.Exit(1)
 	}
 	testTempDir = tempDir
 	path := filepath.Join(tempDir, "TestWebAPIv1Main.yml")
 	testYAML_Argus(path)
 	var cfg config.Config
-	cfg.Load(ctx, g, path, &flags)
+	if !cfg.Load(ctx, g, path, &flags) {
+		fmt.Printf("Config.Load(%q) failed\n", path)
+		os.Exit(1)
+	}
 
 	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshaledBytes, _ := decode.Marshal("json", util.SecretValue)
+	secretValueMarshaledBytes, err := decode.Marshal("json", util.SecretValue)
+	if err != nil {
+		fmt.Printf("decode.Marshal() failed: %v\n", err)
+		os.Exit(1)
+	}
 	secretValueMarshaled = string(secretValueMarshaledBytes)
 
-	// Run other tests.
 	exitCode := m.Run()
 	_ = os.RemoveAll(tempDir)
 	_ = os.Remove(cfg.Settings.DataDatabaseFile())
 	cancel()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
 type failWriter struct {
 	header http.Header
 	code   int
-	body   string
+	body   string // What was handed to Write, though the write fails.
 }
 
 func (f *failWriter) Header() http.Header {
@@ -132,21 +134,19 @@ func (f *failWriter) WriteHeader(code int) {
 	f.code = code
 }
 
-func (f *failWriter) Write([]byte) (int, error) {
+func (f *failWriter) Write(p []byte) (int, error) {
 	if f.code == 0 {
 		f.code = http.StatusOK
 	}
+	f.body += string(p)
 	return 0, errors.New("write failed")
 }
 
-// PlainDefaults returns plain defaults and hardDefaults for testing.
+// plainDefaults returns plain defaults and hardDefaults for testing.
 func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
 	t.Helper()
 
-	dockerDefaults, _ := docker.DecodeDefaults(
-		"yaml", nil,
-		nil,
-	)
+	dockerDefaults, _ := docker.DecodeDefaults("yaml", nil, nil)
 	defaults := config.Defaults{
 		Service: service.Defaults{
 			LatestVersion: latestver.Defaults{
@@ -177,11 +177,15 @@ func testClient() Client {
 }
 
 func testLoad(t *testing.T, file string) *config.Config {
+	t.Helper()
+
 	var cfg config.Config
 	g, _ := errgroup.WithContext(t.Context())
 
 	flags := make(map[string]bool)
-	cfg.Load(t.Context(), g, file, &flags)
+	if !cfg.Load(t.Context(), g, file, &flags) {
+		t.Fatalf("Config.Load(%q) failed", file)
+	}
 	announceChannel := make(chan []byte, 8)
 	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
@@ -198,7 +202,7 @@ func testAPI(t *testing.T, path string) API {
 	cfg := testLoad(t, path)
 
 	t.Cleanup(func() {
-		_ = os.RemoveAll(cfg.Settings.Data.DatabaseFile)
+		_ = os.RemoveAll(cfg.Settings.DataDatabaseFile())
 	})
 
 	return API{Config: cfg}
@@ -210,18 +214,17 @@ func testService(
 	lvType, dvType string,
 	semVer bool,
 ) *service.Service {
-	if t != nil {
-		t.Helper()
-	}
+	t.Helper()
+
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	svc := test.Must(t, func() (*service.Service, error) {
 		return service.DecodeService(
 			"yaml", []byte(test.TrimYAML(`
 			options:
-				semantic_versioning: `+fmt.Sprint(semVer)+`
+				semantic_versioning: `+strconv.FormatBool(semVer)+`
 			latest_version:
 			`+lvtest.Lookup(t, lvType, false).String("  ")+`
 			deployed_version:
@@ -239,7 +242,6 @@ func testService(
 	announceChannel := make(chan []byte, 8)
 	databaseChannel := make(chan dbtype.Message, 8)
 
-	// Status channels.
 	svc.Status.AnnounceChannel = announceChannel
 	svc.Status.DatabaseChannel = databaseChannel
 
@@ -287,22 +289,11 @@ func testAuthServerPendingSetup(
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(cfg.Settings.DataDatabaseFile()) })
 
-	dbConn, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf(
-			"%s\nopen auth db: %v",
-			packageName, err,
-		)
-	}
-	dbConn.SetMaxOpenConns(1)
-	t.Cleanup(func() { _ = dbConn.Close() })
+	dbConn := test.MemoryDB(t)
 
 	authStore, err := store.New(t.Context(), dbConn)
 	if err != nil {
-		t.Fatalf(
-			"%s\nauth store: %v",
-			packageName, err,
-		)
+		t.Fatalf("store.New() failed: %v", err)
 	}
 
 	sessions := session.New(
@@ -346,11 +337,9 @@ func testAuthServer(
 		"Administrator",
 		"admin-password",
 	); err != nil {
-		t.Fatalf(
-			"%s\nbootstrap admin: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.CreateFirstAdmin() failed: %v", err)
 	}
+
 	return api, deps, dbConn
 }
 
@@ -365,10 +354,7 @@ func createAuthUser(
 
 	hash, err := password.Hash(plaintext)
 	if err != nil {
-		t.Fatalf(
-			"%s\nhash password: %v",
-			packageName, err,
-		)
+		t.Fatalf("password.Hash() failed: %v", err)
 	}
 
 	user, err := deps.Store.CreateUser(
@@ -376,13 +362,47 @@ func createAuthUser(
 		username, "", "", hash, groups,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncreate user %q: %v",
-			packageName, username, err,
-		)
+		t.Fatalf("Store.CreateUser(%q) failed: %v", username, err)
 	}
+	t.Logf("created user %q (id=%q)", username, user.ID)
 
 	return user
+}
+
+// createAuthGroup creates a group holding grants.
+func createAuthGroup(
+	t *testing.T,
+	deps *AuthDeps,
+	name, description string,
+	grants []rbac.Grant,
+) *store.Group {
+	t.Helper()
+
+	group, err := deps.Store.CreateGroup(t.Context(), name, description, grants)
+	if err != nil {
+		t.Fatalf("Store.CreateGroup(%q) failed: %v", name, err)
+	}
+	t.Logf("created group %q (id=%q)", name, group.ID)
+
+	return group
+}
+
+// createAPIToken creates an API token for userID, returning its plaintext and record.
+func createAPIToken(
+	t *testing.T,
+	deps *AuthDeps,
+	userID, name string,
+	expiresAt *time.Time,
+) (string, *store.APIToken) {
+	t.Helper()
+
+	plaintext, token, err := deps.Store.CreateAPIToken(t.Context(), userID, name, expiresAt)
+	if err != nil {
+		t.Fatalf("Store.CreateAPIToken(%q) failed: %v", name, err)
+	}
+	t.Logf("created API token %q (id=%q)", name, token.ID)
+
+	return plaintext, token
 }
 
 // withRoutePrefix serves the API under prefix.
@@ -413,13 +433,15 @@ func serveAuth(api *API, r *http.Request) *httptest.ResponseRecorder {
 func loginCookie(t *testing.T, api *API, username, plaintext string) *http.Cookie {
 	t.Helper()
 
-	body := fmt.Sprintf(`{"username":%q,"password":%q}`, username, plaintext)
-	w := serveAuth(api, httptest.NewRequest(
-		http.MethodPost, apiPath(api, "/auth/login"), strings.NewReader(body)))
+	req := httptest.NewRequest(
+		http.MethodPost, apiPath(api, "/auth/login"),
+		strings.NewReader(fmt.Sprintf(`{"username":%q,"password":%q}`, username, plaintext)),
+	)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nlogin as %q failed\ngot:  %d - %s",
-			packageName, username, got, w.Body.String(),
+			"login as %q: status code mismatch\ngot:  %d - %q\nwant: %d",
+			username, got, w.Body.String(), want,
 		)
 	}
 	for _, cookie := range w.Result().Cookies() {
@@ -428,24 +450,31 @@ func loginCookie(t *testing.T, api *API, username, plaintext string) *http.Cooki
 		}
 	}
 
-	t.Fatalf("%s\nlogin response missing the session cookie", packageName)
+	t.Fatalf("login as %q: session cookie mismatch\ngot:  absent\nwant: present", username)
 	return nil
 }
 
-// authedRequest builds a request carrying the session cookie.
-func authedRequest(
-	method, target string,
-	body string,
-	cookie *http.Cookie,
-) *http.Request {
-	var reader *strings.Reader
-	if body == "" {
-		reader = strings.NewReader("")
-	} else {
-		reader = strings.NewReader(body)
-	}
+// assertSessionCookieCleared fails unless the logout response w expires the session cookie.
+func assertSessionCookieCleared(t *testing.T, w *httptest.ResponseRecorder) {
+	t.Helper()
 
-	req := httptest.NewRequest(method, target, reader)
+	cleared := false
+	for _, c := range w.Result().Cookies() {
+		if c.Name == authCookieName {
+			cleared = true
+			if c.MaxAge >= 0 {
+				t.Errorf("logout: Cookie.MaxAge mismatch\ngot:  %d\nwant: <0", c.MaxAge)
+			}
+		}
+	}
+	if !cleared {
+		t.Errorf("logout: %s cookie mismatch\ngot:  absent\nwant: present", authCookieName)
+	}
+}
+
+// authedRequest builds a request carrying the session cookie.
+func authedRequest(method, target, body string, cookie *http.Cookie) *http.Request {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
 	if cookie != nil {
 		req.AddCookie(cookie)
 	}
@@ -458,20 +487,18 @@ func adminContext(t *testing.T, api *API, deps *AuthDeps) *auth.Context {
 	t.Helper()
 
 	creds, err := deps.Store.LocalCredentials(t.Context(), "admin")
-	if err != nil || creds == nil {
-		t.Fatalf(
-			"%s\nadmin lookup failed: %v",
-			packageName, err,
-		)
+	if err != nil {
+		t.Fatalf("Store.LocalCredentials() failed: %v", err)
+	}
+	if creds == nil {
+		t.Fatal("Store.LocalCredentials() mismatch\ngot:  nil\nwant: non-nil")
 	}
 
 	authCtx, err := api.contextForUser(t.Context(), creds.UserID, "local")
 	if err != nil {
-		t.Fatalf(
-			"%s\nadmin context failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("API.contextForUser(%q) failed: %v", creds.UserID, err)
 	}
+	t.Logf("resolved the admin's auth context (userID=%q)", creds.UserID)
 
 	return authCtx
 }

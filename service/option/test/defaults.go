@@ -18,13 +18,12 @@
 package test
 
 import (
-	"testing"
-
+	"github.com/release-argus/Argus/internal/test"
 	opt "github.com/release-argus/Argus/service/option"
 )
 
 // PlainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func PlainDefaultsConfig(t *testing.T) opt.DefaultsConfig {
+func PlainDefaultsConfig(t test.TB) opt.DefaultsConfig {
 	t.Helper()
 
 	defaults, _ := opt.DecodeDefaults("yaml", nil)

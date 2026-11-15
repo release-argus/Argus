@@ -17,7 +17,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,46 +31,34 @@ import (
 // preferencesPath is the route the signed-in user's preferences live on.
 const preferencesPath = "/api/v1/auth/me/preferences"
 
-// decodeAuthMe parses an '/auth/me'-shaped response body.
-func decodeAuthMe(t *testing.T, prefix string, body []byte) apitype.AuthMe {
+// decodeAuthMe parses an '/auth/me'-shaped response body, failing on one without a user
+// (such as an error response).
+func decodeAuthMe(t *testing.T, body []byte) apitype.AuthMe {
 	t.Helper()
 
 	var me apitype.AuthMe
 	if err := decode.Unmarshal("json", body, &me); err != nil {
-		t.Fatalf(
-			"%s\nparse response: %v",
-			prefix, err,
-		)
+		t.Fatalf("decode.Unmarshal() failed: %v", err)
+	}
+	if me.User.ID == "" {
+		t.Fatalf("AuthMe.User.ID mismatch\ngot:  %q (body: %q)\nwant: non-empty", me.User.ID, body)
 	}
 	return me
 }
 
 func TestAPI_AuthMePreferences__roundTrip(t *testing.T) {
-	// GIVEN: an auth-enabled API and a signed-in admin.
 	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
-	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences()", packageName)
+	req := authedRequest(http.MethodGet, "/api/v1/auth/me", "", cookie)
+	w := serveAuth(api, req)
+	me := decodeAuthMe(t, w.Body.Bytes())
 
-	// WHEN: /auth/me is read before anything is saved.
-	me := decodeAuthMe(t, prefix,
-		serveAuth(api, authedRequest(
-			http.MethodGet, "/api/v1/auth/me",
-			"",
-			cookie,
-		)).Body.Bytes(),
-	)
-
-	// THEN: it carries no preferences.
 	if me.Preferences != nil {
-		t.Errorf(
-			"%s\nunsaved preferences present\ngot: %+v",
-			prefix, *me.Preferences,
-		)
+		t.Error("before save: AuthMe.Preferences mismatch\ngot:  present\nwant: absent")
 	}
 
-	// WHEN: preferences are saved.
-	w := serveAuth(api, authedRequest(
+	req = authedRequest(
 		http.MethodPut, preferencesPath,
 		test.TrimJSON(`{
 			"hide":       ["inactive", "up_to_date"],
@@ -79,94 +66,73 @@ func TestAPI_AuthMePreferences__roundTrip(t *testing.T) {
 			"timestamps": ["found"]
 		}`),
 		cookie,
-	))
+	)
+	w = serveAuth(api, req)
 
-	// THEN: the response carries them back, in catalogue order.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix,
-			got, w.Body.String(),
-			want,
+			"save user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	me = decodeAuthMe(t, prefix, w.Body.Bytes())
+	me = decodeAuthMe(t, w.Body.Bytes())
 	if me.Preferences == nil {
-		t.Fatalf(
-			"%s\nsaved preferences missing from the response\ngot: %s",
-			prefix, w.Body.String(),
-		)
+		t.Fatal("save user preferences: AuthMe.Preferences mismatch\ngot:  absent\nwant: present")
 	}
-	if testErr := test.AssertSlicesEqual(t,
-		me.Preferences.Hide, []string{store.HideUpToDate, store.HideInactive},
-		prefix, "hide",
+	// Returned in catalogue order, rather than as submitted.
+	if testErr := test.AssertSlicesEqual(
+		t,
+		me.Preferences.Hide,
+		[]string{store.HideUpToDate, store.HideInactive},
+		"AuthMe.Preferences.Hide",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("save user preferences: %v", testErr)
 	}
-	if testErr := test.AssertSlicesEqual(t,
-		me.Preferences.Timestamps, []string{store.TimestampFound},
-		prefix, "timestamps",
+	if testErr := test.AssertSlicesEqual(
+		t, me.Preferences.Timestamps, []string{store.TimestampFound}, "AuthMe.Preferences.Timestamps",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("save user preferences: %v", testErr)
 	}
 	if got, want := me.Preferences.View, store.ViewTable; got != want {
 		t.Errorf(
-			"%s\nview mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
+			"save user preferences: AuthMe.Preferences.View mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
 
-	// AND: /auth/me carries the same preferences.
-	me = decodeAuthMe(t, prefix,
-		serveAuth(api, authedRequest(
-			http.MethodGet, "/api/v1/auth/me",
-			"",
-			cookie,
-		)).Body.Bytes(),
-	)
-	if me.Preferences == nil || me.Preferences.View != store.ViewTable {
-		t.Errorf(
-			"%s\n/auth/me lost the saved preferences\ngot: %+v",
-			prefix, me.Preferences,
-		)
+	req = authedRequest(http.MethodGet, "/api/v1/auth/me", "", cookie)
+	w = serveAuth(api, req)
+	me = decodeAuthMe(t, w.Body.Bytes())
+	if me.Preferences == nil {
+		t.Error("/auth/me: AuthMe.Preferences mismatch\ngot:  absent\nwant: present")
+	} else if got, want := me.Preferences.View, store.ViewTable; got != want {
+		t.Errorf("/auth/me: AuthMe.Preferences.View mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// WHEN: they are discarded.
-	w = serveAuth(api, authedRequest(http.MethodDelete, preferencesPath, "", cookie))
+	req = authedRequest(http.MethodDelete, preferencesPath, "", cookie)
+	w = serveAuth(api, req)
 
-	// THEN: the response, and /auth/me, carry none.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\ndelete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix,
-			got, w.Body.String(),
-			want,
+			"delete user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
-	if me := decodeAuthMe(t, prefix, w.Body.Bytes()); me.Preferences != nil {
-		t.Errorf(
-			"%s\npreferences survived the delete\ngot: %+v",
-			prefix, *me.Preferences,
-		)
+	if deleted := decodeAuthMe(t, w.Body.Bytes()); deleted.Preferences != nil {
+		t.Error("delete user preferences: AuthMe.Preferences mismatch\ngot:  present\nwant: absent")
 	}
 
-	// AND: discarding again is not an error.
-	if w := serveAuth(api, authedRequest(
-		http.MethodDelete, preferencesPath,
-		"",
-		cookie,
-	)); w.Code != http.StatusOK {
+	req = authedRequest(http.MethodDelete, preferencesPath, "", cookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusOK; got != want {
 		t.Errorf(
-			"%s\nsecond delete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix,
-			w.Code, w.Body.String(),
-			http.StatusOK,
+			"delete user preferences (again): status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_AuthMePreferencesUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API and a signed-in admin.
 	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
@@ -234,42 +200,31 @@ func TestAPI_AuthMePreferencesUpdate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			prefix := fmt.Sprintf("%s\nhttpAuthMePreferencesUpdate(%s)", packageName, tc.name)
-
-			// WHEN: the preferences are PUT.
 			sessionCookie := cookie
 			if tc.noCookie {
 				sessionCookie = nil
 			}
-			w := serveAuth(api, authedRequest(
-				http.MethodPut, preferencesPath,
-				tc.body,
-				sessionCookie,
-			))
+			req := authedRequest(http.MethodPut, preferencesPath, tc.body, sessionCookie)
+			w := serveAuth(api, req)
 
-			// THEN: the status is as expected.
-			if got := w.Code; got != tc.wantStatus {
+			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Fatalf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), tc.wantStatus,
+					"save user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// AND: a rejection says which value it objected to.
 			if tc.wantMessage == "" {
 				return
 			}
 			var body map[string]string
 			if err := decode.Unmarshal("json", w.Body.Bytes(), &body); err != nil {
-				t.Fatalf(
-					"%s\nparse error response: %v",
-					prefix, err,
-				)
+				t.Fatalf("save user preferences: decode.Unmarshal() failed: %v", err)
 			}
-			if !strings.Contains(body["message"], tc.wantMessage) {
+			if msg := body["message"]; !strings.Contains(msg, tc.wantMessage) {
 				t.Errorf(
-					"%s\nmessage mismatch\ngot:  %q\nwant it to contain: %q",
-					prefix, body["message"], tc.wantMessage,
+					"save user preferences: body[\"message\"] mismatch\ngot:  %q\nwant: %q",
+					msg, tc.wantMessage,
 				)
 			}
 		})
@@ -277,70 +232,44 @@ func TestAPI_AuthMePreferencesUpdate(t *testing.T) {
 }
 
 func TestAPI_AuthMePreferences__perUser(t *testing.T) {
-	// GIVEN: an auth-enabled API with two signed-in users.
 	api, deps, _ := testAuthServer(t, t.Name()+".yml")
 	createAuthUser(t, deps, "other", "other-password")
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	otherCookie := loginCookie(t, api, "other", "other-password")
 
-	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() per user", packageName)
-
-	// WHEN: one of them saves preferences.
-	if w := serveAuth(api, authedRequest(
-		http.MethodPut, preferencesPath,
-		`{"view":"table"}`,
-		adminCookie,
-	)); w.Code != http.StatusOK {
+	req := authedRequest(http.MethodPut, preferencesPath, `{"view":"table"}`, adminCookie)
+	w := serveAuth(api, req)
+	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nsave failed\ngot: %d - %s",
-			prefix, w.Code, w.Body.String(),
+			"save user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: the other user still has none.
-	me := decodeAuthMe(t, prefix,
-		serveAuth(api, authedRequest(
-			http.MethodGet, "/api/v1/auth/me",
-			"",
-			otherCookie,
-		)).Body.Bytes(),
-	)
+	req = authedRequest(http.MethodGet, "/api/v1/auth/me", "", otherCookie)
+	w = serveAuth(api, req)
+	me := decodeAuthMe(t, w.Body.Bytes())
 	if me.Preferences != nil {
-		t.Errorf(
-			"%s\nanother user's preferences leaked\ngot: %+v",
-			prefix, *me.Preferences,
-		)
+		t.Error("other user: AuthMe.Preferences mismatch\ngot:  present\nwant: absent")
 	}
 }
 
 func TestAPI_AuthMePreferencesUpdate__bearerRefused(t *testing.T) {
-	// GIVEN: an auth-enabled API and an admin owning an API token.
 	api, deps, _ := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
-	plaintext, _, err := deps.Store.CreateAPIToken(
-		t.Context(), authCtx.User.ID, "ci", nil,
-	)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
-
-	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() from a token", packageName)
+	plaintext, _ := createAPIToken(t, deps, authCtx.User.ID, "ci", nil)
 
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
-		t.Run("method="+method, func(t *testing.T) {
-			// WHEN: the token tries to change the owner's preferences.
+		t.Run(method, func(t *testing.T) {
 			req := authedRequest(method, preferencesPath, `{"view":"table"}`, nil)
 			req.Header.Set("Authorization", "Bearer "+plaintext)
 			w := serveAuth(api, req)
 
-			// THEN: the request is refused.
+			// Only a session may change preferences.
 			if got, want := w.Code, http.StatusForbidden; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, w.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -348,24 +277,21 @@ func TestAPI_AuthMePreferencesUpdate__bearerRefused(t *testing.T) {
 }
 
 func TestAPI_AuthMePreferences__explicitEmpty(t *testing.T) {
-	// GIVEN: an auth-enabled API and a signed-in admin.
 	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
-	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() explicit none", packageName)
-
-	// WHEN: empty lists are saved.
-	w := serveAuth(api, authedRequest(http.MethodPut, preferencesPath,
-		`{"hide":[],"view":"grid","timestamps":[]}`, cookie))
+	req := authedRequest(
+		http.MethodPut, preferencesPath, `{"hide":[],"view":"grid","timestamps":[]}`, cookie,
+	)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"save user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: they come back present and empty.
-	for _, body := range []struct {
+	for _, tc := range []struct {
 		name string
 		read func() []byte
 	}{
@@ -378,37 +304,37 @@ func TestAPI_AuthMePreferences__explicitEmpty(t *testing.T) {
 		{
 			name: "later /auth/me",
 			read: func() []byte {
-				return serveAuth(api,
-					authedRequest(http.MethodGet, "/api/v1/auth/me", "", cookie)).Body.Bytes()
+				req := authedRequest(http.MethodGet, "/api/v1/auth/me", "", cookie)
+				return serveAuth(api, req).Body.Bytes()
 			},
 		},
 	} {
-		me := decodeAuthMe(t, prefix, body.read())
-		if me.Preferences == nil {
-			t.Fatalf(
-				"%s\n%s dropped the saved preferences",
-				prefix, body.name,
-			)
-		}
-		if testErr := test.AssertSlicesEqual(
-			t, me.Preferences.Hide, []string{}, prefix, body.name+" hide",
-		); testErr != nil {
-			t.Error(testErr)
-		}
-		if testErr := test.AssertSlicesEqual(
-			t, me.Preferences.Timestamps, []string{}, prefix, body.name+" timestamps",
-		); testErr != nil {
-			t.Error(testErr)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := tc.read()
+			me := decodeAuthMe(t, body)
+			if me.Preferences == nil {
+				t.Fatal("AuthMe.Preferences mismatch\ngot:  absent\nwant: present")
+			}
+			// Present and empty, rather than absent (inheriting).
+			if testErr := test.AssertSlicesEqual(
+				t, me.Preferences.Hide, []string{}, "AuthMe.Preferences.Hide",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+			if testErr := test.AssertSlicesEqual(
+				t, me.Preferences.Timestamps, []string{}, "AuthMe.Preferences.Timestamps",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+		})
 	}
 }
 
 func TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore(t *testing.T) {
-	// GIVEN: an auth-enabled API, an admin, and a handle on its database.
 	api, deps, dbConn := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
-
-	prefix := fmt.Sprintf("%s\nhttpAuthMePreferences() failure paths", packageName)
 
 	tests := []struct {
 		name    string
@@ -419,40 +345,38 @@ func TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore(t *testing.T) {
 		{name: "delete", method: http.MethodDelete, handler: api.httpAuthMePreferencesDelete},
 	}
 
-	// WHEN: each handler is called with no authenticated user.
 	for _, tc := range tests {
 		t.Run("no auth context/"+tc.name, func(t *testing.T) {
-			recorder := httptest.NewRecorder()
-			tc.handler(recorder,
-				httptest.NewRequest(tc.method, preferencesPath, strings.NewReader(`{"view":"grid"}`)),
-			)
+			// Serial: shares dbConn, which the parent closes after the loop.
 
-			// THEN: it answers 401.
-			if got, want := recorder.Code, http.StatusUnauthorized; got != want {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(tc.method, preferencesPath, strings.NewReader(`{"view":"grid"}`))
+			tc.handler(w, req)
+
+			if got, want := w.Code, http.StatusUnauthorized; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, recorder.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
 
-	// AND: the store breaks beneath them.
 	_ = dbConn.Close()
 
 	for _, tc := range tests {
 		t.Run("broken store/"+tc.name, func(t *testing.T) {
-			recorder := httptest.NewRecorder()
-			tc.handler(recorder, withAuthCtx(
-				httptest.NewRequest(tc.method, preferencesPath, strings.NewReader(`{"view":"grid"}`)),
-				authCtx,
-			))
+			t.Parallel()
 
-			// THEN: the failure reads as 500.
-			if got, want := recorder.Code, http.StatusInternalServerError; got != want {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(tc.method, preferencesPath, strings.NewReader(`{"view":"grid"}`))
+			req = withAuthCtx(req, authCtx)
+			tc.handler(w, req)
+
+			if got, want := w.Code, http.StatusInternalServerError; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-					prefix, got, recorder.Body.String(), want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -460,112 +384,75 @@ func TestAPI_AuthMePreferences__unauthenticatedAndBrokenStore(t *testing.T) {
 }
 
 func TestAPI_AuthMePreferences__partialSaveInherits(t *testing.T) {
-	// GIVEN: an auth-enabled API and a signed-in admin.
 	api, _, _ := testAuthServer(t, t.Name()+".yml")
 	cookie := loginCookie(t, api, "admin", "admin-password")
 
-	// WHEN: only the filters are saved.
-	body := `{"hide":["skipped"]}`
-	w := serveAuth(api, authedRequest(
-		http.MethodPut, preferencesPath,
-		body,
-		cookie,
-	))
-	prefix := fmt.Sprintf(
-		"%s\nhttpAuthMePreferences(%s) partial save",
-		packageName, body,
-	)
+	req := authedRequest(http.MethodPut, preferencesPath, `{"hide":["skipped"]}`, cookie)
+	w := serveAuth(api, req)
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"save user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// THEN: the layout and timestamps stay absent, so they keep inheriting.
-	me := decodeAuthMe(t, prefix, w.Body.Bytes())
+	me := decodeAuthMe(t, w.Body.Bytes())
 	if me.Preferences == nil {
-		t.Fatalf(
-			"%s\nsaved preferences missing\ngot: %s",
-			prefix, w.Body.String(),
-		)
+		t.Fatal("save user preferences: AuthMe.Preferences mismatch\ngot:  absent\nwant: present")
 	}
 	if testErr := test.AssertSlicesEqual(
-		t, me.Preferences.Hide, []string{store.HideSkipped}, prefix, "hide",
+		t, me.Preferences.Hide, []string{store.HideSkipped}, "AuthMe.Preferences.Hide",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("save user preferences: %v", testErr)
 	}
+	// Layout and timestamps stay absent, so they keep inheriting.
 	if testErr := test.AssertSlicesEqual(
-		t, me.Preferences.Timestamps, nil, prefix, "timestamps",
+		t, me.Preferences.Timestamps, nil, "AuthMe.Preferences.Timestamps",
 	); testErr != nil {
-		t.Error(testErr)
+		t.Errorf("save user preferences: %v", testErr)
 	}
-	if me.Preferences.View != "" {
+	if got, want := me.Preferences.View, ""; got != want {
 		t.Errorf(
-			"%s\nview should be absent\ngot: %q",
-			prefix, me.Preferences.View,
+			"save user preferences: AuthMe.Preferences.View mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
 }
 
 func TestAPI_AuthMe__preferencesReadFails(t *testing.T) {
-	// GIVEN: an auth-enabled API and an admin with saved preferences.
 	api, deps, dbConn := testAuthServer(t, t.Name()+".yml")
 	authCtx := adminContext(t, api, deps)
 	prefs := store.DashboardPreferences{View: store.ViewTable}
 	if _, err := deps.Store.SetPreferences(t.Context(), authCtx.User.ID, prefs); err != nil {
-		t.Fatalf(
-			"%s\nsetup SetPreferences(%s) failed: %v",
-			packageName, prefs, err,
-		)
+		t.Fatalf("Store.SetPreferences() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\npreferences read failure", packageName)
+	test.DropTable(t, dbConn, "user_preferences")
 
-	// AND: reading them now fails.
-	if _, err := dbConn.ExecContext(t.Context(), `DROP TABLE user_preferences;`); err != nil {
-		t.Fatalf(
-			"%s drop table failed: %v",
-			prefix, err,
-		)
-	}
-
-	// WHEN: the caller signs in.
-	body := `{"username":"admin","password":"admin-password"}`
-	w := serveAuth(api, httptest.NewRequest(
+	req := httptest.NewRequest(
 		http.MethodPost, "/api/v1/auth/login",
-		strings.NewReader(body),
-	))
+		strings.NewReader(`{"username":"admin","password":"admin-password"}`),
+	)
+	w := serveAuth(api, req)
 
-	// THEN: sign-in still succeeds, without the preferences it could not read.
+	// Login degrades, rather than failing, without the preferences it could not read.
 	if got, want := w.Code, http.StatusOK; got != want {
-		t.Fatalf(
-			"%s\nlogin should degrade, not fail\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
-		)
+		t.Fatalf("login: status code mismatch\ngot:  %d - %q\nwant: %d", got, w.Body.String(), want)
 	}
-	if me := decodeAuthMe(t, prefix, w.Body.Bytes()); me.Preferences != nil {
-		t.Errorf(
-			"%s\nlogin carried preferences it could not read\ngot: %+v",
-			prefix, *me.Preferences,
-		)
+	if me := decodeAuthMe(t, w.Body.Bytes()); me.Preferences != nil {
+		t.Error("login: AuthMe.Preferences mismatch\ngot:  present\nwant: absent")
 	}
 
-	// WHEN: /auth/me is read instead.
-	recorder := httptest.NewRecorder()
-	api.httpAuthMe(recorder, withAuthCtx(
-		httptest.NewRequest(
-			http.MethodGet, "/api/v1/auth/me",
-			nil,
-		),
-		authCtx,
-	))
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+	req = withAuthCtx(req, authCtx)
+	api.httpAuthMe(w, req)
 
-	// THEN: it fails rather than reporting preferences the user has not lost.
-	if got, want := recorder.Code, http.StatusInternalServerError; got != want {
+	// 500, rather than reporting preferences the user has not lost.
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, recorder.Body.String(), want,
+			"read user preferences: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }

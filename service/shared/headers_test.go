@@ -18,7 +18,6 @@
 package shared
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -26,7 +25,6 @@ import (
 )
 
 func TestHeaders_Copy(t *testing.T) {
-	// GIVEN: a Headers.
 	tests := []struct {
 		name    string
 		headers *Headers
@@ -66,36 +64,33 @@ func TestHeaders_Copy(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the Headers are copied.
 			got := tc.headers.Copy()
 
-			prefix := fmt.Sprintf("%s\nHeaders.Copy()", packageName)
-
-			// THEN: Copy on nil (or on an empty set) returns nil.
 			if tc.headers == nil || len(*tc.headers) == 0 {
 				if got != nil {
-					t.Errorf("%s result mismatch\ngot:  non-nil\nwant: nil", prefix)
+					t.Error("Headers.Copy() mismatch\ngot:  non-nil\nwant: nil")
 				}
 				return
 			}
 
-			// AND: the Headers match otherwise.
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				*tc.headers,
-				func(got, want Header) bool { return got.Key == want.Key && got.Value == want.Value },
-				prefix,
+				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
 				"Headers",
-			); err != nil {
-				t.Fatal(err)
+			); testErr != nil {
+				t.Fatal(testErr)
+			}
+
+			if &got[0] == &(*tc.headers)[0] {
+				t.Errorf("copy aliases the original\ngot:  %p\nwant: NOT %p", got, *tc.headers)
 			}
 		})
 	}
 }
 
 func TestHeaders_InheritSecrets(t *testing.T) {
-	// GIVEN: a set of Headers and a list of secretRefs.
 	tests := []struct {
 		name         string
 		h            Headers
@@ -225,6 +220,7 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 			want: Headers{
 				{Key: "X-First", Value: "SecretValue2"},
 				{Key: "X-Second", Value: "SecretValue1"},
+				// No secretRef at index 2, so the loop stops.
 				{Key: "X-Third", Value: util.SecretValue},
 			},
 		},
@@ -264,18 +260,13 @@ func TestHeaders_InheritSecrets(t *testing.T) {
 
 			h := tc.h
 
-			// WHEN: InheritSecrets is called.
 			h.InheritSecrets(tc.otherHeaders, tc.secretRefs)
 
-			prefix := fmt.Sprintf("%s\nHeaders.InheritSecrets()", packageName)
-
-			// THEN: the Headers are as expected.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				h,
 				tc.want,
 				func(a, b Header) bool { return a.Key == b.Key && a.Value == b.Value },
-				prefix,
 				"Headers",
 			); testErr != nil {
 				t.Error(testErr)

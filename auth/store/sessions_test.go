@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -42,99 +43,77 @@ func testSession(tokenHash, userID string, expiresAt time.Time) Session {
 }
 
 func TestStore_Sessions__roundTrip(t *testing.T) {
-	// GIVEN: a Store with a user.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	expiresAt := timeNow().Add(time.Hour)
 
-	prefix := fmt.Sprintf("%s\nsession round-trip", packageName)
-
-	// WHEN: a session is inserted and read back.
-	want := testSession("token-hash-1", user.ID, expiresAt)
+	tokenHash := "token-hash-1"
+	want := testSession(tokenHash, user.ID, expiresAt)
 	if err := store.InsertSession(t.Context(), want); err != nil {
-		t.Fatalf(
-			"%s InsertSession failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("Store.InsertSession() failed: %v", err)
 	}
-	got, err := store.SessionByTokenHash(t.Context(), "token-hash-1")
+	got, err := store.SessionByTokenHash(t.Context(), tokenHash)
 	if err != nil {
-		t.Fatalf(
-			"%s SessionByTokenHash failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("after insert: Store.SessionByTokenHash() failed: %v", err)
 	}
 
-	// THEN: every field round-trips.
-	if got.TokenHash != want.TokenHash ||
-		got.UserID != want.UserID ||
-		!got.CreatedAt.Equal(want.CreatedAt) ||
-		!got.ExpiresAt.Equal(want.ExpiresAt) ||
-		!got.LastSeenAt.Equal(want.LastSeenAt) ||
-		got.IP != want.IP ||
-		got.UserAgent != want.UserAgent {
-		t.Errorf(
-			"%s session mismatch\ngot:  %+v\nwant: %+v",
-			prefix, *got, want,
-		)
+	if testErr := test.AssertFields(t, []test.FieldAssertion{
+		{Name: "TokenHash", Got: got.TokenHash, Want: want.TokenHash, Mode: test.CompareEqual},
+		{Name: "UserID", Got: got.UserID, Want: want.UserID, Mode: test.CompareEqual},
+		{Name: "CreatedAt", Got: got.CreatedAt, Want: want.CreatedAt, Mode: test.CompareEqual},
+		{Name: "ExpiresAt", Got: got.ExpiresAt, Want: want.ExpiresAt, Mode: test.CompareEqual},
+		{Name: "LastSeenAt", Got: got.LastSeenAt, Want: want.LastSeenAt, Mode: test.CompareEqual},
+		{Name: "IP", Got: got.IP, Want: want.IP, Mode: test.CompareEqual},
+		{Name: "UserAgent", Got: got.UserAgent, Want: want.UserAgent, Mode: test.CompareEqual},
+	}, "Session"); testErr != nil {
+		t.Errorf("after insert: %v", testErr)
 	}
 
-	// AND: TouchSession moves last_seen_at.
 	newSeen := timeNow().Add(30 * time.Minute)
-	if err := store.TouchSession(t.Context(), "token-hash-1", newSeen); err != nil {
-		t.Fatalf(
-			"%s TouchSession failed: %v",
-			prefix, err,
-		)
+	if err := store.TouchSession(t.Context(), tokenHash, newSeen); err != nil {
+		t.Fatalf("Store.TouchSession() failed: %v", err)
 	}
-	got, err = store.SessionByTokenHash(t.Context(), "token-hash-1")
-	if err != nil || !got.LastSeenAt.Equal(newSeen) {
+	got, err = store.SessionByTokenHash(t.Context(), tokenHash)
+	if err != nil {
+		t.Fatalf("after touch: Store.SessionByTokenHash() failed: %v", err)
+	}
+	if !got.LastSeenAt.Equal(newSeen) {
 		t.Errorf(
-			"%s last_seen_at mismatch\ngot:  %v, err=%v\nwant: %v",
-			prefix, got.LastSeenAt, err, newSeen,
+			"after touch: Session.LastSeenAt mismatch\ngot:  %v\nwant: %v",
+			got.LastSeenAt, newSeen,
 		)
 	}
 
-	// AND: DeleteSession removes it.
-	if err := store.DeleteSession(t.Context(), "token-hash-1"); err != nil {
-		t.Fatalf(
-			"%s DeleteSession failed: %v",
-			prefix, err,
-		)
+	if err := store.DeleteSession(t.Context(), tokenHash); err != nil {
+		t.Fatalf("Store.DeleteSession() failed: %v", err)
 	}
-	if _, err := store.SessionByTokenHash(t.Context(), "token-hash-1"); !errors.Is(err, ErrNotFound) {
+	if _, err := store.SessionByTokenHash(t.Context(), tokenHash); !errors.Is(err, ErrNotFound) {
 		t.Errorf(
-			"%s session should be gone\ngot: %v",
-			prefix, err,
+			"after delete: Store.SessionByTokenHash() error type mismatch\ngot:  %v\nwant: %v",
+			err, ErrNotFound,
 		)
 	}
 }
 
 func TestStore_InsertSession__error(t *testing.T) {
-	// GIVEN: a Store with a session token hash.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	session := testSession("duplicate", user.ID, timeNow().Add(time.Hour))
 	if err := store.InsertSession(t.Context(), session); err != nil {
-		t.Fatalf(
-			"%s\nsetup InsertSession failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.InsertSession() failed: %v", err)
 	}
 
-	prefix := fmt.Sprintf("%s\nInsertSession(duplicate)", packageName)
-
-	// WHEN: the same token hash is inserted again.
 	err := store.InsertSession(t.Context(), session)
-
-	// THEN: the constraint violation is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^insert session:
+			constraint failed: UNIQUE constraint failed: sessions\.token_hash`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_SessionByTokenHash__errors(t *testing.T) {
-	// GIVEN: stores in various broken states.
 	tests := []struct {
 		name      string
 		setup     func(t *testing.T, store *Store)
@@ -147,6 +126,7 @@ func TestStore_SessionByTokenHash__errors(t *testing.T) {
 			setup:     func(_ *testing.T, _ *Store) {},
 			tokenHash: "never-issued",
 			wantErr:   ErrNotFound,
+			errRegex:  `^not found$`,
 		},
 		{
 			name: "corrupt timestamps",
@@ -157,19 +137,19 @@ func TestStore_SessionByTokenHash__errors(t *testing.T) {
 					VALUES ('corrupt', ?, 'not-a-time', 'not-a-time', 'not-a-time');`,
 					user.ID,
 				); err != nil {
-					t.Fatalf(
-						"%s\nsetup failed: %v",
-						packageName, err,
-					)
+					t.Fatalf("DB.Exec() failed: %v", err)
 				}
 			},
 			tokenHash: "corrupt",
-			errRegex:  `parse stored timestamp`,
+			errRegex: test.TrimYAML(`
+				^load session:
+					sql: Scan error on column index 2, name "created_at":
+						parse stored timestamp "not-a-time"`),
 		},
 		{
 			name: "sessions table missing",
 			setup: func(t *testing.T, store *Store) {
-				dropTable(t, store, "sessions")
+				test.DropTable(t, store.db, "sessions")
 			},
 			tokenHash: "anything",
 			errRegex:  `^load session`,
@@ -181,70 +161,47 @@ func TestStore_SessionByTokenHash__errors(t *testing.T) {
 			store := testStore(t)
 			tc.setup(t, store)
 
-			// WHEN: SessionByTokenHash is called.
 			_, err := store.SessionByTokenHash(t.Context(), tc.tokenHash)
-
-			prefix := fmt.Sprintf(
-				"%s\nSessionByTokenHash(%q)",
-				packageName, tc.tokenHash,
-			)
-
-			// THEN: the failure is surfaced.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
-			if tc.wantErr != nil {
-				if !errors.Is(err, tc.wantErr) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %v\nwant: %v",
-						prefix, err, tc.wantErr,
-					)
-				}
-			} else {
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(errRegex, e) {
-					t.Errorf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, errRegex,
-					)
-				}
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Errorf("error type mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
 			}
 		})
 	}
 }
 
 func TestStore_TouchSession__error(t *testing.T) {
-	// GIVEN: a Store whose sessions table is unreadable.
 	store := testStore(t)
-	dropTable(t, store, "sessions")
+	test.DropTable(t, store.db, "sessions")
 
-	// WHEN: TouchSession is called.
 	err := store.TouchSession(t.Context(), "any", timeNow())
-
-	prefix := fmt.Sprintf("%s\nTouchSession() with unreadable sessions", packageName)
-
-	// THEN: the failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^touch session:
+			SQL logic error: no such table: sessions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_DeleteSession__error(t *testing.T) {
-	// GIVEN: a Store whose sessions table is unreadable.
 	store := testStore(t)
-	dropTable(t, store, "sessions")
+	test.DropTable(t, store.db, "sessions")
 
-	prefix := fmt.Sprintf("%s\nDeleteSession() with unreadable sessions", packageName)
-
-	// WHEN: DeleteSession is called.
 	err := store.DeleteSession(t.Context(), "any")
-
-	// THEN: the failure is surfaced.
-	if err == nil {
-		t.Errorf("%s expected an error, got nil", prefix)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^delete session:
+			SQL logic error: no such table: sessions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_DeleteSessionsForUser(t *testing.T) {
-	// GIVEN: two users with sessions.
 	store := testStore(t)
 	alpha := mustCreateUser(t, store, "alpha", "")
 	beta := mustCreateUser(t, store, "beta", "")
@@ -254,99 +211,77 @@ func TestStore_DeleteSessionsForUser(t *testing.T) {
 			t.Context(),
 			testSession(fmt.Sprintf("hash-%d", i), userID, expiresAt),
 		); err != nil {
-			t.Fatalf(
-				"%s\nsetup InsertSession failed: %v",
-				packageName, err,
-			)
+			t.Fatalf("Store.InsertSession(hash-%d) failed: %v", i, err)
 		}
 	}
 
-	prefix := fmt.Sprintf("%s\nDeleteSessionsForUser()", packageName)
-
-	// WHEN: alpha's sessions are deleted.
-	if err := store.DeleteSessionsForUser(t.Context(), alpha.ID); err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+	err := store.DeleteSessionsForUser(t.Context(), alpha.ID)
+	if err != nil {
+		t.Fatalf("before DropTable: unexpected error: %v", err)
 	}
 
-	// THEN: only beta's session remains.
-	if got := countRows(t, store, "sessions"); got != 1 {
-		t.Errorf(
-			"%s session count mismatch\ngot:  %d\nwant: 1",
-			prefix, got,
-		)
+	if got := test.CountRows(t, store.db, "sessions"); got != 1 {
+		t.Errorf("before DropTable: sessions row count mismatch\ngot:  %d\nwant: 1", got)
 	}
 	if _, err := store.SessionByTokenHash(t.Context(), "hash-2"); err != nil {
-		t.Errorf(
-			"%s beta's session should survive\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("beta: Store.SessionByTokenHash() failed: %v", err)
 	}
 
-	// AND: it errors when the table is unreadable.
-	dropTable(t, store, "sessions")
-	if err := store.DeleteSessionsForUser(t.Context(), alpha.ID); err == nil {
-		t.Errorf("%s expected an error after dropping sessions", prefix)
+	test.DropTable(t, store.db, "sessions")
+	err = store.DeleteSessionsForUser(t.Context(), alpha.ID)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^delete user's sessions:
+			SQL logic error: no such table: sessions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("missing table: error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_DeleteExpiredSessions(t *testing.T) {
-	// GIVEN: sessions either side of the expiry cutoff.
 	store := testStore(t)
 	user := mustCreateUser(t, store, "argus", "")
 	now := timeNow()
-	for hash, expiresAt := range map[string]time.Time{
-		"expired-1": now.Add(-time.Hour),
-		"expired-2": now.Add(-time.Minute),
-		"live":      now.Add(time.Hour),
+	for _, session := range []struct {
+		hash      string
+		expiresAt time.Time
+	}{
+		{hash: "expired-1", expiresAt: now.Add(-time.Hour)},
+		{hash: "expired-2", expiresAt: now.Add(-time.Minute)},
+		{hash: "live", expiresAt: now.Add(time.Hour)},
 	} {
 		if err := store.InsertSession(
 			t.Context(),
-			testSession(hash, user.ID, expiresAt),
+			testSession(session.hash, user.ID, session.expiresAt),
 		); err != nil {
-			t.Fatalf(
-				"%s\nsetup InsertSession failed: %v",
-				packageName, err,
-			)
+			t.Fatalf("Store.InsertSession(%q) failed: %v", session.hash, err)
 		}
 	}
 
-	prefix := fmt.Sprintf("%s\nDeleteExpiredSessions()", packageName)
-
-	// WHEN: expired sessions are pruned.
-	if err := store.DeleteExpiredSessions(t.Context(), now); err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+	err := store.DeleteExpiredSessions(t.Context(), now)
+	if err != nil {
+		t.Fatalf("before DropTable: unexpected error: %v", err)
 	}
 
-	// THEN: only the live session remains.
-	if got := countRows(t, store, "sessions"); got != 1 {
-		t.Errorf(
-			"%s session count mismatch\ngot:  %d\nwant: 1",
-			prefix, got,
-		)
+	if got := test.CountRows(t, store.db, "sessions"); got != 1 {
+		t.Errorf("before DropTable: sessions row count mismatch\ngot:  %d\nwant: 1", got)
 	}
 	if _, err := store.SessionByTokenHash(t.Context(), "live"); err != nil {
-		t.Errorf(
-			"%s live session should survive\ngot: %v",
-			prefix, err,
-		)
+		t.Errorf("live: Store.SessionByTokenHash() failed: %v", err)
 	}
 
-	// AND: it errors when the table is unreadable.
-	dropTable(t, store, "sessions")
-	if err := store.DeleteExpiredSessions(t.Context(), now); err == nil {
-		t.Errorf("%s expected an error after dropping sessions", prefix)
+	test.DropTable(t, store.db, "sessions")
+	err = store.DeleteExpiredSessions(t.Context(), now)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^delete expired sessions:
+			SQL logic error: no such table: sessions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("missing table: error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }
 
 func TestStore_TrimSessionsForUser(t *testing.T) {
-	// GIVEN: a user with sessions of varying activity,
-	// and another user's session older than all of them.
 	store := testStore(t)
 	alpha := mustCreateUser(t, store, "alpha", "")
 	beta := mustCreateUser(t, store, "beta", "")
@@ -356,10 +291,7 @@ func TestStore_TrimSessionsForUser(t *testing.T) {
 		session := testSession(tokenHash, userID, now.Add(time.Hour))
 		session.LastSeenAt = lastSeenAt
 		if err := store.InsertSession(t.Context(), session); err != nil {
-			t.Fatalf(
-				"%s\nsetup InsertSession failed: %v",
-				packageName, err,
-			)
+			t.Fatalf("Store.InsertSession(%q) failed: %v", tokenHash, err)
 		}
 	}
 	insert("beta-oldest", beta.ID, now.Add(-3*time.Hour))
@@ -367,47 +299,38 @@ func TestStore_TrimSessionsForUser(t *testing.T) {
 	insert("alpha-mid", alpha.ID, now.Add(-time.Hour))
 	insert("alpha-new", alpha.ID, now)
 
-	prefix := fmt.Sprintf("%s\nTrimSessionsForUser()", packageName)
-
-	// WHEN: alpha (3-sessions) is trimmed to their 2 most-recently active sessions.
 	evicted, err := store.TrimSessionsForUser(t.Context(), alpha.ID, 2)
 	if err != nil {
-		t.Fatalf(
-			"%s unexpected error: %v",
-			prefix, err,
-		)
+		t.Fatalf("over cap: unexpected error: %v", err)
 	}
 
-	// THEN: only alpha's least-recently active session was evicted.
 	if want := []string{"alpha-old"}; !slices.Equal(evicted, want) {
-		t.Errorf(
-			"%s evicted mismatch\ngot:  %v\nwant: %v",
-			prefix, evicted, want,
-		)
+		t.Errorf("over cap: evicted mismatch\ngot:  %q\nwant: %q", evicted, want)
 	}
 
-	// AND: the survivors and beta's session (the cap is per-user) remain.
+	// The cap is per-user, so beta-oldest survives.
 	for _, tokenHash := range []string{"alpha-mid", "alpha-new", "beta-oldest"} {
-		if _, err := store.SessionByTokenHash(t.Context(), tokenHash); err != nil {
-			t.Errorf(
-				"%s %q should survive\ngot: %v",
-				prefix, tokenHash, err,
-			)
-		}
+		t.Run(tokenHash, func(t *testing.T) {
+			// Serial: reads the sessions table, which the parent drops after the loop.
+
+			if _, err := store.SessionByTokenHash(t.Context(), tokenHash); err != nil {
+				t.Errorf("Store.SessionByTokenHash() failed: %v", err)
+			}
+		})
 	}
 
-	// AND: a below-cap trim evicts nothing.
 	evicted, err = store.TrimSessionsForUser(t.Context(), alpha.ID, 2)
 	if err != nil || evicted != nil {
-		t.Errorf(
-			"%s below-cap trim should evict nothing\ngot:  %v, err=%v",
-			prefix, evicted, err,
-		)
+		t.Errorf("at cap: evicted mismatch\ngot:  %q, err=%v\nwant: nil, err=nil", evicted, err)
 	}
 
-	// AND: it errors when the table is unreadable.
-	dropTable(t, store, "sessions")
-	if _, err := store.TrimSessionsForUser(t.Context(), alpha.ID, 2); err == nil {
-		t.Errorf("%s expected an error after dropping sessions", prefix)
+	test.DropTable(t, store.db, "sessions")
+	_, err = store.TrimSessionsForUser(t.Context(), alpha.ID, 2)
+	e := errfmt.FormatError(err)
+	errRegex := test.TrimYAML(`
+		^list sessions over cap:
+			SQL logic error: no such table: sessions`)
+	if !util.RegexCheck(errRegex, e) {
+		t.Errorf("missing table: error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}
 }

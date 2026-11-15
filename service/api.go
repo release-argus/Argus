@@ -94,22 +94,17 @@ func FromPayload(
 	defaultsCfg DefaultsConfig,
 	notifyCfg shoutrrr.Config,
 	whCfg webhook.Config,
-
-	logFrom logx.LogFrom,
 ) (*Service, error) {
 	var raw []byte
 	raw, err := io.ReadAll(*payload)
 	if err != nil {
-		logx.Error(err, logFrom, true)
 		return nil, err //nolint:wrapcheck
 	}
 
 	// SecretRefs.
 	var secretRefs secretRefs
 	if err := decode.Unmarshal("json", raw, &secretRefs); err != nil {
-		err = fmt.Errorf("unmarshal service payload: %w", err)
-		logx.Error(err, logFrom, true)
-		return nil, err //nolint:wrapcheck
+		return nil, fmt.Errorf("unmarshal service payload: %w", err)
 	}
 
 	field, err := decodeServiceFromPayload(
@@ -118,12 +113,6 @@ func FromPayload(
 		defaultsCfg, notifyCfg, whCfg,
 	)
 	if err != nil {
-		logx.Error(err, logFrom, true)
-		logx.Debug(
-			fmt.Sprintf("Payload: %s", raw),
-			logFrom,
-			true,
-		)
 		return nil, err
 	}
 	if field == nil {

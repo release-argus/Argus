@@ -23,87 +23,68 @@ import (
 )
 
 func TestWebSocketTokenStore_New(t *testing.T) {
-	// GIVEN: a webSocketTokenStore.
 	store := newWebSocketTokenStore()
 
-	// WHEN: New is called.
 	token := store.New()
 
-	prefix := fmt.Sprintf("%s\nwebSocketTokenStore.New()", packageName)
-
-	// THEN: a non-empty token is returned.
 	if token == "" {
-		t.Errorf("%s\ngot an empty token", prefix)
+		t.Errorf("token mismatch\ngot:  %q\nwant: non-empty", token)
 	}
 
-	// AND: the token has the expected length.
 	if len(token) != webSocketTokenLength {
-		t.Errorf(
-			"%s\ntoken length mismatch\ngot:  %d\nwant: %d",
-			prefix, len(token), webSocketTokenLength,
-		)
+		t.Errorf("token length mismatch\ngot:  %d\nwant: %d", len(token), webSocketTokenLength)
 	}
 
-	// AND: two consecutive tokens are different.
 	other := store.New()
 	if token == other {
-		t.Errorf(
-			"%s\nexpected two different tokens, got the same one twice: %q",
-			prefix, token,
-		)
+		t.Errorf("second token mismatch\ngot:  %q\nwant: NOT %q", other, token)
 	}
 }
 
 func TestWebSocketTokenStore_New_MaxSize(t *testing.T) {
-	// GIVEN: a store already at webSocketTokenMaxSize, with distinct
-	// (unexpired) expiries so the "oldest" (soonest-expiring) token is
-	// unambiguous.
 	store := newWebSocketTokenStore()
 	base := time.Now().Add(webSocketTokenTTL)
 
 	store.mu.Lock()
+	// Distinct expiries, so the soonest-expiring token is unambiguous.
 	for i := range webSocketTokenMaxSize {
 		store.tokens[fmt.Sprintf("token-%d", i)] = base.Add(time.Duration(i) * time.Millisecond)
 	}
 	store.mu.Unlock()
 
-	prefix := fmt.Sprintf("%s\nwebSocketTokenStore.New() (max size)", packageName)
-
-	// WHEN: New is called, which would exceed webSocketTokenMaxSize.
 	newToken := store.New()
 
-	// THEN: the store does not grow beyond webSocketTokenMaxSize.
+	newestKey := fmt.Sprintf("token-%d", webSocketTokenMaxSize-1)
 	store.mu.Lock()
 	size := len(store.tokens)
 	_, oldestStillPresent := store.tokens["token-0"]
-	_, newestStillPresent := store.tokens[fmt.Sprintf("token-%d", webSocketTokenMaxSize-1)]
+	_, newestStillPresent := store.tokens[newestKey]
 	store.mu.Unlock()
 
 	if size != webSocketTokenMaxSize {
 		t.Errorf(
-			"%s\nstore size mismatch\ngot:  %d\nwant: %d",
-			prefix, size, webSocketTokenMaxSize,
+			"webSocketTokenStore.tokens length mismatch\ngot:  %d\nwant: %d",
+			size, webSocketTokenMaxSize,
 		)
 	}
 
-	// AND: the oldest (soonest-expiring) token was evicted to make room.
 	if oldestStillPresent {
-		t.Errorf("%s\noldest token should have been evicted", prefix)
+		t.Error(
+			"webSocketTokenStore.tokens[\"token-0\"] mismatch\n" +
+				"got:  present\nwant: absent (evicted)",
+		)
 	}
 
-	// AND: the newest pre-existing token is retained.
 	if !newestStillPresent {
-		t.Errorf("%s\nnewest pre-existing token should not have been evicted", prefix)
+		t.Errorf("webSocketTokenStore.tokens[%q] mismatch\ngot:  absent\nwant: present", newestKey)
 	}
 
-	// AND: the newly-minted token is itself valid.
 	if !store.Validate(newToken) {
-		t.Errorf("%s\nnewly minted token should be valid", prefix)
+		t.Error("webSocketTokenStore.Validate(newToken) mismatch\ngot:  false\nwant: true")
 	}
 }
 
 func TestWebSocketTokenStore_Validate(t *testing.T) {
-	// GIVEN: a webSocketTokenStore.
 	tests := []struct {
 		name  string
 		setup func(store *webSocketTokenStore) string
@@ -150,24 +131,19 @@ func TestWebSocketTokenStore_Validate(t *testing.T) {
 			store := newWebSocketTokenStore()
 			token := tc.setup(store)
 
-			prefix := fmt.Sprintf("%s\nwebSocketTokenStore.Validate", packageName)
-
-			// WHEN: Validate is called.
 			got := store.Validate(token)
 
-			// THEN: the result matches expectations.
 			if got != tc.want {
 				t.Errorf(
-					"%s\nfirst call result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
+					"first call: webSocketTokenStore.Validate() mismatch\ngot:  %t\nwant: %t",
+					got, tc.want,
 				)
 			}
 
-			// AND: tokens are single-use - a second call always fails.
+			// Tokens are single-use.
 			if gotTwo := store.Validate(token); gotTwo {
-				t.Errorf(
-					"%s\nsecond call (re-use) should always fail (tokens are single-use), got: %t",
-					prefix, gotTwo,
+				t.Error(
+					"second call: webSocketTokenStore.Validate() mismatch\ngot:  true\nwant: false",
 				)
 			}
 		})
@@ -175,7 +151,6 @@ func TestWebSocketTokenStore_Validate(t *testing.T) {
 }
 
 func TestWebSocketTokenStore_Prune(t *testing.T) {
-	// GIVEN: a store with an expired and a valid token.
 	store := newWebSocketTokenStore()
 	expired := store.New()
 	valid := store.New()
@@ -184,23 +159,22 @@ func TestWebSocketTokenStore_Prune(t *testing.T) {
 	store.tokens[expired] = time.Now().Add(-time.Second)
 	store.mu.Unlock()
 
-	prefix := fmt.Sprintf("%s\nwebSocketTokenStore.prune()", packageName)
-
-	// WHEN: a New call triggers pruning.
+	// New prunes expired tokens.
 	_ = store.New()
 
-	// THEN: the expired token is removed.
 	store.mu.Lock()
 	_, expiredStillPresent := store.tokens[expired]
 	_, validStillPresent := store.tokens[valid]
 	store.mu.Unlock()
 
 	if expiredStillPresent {
-		t.Errorf("%s\nexpired token should have been pruned", prefix)
+		t.Error(
+			"expired: webSocketTokenStore.tokens key mismatch\n" +
+				"got:  present\nwant: absent (pruned)",
+		)
 	}
 
-	// AND: the valid token remains.
 	if !validStillPresent {
-		t.Errorf("%s\nvalid token should not have been pruned", prefix)
+		t.Error("valid: webSocketTokenStore.tokens key mismatch\ngot:  absent\nwant: present")
 	}
 }

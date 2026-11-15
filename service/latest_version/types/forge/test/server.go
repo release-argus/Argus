@@ -31,14 +31,14 @@ import (
 
 // Endpoint is one endpoint's reply.
 //
-// With `Pages` set, the endpoint paginates: page N serves Pages[N-1], and every page but
+// With Pages set, the endpoint paginates: page N serves Pages[N-1], and every page but
 // the last advertises the next through a Link header.
 type Endpoint struct {
 	Status  int               // Response status code. Defaults to 200.
 	Headers map[string]string // Extra response headers.
 	Body    string            // Response body, when not paginating.
 	Pages   []string          // One body per page.
-	Endless bool              // Serve `Body` on every page, always naming a next page.
+	Endless bool              // Serve Body on every page, always naming a next page.
 	ETag    string            // ETag to serve, and to answer a matching If-None-Match with 304.
 }
 
@@ -76,8 +76,8 @@ type Server struct {
 	NotFoundBody     string // Body for an unmapped endpoint.
 	EmptyPageBody    string // Body for a page outside the paginated range. Defaults to "[]".
 
-	// NextPageLink builds the Link header naming page `next`. `last` is 0 when no last
-	// page is known, as for an endless walk.
+	// NextPageLink builds the Link header for the next page. last is the final page
+	// number, or 0 when unknown, as for an endless walk.
 	NextPageLink func(r *http.Request, next, last int) string
 
 	mu          sync.Mutex
@@ -85,9 +85,9 @@ type Server struct {
 	notModified int
 }
 
-// Start starts `server`, filling in any reply the caller left unset.
+// Start starts server, defaulting an unset EmptyPageBody and NextPageLink.
 //
-// `start` is [httptest.NewServer], or [httptest.NewTLSServer] to serve over TLS.
+// start is [httptest.NewServer], or [httptest.NewTLSServer] to serve over TLS.
 func Start(
 	t *testing.T,
 	server *Server,

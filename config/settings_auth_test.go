@@ -17,18 +17,16 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/auth/session"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
-// authHardDefaults returns Settings hard defaults matching Settings.Default().
-// The session block comes from the production defaulter, so the fixture cannot
-// drift from what Settings.Default() actually produces.
+// authHardDefaults returns the auth hard defaults Settings.Default() sets.
 func authHardDefaults() SettingsBase {
 	base := SettingsBase{
 		Auth: AuthSettings{
@@ -43,72 +41,7 @@ func authHardDefaults() SettingsBase {
 	return base
 }
 
-func TestAuthSessionSettings_Default(t *testing.T) {
-	// GIVEN: zero-value session settings.
-	var settings AuthSessionSettings
-	if !settings.IsZero() {
-		t.Fatalf("%s\nsettings should start zero", packageName)
-	}
-
-	prefix := fmt.Sprintf("%s\nAuthSessionSettings.Default()", packageName)
-
-	// WHEN: the defaults are applied.
-	settings.Default()
-
-	// THEN: every bound is set.
-	if got, want := settings.Lifetime, "720h"; got != want {
-		t.Errorf(
-			"%s lifetime mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
-	}
-	if got, want := settings.IdleTimeout, "168h"; got != want {
-		t.Errorf(
-			"%s idle_timeout mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
-	}
-	if settings.MaxPerUser == nil {
-		t.Fatalf("%s max_per_user should be set", prefix)
-	}
-	if got, want := *settings.MaxPerUser, 10; got != want {
-		t.Errorf(
-			"%s max_per_user mismatch\ngot:  %d\nwant: %d",
-			prefix, got, want,
-		)
-	}
-
-	// AND: the idle window sits inside the lifetime, so the defaults alone
-	// cannot fail CheckValues.
-	lifetime, err := time.ParseDuration(settings.Lifetime)
-	if err != nil {
-		t.Fatalf(
-			"%s parse lifetime: %v",
-			prefix, err,
-		)
-	}
-	idle, err := time.ParseDuration(settings.IdleTimeout)
-	if err != nil {
-		t.Fatalf(
-			"%s parse idle_timeout: %v",
-			prefix, err,
-		)
-	}
-	if idle > lifetime {
-		t.Errorf(
-			"%s idle_timeout exceeds lifetime\ngot:  %s > %s",
-			prefix, idle, lifetime,
-		)
-	}
-
-	// AND: it is no longer zero.
-	if settings.IsZero() {
-		t.Errorf("%s settings should not read as zero after Default()", prefix)
-	}
-}
-
 func TestAuthSettings_IsZero(t *testing.T) {
-	// GIVEN: AuthSettings in various states.
 	tests := []struct {
 		name string
 		auth AuthSettings
@@ -141,28 +74,20 @@ func TestAuthSettings_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nAuthSettings.IsZero()", packageName)
-
-			// WHEN: IsZero is called.
 			got := tc.auth.IsZero()
 
-			// THEN: the result matches expectations.
 			if got != tc.want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestAuthSettings_CheckValues(t *testing.T) {
-	// GIVEN: AuthSettings with session durations/caps of varying validity.
 	tests := []struct {
 		name     string
 		auth     AuthSettings
-		errRegex string // Empty = no error wanted.
+		errRegex string
 	}{
 		{
 			name:     "empty",
@@ -269,60 +194,67 @@ func TestAuthSettings_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nAuthSettings.CheckValues()", packageName)
-
-			// WHEN: CheckValues is called.
 			err := tc.auth.CheckValues()
-
-			// THEN: errors match expectations.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %v\nwant: %q",
-					prefix, err, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
-func TestSettings_Default__auth(t *testing.T) {
-	// GIVEN: fresh Settings.
-	loadMu.Lock()
-	defer loadMu.Unlock()
-	settings := Settings{}
-
-	prefix := fmt.Sprintf("%s\nSettings.Default() auth", packageName)
-
-	// WHEN: Default is applied.
-	if ok := settings.Default(); !ok {
-		t.Fatalf("%s Default() failed", prefix)
+func TestAuthSessionSettings_Default(t *testing.T) {
+	var settings AuthSessionSettings
+	if !settings.IsZero() {
+		t.Fatal("before: AuthSessionSettings.IsZero() mismatch\ngot:  false\nwant: true")
 	}
 
-	// THEN: the auth hard defaults are populated.
-	if settings.HardDefaults.Auth.Enabled == nil || *settings.HardDefaults.Auth.Enabled {
+	settings.Default()
+
+	if got, want := settings.Lifetime, "720h"; got != want {
 		t.Errorf(
-			"%s auth should be disabled by default\ngot: %v",
-			prefix, settings.HardDefaults.Auth.Enabled,
+			"after Default: AuthSessionSettings.Lifetime mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
-	if settings.HardDefaults.Auth.Session.Lifetime != "720h" ||
-		settings.HardDefaults.Auth.Session.IdleTimeout != "168h" {
+	if got, want := settings.IdleTimeout, "168h"; got != want {
 		t.Errorf(
-			"%s session bounds mismatch\ngot:  %+v",
-			prefix, settings.HardDefaults.Auth.Session,
+			"after Default: AuthSessionSettings.IdleTimeout mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
-	if settings.HardDefaults.Auth.Local.Enabled == nil || !*settings.HardDefaults.Auth.Local.Enabled {
+	if settings.MaxPerUser == nil {
+		t.Fatal("after Default: AuthSessionSettings.MaxPerUser mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if got, want := *settings.MaxPerUser, 10; got != want {
 		t.Errorf(
-			"%s local provider should default to enabled\ngot: %v",
-			prefix, settings.HardDefaults.Auth.Local.Enabled,
+			"after Default: AuthSessionSettings.MaxPerUser mismatch\ngot:  %d\nwant: %d",
+			got, want,
 		)
+	}
+
+	lifetime, err := time.ParseDuration(settings.Lifetime)
+	if err != nil {
+		t.Fatalf("time.ParseDuration(%q) failed: %v", settings.Lifetime, err)
+	}
+	idle, err := time.ParseDuration(settings.IdleTimeout)
+	if err != nil {
+		t.Fatalf("time.ParseDuration(%q) failed: %v", settings.IdleTimeout, err)
+	}
+	// CheckValues rejects an idle timeout past the lifetime, so the defaults keep it inside.
+	if idle > lifetime {
+		t.Errorf(
+			"after Default: AuthSessionSettings.IdleTimeout mismatch\ngot:  %s\nwant: at most %s",
+			idle, lifetime,
+		)
+	}
+
+	if settings.IsZero() {
+		t.Error("after Default: AuthSessionSettings.IsZero() mismatch\ngot:  true\nwant: false")
 	}
 }
 
 func TestSettings_CheckValues__auth(t *testing.T) {
-	// GIVEN: Settings combining auth with basic auth across layers.
 	tests := []struct {
 		name      string
 		auth      AuthSettings
@@ -453,25 +385,45 @@ func TestSettings_CheckValues__auth(t *testing.T) {
 			settings.FromFlags.Web.BasicAuth = tc.flagBasic
 			settings.HardDefaults.Web.BasicAuth = tc.hardBasic
 
-			prefix := fmt.Sprintf("%s\nSettings.CheckValues()", packageName)
-
-			// WHEN: CheckValues is called.
 			err := settings.CheckValues()
-
-			// THEN: errors match expectations.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %v\nwant: %q",
-					prefix, err, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
+func TestSettings_Default__auth(t *testing.T) {
+	loadMu.Lock()
+	defer loadMu.Unlock()
+	settings := Settings{}
+
+	if !settings.Default() {
+		t.Fatal("ok mismatch\ngot:  false\nwant: true")
+	}
+
+	if got, want := test.StringifyPtr(settings.HardDefaults.Auth.Enabled), "false"; got != want {
+		t.Errorf("Settings.HardDefaults.Auth.Enabled mismatch\ngot:  %s\nwant: %s", got, want)
+	}
+	if got, want := settings.HardDefaults.Auth.Session.Lifetime, "720h"; got != want {
+		t.Errorf(
+			"Settings.HardDefaults.Auth.Session.Lifetime mismatch\ngot:  %q\nwant: %q",
+			got, want,
+		)
+	}
+	if got, want := settings.HardDefaults.Auth.Session.IdleTimeout, "168h"; got != want {
+		t.Errorf(
+			"Settings.HardDefaults.Auth.Session.IdleTimeout mismatch\ngot:  %q\nwant: %q",
+			got, want,
+		)
+	}
+	if got, want := test.StringifyPtr(settings.HardDefaults.Auth.Local.Enabled), "true"; got != want {
+		t.Errorf("Settings.HardDefaults.Auth.Local.Enabled mismatch\ngot:  %s\nwant: %s", got, want)
+	}
+}
+
 func TestSettings__authAccessors(t *testing.T) {
-	// GIVEN: Settings with and without explicit auth values.
 	tests := []struct {
 		name                    string
 		auth                    AuthSettings
@@ -531,44 +483,38 @@ func TestSettings__authAccessors(t *testing.T) {
 				HardDefaults: authHardDefaults(),
 			}
 
-			prefix := fmt.Sprintf("%s\nSettings auth accessors", packageName)
-
-			// WHEN/THEN: each accessor resolves the layered value.
 			if got := settings.AuthEnabled(); got != tc.wantEnabled {
-				t.Errorf(
-					"%s AuthEnabled() mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.wantEnabled,
-				)
+				t.Errorf("Settings.AuthEnabled() mismatch\ngot:  %t\nwant: %t", got, tc.wantEnabled)
 			}
 			if got := settings.AuthLocalEnabled(); got != tc.wantLocalEnabled {
 				t.Errorf(
-					"%s AuthLocalEnabled() mismatch\ngot:  %t\nwant: %t",
-					prefix, got, tc.wantLocalEnabled,
+					"Settings.AuthLocalEnabled() mismatch\ngot:  %t\nwant: %t",
+					got, tc.wantLocalEnabled,
 				)
 			}
 			if got := settings.AuthSessionLifetime(); got != tc.wantSessionLifetime {
 				t.Errorf(
-					"%s AuthSessionLifetime() mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.wantSessionLifetime,
+					"Settings.AuthSessionLifetime() mismatch\ngot:  %v\nwant: %v",
+					got, tc.wantSessionLifetime,
 				)
 			}
 			if got := settings.AuthSessionIdleTimeout(); got != tc.wantSessionIdleTimeout {
 				t.Errorf(
-					"%s AuthSessionIdleTimeout() mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.wantSessionIdleTimeout,
+					"Settings.AuthSessionIdleTimeout() mismatch\ngot:  %v\nwant: %v",
+					got, tc.wantSessionIdleTimeout,
 				)
 			}
 			if got := settings.AuthSessionMaxPerUser(); got != tc.wantSessionMaxPerUser {
 				t.Errorf(
-					"%s AuthSessionMaxPerUser() mismatch\ngot:  %d\nwant: %d",
-					prefix, got, tc.wantSessionMaxPerUser,
+					"Settings.AuthSessionMaxPerUser() mismatch\ngot:  %d\nwant: %d",
+					got, tc.wantSessionMaxPerUser,
 				)
 			}
-			gotSecure := util.DerefOrZero(settings.AuthSessionSecureCookie())
-			if wantSecure := util.DerefOrZero(tc.wantSessionSecureCookie); gotSecure != wantSecure {
+			gotSecure := test.StringifyPtr(settings.AuthSessionSecureCookie())
+			if wantSecure := test.StringifyPtr(tc.wantSessionSecureCookie); gotSecure != wantSecure {
 				t.Errorf(
-					"%s AuthSessionSecureCookie() mismatch\ngot:  %t\nwant: %t",
-					prefix, gotSecure, wantSecure,
+					"Settings.AuthSessionSecureCookie() mismatch\ngot:  %s\nwant: %s",
+					gotSecure, wantSecure,
 				)
 			}
 		})

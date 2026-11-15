@@ -17,12 +17,12 @@
 package latestver
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	"github.com/release-argus/Argus/service/latest_version/types/forgejo"
 	"github.com/release-argus/Argus/service/latest_version/types/github"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
 	opt "github.com/release-argus/Argus/service/option"
@@ -35,7 +35,6 @@ func TestDecode(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: data in a given format to Decode into a Lookup.
 	tests := []struct {
 		name         string
 		format, data string
@@ -180,6 +179,21 @@ func TestDecode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:   "YAML/forgejo/bare",
+			format: "yaml",
+			data: test.TrimYAML(`
+				type: forgejo
+				host: https://codeberg.org
+				url: forgejo/forgejo
+			`),
+			want: test.TrimYAML(`
+				type: forgejo
+				host: https://codeberg.org
+				url: forgejo/forgejo
+			`),
+			errRegex: `^$`,
+		},
+		{
 			name:   "YAML/url/bare",
 			format: "yaml",
 			data: test.TrimYAML(`
@@ -251,16 +265,9 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Options + Status.
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
-			svcStatus, _ := statustest.New(
-				"yaml", nil,
-			)
+			options, _ := opt.Decode("yaml", nil, optCfg)
+			svcStatus, _ := statustest.New("yaml", nil)
 
-			// WHEN: Decode is called with the args.
 			lookup, err, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (Lookup, error) {
@@ -275,7 +282,6 @@ func TestDecode(t *testing.T) {
 				func(v Lookup) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			)
 			if testErr != nil {
@@ -285,40 +291,45 @@ func TestDecode(t *testing.T) {
 				return
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nDecode(format=%q, data=%q)",
-				packageName, tc.format, tc.data,
-			)
-
-			// AND: Pointers are handed out to it correctly.
 			fieldTests := []test.FieldAssertion{
-				{Name: "Options", Got: lookup.GetOptions(), Want: options, Mode: test.CompareSamePointer},
-				{Name: "Status", Got: lookup.GetStatus(), Want: svcStatus, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
+				{Name: "GetOptions()", Got: lookup.GetOptions(), Want: options, Mode: test.CompareSamePointer},
+				{Name: "GetStatus()", Got: lookup.GetStatus(), Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "GetDefaults()", Got: lookup.GetDefaults(), Want: &lvCfg.Soft.Common, Mode: test.CompareSamePointer},
+				{Name: "GetHardDefaults()", Got: lookup.GetHardDefaults(), Want: &lvCfg.Hard.Common, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: the type-specific Defaults/HardDefaults are wired correctly.
 			var typeFieldTests []test.FieldAssertion
 			switch v := lookup.(type) {
+			case *forgejo.Lookup:
+				gotSoft, gotHard := v.GetTypeDefaults()
+				typeFieldTests = []test.FieldAssertion{
+					{Name: "GetTypeDefaults() defaults", Got: gotSoft, Want: &lvCfg.Soft.Forgejo, Mode: test.CompareSamePointer},
+					{Name: "GetTypeDefaults() hardDefaults", Got: gotHard, Want: &lvCfg.Hard.Forgejo, Mode: test.CompareSamePointer},
+				}
 			case *github.Lookup:
 				gotSoft, gotHard := v.GetTypeDefaults()
 				typeFieldTests = []test.FieldAssertion{
-					{Name: "GitHub typeDefaults", Got: gotSoft, Want: &lvCfg.Soft.GitHub, Mode: test.CompareSamePointer},
-					{Name: "GitHub typeHardDefaults", Got: gotHard, Want: &lvCfg.Hard.GitHub, Mode: test.CompareSamePointer},
+					{Name: "GetTypeDefaults() defaults", Got: gotSoft, Want: &lvCfg.Soft.GitHub, Mode: test.CompareSamePointer},
+					{Name: "GetTypeDefaults() hardDefaults", Got: gotHard, Want: &lvCfg.Hard.GitHub, Mode: test.CompareSamePointer},
 				}
 			case *web.Lookup:
 				gotSoft, gotHard := v.GetTypeDefaults()
 				typeFieldTests = []test.FieldAssertion{
-					{Name: "URL typeDefaults", Got: gotSoft, Want: &lvCfg.Soft.URL, Mode: test.CompareSamePointer},
-					{Name: "URL typeHardDefaults", Got: gotHard, Want: &lvCfg.Hard.URL, Mode: test.CompareSamePointer},
+					{Name: "GetTypeDefaults() defaults", Got: gotSoft, Want: &lvCfg.Soft.URL, Mode: test.CompareSamePointer},
+					{Name: "GetTypeDefaults() hardDefaults", Got: gotHard, Want: &lvCfg.Hard.URL, Mode: test.CompareSamePointer},
 				}
+			default:
+				t.Fatalf(
+					"Lookup type mismatch\ngot:  %T\n"+
+						"want: *forgejo.Lookup, *github.Lookup or *web.Lookup",
+					v,
+				)
 			}
-			if err := test.AssertFields(t, typeFieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, typeFieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -328,7 +339,7 @@ type BadInheritable struct{}
 
 func (b *BadInheritable) GetType() string                                 { return "bad" }
 func (b *BadInheritable) DecodeSelf(format string, data []byte) error     { return nil }
-func (f *BadInheritable) ApplyOverrides(format string, data []byte) error { return nil }
+func (b *BadInheritable) ApplyOverrides(format string, data []byte) error { return nil }
 
 func TestDecode_TypeAssertionFailure(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
@@ -336,7 +347,6 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 	orig := ServiceMapInheritable
 	t.Cleanup(func() { ServiceMapInheritable = orig })
 
-	// GIVEN: ServiceMap with a struct that does not implement Lookup.
 	bad := map[string]func() polymorphic.Inheritable{
 		"bad": func() polymorphic.Inheritable {
 			return &BadInheritable{}
@@ -346,7 +356,6 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 
 	data := `{"type":"bad"}`
 
-	// WHEN: We decode a payload that maps to that type.
 	_, err := Decode(
 		"json", []byte(data),
 		nil,
@@ -354,17 +363,8 @@ func TestDecode_TypeAssertionFailure(t *testing.T) {
 		lvCfg,
 	)
 
-	prefix := fmt.Sprintf(
-		"%s\nDecode(%q)",
-		packageName, data,
-	)
-
-	// THEN: We get an error because the type assertion failed.
-	if err == nil {
-		t.Fatalf("%s expected type assertion error", prefix)
-	}
-	if !strings.Contains(err.Error(), "expected latestver.Lookup") {
-		t.Fatalf("%s unexpected error: %v", prefix, err)
+	if want := "expected latestver.Lookup"; err == nil || !strings.Contains(err.Error(), want) {
+		t.Fatalf("error mismatch\ngot:  %v\nwant: %q", err, want)
 	}
 }
 
@@ -543,16 +543,9 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Options + Status.
-			options, _ := opt.Decode(
-				"yaml", nil,
-				optCfg,
-			)
-			svcStatus, _ := statustest.New(
-				"yaml", nil,
-			)
+			options, _ := opt.Decode("yaml", nil, optCfg)
+			svcStatus, _ := statustest.New("yaml", nil)
 
-			// WHEN: ApplyOverrides is called.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -570,7 +563,6 @@ func TestApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				tc.sameAddress,
-				packageName,
 				"ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)

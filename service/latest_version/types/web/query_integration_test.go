@@ -17,12 +17,12 @@
 package web
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -35,7 +35,9 @@ import (
 
 func TestLookup_Query(t *testing.T) {
 	testLookupVersions := testLookup(t, false)
-	_, _ = testLookupVersions.query(logx.LogFrom{})
+	if _, err := testLookupVersions.query(logx.LogFrom{}); err != nil {
+		t.Fatalf("Lookup.query() failed: %v", err)
+	}
 
 	type statusVars struct {
 		latestVersion, latestVersionWant string
@@ -48,7 +50,6 @@ func TestLookup_Query(t *testing.T) {
 		errRegex    string
 	}
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name               string
 		overrides          string
@@ -60,6 +61,7 @@ func TestLookup_Query(t *testing.T) {
 			name:      "invalid url",
 			overrides: `url: "invalid://	test"`,
 			want: wantVars{
+				announce: false,
 				errRegex: `invalid control character in URL`,
 			},
 		},
@@ -72,6 +74,7 @@ func TestLookup_Query(t *testing.T) {
 					  regex: ver[0-9.]+
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: `failed to convert "[^"]+" to a semantic version`,
 			},
 		},
@@ -85,6 +88,7 @@ func TestLookup_Query(t *testing.T) {
 				allow_invalid_certs: true
 			`),
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -98,6 +102,7 @@ func TestLookup_Query(t *testing.T) {
 				allow_invalid_certs: false
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: `x509`,
 			},
 		},
@@ -107,6 +112,7 @@ func TestLookup_Query(t *testing.T) {
 				deployedVersion: "1.2.3.4",
 			},
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -117,6 +123,7 @@ func TestLookup_Query(t *testing.T) {
 					regex_content: argus[0-9]+.exe
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require fields
 						regex "[^"]+" not matched on content for version "[^"]+"$`,
@@ -130,6 +137,7 @@ func TestLookup_Query(t *testing.T) {
 					regex_content: ver{{ version }}
 			`),
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -140,6 +148,7 @@ func TestLookup_Query(t *testing.T) {
 					command: [false]
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require fields
 						command failed:
@@ -154,6 +163,7 @@ func TestLookup_Query(t *testing.T) {
 					command: [true]
 			`),
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -165,9 +175,10 @@ func TestLookup_Query(t *testing.T) {
 						type: ghcr
 						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: 0.9.0-beta
-						token: ` + test.DockerHubToken(t) + `
+						token: ` + test.GitHubToken(t) + `
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require fields
 						release-argus\/argus:[^ ]+ - .*tag not found.*$`,
@@ -182,9 +193,10 @@ func TestLookup_Query(t *testing.T) {
 						type: ghcr
 						image: ` + test.ArgusDockerGHCRRepo + `
 						tag: 0.9.0
-						token: ` + test.DockerHubToken(t) + `
+						token: ` + test.GitHubToken(t) + `
 			`),
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -199,6 +211,7 @@ func TestLookup_Query(t *testing.T) {
 			`),
 			semanticVersioning: new(false),
 			want: wantVars{
+				announce: false,
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the require fields
 						regex "[^"]+" not matched on version ("[^"]+".*)+$`,
@@ -213,6 +226,7 @@ func TestLookup_Query(t *testing.T) {
 						regex: ^[0-9]+$
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: test.TrimYAML(`
 					^no releases were found matching the url_commands
 						regex "[^"]+" didn't return any matches on ".*"$`,
@@ -227,6 +241,7 @@ func TestLookup_Query(t *testing.T) {
 						regex: ver([0-9.]+)
 			`),
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -242,6 +257,7 @@ func TestLookup_Query(t *testing.T) {
 				deployedVersion: "9.9.9",
 			},
 			want: wantVars{
+				announce:   false,
 				newVersion: true,
 				errRegex:   `^$`,
 			},
@@ -257,6 +273,7 @@ func TestLookup_Query(t *testing.T) {
 				deployedVersion: "0.0.0",
 			},
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -271,6 +288,7 @@ func TestLookup_Query(t *testing.T) {
 				deployedVersion: "1.2.1",
 			},
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -286,6 +304,7 @@ func TestLookup_Query(t *testing.T) {
 				latestVersionWant: "ver1.2.2",
 			},
 			want: wantVars{
+				announce: true,
 				errRegex: `^$`,
 			},
 		},
@@ -297,6 +316,7 @@ func TestLookup_Query(t *testing.T) {
 						regex: '([0-9.]+-)'
 			`),
 			want: wantVars{
+				announce: false,
 				errRegex: `failed to convert "[^"]+" to a semantic version`,
 			},
 		},
@@ -339,38 +359,38 @@ func TestLookup_Query(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
 
 			serviceID := tc.name
-			try := 0
-			temporaryFailureInNameResolution := true
-			for temporaryFailureInNameResolution != false {
+			const maxAttempts = 3
+			retryOnTimeout := true
+			for attempt := 0; retryOnTimeout; attempt++ {
+				t.Logf("attempt %d", attempt)
 				releaseStdout := test.CaptureLog(t, logx.Default())
-				try++
-				temporaryFailureInNameResolution = false
+				retryOnTimeout = false
 				lookup := testLookup(t, false)
 				lookup.InitMetrics(lookup)
-				// Valid cert switch.
 				lookup.URL = strings.Replace(lookup.URL, "://invalid", "://valid", 1)
 				lookup.AllowInvalidCerts = nil
 				lookup.Status.ServiceInfo.ID = serviceID
 				lookup.Options.SemanticVersioning = tc.semanticVersioning
-				// hadStatus.
 				lookup.Status.SetLatestVersion(tc.hadStatus.latestVersion, "", false)
 				lookup.Status.SetDeployedVersion(tc.hadStatus.deployedVersion, "", false)
-				// overrides.
 				if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
-					t.Fatalf(
-						"%s\nfailed to unmarshal overrides: %v",
-						packageName, err,
-					)
+					t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
 				}
-				if regOverride, _ := polymorphic.Extract("yaml", []byte(tc.overrides), "require"); regOverride != nil {
-					lookup.Require, _ = filter.Decode(
-						"yaml", regOverride,
+				reqOverride, err := polymorphic.Extract("yaml", []byte(tc.overrides), "require")
+				if err != nil {
+					t.Fatalf("polymorphic.Extract() failed: %v", err)
+				}
+				if reqOverride != nil {
+					if lookup.Require, err = filter.Decode(
+						"yaml", reqOverride,
 						lookup.Status,
 						&lookup.Defaults.Require,
-					)
+					); err != nil {
+						t.Fatalf("filter.Decode() failed: %v", err)
+					}
 				}
 				lookup.Init(
 					lookup.Options,
@@ -381,61 +401,49 @@ func TestLookup_Query(t *testing.T) {
 					},
 				)
 
-				// WHEN: Query is called on it.
-				var newVersion bool
 				newVersion, err := lookup.Query(true, logx.LogFrom{})
 
-				prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-				// THEN: the error is as expected.
 				stdout := releaseStdout()
 				e := errfmt.FormatError(err)
 				if !util.RegexCheck(tc.want.errRegex, e) {
-					if strings.Contains(e, "context deadline exceeded") {
-						temporaryFailureInNameResolution = true
-						if try != 3 {
-							time.Sleep(time.Second)
-							continue
-						}
+					if strings.Contains(e, "context deadline exceeded") && attempt < maxAttempts-1 {
+						retryOnTimeout = true
+						lookup.DeleteMetrics(lookup)
+						time.Sleep(time.Second)
+						continue
 					}
-					t.Fatalf(
-						"%s error mismatch\ngot:  %q\nwant: %q",
-						prefix, e, tc.want.errRegex,
-					)
+					t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
 				}
 
-				// AND: the stdout contains the expected strings.
 				if !util.RegexCheck(tc.want.stdoutRegex, stdout) {
-					t.Fatalf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, tc.want.stdoutRegex,
-					)
+					t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want.stdoutRegex)
 				}
 
-				// AND: the LatestVersion is as expected.
 				if got := lookup.Status.LatestVersion(); tc.hadStatus.latestVersionWant != "" &&
 					tc.hadStatus.latestVersionWant != got {
 					t.Fatalf(
-						"%s .LatestVersion() mismatch\ngot:  %q\nwant:   %q",
-						prefix, got, tc.hadStatus.latestVersionWant,
+						"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+						got, tc.hadStatus.latestVersionWant,
 					)
 				}
-				if got := len(lookup.Status.AnnounceChannel); tc.want.announce && got != 1 {
+				wantAnnounces := 0
+				if tc.want.announce {
+					wantAnnounces = 1
+				}
+				if got := len(lookup.Status.AnnounceChannel); got != wantAnnounces {
 					t.Fatalf(
-						"%s announcement mismatch\ngot:  %d\nwant: %d",
-						prefix, got, 1,
+						"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+						got, wantAnnounces,
 					)
 				}
 				if newVersion != tc.want.newVersion {
 					t.Fatalf(
-						"%s newVersion mismatch\ngot:  %t\nwant: %t",
-						prefix, newVersion, tc.want.newVersion,
+						"newVersion mismatch\ngot:  %t\nwant: %t",
+						newVersion, tc.want.newVersion,
 					)
 				}
 
-				// AND: the metrics are as expected.
-				// 	FAIL:
-				var want float64 = 0
+				want := 0.0
 				if tc.want.errRegex != `^$` {
 					want = 1
 				}
@@ -448,11 +456,10 @@ func TestLookup_Query(t *testing.T) {
 				)
 				if got != want {
 					t.Fatalf(
-						"%s LatestVersionQueryResultTotal metric - FAIL\ngot:  %f\nwant: %f",
-						prefix, got, want,
+						"fail: metric.LatestVersionQueryResultTotal mismatch\ngot:  %f\nwant: %f",
+						got, want,
 					)
 				}
-				// 	SUCCESS:
 				want = 0
 				if tc.want.errRegex == `^$` {
 					want = 1
@@ -466,11 +473,102 @@ func TestLookup_Query(t *testing.T) {
 				)
 				if got != want {
 					t.Fatalf(
-						"%s LatestVersionQueryResultTotal metric - SUCCESS\ngot:  %f\nwant: %f",
-						prefix, got, want,
+						"success: metric.LatestVersionQueryResultTotal mismatch\n"+
+							"got:  %f\nwant: %f",
+						got, want,
 					)
 				}
 				lookup.DeleteMetrics(lookup)
+			}
+		})
+	}
+}
+
+func TestLookup_GetVersion__integration__docker(t *testing.T) {
+	body := `
+		version 1 is "v0.0.0"
+		version 2 is "ver1.2.3-dev"
+		version 3 is "ver1.2.4"
+		version 4 is "ver1.2.5"
+	`
+
+	type wantVars struct {
+		version  string
+		errRegex string
+	}
+
+	tests := []struct {
+		name            string
+		lookupOverrides string
+		want            wantVars
+	}{
+		{
+			name: "docker fail",
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '4 is "ver([0-9][^"]+)"'
+				require:
+					regex_version: ^1\.[0-9.]+$
+					regex_content: 'version 4 is "ver{{ version }}"'
+					command: [true]
+					docker:
+						type: ghcr
+						image: ` + test.ArgusDockerGHCRRepo + `
+						tag: '{{ version }}-unknown'
+						token: ` + test.GitHubToken(t) + `
+			`),
+			want: wantVars{
+				errRegex: test.TrimYAML(`
+					^no releases were found matching the require field.*
+						` + test.ArgusDockerGHCRRepo + `:[^ ]+ - .*tag not found.*$`,
+				),
+			},
+		},
+		{
+			name: "docker pass",
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: '"ver([0-9][^"]+)"'
+				require:
+					regex_version: ^1\.[0-9.]+$
+					regex_content: 'version 4 is "ver{{ version }}"'
+					command: [true]
+					docker:
+						type: ghcr
+						image: ` + test.ArgusDockerGHCRRepo + `
+						tag: '0.39.0'
+						token: ` + test.GitHubToken(t) + `
+			`),
+			want: wantVars{
+				version:  "1.2.5",
+				errRegex: `^$`,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, false)
+			if err := lookup.ApplyOverrides("yaml", []byte(tc.lookupOverrides)); err != nil {
+				t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
+			}
+			lookup.Options.SemanticVersioning = new(true)
+			if err := lookup.CheckValues(); err != nil {
+				t.Fatalf("Lookup.CheckValues() failed: %v", err)
+			}
+
+			version, err := lookup.getVersion(body, logx.LogFrom{})
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.want.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
+			}
+
+			if version != tc.want.version {
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", version, tc.want.version)
 			}
 		})
 	}

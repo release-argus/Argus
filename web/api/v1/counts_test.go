@@ -24,27 +24,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/release-argus/Argus/config/decode"
-	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
-	svctest "github.com/release-argus/Argus/service/test"
-	whtest "github.com/release-argus/Argus/webhook/test"
-
 	"github.com/release-argus/Argus/config"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
+	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/web/metric"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
-
-var router *mux.Router
 
 func TestHTTP_Counts(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: values of metrics.
 	tests := []struct {
 		name                                                   string
 		serviceCountCurrentActive, serviceCountCurrentInactive int
@@ -178,7 +173,7 @@ func TestHTTP_Counts(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: resets metric.ServiceCountCurrent.
 
 			api := API{}
 
@@ -200,10 +195,7 @@ func TestHTTP_Counts(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 				if err != nil {
-					t.Fatalf(
-						"%s\nfailed to unmarshal service template: %v",
-						packageName, err,
-					)
+					t.Fatalf("service.DecodeService(%q) failed: %v", id, err)
 				}
 
 				api.Config.Service[id] = newService
@@ -251,10 +243,7 @@ func TestHTTP_Counts(t *testing.T) {
 			metric.UpdatesCurrent.WithLabelValues("SKIPPED").Set(float64(tc.updatesCurrentSkipped))
 			var updateDetailsStr string
 			if tc.updateDetails != nil {
-				updateDetailsStr = fmt.Sprintf(
-					`,"update_details": %v`,
-					decode.ToJSONString(*tc.updateDetails),
-				)
+				updateDetailsStr = `,"update_details": ` + decode.ToJSONString(*tc.updateDetails)
 			}
 			wantJSON := test.TrimJSON(fmt.Sprintf(`{
 				"service_count": %d,
@@ -271,20 +260,18 @@ func TestHTTP_Counts(t *testing.T) {
 				updateDetailsStr,
 			)) + "\n"
 
-			// WHEN: a HTTP request is sent to the /counts endpoint.
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/counts", nil)
 			w := httptest.NewRecorder()
 			api.httpCounts(w, req)
-			res := w.Result()
-			t.Cleanup(func() { _ = res.Body.Close() })
+			resp := w.Result()
+			t.Cleanup(func() { _ = resp.Body.Close() })
 
-			// THEN: the set values are returned in the JSON response.
-			data, _ := io.ReadAll(res.Body)
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
+			}
 			if got := string(data); got != wantJSON {
-				t.Errorf(
-					"%s\nAPI.httpCounts() response mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantJSON,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", got, wantJSON)
 			}
 		})
 	}

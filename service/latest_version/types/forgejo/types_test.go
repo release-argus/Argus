@@ -18,7 +18,7 @@
 package forgejo
 
 import (
-	"fmt"
+	"maps"
 	"reflect"
 	"regexp"
 	"slices"
@@ -28,6 +28,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
@@ -37,7 +38,6 @@ import (
 )
 
 func TestLookup_Marshal(t *testing.T) {
-	// GIVEN: a Lookup with every marshalled field set.
 	lookup := testLookup(t, `
 		type: forgejo
 		host: https://codeberg.org
@@ -47,16 +47,20 @@ func TestLookup_Marshal(t *testing.T) {
 			- type: regex
 				regex: '([0-9.]+)'
 		require:
-			regex_version: '^[0-9]'`)
+			regex_version: '^[0-9]'
+		access_token: token
+		allow_invalid_certs: true`)
 
-	// WHEN: it is marshalled.
 	got := lookup.String("")
 
-	// THEN: 'host' sits with the 'url' it completes, after 'type'.
-	wantOrder := []string{"type", "host", "url", "url_commands", "require", "use_prerelease"}
+	wantOrder := []string{
+		"type", "host", "url", "url_commands", "require",
+		"access_token", "allow_invalid_certs", "use_prerelease",
+	}
 	var gotOrder []string
+	keyRe := regexp.MustCompile(`^[a-z_]+:`)
 	for line := range strings.SplitSeq(got, "\n") {
-		matches := regexp.MustCompile(`^[a-z_]+:`).FindStringSubmatch(line)
+		matches := keyRe.FindStringSubmatch(line)
 		if matches == nil {
 			continue
 		}
@@ -64,34 +68,33 @@ func TestLookup_Marshal(t *testing.T) {
 	}
 	if !slices.Equal(gotOrder, wantOrder) {
 		t.Fatalf(
-			"%s\nLookup.String() key order mismatch\ngot:  %v\nwant: %v\n\n%s",
-			packageName, gotOrder, wantOrder, got,
+			"Lookup.String() key order mismatch\ngot:  %v\nwant: %v\n\n%s",
+			gotOrder, wantOrder, got,
 		)
 	}
 
-	// AND: the JSON the API serves carries the same order.
 	gotJSON := decode.ToJSONString(lookup)
 	var at []int
 	for _, key := range wantOrder {
 		i := strings.Index(gotJSON, `"`+key+`":`)
 		if i == -1 {
+			var fields map[string]any
+			if err := decode.Unmarshal("json", []byte(gotJSON), &fields); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
 			t.Fatalf(
-				"%s\nLookup.MarshalJSON() dropped %q\ngot:  %s",
-				packageName, key, gotJSON,
+				"decode.ToJSONString() key %q mismatch\ngot:  absent (keys=%q)\nwant: present",
+				key, util.SortedKeys(fields),
 			)
 		}
 		at = append(at, i)
 	}
 	if !slices.IsSorted(at) {
-		t.Fatalf(
-			"%s\nLookup.MarshalJSON() key order mismatch\nwant: %v\ngot:  %s",
-			packageName, wantOrder, gotJSON,
-		)
+		t.Fatalf("decode.ToJSONString() key order mismatch\ngot:  %s\nwant: %v", gotJSON, wantOrder)
 	}
 }
 
 func TestLookup_Marshal_dropsNothing(t *testing.T) {
-	// GIVEN: the fields [Lookup] marshals, taken from the struct.
 	want := make([]string, 0, 8)
 	for _, typ := range []reflect.Type{
 		reflect.TypeFor[base.Lookup](),
@@ -106,7 +109,6 @@ func TestLookup_Marshal_dropsNothing(t *testing.T) {
 		}
 	}
 
-	// WHEN: the marshal-only helper is inspected.
 	auxType := reflect.TypeFor[lookupMarshal]()
 	got := make(map[string]bool, auxType.NumField())
 	for field := range auxType.Fields() {
@@ -114,21 +116,19 @@ func TestLookup_Marshal_dropsNothing(t *testing.T) {
 		got[tag] = true
 	}
 
-	// THEN: it carries every field the Lookup marshals.
 	for _, field := range want {
 		if !got[field] {
 			t.Fatalf(
-				"%s\nlookupMarshal is missing %q, so it would be dropped on save\nhas: %v",
-				packageName, field, got,
+				"lookupMarshal field %q mismatch\ngot:  absent (fields=%q)\nwant: present",
+				field, slices.Sorted(maps.Keys(got)),
 			)
 		}
 	}
 }
 
 func TestLookup_Unmarshal(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 
-	// GIVEN: a Lookup with values already on it, and encoded data to unmarshal over it.
 	tests := []struct {
 		name              string
 		format            string
@@ -208,7 +208,6 @@ func TestLookup_Unmarshal(t *testing.T) {
 				HardDefaults:  lvCfg.Hard,
 			}
 
-			// WHEN: it is unmarshalled over.
 			var err error
 			if tc.format == "json" {
 				err = lookup.UnmarshalJSON([]byte(tc.data))
@@ -216,42 +215,26 @@ func TestLookup_Unmarshal(t *testing.T) {
 				err = lookup.UnmarshalYAML([]byte(tc.data))
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Unmarshal%s(%q)",
-				packageName, strings.ToUpper(tc.format), tc.data,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 			if err != nil {
 				return
 			}
 
-			// AND: the fields are as expected.
 			if lookup.Host != tc.wantHost {
-				t.Fatalf(
-					"%s host mismatch\ngot:  %q\nwant: %q",
-					prefix, lookup.Host, tc.wantHost,
-				)
+				t.Fatalf("Lookup.Host mismatch\ngot:  %q\nwant: %q", lookup.Host, tc.wantHost)
 			}
 			if g, w := test.StringifyPtr(lookup.UsePreRelease), test.StringifyPtr(tc.wantUsePreRelease); g != w {
-				t.Fatalf(
-					"%s use_prerelease mismatch\ngot:  %s\nwant: %s",
-					prefix, g, w,
-				)
+				t.Fatalf("Lookup.UsePreRelease mismatch\ngot:  %s\nwant: %s", g, w)
 			}
 		})
 	}
 }
 
 func TestLookup_String(t *testing.T) {
-	// GIVEN: a Lookup.
+	// Mixed case, so String() must keep the host exactly as written.
 	want := test.TrimYAML(`
 		type: forgejo
 		host: HTTPS://CodeBerg.org
@@ -260,23 +243,17 @@ func TestLookup_String(t *testing.T) {
 	`)
 	lookup := testLookup(t, want)
 
-	// WHEN: it is stringified.
 	got := lookup.String("")
 
-	// THEN: it round-trips the host exactly as it was written.
 	if got != want {
-		t.Fatalf(
-			"%s\nLookup.String() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Fatalf("Lookup.String() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestLookup_Copy(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name   string
 		lookup *Lookup
@@ -326,93 +303,68 @@ func TestLookup_Copy(t *testing.T) {
 
 			wantStr := decode.ToYAMLString(tc.lookup, "")
 
-			// WHEN: Copy() is called on it.
 			gotInterface := tc.lookup.Copy(tc.status)
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.Copy(status=%p)",
-				packageName, tc.status,
-			)
-
-			// THEN: if nil was copied, we get nil.
 			if tc.lookup == nil {
 				if gotInterface != nil {
-					t.Errorf(
-						"%s of nil mismatch\ngot:  %v\nwant: nil",
-						prefix, gotInterface,
-					)
+					t.Errorf("copy mismatch\ngot:  non-nil (%T)\nwant: nil", gotInterface)
 				}
 				return
 			}
 
-			// AND: the copy is non-nil.
 			if gotInterface == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
+				t.Fatal("copy mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the copy is distinct.
 			if gotInterface == tc.lookup {
 				t.Fatalf(
-					"%s should return a distinct copy\ngot:  %p\nwant: %p",
-					prefix, gotInterface, tc.lookup,
+					"copy aliases the original\ngot:  %p\nwant: NOT %p",
+					gotInterface, tc.lookup,
 				)
 			}
 
-			// AND: the type is unchanged.
 			got, ok := gotInterface.(*Lookup)
 			if !ok {
-				t.Fatalf(
-					"%s type shouldn't have changed\ngot:  %T\nwant: Lookup",
-					prefix, gotInterface,
-				)
+				t.Fatalf("copy type mismatch\ngot:  %T\nwant: *Lookup", gotInterface)
 			}
 
-			// AND: the copy unmarshals the same.
 			if gotStr := got.String(""); gotStr != wantStr {
-				t.Fatalf(
-					"%s stringified mismatch\ngot:  %q\nwant: %q",
-					prefix, gotStr, wantStr,
-				)
+				t.Fatalf("Lookup.String() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			// AND: the fields are copied as expected.
-			err := []test.FieldAssertion{
+			fieldTests := []test.FieldAssertion{
 				{Name: "Type", Got: got.Type, Want: tc.lookup.Type, Mode: test.CompareEqual},
 				{Name: "URL", Got: got.URL, Want: tc.lookup.URL, Mode: test.CompareEqual},
-				{Name: "URLCommands", Got: &got.URLCommands, Want: &tc.lookup.URLCommands, Mode: test.CompareDifferentPointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: copied pointers should be value-equal and non-aliased.
-			err = []test.FieldAssertion{
-				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: tc.lookup.AllowInvalidCerts, Mode: test.CompareDifferentPointer},
-				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CompareDifferentPointer},
-				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CompareDifferentPointer},
-				{Name: "Status", Got: got.Status, Want: tc.lookup.Status, Mode: test.CompareDifferentPointer},
+			fieldTests = []test.FieldAssertion{
+				{Name: "AllowInvalidCerts", Got: got.AllowInvalidCerts, Want: tc.lookup.AllowInvalidCerts, Mode: test.CopiedPointerMode(tc.lookup.AllowInvalidCerts)},
+				{Name: "Require", Got: got.Require, Want: tc.lookup.Require, Mode: test.CopiedPointerMode(tc.lookup.Require)},
+				{Name: "Options", Got: got.Options, Want: tc.lookup.Options, Mode: test.CopiedPointerMode(tc.lookup.Options)},
+				{Name: "Status", Got: got.Status, Want: tc.status, Mode: test.CompareSamePointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: the non-Base fields are copied as expected.
-			err = []test.FieldAssertion{
+			fieldTests = []test.FieldAssertion{
 				{Name: "AccessToken", Got: got.AccessToken, Want: tc.lookup.AccessToken, Mode: test.CompareEqual},
-				{Name: "UsePreRelease", Got: got.UsePreRelease, Want: tc.lookup.UsePreRelease, Mode: test.CompareDifferentPointer},
+				{Name: "UsePreRelease", Got: got.UsePreRelease, Want: tc.lookup.UsePreRelease, Mode: test.CopiedPointerMode(tc.lookup.UsePreRelease)},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 
-			// AND: defaults pointers are shared.
-			err = []test.FieldAssertion{
+			fieldTests = []test.FieldAssertion{
 				{Name: "Defaults", Got: got.Defaults, Want: tc.lookup.Defaults, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: got.HardDefaults, Want: tc.lookup.HardDefaults, Mode: test.CompareSamePointer},
 				{Name: "typeDefaults", Got: got.typeDefaults, Want: tc.lookup.typeDefaults, Mode: test.CompareSamePointer},
 				{Name: "typeHardDefaults", Got: got.typeHardDefaults, Want: tc.lookup.typeHardDefaults, Mode: test.CompareSamePointer},
 			}
-			if testErr := test.AssertFields(t, err, prefix, "Lookup"); testErr != nil {
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
 				t.Fatal(testErr)
 			}
 		})
@@ -420,23 +372,24 @@ func TestLookup_Copy(t *testing.T) {
 }
 
 func TestLookup_TypeDefaults(t *testing.T) {
-	// GIVEN: a Lookup and a pair of type-specific Defaults.
 	lookup := &Lookup{}
 	defaults := &Defaults{}
 	hardDefaults := &Defaults{}
 	hardDefaults.Default()
 
-	// WHEN: they are assigned.
 	lookup.SetTypeDefaults(defaults, hardDefaults)
 	gotDefaults, gotHardDefaults := lookup.GetTypeDefaults()
 
-	// THEN: they come back unchanged.
-	if gotDefaults != defaults || gotHardDefaults != hardDefaults {
-		t.Fatalf(
-			"%s\nLookup.GetTypeDefaults() mismatch\ngot:  (%p, %p)\nwant: (%p, %p)",
-			packageName,
-			gotDefaults, gotHardDefaults,
-			defaults, hardDefaults,
+	if gotDefaults != defaults {
+		t.Errorf(
+			"Lookup.GetTypeDefaults() defaults mismatch\ngot:  %p\nwant: %p",
+			gotDefaults, defaults,
+		)
+	}
+	if gotHardDefaults != hardDefaults {
+		t.Errorf(
+			"Lookup.GetTypeDefaults() hardDefaults mismatch\ngot:  %p\nwant: %p",
+			gotHardDefaults, hardDefaults,
 		)
 	}
 }

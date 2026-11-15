@@ -16,4 +16,24 @@
 
 package test
 
-var packageName = "deployedver.test"
+import (
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/release-argus/Argus/internal/logx"
+	logtest "github.com/release-argus/Argus/internal/test/log"
+)
+
+func TestMain(m *testing.M) {
+	logtest.InitLog()
+
+	exitCode := m.Run()
+
+	if len(logx.ExitCodeChannel()) > 0 {
+		fmt.Println("exit code channel not empty")
+		exitCode = 1
+	}
+
+	os.Exit(exitCode)
+}

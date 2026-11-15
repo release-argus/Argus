@@ -35,7 +35,6 @@ type statusTimestamps struct {
 func New(format string, data []byte) (*status.Status, error) {
 	var field status.Status
 
-	// Channels.
 	var (
 		announceChannel = make(chan []byte, 8)
 		databaseChannel = make(chan dbtype.Message, 8)
@@ -51,24 +50,20 @@ func New(format string, data []byte) (*status.Status, error) {
 		&dashboard.Options{},
 	)
 
-	// Versions.
 	serviceInfo := info.ServiceInfo{}
 	if err := decode.Unmarshal(format, data, &serviceInfo); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal ServiceInfo: %w", err)
 	}
 
-	// Timestamps.
 	timestamps := statusTimestamps{}
 	if err := decode.Unmarshal(format, data, &timestamps); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal timestamps: %w", err)
 	}
 	if serviceInfo.DeployedVersion != "" {
 		field.SetDeployedVersion(serviceInfo.DeployedVersion, timestamps.DeployedVersionTimestamp, false)
-		field.ServiceInfo.DeployedVersion = serviceInfo.DeployedVersion
 	}
 	if serviceInfo.LatestVersion != "" {
 		field.SetLatestVersion(serviceInfo.LatestVersion, timestamps.LatestVersionTimestamp, false)
-		field.ServiceInfo.LatestVersion = serviceInfo.LatestVersion
 	}
 	if serviceInfo.ApprovedVersion != "" {
 		field.SetApprovedVersion(serviceInfo.ApprovedVersion, false)

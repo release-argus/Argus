@@ -19,63 +19,27 @@ package test
 import (
 	"fmt"
 	"testing"
-
-	"github.com/release-argus/Argus/service/latest_version/filter/docker"
 )
 
 func TestRequire(t *testing.T) {
-	// GIVEN: a Docker type.
 	tests := []struct {
 		dockerType string
+		want       string
 	}{
-		{dockerType: "ecr"},
-		{dockerType: "ghcr"},
-		{dockerType: "hub"},
-		{dockerType: "quay"},
+		{dockerType: "ecr", want: "*docker.ECRRegistry"},
+		{dockerType: "ghcr", want: "*docker.GHCRRegistry"},
+		{dockerType: "hub", want: "*docker.HubRegistry"},
+		{dockerType: "quay", want: "*docker.QuayRegistry"},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.dockerType, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Require is called with it.
 			got := Require(t, tc.dockerType)
 
-			prefix := fmt.Sprintf(
-				"%s\nRequire(type=%q)",
-				packageName, tc.dockerType,
-			)
-
-			// THEN: the expected Docker type is returned.
-			switch tc.dockerType {
-			case "ecr":
-				if _, ok := got.Docker.(*docker.ECRRegistry); !ok {
-					t.Errorf(
-						"%s type mismatch\ngot:  %t\nwant: %q",
-						prefix, got.Docker, "ECRRegistry",
-					)
-				}
-			case "ghcr":
-				if _, ok := got.Docker.(*docker.GHCRRegistry); !ok {
-					t.Errorf(
-						"%s type mismatch\ngot:  %t\nwant: %q",
-						prefix, got.Docker, "GHCRRegistry",
-					)
-				}
-			case "hub":
-				if _, ok := got.Docker.(*docker.HubRegistry); !ok {
-					t.Errorf(
-						"%s type mismatch\ngot:  %t\nwant: %q",
-						prefix, got.Docker, "HubRegistry",
-					)
-				}
-			case "quay":
-				if _, ok := got.Docker.(*docker.QuayRegistry); !ok {
-					t.Errorf(
-						"%s type mismatch\ngot:  %t\nwant: %q",
-						prefix, got.Docker, "QuayRegistry",
-					)
-				}
+			if gotType := fmt.Sprintf("%T", got.Docker); gotType != tc.want {
+				t.Errorf("Require.Docker mismatch\ngot:  %s\nwant: %s", gotType, tc.want)
 			}
 		})
 	}

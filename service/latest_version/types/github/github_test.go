@@ -18,7 +18,6 @@
 package github
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -32,7 +31,6 @@ import (
 )
 
 func TestLookup_FilterGitHubReleases(t *testing.T) {
-	// GIVEN: a bunch of releases.
 	tests := []struct {
 		name                               string
 		releases                           []forgetypes.Release
@@ -148,7 +146,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lv := testLookup(t, false)
+			lv := testLookup(t)
 			lv.URLCommands = nil
 			if tc.urlCommands != nil {
 				lv.URLCommands = *tc.urlCommands
@@ -157,26 +155,22 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			lv.Options.SemanticVersioning = &tc.semanticVersioning
 			lv.GetGitHubData().SetReleases(tc.releases)
 
-			// WHEN: filterGitHubReleases is called on this body.
 			filteredReleases := lv.filterGitHubReleases(logx.LogFrom{})
 
-			// THEN: only the expected releases are kept.
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				filteredReleases,
 				tc.want,
 				func(a forgetypes.Release, b string) bool { return a.TagName == b },
-				fmt.Sprintf("%s\nLookup.filterGitHubReleases()", packageName),
 				"",
-			); err != nil {
-				t.Fatal(err)
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestLookup_UnmarshalGitHubReleasesBody(t *testing.T) {
-	// GIVEN: a URL body.
 	tests := []struct {
 		name     string
 		body     string
@@ -222,35 +216,23 @@ func TestLookup_UnmarshalGitHubReleasesBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			body := []byte(tc.body)
 			lv := Lookup{}
 
-			// WHEN: filterGitHubReleases is called on this body.
-			releases, err := lv.unmarshalGitHubReleasesBody(body)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.checkGitHubReleasesBody(%q)",
-				packageName, tc.body,
-			)
-
-			// THEN: it errors when expected.
+			releases, err := lv.unmarshalGitHubReleasesBody([]byte(tc.body))
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
-			// ELSE: the releases marshal correctly.
-			releasesYAML, _ := decode.Marshal("json", releases)
-			if got := string(releasesYAML); got != tc.body {
-				t.Errorf(
-					"%s releases mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.body,
-				)
+
+			releasesJSON, err := decode.Marshal("json", releases)
+			if err != nil {
+				t.Fatalf("decode.Marshal() failed: %v", err)
+			}
+			if got := string(releasesJSON); got != tc.body {
+				t.Errorf("decode.Marshal() mismatch\ngot:  %q\nwant: %q", got, tc.body)
 			}
 		})
 	}

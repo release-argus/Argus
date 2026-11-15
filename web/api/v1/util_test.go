@@ -30,6 +30,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
@@ -37,16 +38,7 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
-func TestAPI_SendAnnouncePayload__marshalError(t *testing.T) {
-	// GIVEN: a failing marshal function.
-	original := marshalAnnouncePayload
-	customErr := fmt.Errorf("marshal failed")
-	marshalAnnouncePayload = func(v any) ([]byte, error) {
-		return nil, customErr
-	}
-	t.Cleanup(func() { marshalAnnouncePayload = original })
-
-	// AND: an API with an Announce Channel.
+func TestAPI_SendAnnouncePayload(t *testing.T) {
 	announceChannel := make(chan []byte, 1)
 	statusDefaults := status.NewDefaults(
 		announceChannel,
@@ -63,24 +55,40 @@ func TestAPI_SendAnnouncePayload__marshalError(t *testing.T) {
 		},
 	}
 
-	// WHEN: sendAnnouncePayload is called.
 	api.sendAnnouncePayload(apitype.WebSocketMessage{})
+	select {
+	case <-announceChannel:
+	default:
+		t.Fatal("working marshal: Status.AnnounceChannel message count mismatch\ngot:  0\nwant: 1")
+	}
 
-	prefix := fmt.Sprintf("%s\nAPI.sendAnnouncePayload(marshal error)", packageName)
+	original := marshalAnnouncePayload
+	customErr := errors.New("marshal failed")
+	marshalAnnouncePayload = func(v any) ([]byte, error) {
+		return nil, customErr
+	}
+	t.Cleanup(func() { marshalAnnouncePayload = original })
 
-	// THEN: no message is sent to the announce channel.
+	releaseStdout := test.CaptureLog(t, logx.Default())
+	api.sendAnnouncePayload(apitype.WebSocketMessage{})
+	stdout := releaseStdout()
+
 	select {
 	case msg := <-announceChannel:
 		t.Fatalf(
-			"%s unexpected message on AnnounceChannel\ngot:  %q\nwant: none",
-			prefix, msg,
+			"failing marshal: Status.AnnounceChannel message mismatch\ngot:  %q\nwant: absent",
+			msg,
 		)
 	default:
+	}
+
+	stdoutRegex := `^ERROR: API sendAnnouncePayload, marshal failed\s$`
+	if !util.RegexCheck(stdoutRegex, stdout) {
+		t.Errorf("failing marshal: stdout mismatch\ngot:  %q\nwant: %q", stdout, stdoutRegex)
 	}
 }
 
 func TestGetParam(t *testing.T) {
-	// GIVEN: a map of query parameters and a parameter to retrieve.
 	tests := []struct {
 		name        string
 		queryParams url.Values
@@ -111,21 +119,14 @@ func TestGetParam(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: getParam is called.
 			got := getParam(tc.queryParams, tc.param)
 
-			prefix := fmt.Sprintf(
-				"%s\ngetParam(params=%+v, key=%q)",
-				packageName, tc.queryParams, tc.param,
-			)
-
-			// THEN: the result should be as expected.
 			if (got == nil && tc.want != nil) ||
 				(got != nil && tc.want == nil) ||
 				(got != nil && *got != *tc.want) {
 				t.Errorf(
-					"%s value mismatch\ngot:  %v\nwant: %v",
-					prefix, got, tc.want,
+					"mismatch\ngot:  %s\nwant: %s",
+					test.StringifyPtr(got), test.StringifyPtr(tc.want),
 				)
 			}
 		})
@@ -133,7 +134,6 @@ func TestGetParam(t *testing.T) {
 }
 
 func TestAPI_AnnounceEdit(t *testing.T) {
-	// GIVEN: an API instance and old/new service data.
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
 		announceChannel,
@@ -215,53 +215,50 @@ func TestAPI_AnnounceEdit(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using a shared channel.
+			// Serial: shares announceChannel.
 
 			tc.newData.Status = &apitype.Status{}
 			if tc.oldData != nil {
 				tc.oldData.Status = &apitype.Status{}
 			}
 
-			// WHEN: announceEdit is called.
 			api.announceEdit(tc.oldData, &tc.newData)
 
-			prefix := fmt.Sprintf("%s\nAPI.announceEdit()", packageName)
-
-			// THEN: the message should be sent to the announce channel.
 			select {
 			case msg := <-announceChannel:
 				var wsMessage apitype.WebSocketMessage
 				err := decode.Unmarshal("json", msg, &wsMessage)
 				if err != nil {
-					t.Fatalf(
-						"%s failed to unmarshal message from Announce channel: %v",
-						prefix, err,
-					)
+					t.Fatalf("decode.Unmarshal() failed: %v", err)
 				}
 
-				// AND: the ServiceData should be as expected.
 				wantedStr := decode.ToYAMLString(tc.wantedServiceData, "")
 				gotStr := decode.ToYAMLString(wsMessage.ServiceData, "")
+				wantSubType := ""
+				if tc.oldData != nil {
+					wantSubType = tc.oldData.ID
+				}
 				if wsMessage.Page != "APPROVALS" ||
 					wsMessage.Type != "EDIT" ||
-					(tc.oldData != nil && wsMessage.SubType != tc.oldData.ID) ||
-					(tc.oldData == nil && wsMessage.SubType != "") ||
+					wsMessage.SubType != wantSubType ||
 					gotStr != wantedStr {
 					t.Errorf(
-						"%s unexpected WebSocketMessage in AnnounceChannel\ngot:  %q:\nwant: %q",
-						prefix, gotStr, wantedStr,
+						"WebSocketMessage mismatch\n"+
+							"got:  page=%q type=%q sub_type=%q service_data=%q\n"+
+							"want: page=%q type=%q sub_type=%q service_data=%q",
+						wsMessage.Page, wsMessage.Type, wsMessage.SubType, gotStr,
+						"APPROVALS", "EDIT", wantSubType, wantedStr,
 					)
 				}
 			default:
 				// Every successful edit announces, even when nothing displayed changed.
-				t.Fatalf("%s Announce channel mismatch\ngot:  none\nwant: message", prefix)
+				t.Fatal("Status.AnnounceChannel message count mismatch\ngot:  0\nwant: 1")
 			}
 		})
 	}
 }
 
 func TestAPI_AnnounceDelete(t *testing.T) {
-	// GIVEN: an API instance and a serviceID.
 	serviceID := "test-service"
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
@@ -280,21 +277,14 @@ func TestAPI_AnnounceDelete(t *testing.T) {
 		},
 	}
 
-	// WHEN: announceDelete is called.
 	api.announceDelete(serviceID)
 
-	prefix := fmt.Sprintf("%s\nAPI.announceDelete()", packageName)
-
-	// THEN: the message should be sent to the announce channel.
 	select {
 	case msg := <-announceChannel:
 		var wsMessage apitype.WebSocketMessage
 		err := decode.Unmarshal("json", msg, &wsMessage)
 		if err != nil {
-			t.Fatalf(
-				"%s failed to unmarshal message from Announce channel: %v",
-				prefix, err,
-			)
+			t.Fatalf("decode.Unmarshal() failed: %v", err)
 		}
 
 		want := apitype.WebSocketMessage{
@@ -302,24 +292,23 @@ func TestAPI_AnnounceDelete(t *testing.T) {
 			Type:    "DELETE",
 			SubType: serviceID,
 		}
-		if wsMessage.Page != "APPROVALS" ||
-			wsMessage.Type != "DELETE" ||
-			wsMessage.SubType != serviceID {
+		if wsMessage.Page != want.Page ||
+			wsMessage.Type != want.Type ||
+			wsMessage.SubType != want.SubType {
 			t.Errorf(
-				"%s unexpected WebSocketMessage in AnnounceChannel\ngot:  %+v:\nwant: %+v",
-				prefix, wsMessage, want,
+				"WebSocketMessage mismatch\n"+
+					"got:  page=%q type=%q sub_type=%q\n"+
+					"want: page=%q type=%q sub_type=%q",
+				wsMessage.Page, wsMessage.Type, wsMessage.SubType,
+				want.Page, want.Type, want.SubType,
 			)
 		}
 	default:
-		t.Fatalf(
-			"%s Announce channel mismatch\ngot:  none\nwant: message",
-			prefix,
-		)
+		t.Fatal("Status.AnnounceChannel message count mismatch\ngot:  0\nwant: 1")
 	}
 }
 
 func TestAPI_AnnounceOrder(t *testing.T) {
-	// GIVEN: an API instance with a service order.
 	announceChannel := make(chan []byte, 2)
 	statusDefaults := status.NewDefaults(
 		announceChannel,
@@ -338,21 +327,14 @@ func TestAPI_AnnounceOrder(t *testing.T) {
 		},
 	}
 
-	// WHEN: announceOrder is called.
 	api.announceOrder()
 
-	prefix := fmt.Sprintf("%s\nAPI.announceOrder()", packageName)
-
-	// THEN: the message should be sent to the announce channel.
 	select {
 	case msg := <-announceChannel:
 		var wsMessage apitype.WebSocketMessage
 		err := decode.Unmarshal("json", msg, &wsMessage)
 		if err != nil {
-			t.Fatalf(
-				"%s failed to unmarshal message from Announce channel: %v",
-				prefix, err,
-			)
+			t.Fatalf("decode.Unmarshal() failed: %v", err)
 		}
 
 		want := apitype.WebSocketMessage{
@@ -360,38 +342,34 @@ func TestAPI_AnnounceOrder(t *testing.T) {
 			Type:    "SERVICE",
 			SubType: "ORDER",
 		}
-		if wsMessage.Page != "APPROVALS" ||
-			wsMessage.Type != "SERVICE" ||
-			wsMessage.SubType != "ORDER" {
+		if wsMessage.Page != want.Page ||
+			wsMessage.Type != want.Type ||
+			wsMessage.SubType != want.SubType {
 			t.Errorf(
-				"%s unexpected WebSocketMessage in AnnounceChannel\ngot:  %+v:\nwant: %+v",
-				prefix, wsMessage, want,
+				"WebSocketMessage mismatch\n"+
+					"got:  page=%q type=%q sub_type=%q\n"+
+					"want: page=%q type=%q sub_type=%q",
+				wsMessage.Page, wsMessage.Type, wsMessage.SubType,
+				want.Page, want.Type, want.SubType,
 			)
 		}
 
 		if wsMessage.Order == nil {
-			t.Fatalf(
-				"%s Order missing from WebSocketMessage in AnnounceChannel\ngot:  none\nwant: order",
-				prefix,
-			)
+			t.Fatal("WebSocketMessage.Order mismatch\ngot:  nil\nwant: non-nil")
 		} else {
 			if match := util.AreSlicesEqual(*wsMessage.Order, order); !match {
 				t.Errorf(
-					"%s Order mismatch in WebSocketMessage in AnnounceChannel\ngot:  %+v\nwant: %+v",
-					prefix, *wsMessage.Order, order,
+					"WebSocketMessage.Order mismatch\ngot:  %q\nwant: %q",
+					*wsMessage.Order, order,
 				)
 			}
 		}
 	default:
-		t.Fatalf(
-			"%s Announce channel mismatch\ngot:  none\nwant: message",
-			prefix,
-		)
+		t.Fatal("Status.AnnounceChannel message count mismatch\ngot:  0\nwant: 1")
 	}
 }
 
 func TestValidatePassword(t *testing.T) {
-	// GIVEN: passwords of varying lengths.
 	tests := []struct {
 		name      string
 		plaintext string
@@ -428,28 +406,16 @@ func TestValidatePassword(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: validatePassword is called.
 			err := validatePassword(tc.plaintext)
-
-			prefix := fmt.Sprintf(
-				"%s\nvalidatePassword(%q)",
-				packageName, tc.plaintext,
-			)
-
-			// THEN: the error matches expectation.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestAPI_DecodeAuthBody(t *testing.T) {
-	// GIVEN: request bodies in varying states.
 	type target struct {
 		Name string `json:"name"`
 	}
@@ -486,53 +452,36 @@ func TestAPI_DecodeAuthBody(t *testing.T) {
 			t.Parallel()
 
 			api := &API{}
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login",
-				strings.NewReader(tc.body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(tc.body))
 			w := httptest.NewRecorder()
 
-			// WHEN: the body is decoded.
 			var got target
 			ok := api.decodeAuthBody(w, req, &got)
 
-			prefix := fmt.Sprintf("%s\ndecodeAuthBody", packageName)
-
-			// THEN: the outcome matches expectation.
 			if ok != tc.wantOK {
-				t.Fatalf(
-					"%s ok mismatch\ngot:  %t\nwant: %t",
-					prefix, ok, tc.wantOK,
-				)
+				t.Fatalf("ok mismatch\ngot:  %t\nwant: %t", ok, tc.wantOK)
 			}
 			if tc.wantOK {
-				// AND: the target is filled.
 				if got.Name != tc.wantName {
-					t.Errorf(
-						"%s decoded value mismatch\ngot:  %q\nwant: %q",
-						prefix, got.Name, tc.wantName,
-					)
+					t.Errorf("target.Name mismatch\ngot:  %q\nwant: %q", got.Name, tc.wantName)
 				}
 				return
 			}
 
-			// AND: the request is failed with the expected status and message.
-			if got, want := w.Code, tc.wantStatus; got != want {
+			if gotCode, wantCode := w.Code, tc.wantStatus; gotCode != wantCode {
 				t.Errorf(
-					"%s status mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					gotCode, w.Body.String(), wantCode,
 				)
 			}
 			if !util.RegexCheck(tc.bodyRegex, w.Body.String()) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, w.Body.String(), tc.bodyRegex,
-				)
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", w.Body.String(), tc.bodyRegex)
 			}
 		})
 	}
 }
 
 func TestAPI_FailAuthStoreRequest(t *testing.T) {
-	// GIVEN: store errors of each classification.
 	tests := []struct {
 		name       string
 		err        error
@@ -600,87 +549,66 @@ func TestAPI_FailAuthStoreRequest(t *testing.T) {
 			api := &API{}
 			w := httptest.NewRecorder()
 
-			// WHEN: the error is mapped onto a response.
-			api.failAuthStoreRequest(w, tc.err,
-				logx.LogFrom{Primary: "TestAPI_FailAuthStoreRequest"}, "delete")
+			logFrom := logx.LogFrom{Primary: "TestAPI_FailAuthStoreRequest"}
+			api.failAuthStoreRequest(w, tc.err, logFrom, "delete")
 
-			prefix := fmt.Sprintf("%s\nfailAuthStoreRequest", packageName)
-
-			// THEN: the status and message match expectations.
 			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s status mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
-			if !util.RegexCheck(tc.bodyRegex, w.Body.String()) {
-				t.Errorf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, w.Body.String(), tc.bodyRegex,
-				)
+			gotBody := w.Body.String()
+			if !util.RegexCheck(tc.bodyRegex, gotBody) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", gotBody, tc.bodyRegex)
 			}
 
-			// AND: internal detail is never leaked on infrastructure failures.
 			if tc.wantStatus == http.StatusInternalServerError &&
-				strings.Contains(w.Body.String(), "db broke") {
-				t.Errorf(
-					"%s internal error detail leaked\ngot:  %q",
-					prefix, w.Body.String(),
-				)
+				strings.Contains(gotBody, "db broke") {
+				t.Errorf("body mismatch\ngot:  %q\nwant: NOT %q", gotBody, "db broke")
 			}
 		})
 	}
 }
 
 func TestConstantTimeCompare(t *testing.T) {
-	// GIVEN: two hashes.
 	tests := []struct {
-		name         string
-		hash1, hash2 string
+		name           string
+		input1, input2 string
 	}{
 		{
-			name:  "equal/1",
-			hash1: "a",
-			hash2: "a",
+			name:   "equal/1",
+			input1: "a",
+			input2: "a",
 		},
 		{
-			name:  "equal/2",
-			hash1: "abc",
-			hash2: "abc",
+			name:   "equal/2",
+			input1: "abc",
+			input2: "abc",
 		},
 		{
-			name:  "not equal/1",
-			hash1: "a",
-			hash2: "b",
+			name:   "not equal/1",
+			input1: "a",
+			input2: "b",
 		},
 		{
-			name:  "not equal/2",
-			hash1: "abc",
-			hash2: "abb",
+			name:   "not equal/2",
+			input1: "abc",
+			input2: "abb",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			hash1 := sha256.Sum256([]byte(tc.hash1))
-			hash2 := sha256.Sum256([]byte(tc.hash2))
+			hash1 := sha256.Sum256([]byte(tc.input1))
+			hash2 := sha256.Sum256([]byte(tc.input2))
 
-			// WHEN: ConstantTimeCompare is called.
 			got := ConstantTimeCompare(hash1, hash2)
 
-			prefix := fmt.Sprintf(
-				"%s\nConstantTimeCompare(a=%q, b=%q)",
-				packageName, tc.hash1, tc.hash2,
-			)
-
-			// THEN: the result should be as expected.
-			want := tc.hash1 == tc.hash2
+			want := tc.input1 == tc.input2
 			if got != want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %t\nwant: %t",
-					prefix, got, want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, want)
 			}
 		})
 	}

@@ -24,25 +24,22 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
+	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
+	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "shoutrrr"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -124,9 +121,22 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 	return shoutrrr
 }
 
-func plainConfig(t *testing.T) Config {
+// newTestStatus returns a Status for service id, initialised for the given number of Shoutrrrs.
+func newTestStatus(t *testing.T, id string, shoutrrrs int) *status.Status {
 	t.Helper()
 
+	svcStatus, _ := statustest.New("yaml", nil)
+	svcStatus.Init(
+		0, shoutrrrs, 0,
+		status.ServiceInfo{
+			ID: id,
+		},
+		&dashboard.Options{},
+	)
+	return svcStatus
+}
+
+func plainConfig() Config {
 	defaults := ShoutrrrsDefaults{}
 	hardDefaults := ShoutrrrsDefaults{}
 	hardDefaults.Default()

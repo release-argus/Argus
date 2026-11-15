@@ -28,56 +28,30 @@ import (
 	"github.com/release-argus/Argus/auth"
 	"github.com/release-argus/Argus/auth/rbac"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 )
 
-var packageName = "auth_store"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
-}
-
-// testDB opens a fresh (in-memory) SQLite database.
-func testDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf(
-			"%s\nopen test database: %v",
-			packageName, err,
-		)
-	}
-	// In-memory SQLite gives each connection its own database;
-	// pin the pool to one connection so all queries share it.
-	db.SetMaxOpenConns(1)
-	t.Cleanup(func() { _ = db.Close() })
-
-	return db
 }
 
 // testStore creates a Store on a fresh (in-memory) database.
 func testStore(t *testing.T) *Store {
 	t.Helper()
 
-	store, err := New(t.Context(), testDB(t))
+	store, err := New(t.Context(), test.MemoryDB(t))
 	if err != nil {
-		t.Fatalf(
-			"%s\nNew() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("New() failed: %v", err)
 	}
 	return store
 }
@@ -104,10 +78,7 @@ func mustCreateUser(
 		groups,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nCreateUser(%q) failed: %v",
-			packageName, username, err,
-		)
+		t.Fatalf("Store.CreateUser(%q) failed: %v", username, err)
 	}
 	return user
 }
@@ -118,10 +89,43 @@ func mustCreateGroup(t *testing.T, store *Store, name string, grants ...rbac.Gra
 
 	group, err := store.CreateGroup(t.Context(), name, "Test "+name, grants)
 	if err != nil {
-		t.Fatalf(
-			"%s\nCreateGroup(%q) failed: %v",
-			packageName, name, err,
-		)
+		t.Fatalf("Store.CreateGroup(%q) failed: %v", name, err)
+	}
+	return group
+}
+
+// mustUserByID fetches a user with the given id, failing the test on error.
+func mustUserByID(t *testing.T, store *Store, id string) *auth.User {
+	t.Helper()
+
+	user, err := store.UserByID(t.Context(), id)
+	if err != nil {
+		t.Fatalf("Store.UserByID(%q) failed: %v", id, err)
+	}
+	return user
+}
+
+// mustLocalCredentials fetches the credentials of username, failing the test on error or none.
+func mustLocalCredentials(t *testing.T, store *Store, username string) *auth.Credentials {
+	t.Helper()
+
+	creds, err := store.LocalCredentials(t.Context(), username)
+	if err != nil {
+		t.Fatalf("Store.LocalCredentials(%q) failed: %v", username, err)
+	}
+	if creds == nil {
+		t.Fatalf("Store.LocalCredentials(%q) mismatch\ngot:  nil\nwant: non-nil", username)
+	}
+	return creds
+}
+
+// mustGroupByID fetches a group with the given id, failing the test on error.
+func mustGroupByID(t *testing.T, store *Store, id string) *Group {
+	t.Helper()
+
+	group, err := store.GroupByID(t.Context(), id)
+	if err != nil {
+		t.Fatalf("Store.GroupByID(%q) failed: %v", id, err)
 	}
 	return group
 }
@@ -132,10 +136,7 @@ func groupsByName(t *testing.T, store *Store) map[string]Group {
 
 	groups, err := store.Groups(t.Context())
 	if err != nil {
-		t.Fatalf(
-			"%s\nGroups() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Store.Groups() failed: %v", err)
 	}
 	byName := make(map[string]Group, len(groups))
 	for _, group := range groups {
@@ -144,22 +145,50 @@ func groupsByName(t *testing.T, store *Store) map[string]Group {
 	return byName
 }
 
+// mustGroupByName returns store's group called name, failing when it is absent.
+func mustGroupByName(t *testing.T, store *Store, name string) Group {
+	t.Helper()
+
+	return groupNamed(t, groupsByName(t, store), name)
+}
+
+// groupNamed returns byName[name], failing when it is absent.
+func groupNamed(t *testing.T, byName map[string]Group, name string) Group {
+	t.Helper()
+
+	group, ok := byName[name]
+	if !ok {
+		t.Fatalf("byName[%q] mismatch\ngot:  absent\nwant: present", name)
+	}
+	return group
+}
+
 // globalGrant builds a valid global-scope Grant.
 func globalGrant(resource rbac.Resource, action rbac.Action) rbac.Grant {
-	return rbac.Grant{
-		Resource: resource,
-		Action:   action,
-		Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-	}
+	return rbac.Grant{Resource: resource, Action: action, Scope: rbac.Scope{Type: rbac.ScopeGlobal}}
 }
 
 // serviceGrant builds a valid service-scope Grant.
 func serviceGrant(resource rbac.Resource, action rbac.Action, serviceID string) rbac.Grant {
-	return rbac.Grant{
-		Resource: resource,
-		Action:   action,
-		Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: serviceID},
+	return rbac.Grant{Resource: resource, Action: action, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: serviceID}}
+}
+
+// grantString renders a Grant as `resource:action@scope[/ref]`.
+func grantString(grant rbac.Grant) string {
+	str := fmt.Sprintf("%s:%s@%s", grant.Resource, grant.Action, grant.Scope.Type)
+	if grant.Scope.Ref != "" {
+		str += "/" + grant.Scope.Ref
 	}
+	return str
+}
+
+// grantStrings renders each of grants with [grantString].
+func grantStrings(grants []rbac.Grant) []string {
+	strs := make([]string, len(grants))
+	for i, grant := range grants {
+		strs[i] = grantString(grant)
+	}
+	return strs
 }
 
 // cataloguePairCount counts the valid (resource, action) pairs.
@@ -190,10 +219,7 @@ func seedGrantCount(t *testing.T, key string) int {
 		return count
 	}
 
-	t.Fatalf(
-		"%s\nunknown seed group %q",
-		packageName, key,
-	)
+	t.Fatalf("seededGroups key %q mismatch\ngot:  absent\nwant: present", key)
 	return -1
 }
 
@@ -203,25 +229,13 @@ func groupHasGlobalGrant(group Group, resource rbac.Resource, action rbac.Action
 	return slices.Contains(group.Grants, globalGrant(resource, action))
 }
 
-// mustExec runs a statement, failing the test on error.
-func mustExec(t *testing.T, store *Store, statement string) {
-	t.Helper()
-
-	if _, err := store.db.Exec(statement); err != nil {
-		t.Fatalf(
-			"%s\nexec failed: %v\n%s",
-			packageName, err, statement,
-		)
-	}
-}
-
 // raceOnGroupInsert claims the group name being inserted from inside the
 // INSERT, standing in for a concurrent create landing between the duplicate
 // check and the insert.
 func raceOnGroupInsert(t *testing.T, store *Store) {
 	t.Helper()
 
-	mustExec(t, store, `
+	test.ExecSQL(t, store.db, `
 		CREATE TRIGGER race_groups BEFORE INSERT ON groups BEGIN
 			INSERT INTO groups (id, name, description, system, created_at, updated_at)
 			VALUES ('racer', NEW.name, '', 0, '', '');
@@ -233,48 +247,16 @@ func raceOnGroupInsert(t *testing.T, store *Store) {
 func removePermission(t *testing.T, db *sql.DB, resource rbac.Resource, action rbac.Action) {
 	t.Helper()
 
-	for _, statement := range []string{
+	for i, statement := range []string{
 		`DELETE FROM group_permissions WHERE permission_id =
 			(SELECT id FROM permissions WHERE resource = ? AND action = ?);`,
 		`DELETE FROM permissions WHERE resource = ? AND action = ?;`,
 	} {
 		if _, err := db.Exec(statement, string(resource), string(action)); err != nil {
 			t.Fatalf(
-				"%s\nremove permission %s:%s: %v",
-				packageName, resource, action, err,
+				"statement %d: DB.Exec(resource=%q, action=%q) failed: %v",
+				i, resource, action, err,
 			)
 		}
-	}
-}
-
-// countRows counts the rows of a table.
-func countRows(t *testing.T, store *Store, table string) int {
-	t.Helper()
-
-	var count int
-	//#nosec G201 -- table names come from the tests themselves.
-	if err := store.db.QueryRow(
-		fmt.Sprintf(`SELECT COUNT(*) FROM %s;`, table),
-	).Scan(&count); err != nil {
-		t.Fatalf(
-			"%s\ncount %s: %v",
-			packageName, table, err,
-		)
-	}
-	return count
-}
-
-// dropTable drops a table to force errors on statements touching it.
-func dropTable(t *testing.T, store *Store, table string) {
-	t.Helper()
-
-	//#nosec G201 -- table names come from the tests themselves.
-	if _, err := store.db.Exec(
-		fmt.Sprintf(`DROP TABLE %s;`, table),
-	); err != nil {
-		t.Fatalf(
-			"%s\ndrop %s: %v",
-			packageName, table, err,
-		)
 	}
 }

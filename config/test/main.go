@@ -17,15 +17,11 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/config"
 )
 
 // NilFlags sets all flags to nil in the given config.
-func NilFlags(t *testing.T, cfg *config.Config) {
-	t.Helper()
-
+func NilFlags(cfg *config.Config) {
 	flags := []string{
 		"log.level",
 		"log.timestamps",
@@ -46,10 +42,8 @@ func NilFlags(t *testing.T, cfg *config.Config) {
 	cfg.Settings.NilUndefinedFlags(&flagMap)
 }
 
-// BareConfig returns a minimal config with no flags set.
-func BareConfig(t *testing.T, nilFlags bool) (cfg *config.Config) {
-	t.Helper()
-
+// BareConfig returns a minimal config; with nilFlags, no flags are set.
+func BareConfig(nilFlags bool) (cfg *config.Config) {
 	cfg = &config.Config{
 		Settings: config.Settings{
 			Web: config.WebSettings{
@@ -61,16 +55,14 @@ func BareConfig(t *testing.T, nilFlags bool) (cfg *config.Config) {
 
 	// NilFlags can be a RACE condition, so use it conditionally.
 	if nilFlags {
-		NilFlags(t, cfg)
+		NilFlags(cfg)
 	}
 
 	cfg.HardDefaults.Default()
 	cfg.Settings.Default()
 
-	// Announce channel.
 	announceChannel := make(chan []byte, 16)
 	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
-	// Save channel.
 	saveChannel := make(chan bool, 16)
 	cfg.HardDefaults.Service.Status.SaveChannel = saveChannel
 	return

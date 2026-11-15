@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -37,7 +38,6 @@ import (
 )
 
 func TestLookup_Query(t *testing.T) {
-	// GIVEN: an instance responding in a particular way, and a service configured against it.
 	tests := []struct {
 		name         string
 		endpoints    map[string]forgeEndpoint
@@ -45,8 +45,8 @@ func TestLookup_Query(t *testing.T) {
 		requiredAuth string // Answer 401 to any request not carrying this.
 		defaults     map[string]HostDefaults
 		hostSuffix   string
-		hostNamed    bool // address the instance by its defaults name.
-		noHost       bool // on the Lookup.
+		hostNamed    bool // Address the instance by its defaults name.
+		noHost       bool // Give the Lookup no host.
 		closeServer  bool // Stop the instance before querying.
 		metrics      bool // Record Prometheus metrics for the query.
 		lookupYAML   string
@@ -367,9 +367,11 @@ func TestLookup_Query(t *testing.T) {
 			if tc.tls {
 				start = httptest.NewTLSServer
 			}
-			server := startForgeServer(t,
+			server := startForgeServer(
+				t,
 				&forgeServer{Endpoints: tc.endpoints, RequireAuth: tc.requiredAuth},
-				start)
+				start,
+			)
 			if tc.closeServer {
 				server.Close()
 			}
@@ -383,29 +385,16 @@ func TestLookup_Query(t *testing.T) {
 			lookup := testLookup(t, lookupYAML)
 			setHostDefaults(lookup, hostKeyedAt(tc.defaults, server.URL), nil)
 
-			// WHEN: it is queried.
 			_, err := lookup.Query(tc.metrics, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the version reported is as expected.
 			if got := lookup.Status.LatestVersion(); got != tc.wantVersion {
-				t.Fatalf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantVersion,
-				)
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, tc.wantVersion)
 			}
 
-			// AND: the API paths requested are as expected.
 			if tc.wantPaths != nil {
 				var paths []string
 				for _, request := range server.Requests() {
@@ -415,8 +404,8 @@ func TestLookup_Query(t *testing.T) {
 				}
 				if !slices.Equal(paths, tc.wantPaths) {
 					t.Fatalf(
-						"%s requested paths mismatch\ngot:  %v\nwant: %v",
-						prefix, paths, tc.wantPaths,
+						"Server.Requests() paths mismatch\ngot:  %q\nwant: %q",
+						paths, tc.wantPaths,
 					)
 				}
 			}
@@ -425,7 +414,6 @@ func TestLookup_Query(t *testing.T) {
 }
 
 func TestLookup_Query__Paginates(t *testing.T) {
-	// GIVEN: an instance whose first page of the endpoint queried holds no usable version.
 	tests := []struct {
 		name        string
 		endpoints   map[string]forgeEndpoint
@@ -464,41 +452,31 @@ func TestLookup_Query__Paginates(t *testing.T) {
 			server := newForgeServer(t, tc.endpoints)
 			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 
-			// WHEN: it is queried.
-			if _, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()}); err != nil {
-				t.Fatalf(
-					"%s\nLookup.Query() unexpected error: %v",
-					packageName, err,
-				)
+			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
+			if err != nil {
+				t.Fatalf("Lookup.Query() failed: %v", err)
 			}
 
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-			// THEN: the version from the second page is reported.
 			if got := lookup.Status.LatestVersion(); got != tc.wantVersion {
-				t.Fatalf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantVersion,
-				)
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, tc.wantVersion)
 			}
 
-			// AND: page 2 was asked for by number, from the endpoint the version was on.
 			requests := server.Requests()
 			if !slices.ContainsFunc(requests, func(r forgetest.RecordedRequest) bool {
 				return r.Query.Get("page") == "2" && strings.HasSuffix(r.Path, "/"+tc.wantOn)
 			}) {
 				t.Fatalf(
-					"%s never requested page 2 of /%s\ngot:  %+v",
-					prefix, tc.wantOn, requests,
+					"Server.Requests() mismatch\ngot:  %v\nwant: page=2 of /%s",
+					requests, tc.wantOn,
 				)
 			}
 
-			// AND: the page size used the forge's own parameter name, at its cap.
-			for _, request := range requests {
-				if got, want := request.Query.Get("limit"), fmt.Sprint(apiPageSize); got != want {
+			for i, request := range requests {
+				if got, want := request.Query.Get("limit"), strconv.Itoa(apiPageSize); got != want {
 					t.Fatalf(
-						"%s limit mismatch on %s\ngot:  %q\nwant: %q",
-						prefix, request.Path, got, want,
+						"request %d: RecordedRequest.Query[limit] mismatch\n"+
+							"got:  %q (path=%q)\nwant: %q",
+						i, got, request.Path, want,
 					)
 				}
 			}
@@ -507,40 +485,29 @@ func TestLookup_Query__Paginates(t *testing.T) {
 }
 
 func TestLookup_Query__CachesNothingBetweenQueries(t *testing.T) {
-	// GIVEN: an instance serving releases.
 	server := newForgeServer(t, map[string]forgeEndpoint{
 		endpointReleases: {Body: releasesBody},
 	})
 	lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 	logFrom := logx.LogFrom{Primary: t.Name()}
 
-	// WHEN: it is queried twice.
-	if _, err := lookup.Query(false, logFrom); err != nil {
-		t.Fatalf(
-			"%s\nLookup.Query() unexpected error on the first query: %v",
-			packageName, err,
-		)
+	_, err := lookup.Query(false, logFrom)
+	if err != nil {
+		t.Fatalf("first: Lookup.Query() failed: %v", err)
 	}
 	afterFirst := len(server.Requests())
 
-	if _, err := lookup.Query(false, logFrom); err != nil {
-		t.Fatalf(
-			"%s\nLookup.Query() unexpected error on the second query: %v",
-			packageName, err,
-		)
+	_, err = lookup.Query(false, logFrom)
+	if err != nil {
+		t.Fatalf("second: Lookup.Query() failed: %v", err)
 	}
 
-	// THEN: the second query went to the instance rather than reusing a cached response.
 	if got := len(server.Requests()); got <= afterFirst {
-		t.Fatalf(
-			"%s\nLookup.Query() reused a cached response\ngot:  %d requests\nwant: more than %d",
-			packageName, got, afterFirst,
-		)
+		t.Fatalf("Server.Requests() length mismatch\ngot:  %d\nwant: > %d", got, afterFirst)
 	}
 }
 
 func TestLookup_Query__NoTagsFallback(t *testing.T) {
-	// GIVEN: an instance with no releases, and a service filtering on something tags cannot carry.
 	tests := []struct {
 		name       string
 		lookupYAML string
@@ -565,26 +532,17 @@ func TestLookup_Query__NoTagsFallback(t *testing.T) {
 			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
 			lookup := testLookup(t, lookupYAML)
 
-			// WHEN: it is queried.
 			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-			// THEN: it reports that no releases were found, without mentioning tags.
 			e := errfmt.FormatError(err)
 			if wantRe := `^no releases were found$`; !util.RegexCheck(wantRe, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, wantRe,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantRe)
 			}
 
-			// AND: /tags was never requested.
 			for _, request := range server.Requests() {
 				if strings.HasSuffix(request.Path, "/"+endpointTags) {
 					t.Fatalf(
-						"%s requested /%s, which cannot satisfy the filters\ngot:  %q",
-						prefix, endpointTags, request.Path,
+						"RecordedRequest.Path mismatch\ngot:  %q\nwant: NOT %q",
+						request.Path, "/"+endpointTags,
 					)
 				}
 			}
@@ -592,57 +550,96 @@ func TestLookup_Query__NoTagsFallback(t *testing.T) {
 	}
 }
 
-func TestIsEmptyJSONList(t *testing.T) {
-	// GIVEN: a response body.
+func TestLookup_Query__EndpointFallback(t *testing.T) {
 	tests := []struct {
-		name string
-		body string
-		want bool
+		name          string
+		endpoints     map[string]forgeEndpoint
+		lookupYAML    string
+		wantRequested []string
+		wantLatest    string
+		errRegex      string
 	}{
 		{
-			name: "empty/compact",
-			body: emptyListCompact,
-			want: true,
+			name: "releases answers, so tags skipped",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+				endpointTags:     {Body: tagsBody},
+			},
+			lookupYAML:    `url: owner/repo`,
+			wantRequested: []string{endpointReleases, endpointReleases},
+			wantLatest:    "0.17.4",
+			errRegex:      `^$`,
 		},
 		{
-			name: "empty/LF",
-			body: emptyListNewline,
-			want: true,
+			name: "empty releases list falls through to tags",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
+			},
+			lookupYAML:    `url: owner/repo`,
+			wantRequested: []string{endpointReleases, endpointTags, endpointTags},
+			wantLatest:    "0.12.1",
+			errRegex:      `^$`,
 		},
 		{
-			name: "empty/CRLF",
-			body: "[]\r\n",
-			want: true,
+			name: "filters that tags cannot satisfy (regex_content) stop the fallback",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
+			},
+			lookupYAML: `
+				url: owner/repo
+				require:
+					regex_content: 'Argus-{{ version }}.linux-amd64'`,
+			wantRequested: []string{endpointReleases},
+			errRegex:      `^no releases were found$`,
 		},
 		{
-			name: "empty/surrounded by whitespace",
-			body: "  []  ",
-			want: true,
+			name: "wanting prereleases doesn't stop the tags fallback",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: tagsBody},
+			},
+			lookupYAML: `
+				url: owner/repo
+				use_prerelease: true`,
+			wantRequested: []string{endpointReleases, endpointTags, endpointTags},
+			wantLatest:    "0.12.1",
+			errRegex:      `^$`,
 		},
 		{
-			name: "not empty/a release list",
-			body: releasesBody,
-			want: false,
+			name: "pre-release tag is excluded by default as its name labels it",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: preReleaseTagsBody},
+			},
+			lookupYAML:    `url: owner/repo`,
+			wantRequested: []string{endpointReleases, endpointTags, endpointTags},
+			wantLatest:    "0.12.1",
+			errRegex:      `^$`,
 		},
 		{
-			name: "not empty/a list holding one release",
-			body: `[{"tag_name":"1.0.0"}]`,
-			want: false,
+			name: "pre-release tag is taken when prereleases are wanted",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+				endpointTags:     {Body: preReleaseTagsBody},
+			},
+			lookupYAML: `
+				url: owner/repo
+				use_prerelease: true`,
+			wantRequested: []string{endpointReleases, endpointTags, endpointTags},
+			wantLatest:    "0.13.0-rc1",
+			errRegex:      `^$`,
 		},
 		{
-			name: "not empty/an object",
-			body: `{}`,
-			want: false,
-		},
-		{
-			name: "not empty/no body",
-			body: "",
-			want: false,
-		},
-		{
-			name: "not empty/a non-empty list",
-			body: `[1]`,
-			want: false,
+			name: "rate-limit response stops the fallback",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Status: http.StatusTooManyRequests, Body: "<!DOCTYPE html>"},
+				endpointTags:     {Body: tagsBody},
+			},
+			lookupYAML:    `url: owner/repo`,
+			wantRequested: []string{endpointReleases},
+			errRegex:      `^rate limit reached for 127\.0\.0\.1:\d+ - no access_token was sent$`,
 		},
 	}
 
@@ -650,15 +647,27 @@ func TestIsEmptyJSONList(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: isEmptyJSONList is called on it.
-			got := isEmptyJSONList([]byte(tc.body))
+			server := newForgeServer(t, tc.endpoints)
+			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
+			lookup := testLookup(t, lookupYAML)
 
-			// THEN: emptiness is judged on content, not on length.
-			if got != tc.want {
+			_, err := lookup.query(logx.LogFrom{Primary: t.Name()})
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, tc.wantLatest)
+			}
+
+			requested := test.Attributes(server.Requests(), func(r forgetest.RecordedRequest) string {
+				return path.Base(r.Path)
+			})
+			if !slices.Equal(requested, tc.wantRequested) {
 				t.Fatalf(
-					"%s\nisEmptyJSONList(%q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.body,
-					got, tc.want,
+					"Server.Requests() endpoints mismatch\ngot:  %q\nwant: %q",
+					requested, tc.wantRequested,
 				)
 			}
 		})
@@ -666,7 +675,6 @@ func TestIsEmptyJSONList(t *testing.T) {
 }
 
 func TestEndpointYieldedNothing(t *testing.T) {
-	// GIVEN: an error from an endpoint.
 	tests := []struct {
 		name string
 		err  error
@@ -703,23 +711,16 @@ func TestEndpointYieldedNothing(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: endpointYieldedNothing is called on it.
 			got := endpointYieldedNothing(tc.err)
 
-			// THEN: only an empty list or a 404 counts as nothing to filter.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nendpointYieldedNothing(%v) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.err,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestNothingFound(t *testing.T) {
-	// GIVEN: what each endpoint tried came back with.
 	tests := []struct {
 		name                 string
 		releasesErr, tagsErr error
@@ -770,95 +771,109 @@ func TestNothingFound(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: nothingFound is called.
 			got := nothingFound(tc.releasesErr, tc.tagsErr, tc.triedTags)
 
-			// THEN: the message names only the causes still possible.
 			if got == nil || got.Error() != tc.want {
-				t.Fatalf(
-					"%s\nnothingFound(%v, %v, %t) mismatch\ngot:  %v\nwant: %q",
-					packageName, tc.releasesErr, tc.tagsErr, tc.triedTags, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %v\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
-func TestRequestsRemaining(t *testing.T) {
-	// GIVEN: the headers a limiter in front of the forge may have set.
+func TestLookup_QueryEndpoint(t *testing.T) {
 	tests := []struct {
-		name     string
-		headers  map[string]string
-		want     int
-		wantSaid bool
+		name           string
+		endpoints      map[string]forgeEndpoint
+		latestVersion  string // Already known to the service.
+		endpoint       string
+		wantNewVersion bool
+		wantLatest     string
+		errRegex       string
 	}{
 		{
-			name:     "silent/no headers at all",
-			want:     0,
-			wantSaid: false,
-		},
-		{
-			name:     "silent/only a policy describing the budget",
-			headers:  map[string]string{"RateLimit-Policy": `"baseline";q=2000;w=600`},
-			want:     0,
-			wantSaid: false,
-		},
-		{
-			name:     "silent/only Retry-After, which any outage may set",
-			headers:  map[string]string{"Retry-After": "120"},
-			want:     0,
-			wantSaid: false,
-		},
-		{
-			name:     "silent/remaining count that is not a number",
-			headers:  map[string]string{"X-RateLimit-Remaining": "many"},
-			want:     0,
-			wantSaid: false,
-		},
-		{
-			name:     "silent/IETF header with no r= parameter",
-			headers:  map[string]string{"RateLimit": `"baseline";t=600`},
-			want:     0,
-			wantSaid: false,
-		},
-		{
-			name:     "said/GitHub's X-RateLimit-Remaining, spent",
-			headers:  map[string]string{"X-RateLimit-Remaining": "0"},
-			want:     0,
-			wantSaid: true,
-		},
-		{
-			name:     "said/GitHub's X-RateLimit-Remaining, with budget left",
-			headers:  map[string]string{"X-RateLimit-Remaining": "1"},
-			want:     1,
-			wantSaid: true,
-		},
-		{
-			name:     "said/bare RateLimit-Remaining spelling",
-			headers:  map[string]string{"RateLimit-Remaining": "7"},
-			want:     7,
-			wantSaid: true,
-		},
-		{
-			name:     "said/IETF RateLimit header, spent",
-			headers:  map[string]string{"RateLimit": `"baseline";r=0;t=600`},
-			want:     0,
-			wantSaid: true,
-		},
-		{
-			name:     "said/IETF RateLimit header, with budget left",
-			headers:  map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
-			want:     1960,
-			wantSaid: true,
-		},
-		{
-			name: "said/a bare count wins over the IETF header",
-			headers: map[string]string{
-				"RateLimit":             `"baseline";r=1960;t=600`,
-				"X-RateLimit-Remaining": "0",
+			name: "version on the first page",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
 			},
-			want:     0,
-			wantSaid: true,
+			endpoint:   endpointReleases,
+			wantLatest: "0.17.4",
+			errRegex:   `^$`,
+		},
+		{
+			name: "newer version on the first page",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			},
+			latestVersion:  "0.0.1",
+			endpoint:       endpointReleases,
+			wantNewVersion: true,
+			wantLatest:     "0.17.4",
+			errRegex:       `^$`,
+		},
+		{
+			name: "version only on a later page",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Pages: []string{
+					`[{"tag_name":"not-a-version","prerelease":false}]`,
+					`[{"tag_name":"nor-this","prerelease":false}]`,
+					`[{"tag_name":"3.2.1","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}]`,
+				}},
+			},
+			endpoint:   endpointReleases,
+			wantLatest: "3.2.1",
+			errRegex:   `^$`,
+		},
+		{
+			name: "tags endpoint is walked",
+			endpoints: map[string]forgeEndpoint{
+				endpointTags: {Body: tagsBody},
+			},
+			endpoint:   endpointTags,
+			wantLatest: "0.12.1",
+			errRegex:   `^$`,
+		},
+		{
+			name: "an empty list stops the walk with nothing to filter",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListCompact},
+			},
+			endpoint: endpointReleases,
+			errRegex: `^empty list$`,
+		},
+		{
+			name: "pages that never yield a version end in an error",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Pages: []string{
+					`[{"tag_name":"not-a-version","prerelease":false}]`,
+					`[{"tag_name":"nor-this","prerelease":false}]`,
+				}},
+			},
+			endpoint: endpointReleases,
+			errRegex: `^no releases were found matching the url_commands on page 2 of the API response$`,
+		},
+		{
+			name: "next page that does not advance is refused",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {
+					Body: `[{"tag_name":"not-a-version","prerelease":false}]`,
+					Headers: map[string]string{
+						"Link": `<https://root-url.example.com/api/v1/repos/o/r/releases?page=1>; rel="next"`,
+					},
+				},
+			},
+			endpoint: endpointReleases,
+			errRegex: `^/releases did not advance past page 1$`,
+		},
+		{
+			name: "endless walk stops at the page cap",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {
+					Body:    `[{"tag_name":"not-a-version","prerelease":false}]`,
+					Endless: true,
+				},
+			},
+			endpoint: endpointReleases,
+			errRegex: fmt.Sprintf(`^gave up walking /releases after %d pages$`, maxPages),
 		},
 	}
 
@@ -866,107 +881,95 @@ func TestRequestsRemaining(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			header := http.Header{}
-			for key, value := range tc.headers {
-				header.Set(key, value)
+			server := newForgeServer(t, tc.endpoints)
+			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+			if tc.latestVersion != "" {
+				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
 			}
 
-			// WHEN: requestsRemaining is called with them.
-			got, gotSaid := requestsRemaining(header)
-
-			// THEN: the count is read only where the limiter gave one.
-			if gotSaid != tc.wantSaid {
-				t.Fatalf(
-					"%s\nrequestsRemaining() said mismatch\ngot:  %t\nwant: %t",
-					packageName, gotSaid, tc.wantSaid,
-				)
+			newVersion, err := lookup.queryEndpoint(tc.endpoint, logx.LogFrom{Primary: t.Name()})
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nrequestsRemaining() count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, tc.want,
-				)
+
+			if newVersion != tc.wantNewVersion {
+				t.Fatalf("newVersion mismatch\ngot:  %t\nwant: %t", newVersion, tc.wantNewVersion)
+			}
+
+			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, tc.wantLatest)
 			}
 		})
 	}
 }
 
-func TestIsRateLimited(t *testing.T) {
-	// GIVEN: an API response.
+func TestLookup_QueryPage(t *testing.T) {
 	tests := []struct {
-		name    string
-		status  int
-		headers map[string]string
-		want    bool
+		name           string
+		endpoints      map[string]forgeEndpoint
+		page           int
+		latestVersion  string
+		wantNewVersion bool
+		wantNextPage   int
+		wantLatest     string
+		errRegex       string
 	}{
 		{
-			name:   "limited/429 alone",
-			status: http.StatusTooManyRequests,
-			want:   true,
+			name: "first version is recorded, but is not announced as new",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			},
+			page:       1,
+			wantLatest: "0.17.4",
+			errRegex:   `^$`,
 		},
 		{
-			name:    "limited/403 with the IETF RateLimit header",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
-			want:    true,
+			name: "version replacing an older one is new",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			},
+			page:           1,
+			latestVersion:  "0.1.0",
+			wantNewVersion: true,
+			wantLatest:     "0.17.4",
+			errRegex:       `^$`,
 		},
 		{
-			name:    "not limited/403 with only a RateLimit-Policy header",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"RateLimit-Policy": `"baseline";q=2000;w=600`},
-			want:    false,
+			name: "unchanged version is neither new nor an error",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			},
+			page:          1,
+			latestVersion: "0.17.4",
+			wantLatest:    "0.17.4",
+			errRegex:      `^$`,
 		},
 		{
-			name:    "not limited/403 with the IETF RateLimit header showing requests remaining",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
-			want:    false,
+			name: "no version on this page, but another page to try",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Pages: []string{
+					`[{"tag_name":"not-a-version","prerelease":false}]`,
+					releasesBody,
+				}},
+			},
+			page:         1,
+			wantNextPage: 2,
+			errRegex:     `^$`,
 		},
 		{
-			name:    "not limited/403 with GitHub's X-RateLimit-Remaining above zero",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"X-RateLimit-Remaining": "59"},
-			want:    false,
+			name: "no version and no further page is an error",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: `[{"tag_name":"not-a-version","prerelease":false}]`},
+			},
+			page:     1,
+			errRegex: `^no releases were found matching the url_commands on page 1 of the API response$`,
 		},
 		{
-			name:    "limited/403 with RateLimit-Remaining at zero",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"RateLimit-Remaining": "0"},
-			want:    true,
-		},
-		{
-			name:    "limited/403 with GitHub's X-RateLimit-Remaining at zero",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"X-RateLimit-Remaining": "0"},
-			want:    true,
-		},
-		{
-			name:    "limited/IETF RateLimit header, spent",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
-			want:    true,
-		},
-		{
-			name:   "not limited/403 with no rate-limit headers",
-			status: http.StatusForbidden,
-			want:   false,
-		},
-		{
-			name:    "not limited/403 with only Retry-After (possible maintenance window)",
-			status:  http.StatusForbidden,
-			headers: map[string]string{"Retry-After": "120"},
-			want:    false,
-		},
-		{
-			name:   "not limited/401",
-			status: http.StatusUnauthorized,
-			want:   false,
-		},
-		{
-			name:    "not limited/200 carrying the limiter's running count",
-			status:  http.StatusOK,
-			headers: map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
-			want:    false,
+			name:      "404 stops the walk",
+			endpoints: map[string]forgeEndpoint{},
+			page:      1,
+			errRegex:  `^not found$`,
 		},
 	}
 
@@ -974,31 +977,429 @@ func TestIsRateLimited(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			response := newResponse(t,
-				"https://codeberg.org",
-				tc.status,
-				tc.headers,
-				"",
-				"",
+			server := newForgeServer(t, tc.endpoints)
+			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+			if tc.latestVersion != "" {
+				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
+			}
+
+			// The second check, so it commits rather than re-checking.
+			newVersion, nextPage, err := lookup.queryPage(
+				1, tc.page, endpointReleases,
+				logx.LogFrom{Primary: t.Name()},
+			)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if newVersion != tc.wantNewVersion {
+				t.Fatalf("newVersion mismatch\ngot:  %t\nwant: %t", newVersion, tc.wantNewVersion)
+			}
+			if nextPage != tc.wantNextPage {
+				t.Fatalf("nextPage mismatch\ngot:  %d\nwant: %d", nextPage, tc.wantNextPage)
+			}
+			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
+				t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, tc.wantLatest)
+			}
+
+			requests := server.Requests()
+			if len(requests) == 0 {
+				t.Fatal("Server.Requests() length mismatch\ngot:  0\nwant: > 0")
+			}
+			wantPath := "/api/v1/repos/owner/repo/" + endpointReleases
+			if got := requests[0].Path; got != wantPath {
+				t.Errorf("RecordedRequest.Path mismatch\ngot:  %q\nwant: %q", got, wantPath)
+			}
+		})
+	}
+}
+
+func TestLookup_HTTPRequest(t *testing.T) {
+	tests := []struct {
+		name         string
+		endpoints    map[string]forgeEndpoint
+		host         string // Fixture override.
+		endpoint     string
+		page         int
+		wantBody     string
+		wantNextPage int
+		errRegex     string
+	}{
+		{
+			name: "valid/a page of releases",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			wantBody: releasesBody,
+			errRegex: `^$`,
+		},
+		{
+			name: "valid/a paginated page advertises the next",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Pages: []string{releasesBody, tagsBody}},
+			},
+			endpoint:     endpointReleases,
+			page:         1,
+			wantBody:     releasesBody,
+			wantNextPage: 2,
+			errRegex:     `^$`,
+		},
+		{
+			name: "invalid/an empty first page",
+			endpoints: map[string]forgeEndpoint{
+				endpointReleases: {Body: emptyListNewline},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			errRegex: `^empty list$`,
+		},
+		{
+			name:      "invalid/an endpoint the instance does not serve",
+			endpoints: map[string]forgeEndpoint{},
+			endpoint:  endpointReleases,
+			page:      1,
+			errRegex:  `^not found$`,
+		},
+		{
+			name:      "invalid/a host no request can be built for",
+			endpoints: map[string]forgeEndpoint{},
+			host:      "https://codeberg.org/%zz",
+			endpoint:  endpointReleases,
+			page:      1,
+			errRegex: test.TrimYAML(`
+				^invalid host "[^"]+":
+					parse "[^"]+":
+						invalid URL escape "%zz"$`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := newForgeServer(t, tc.endpoints)
+			host := util.ValueOr(tc.host, server.URL)
+			lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
+
+			body, nextPage, err := lookup.httpRequest(
+				tc.endpoint, tc.page,
+				logx.LogFrom{Primary: t.Name()},
+			)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if string(body) != tc.wantBody {
+				t.Fatalf("body mismatch\ngot:  %q\nwant: %q", string(body), tc.wantBody)
+			}
+			if nextPage != tc.wantNextPage {
+				t.Fatalf("nextPage mismatch\ngot:  %d\nwant: %d", nextPage, tc.wantNextPage)
+			}
+		})
+	}
+}
+
+func TestLookup_CreateRequest(t *testing.T) {
+	tests := []struct {
+		name         string
+		host         string
+		serviceToken string
+		defaults     map[string]HostDefaults
+		endpoint     string
+		page         int
+		wantURL      string
+		wantAuth     string
+		errRegex     string
+	}{
+		{
+			name:     "releases, first page",
+			host:     "https://codeberg.org",
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:     "tags, second page",
+			host:     "https://codeberg.org",
+			endpoint: endpointTags,
+			page:     2,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/tags?limit=50&page=2",
+			errRegex: `^$`,
+		},
+		{
+			name:     "unvalidated host still builds an address",
+			host:     "", // CheckValues validates the host.
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https:///api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:         "service's own token is sent",
+			host:         "https://codeberg.org",
+			serviceToken: "service-token",
+			endpoint:     endpointReleases,
+			page:         1,
+			wantURL:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			wantAuth:     "Bearer service-token",
+			errRegex:     `^$`,
+		},
+		{
+			name: "token from the matching host entry is sent",
+			host: "https://codeberg.org",
+			defaults: map[string]HostDefaults{
+				"https://codeberg.org": {URL: "https://codeberg.org", AccessToken: "defaults-token"},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			wantAuth: "Bearer defaults-token",
+			errRegex: `^$`,
+		},
+		{
+			name: "host matching no entry is sent no credential",
+			host: "https://codeberg.org",
+			defaults: map[string]HostDefaults{
+				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "defaults-token"},
+			},
+			endpoint: endpointReleases,
+			page:     1,
+			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:     "a host no address can be built from",
+			host:     "https://codeberg.org/%zz", // CheckValues rejects it first.
+			endpoint: endpointReleases,
+			page:     1,
+			errRegex: test.TrimYAML(`
+				^invalid host "[^"]+":
+					parse "[^"]+":
+						invalid URL escape "%zz"$`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := Lookup{
+				Host:        tc.host,
+				AccessToken: tc.serviceToken,
+			}
+			lookup.URL = "owner/repo"
+			lookup.SetTypeDefaults(
+				&Defaults{Host: tc.defaults},
+				&Defaults{},
 			)
 
-			// WHEN: isRateLimited is called on it.
-			got := isRateLimited(response)
+			request, err := lookup.createRequest(
+				tc.endpoint,
+				tc.page,
+				logx.LogFrom{Primary: t.Name()},
+			)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if err != nil {
+				return
+			}
 
-			// THEN: only a 429, or a 403 announcing a limiter, counts as rate limited.
-			if got != tc.want {
+			if request.Method != http.MethodGet {
 				t.Fatalf(
-					"%s\nisRateLimited(status=%d, headers=%v) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.status, tc.headers,
-					got, tc.want,
+					"Request.Method mismatch\ngot:  %q\nwant: %q",
+					request.Method, http.MethodGet,
+				)
+			}
+			if got := request.URL.String(); got != tc.wantURL {
+				t.Fatalf("Request.URL.String() mismatch\ngot:  %q\nwant: %q", got, tc.wantURL)
+			}
+
+			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
+				t.Fatalf(
+					"Request.Header[Authorization] mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantAuth,
+				)
+			}
+
+			for _, header := range []string{"If-None-Match", "If-Modified-Since"} {
+				if got := request.Header.Get(header); got != "" {
+					t.Fatalf("Request.Header[%s] mismatch\ngot:  %q\nwant: \"\"", header, got)
+				}
+			}
+		})
+	}
+}
+
+func TestLookup_RequestFor(t *testing.T) {
+	tests := []struct {
+		name         string
+		address      string
+		serviceToken string
+		wantAuth     string
+		errRegex     string
+	}{
+		{
+			name:     "valid address",
+			address:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			errRegex: `^$`,
+		},
+		{
+			name:         "the access token is sent",
+			address:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
+			serviceToken: "service-token",
+			wantAuth:     "Bearer service-token",
+			errRegex:     `^$`,
+		},
+		{
+			name:    "an address no request can be built for",
+			address: "invalid://\ttest",
+			errRegex: test.TrimYAML(`
+				^failed creating http request for .*`,
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := Lookup{AccessToken: tc.serviceToken}
+			lookup.SetTypeDefaults(&Defaults{}, &Defaults{})
+
+			request, err := lookup.requestFor(
+				tc.address,
+				logx.LogFrom{Primary: t.Name()},
+			)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if err != nil {
+				return
+			}
+
+			if request.Method != http.MethodGet {
+				t.Fatalf(
+					"Request.Method mismatch\ngot:  %q\nwant: %q",
+					request.Method, http.MethodGet,
+				)
+			}
+			if got := request.URL.String(); got != tc.address {
+				t.Fatalf("Request.URL.String() mismatch\ngot:  %q\nwant: %q", got, tc.address)
+			}
+			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
+				t.Fatalf(
+					"Request.Header[Authorization] mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantAuth,
 				)
 			}
 		})
+	}
+}
+
+func TestLookup_GetResponse(t *testing.T) {
+	t.Run("valid/the response and its body come back from /releases", func(t *testing.T) {
+		t.Parallel()
+
+		server := newForgeServer(t, map[string]forgeEndpoint{
+			endpointReleases: {Body: releasesBody},
+		})
+		lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+		logFrom := logx.LogFrom{Primary: t.Name()}
+
+		req, err := lookup.createRequest(endpointReleases, 1, logFrom)
+		if err != nil {
+			t.Fatalf("Lookup.createRequest() failed: %v", err)
+		}
+
+		response, body, err := lookup.getResponse(req, logFrom)
+		if err != nil {
+			t.Fatalf("Lookup.getResponse() failed: %v", err)
+		}
+
+		if got, want := response.StatusCode, http.StatusOK; got != want {
+			t.Fatalf("status code mismatch\ngot:  %d - %q\nwant: %d", got, string(body), want)
+		}
+		if string(body) != releasesBody {
+			t.Fatalf("body mismatch\ngot:  %q\nwant: %q", string(body), releasesBody)
+		}
+	})
+
+	t.Run("invalid/an instance that is not listening", func(t *testing.T) {
+		t.Parallel()
+
+		server := newForgeServer(t, map[string]forgeEndpoint{})
+		host := server.URL
+		server.Close()
+
+		lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
+		logFrom := logx.LogFrom{Primary: t.Name()}
+
+		req, err := lookup.createRequest(endpointReleases, 1, logFrom)
+		if err != nil {
+			t.Fatalf("Lookup.createRequest() failed: %v", err)
+		}
+
+		response, body, err := lookup.getResponse(req, logFrom)
+		e := errfmt.FormatError(err)
+		if wantRe := `connection refused|connect: `; !util.RegexCheck(wantRe, e) {
+			t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantRe)
+		}
+		if response != nil || body != nil {
+			t.Fatalf(
+				"response, body mismatch\n"+
+					"got:  response nil=%t, body nil=%t\nwant: response nil=true, body nil=true",
+				response == nil, body == nil,
+			)
+		}
+	})
+}
+
+func TestLookup_GetResponse__readError(t *testing.T) {
+	// Promises a body, then closes the connection without sending it.
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "10")
+			w.WriteHeader(http.StatusOK)
+			conn, _, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Errorf("Hijacker.Hijack() failed: %v", err)
+				return
+			}
+			conn.Close()
+		}),
+	)
+	t.Cleanup(server.Close)
+
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatalf("http.NewRequest() failed: %v", err)
+	}
+
+	lookup := Lookup{}
+	response, body, err := lookup.getResponse(req, logx.LogFrom{Primary: t.Name()})
+
+	e := errfmt.FormatError(err)
+	if wantRe := `unexpected EOF|connection reset|body length`; !util.RegexCheck(wantRe, e) {
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantRe)
+	}
+	if response != nil || body != nil {
+		t.Fatalf(
+			"response, body mismatch\n"+
+				"got:  response nil=%t, body nil=%t\nwant: response nil=true, body nil=true",
+			response == nil, body == nil,
+		)
 	}
 }
 
 func TestHandleResponse(t *testing.T) {
-	// GIVEN: a response with a given status and headers.
 	tests := []struct {
 		name         string
 		status       int
@@ -1033,7 +1434,7 @@ func TestHandleResponse(t *testing.T) {
 			errRegex: `^empty list$`,
 		},
 		{
-			name:     "200/empty later page is returned, not reported as nothing",
+			name:     "200/empty later page is returned",
 			status:   http.StatusOK,
 			body:     emptyListNewline,
 			page:     2,
@@ -1112,7 +1513,7 @@ func TestHandleResponse(t *testing.T) {
 			errRegex: `^rate limit reached for codeberg.org - no access_token was sent$`,
 		},
 		{
-			name:     "429 with a retry window names it",
+			name:     "429/retry window and the absent credential both named",
 			status:   http.StatusTooManyRequests,
 			headers:  map[string]string{"Retry-After": "120"},
 			body:     `<!DOCTYPE html>`,
@@ -1120,7 +1521,7 @@ func TestHandleResponse(t *testing.T) {
 			errRegex: `^rate limit reached for codeberg.org - retry after 120 - no access_token was sent$`,
 		},
 		{
-			name:     "unmapped status reported with an excerpt of its body",
+			name:     "unmapped/status reported with an excerpt of its body",
 			status:   http.StatusInternalServerError,
 			body:     "proxy error",
 			page:     1,
@@ -1132,7 +1533,8 @@ func TestHandleResponse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			response := newResponse(t,
+			response := newResponse(
+				t,
 				"https://codeberg.org/api/v1/repos/o/r/releases",
 				tc.status,
 				tc.headers,
@@ -1140,37 +1542,410 @@ func TestHandleResponse(t *testing.T) {
 				tc.accessToken,
 			)
 
-			// WHEN: handleResponse is called.
 			body, nextPage, err := handleResponse(
 				response, []byte(tc.body), tc.page,
 				logx.LogFrom{Primary: t.Name()},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nhandleResponse(%d)",
-				packageName, tc.status,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the body and next page are as expected.
 			if string(body) != tc.wantBody {
-				t.Fatalf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, string(body), tc.wantBody,
-				)
+				t.Fatalf("body mismatch\ngot:  %q\nwant: %q", string(body), tc.wantBody)
 			}
 			if nextPage != tc.wantNextPage {
+				t.Fatalf("nextPage mismatch\ngot:  %d\nwant: %d", nextPage, tc.wantNextPage)
+			}
+		})
+	}
+}
+
+func TestIsEmptyJSONList(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{
+			name: "empty/compact",
+			body: emptyListCompact,
+			want: true,
+		},
+		{
+			name: "empty/LF",
+			body: emptyListNewline,
+			want: true,
+		},
+		{
+			name: "empty/CRLF",
+			body: "[]\r\n",
+			want: true,
+		},
+		{
+			name: "empty/surrounded by whitespace",
+			body: "  []  ",
+			want: true,
+		},
+		{
+			name: "not empty/a release list",
+			body: releasesBody,
+			want: false,
+		},
+		{
+			name: "not empty/a list holding one release",
+			body: `[{"tag_name":"1.0.0"}]`,
+			want: false,
+		},
+		{
+			name: "not empty/an object",
+			body: `{}`,
+			want: false,
+		},
+		{
+			name: "not empty/no body",
+			body: "",
+			want: false,
+		},
+		{
+			name: "not empty/a non-empty list",
+			body: `[1]`,
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := isEmptyJSONList([]byte(tc.body))
+
+			if got != tc.want {
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRequestsRemaining(t *testing.T) {
+	tests := []struct {
+		name     string
+		headers  map[string]string
+		want     int
+		wantSaid bool
+	}{
+		{
+			name:     "silent/no headers",
+			want:     0,
+			wantSaid: false,
+		},
+		{
+			name:     "silent/only a policy describing the budget",
+			headers:  map[string]string{"RateLimit-Policy": `"baseline";q=2000;w=600`},
+			want:     0,
+			wantSaid: false,
+		},
+		{
+			name:     "silent/only 'Retry-After', which any outage may set",
+			headers:  map[string]string{"Retry-After": "120"},
+			want:     0,
+			wantSaid: false,
+		},
+		{
+			name:     "silent/remaining count that is not a number",
+			headers:  map[string]string{"X-RateLimit-Remaining": "many"},
+			want:     0,
+			wantSaid: false,
+		},
+		{
+			name:     "silent/IETF header with no 'r=' parameter",
+			headers:  map[string]string{"RateLimit": `"baseline";t=600`},
+			want:     0,
+			wantSaid: false,
+		},
+		{
+			name:     "said/GitHub's X-RateLimit-Remaining, spent",
+			headers:  map[string]string{"X-RateLimit-Remaining": "0"},
+			want:     0,
+			wantSaid: true,
+		},
+		{
+			name:     "said/GitHub's X-RateLimit-Remaining, with budget left",
+			headers:  map[string]string{"X-RateLimit-Remaining": "1"},
+			want:     1,
+			wantSaid: true,
+		},
+		{
+			name:     "said/bare RateLimit-Remaining spelling",
+			headers:  map[string]string{"RateLimit-Remaining": "7"},
+			want:     7,
+			wantSaid: true,
+		},
+		{
+			name:     "said/IETF RateLimit header, spent",
+			headers:  map[string]string{"RateLimit": `"baseline";r=0;t=600`},
+			want:     0,
+			wantSaid: true,
+		},
+		{
+			name:     "said/IETF RateLimit header, with budget left",
+			headers:  map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
+			want:     1960,
+			wantSaid: true,
+		},
+		{
+			name: "said/a bare count wins over the IETF header",
+			headers: map[string]string{
+				"RateLimit":             `"baseline";r=1960;t=600`,
+				"X-RateLimit-Remaining": "0",
+			},
+			want:     0,
+			wantSaid: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			header := http.Header{}
+			for key, value := range tc.headers {
+				header.Set(key, value)
+			}
+
+			got, gotSaid := requestsRemaining(header)
+
+			if gotSaid != tc.wantSaid {
+				t.Fatalf("said mismatch\ngot:  %t\nwant: %t", gotSaid, tc.wantSaid)
+			}
+			if got != tc.want {
+				t.Fatalf("remaining count mismatch\ngot:  %d\nwant: %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsRateLimited(t *testing.T) {
+	tests := []struct {
+		name    string
+		status  int
+		headers map[string]string
+		want    bool
+	}{
+		{
+			name:   "limited/429 alone",
+			status: http.StatusTooManyRequests,
+			want:   true,
+		},
+		{
+			name:    "limited/403 with the IETF RateLimit header",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
+			want:    true,
+		},
+		{
+			name:    "not limited/403 with only a RateLimit-Policy header",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"RateLimit-Policy": `"baseline";q=2000;w=600`},
+			want:    false,
+		},
+		{
+			name:    "not limited/403 with the IETF RateLimit header showing requests remaining",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
+			want:    false,
+		},
+		{
+			name:    "not limited/403 with GitHub's X-RateLimit-Remaining above zero",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"X-RateLimit-Remaining": "59"},
+			want:    false,
+		},
+		{
+			name:    "limited/403 with RateLimit-Remaining at zero",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"RateLimit-Remaining": "0"},
+			want:    true,
+		},
+		{
+			name:    "limited/403 with GitHub's X-RateLimit-Remaining at zero",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"X-RateLimit-Remaining": "0"},
+			want:    true,
+		},
+		{
+			name:    "limited/IETF RateLimit header, spent",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"RateLimit": `"baseline";r=0;t=600`},
+			want:    true,
+		},
+		{
+			name:   "not limited/403 with no rate-limit headers",
+			status: http.StatusForbidden,
+			want:   false,
+		},
+		{
+			name:    "not limited/403 with only 'Retry-After' (possible maintenance window)",
+			status:  http.StatusForbidden,
+			headers: map[string]string{"Retry-After": "120"},
+			want:    false,
+		},
+		{
+			name:   "not limited/401",
+			status: http.StatusUnauthorized,
+			want:   false,
+		},
+		{
+			name:    "not limited/200 carrying the limiter's running count",
+			status:  http.StatusOK,
+			headers: map[string]string{"RateLimit": `"baseline";r=1960;t=600`},
+			want:    false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			response := newResponse(
+				t,
+				"https://codeberg.org",
+				tc.status,
+				tc.headers,
+				"",
+				"",
+			)
+
+			got := isRateLimited(response)
+
+			if got != tc.want {
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLookup_GetVersion(t *testing.T) {
+	tests := []struct {
+		name            string
+		lookupYAML      string
+		body            string
+		page            int
+		wantVersion     string
+		wantReleaseDate string
+		errRegex        string
+	}{
+		{
+			name: "the highest semantic version, with its release date",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body:            releasesBody,
+			page:            1,
+			wantVersion:     "0.17.4",
+			wantReleaseDate: "2000-01-02T00:00:00Z",
+			errRegex:        `^$`,
+		},
+		{
+			name: "require narrows which release is taken",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				require:
+					regex_version: '^0\.16\.'`,
+			body:            releasesBody,
+			page:            1,
+			wantVersion:     "0.16.9",
+			wantReleaseDate: "2000-01-01T00:00:00Z",
+			errRegex:        `^$`,
+		},
+		{
+			name: "tags/tag has no published_at",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body: tagsBody,
+			page: 1,
+
+			wantVersion: "0.12.1",
+			errRegex:    `^$`,
+		},
+		{
+			name: "tags/semver-prerelease tag name is excluded",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body: preReleaseTagsBody,
+			page: 1,
+
+			wantVersion: "0.12.1",
+			errRegex:    `^$`,
+		},
+		{
+			name: "tags/semver-prerelease tag name is kept when opted into",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				use_prerelease: true`,
+			body: preReleaseTagsBody,
+			page: 1,
+
+			wantVersion: "0.13.0-rc1",
+			errRegex:    `^$`,
+		},
+		{
+			name: "nothing matches the url_commands",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body:     `[{"tag_name":"not-a-version","prerelease":false}]`,
+			page:     3,
+			errRegex: `^no releases were found matching the url_commands on page 3 of the API response$`,
+		},
+		{
+			name: "nothing meets the require fields",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo
+				require:
+					regex_version: '^9\.'`,
+			body:     releasesBody,
+			page:     1,
+			errRegex: `^no releases were found matching the require fields`,
+		},
+		{
+			name: "a body that is not a release list",
+			lookupYAML: `
+				host: https://codeberg.org
+				url: owner/repo`,
+			body:     `<!DOCTYPE html>`,
+			page:     1,
+			errRegex: `^release data failed to parse`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, tc.lookupYAML)
+
+			version, releaseDate, err := lookup.getVersion(
+				[]byte(tc.body), tc.page,
+				logx.LogFrom{Primary: t.Name()},
+			)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if version != tc.wantVersion {
+				t.Fatalf("version mismatch\ngot:  %q\nwant: %q", version, tc.wantVersion)
+			}
+			if releaseDate != tc.wantReleaseDate {
 				t.Fatalf(
-					"%s next page mismatch\ngot:  %d\nwant: %d",
-					prefix, nextPage, tc.wantNextPage,
+					"releaseDate mismatch\ngot:  %q\nwant: %q",
+					releaseDate, tc.wantReleaseDate,
 				)
 			}
 		})
@@ -1178,7 +1953,6 @@ func TestHandleResponse(t *testing.T) {
 }
 
 func TestLookup_FilterReleases(t *testing.T) {
-	// GIVEN: releases, and a Lookup whose settings filter them.
 	tests := []struct {
 		name       string
 		lookupYAML string
@@ -1241,1061 +2015,25 @@ func TestLookup_FilterReleases(t *testing.T) {
 			lookup := testLookup(t, tc.lookupYAML)
 			releases, err := forge.UnmarshalReleases([]byte(tc.body))
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal the body: %v",
-					packageName, err,
-				)
+				t.Fatalf("forge.UnmarshalReleases() failed: %v", err)
 			}
 
-			// WHEN: filterReleases is called on them.
 			got := lookup.filterReleases(releases, logx.LogFrom{Primary: t.Name()})
 
-			// THEN: only the expected releases are kept, in the expected order.
-			if err := test.AssertSlicesEqualFunc(
+			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a forgetypes.Release, b string) bool { return a.TagName == b },
-				fmt.Sprintf("%s\nLookup.filterReleases()", packageName),
 				"",
-			); err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
-}
-
-func TestLookup_GetVersion(t *testing.T) {
-	// GIVEN: a response body, and a Lookup whose filters must be met.
-	tests := []struct {
-		name            string
-		lookupYAML      string
-		body            string
-		page            int
-		wantVersion     string
-		wantReleaseDate string
-		errRegex        string
-	}{
-		{
-			name: "the highest semantic version, with its release date",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo`,
-			body:            releasesBody,
-			page:            1,
-			wantVersion:     "0.17.4",
-			wantReleaseDate: "2000-01-02T00:00:00Z",
-			errRegex:        `^$`,
-		},
-		{
-			name: "require narrows which release is taken",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo
-				require:
-					regex_version: '^0\.16\.'`,
-			body:            releasesBody,
-			page:            1,
-			wantVersion:     "0.16.9",
-			wantReleaseDate: "2000-01-01T00:00:00Z",
-			errRegex:        `^$`,
-		},
-		{
-			name: "tags/a tag has no published_at",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo`,
-			body: tagsBody,
-			page: 1,
-
-			wantVersion: "0.12.1",
-			errRegex:    `^$`,
-		},
-		{
-			name: "tags/a semver-prerelease tag name is excluded",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo`,
-			body: preReleaseTagsBody,
-			page: 1,
-
-			wantVersion: "0.12.1",
-			errRegex:    `^$`,
-		},
-		{
-			name: "tags/a semver-prerelease tag name is kept when opted into",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo
-				use_prerelease: true`,
-			body: preReleaseTagsBody,
-			page: 1,
-
-			wantVersion: "0.13.0-rc1",
-			errRegex:    `^$`,
-		},
-		{
-			name: "nothing matches the url_commands",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo`,
-			body:     `[{"tag_name":"not-a-version","prerelease":false}]`,
-			page:     3,
-			errRegex: `^no releases were found matching the url_commands on page 3 of the API response$`,
-		},
-		{
-			name: "nothing meets the require fields",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo
-				require:
-					regex_version: '^9\.'`,
-			body:     releasesBody,
-			page:     1,
-			errRegex: `^no releases were found matching the require fields`,
-		},
-		{
-			name: "a body that is not a release list",
-			lookupYAML: `
-				host: https://codeberg.org
-				url: owner/repo`,
-			body:     `<!DOCTYPE html>`,
-			page:     1,
-			errRegex: `^release data failed to parse`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := testLookup(t, tc.lookupYAML)
-
-			// WHEN: getVersion is called on the body.
-			version, releaseDate, err := lookup.getVersion(
-				[]byte(tc.body), tc.page,
-				logx.LogFrom{Primary: t.Name()},
-			)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.getVersion(page=%d)",
-				packageName, tc.page,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-
-			// AND: the version and its release date are as expected.
-			if version != tc.wantVersion {
-				t.Fatalf(
-					"%s version mismatch\ngot:  %q\nwant: %q",
-					prefix, version, tc.wantVersion,
-				)
-			}
-			if releaseDate != tc.wantReleaseDate {
-				t.Fatalf(
-					"%s release date mismatch\ngot:  %q\nwant: %q",
-					prefix, releaseDate, tc.wantReleaseDate,
-				)
-			}
-		})
-	}
-}
-
-func TestLookup_CreateRequest(t *testing.T) {
-	// GIVEN: a Lookup, an endpoint and a page.
-	tests := []struct {
-		name         string
-		host         string
-		serviceToken string
-		defaults     map[string]HostDefaults
-		endpoint     string
-		page         int
-		wantURL      string
-		wantAuth     string
-		errRegex     string
-	}{
-		{
-			name:     "releases, first page",
-			host:     "https://codeberg.org",
-			endpoint: endpointReleases,
-			page:     1,
-			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			errRegex: `^$`,
-		},
-		{
-			name:     "tags, second page",
-			host:     "https://codeberg.org",
-			endpoint: endpointTags,
-			page:     2,
-			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/tags?limit=50&page=2",
-			errRegex: `^$`,
-		},
-		{
-			name:     "unvalidated host still builds an address", // CheckValues validates the host.
-			host:     "",
-			endpoint: endpointReleases,
-			page:     1,
-			wantURL:  "https:///api/v1/repos/owner/repo/releases?limit=50",
-			errRegex: `^$`,
-		},
-		{
-			name:         "service's own token is sent",
-			host:         "https://codeberg.org",
-			serviceToken: "service-token",
-			endpoint:     endpointReleases,
-			page:         1,
-			wantURL:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth:     "Bearer service-token",
-			errRegex:     `^$`,
-		},
-		{
-			name: "token from the matching host entry is sent",
-			host: "https://codeberg.org",
-			defaults: map[string]HostDefaults{
-				"https://codeberg.org": {URL: "https://codeberg.org", AccessToken: "defaults-token"},
-			},
-			endpoint: endpointReleases,
-			page:     1,
-			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			wantAuth: "Bearer defaults-token",
-			errRegex: `^$`,
-		},
-		{
-			name: "host matching no entry is sent no credential",
-			host: "https://codeberg.org",
-			defaults: map[string]HostDefaults{
-				"https://forge.example.com": {URL: "https://forge.example.com", AccessToken: "defaults-token"},
-			},
-			endpoint: endpointReleases,
-			page:     1,
-			wantURL:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			errRegex: `^$`,
-		},
-		{
-			name:     "a host no address can be built from", // CheckValues rejects it first.
-			host:     "https://codeberg.org/%zz",
-			endpoint: endpointReleases,
-			page:     1,
-			errRegex: `^invalid host "[^"]+":\n\s+parse "[^"]+":\n\s+invalid URL escape "%zz"$`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := Lookup{
-				Host:        tc.host,
-				AccessToken: tc.serviceToken,
-			}
-			lookup.URL = "owner/repo"
-			lookup.SetTypeDefaults(
-				&Defaults{Host: tc.defaults},
-				&Defaults{},
-			)
-
-			// WHEN: createRequest is called.
-			request, err := lookup.createRequest(
-				tc.endpoint,
-				tc.page,
-				logx.LogFrom{Primary: t.Name()},
-			)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.createRequest(endpoint=%q, page=%d)",
-				packageName, tc.endpoint, tc.page,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if tc.errRegex != "^$" {
-				return
-			}
-
-			// AND: it is a GET for the expected address.
-			if request.Method != http.MethodGet {
-				t.Fatalf(
-					"%s method mismatch\ngot:  %q\nwant: %q",
-					prefix, request.Method, http.MethodGet,
-				)
-			}
-			if got := request.URL.String(); got != tc.wantURL {
-				t.Fatalf(
-					"%s address mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantURL,
-				)
-			}
-
-			// AND: it carries the credential bound to the host, if any.
-			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
-				t.Fatalf(
-					"%s Authorization mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantAuth,
-				)
-			}
-
-			// AND: it carries no conditional-request header.
-			for _, header := range []string{"If-None-Match", "If-Modified-Since"} {
-				if got := request.Header.Get(header); got != "" {
-					t.Fatalf(
-						"%s set %s: %q",
-						prefix, header, got,
-					)
-				}
-			}
-		})
-	}
-}
-
-func TestLookup_RequestFor(t *testing.T) {
-	// GIVEN: an address, which [Lookup.createRequest] has already assembled.
-	tests := []struct {
-		name         string
-		address      string
-		serviceToken string
-		wantAuth     string
-		errRegex     string
-	}{
-		{
-			name:     "valid address",
-			address:  "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			errRegex: `^$`,
-		},
-		{
-			name:         "the access token is sent",
-			address:      "https://codeberg.org/api/v1/repos/owner/repo/releases?limit=50",
-			serviceToken: "service-token",
-			wantAuth:     "Bearer service-token",
-			errRegex:     `^$`,
-		},
-		{
-			name:    "an address no request can be built for",
-			address: "invalid://\ttest",
-			errRegex: test.TrimYAML(`
-				^failed creating http request for .*`,
-			),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			lookup := Lookup{AccessToken: tc.serviceToken}
-			lookup.SetTypeDefaults(&Defaults{}, &Defaults{})
-
-			// WHEN: requestFor is called.
-			request, err := lookup.requestFor(
-				tc.address,
-				logx.LogFrom{Primary: t.Name()},
-			)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.requestFor(%q)",
-				packageName, tc.address,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-			if tc.errRegex != `^$` {
-				return
-			}
-
-			// AND: it is a GET for that address, with authentication as expected.
-			if request.Method != http.MethodGet {
-				t.Fatalf(
-					"%s method mismatch\ngot:  %q\nwant: %q",
-					prefix, request.Method, http.MethodGet,
-				)
-			}
-			if got := request.URL.String(); got != tc.address {
-				t.Fatalf(
-					"%s address mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.address,
-				)
-			}
-			if got := request.Header.Get("Authorization"); got != tc.wantAuth {
-				t.Fatalf(
-					"%s Authorization header mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantAuth,
-				)
-			}
-		})
-	}
-}
-
-func TestLookup_GetResponse(t *testing.T) {
-	// GIVEN: an instance, and a request for one of its endpoints.
-	t.Run("valid/the response and its body come back", func(t *testing.T) {
-		t.Parallel()
-
-		server := newForgeServer(t, map[string]forgeEndpoint{
-			endpointReleases: {Body: releasesBody},
-		})
-		lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
-		logFrom := logx.LogFrom{Primary: t.Name()}
-
-		request, err := lookup.createRequest(endpointReleases, 1, logFrom)
-		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.createRequest() unexpected error: %v",
-				packageName, err,
-			)
-		}
-
-		// WHEN: getResponse is called.
-		response, body, err := lookup.getResponse(request, logFrom)
-		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.getResponse() unexpected error: %v",
-				packageName, err,
-			)
-		}
-
-		// THEN: the status and body are as served.
-		if response.StatusCode != http.StatusOK {
-			t.Fatalf(
-				"%s\nLookup.getResponse() status mismatch\ngot:  %d\nwant: %d",
-				packageName, response.StatusCode, http.StatusOK,
-			)
-		}
-		if string(body) != releasesBody {
-			t.Fatalf(
-				"%s\nLookup.getResponse() body mismatch\ngot:  %q\nwant: %q",
-				packageName, string(body), releasesBody,
-			)
-		}
-	})
-
-	t.Run("invalid/an instance that is not listening", func(t *testing.T) {
-		t.Parallel()
-
-		server := newForgeServer(t, map[string]forgeEndpoint{})
-		host := server.URL
-		server.Close()
-
-		lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
-		logFrom := logx.LogFrom{Primary: t.Name()}
-
-		request, err := lookup.createRequest(endpointReleases, 1, logFrom)
-		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.createRequest() unexpected error: %v",
-				packageName, err,
-			)
-		}
-
-		// WHEN: getResponse is called.
-		response, body, err := lookup.getResponse(request, logFrom)
-
-		// THEN: the transport error comes back, with nothing else.
-		e := errfmt.FormatError(err)
-		if !util.RegexCheck(`connection refused|connect: `, e) {
-			t.Fatalf(
-				"%s\nLookup.getResponse() error mismatch\ngot:  %q\nwant: a connection error",
-				packageName, e,
-			)
-		}
-		if response != nil || body != nil {
-			t.Fatalf("%s\nLookup.getResponse() returned a response or body alongside its error", packageName)
-		}
-	})
-}
-
-func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN: an instance responding in a particular way.
-	tests := []struct {
-		name         string
-		endpoints    map[string]forgeEndpoint
-		host         string // Fixture override.
-		endpoint     string
-		page         int
-		wantBody     string
-		wantNextPage int
-		errRegex     string
-	}{
-		{
-			name: "valid/a page of releases",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			endpoint: endpointReleases,
-			page:     1,
-			wantBody: releasesBody,
-			errRegex: `^$`,
-		},
-		{
-			name: "valid/a paginated page advertises the next",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Pages: []string{releasesBody, tagsBody}},
-			},
-			endpoint:     endpointReleases,
-			page:         1,
-			wantBody:     releasesBody,
-			wantNextPage: 2,
-			errRegex:     `^$`,
-		},
-		{
-			name: "invalid/an empty first page",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-			},
-			endpoint: endpointReleases,
-			page:     1,
-			errRegex: `^empty list$`,
-		},
-		{
-			name:      "invalid/an endpoint the instance does not serve",
-			endpoints: map[string]forgeEndpoint{},
-			endpoint:  endpointReleases,
-			page:      1,
-			errRegex:  `^not found$`,
-		},
-		{
-			name:      "invalid/a host no request can be built for",
-			endpoints: map[string]forgeEndpoint{},
-			host:      "https://codeberg.org/%zz",
-			endpoint:  endpointReleases,
-			page:      1,
-			errRegex:  `^invalid host "[^"]+":\n\s+parse "[^"]+":\n\s+invalid URL escape "%zz"$`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			server := newForgeServer(t, tc.endpoints)
-			host := server.URL
-			if tc.host != "" {
-				host = tc.host
-			}
-			lookup := testLookup(t, "host: "+host+"\nurl: owner/repo")
-
-			// WHEN: httpRequest is called.
-			body, nextPage, err := lookup.httpRequest(
-				tc.endpoint, tc.page,
-				logx.LogFrom{Primary: t.Name()},
-			)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.httpRequest(%q, %d)",
-				packageName, tc.endpoint, tc.page,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-
-			// AND: the body and next page are as expected.
-			if string(body) != tc.wantBody {
-				t.Fatalf(
-					"%s body mismatch\ngot:  %q\nwant: %q",
-					prefix, string(body), tc.wantBody,
-				)
-			}
-			if nextPage != tc.wantNextPage {
-				t.Fatalf(
-					"%s next page mismatch\ngot:  %d\nwant: %d",
-					prefix, nextPage, tc.wantNextPage,
-				)
-			}
-		})
-	}
-}
-
-func TestLookup_GetResponse__ReadError(t *testing.T) {
-	// GIVEN: a server that closes the connection without sending the body it promised.
-	server := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Length", "10")
-			w.WriteHeader(http.StatusOK)
-			conn, _, _ := w.(http.Hijacker).Hijack()
-			conn.Close()
-		}),
-	)
-	t.Cleanup(server.Close)
-
-	// AND: a request for it.
-	request, err := http.NewRequest(http.MethodGet, server.URL, nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\ncould not create request: %v",
-			packageName, err,
-		)
-	}
-
-	// WHEN: getResponse is called with it.
-	lookup := Lookup{}
-	response, body, err := lookup.getResponse(request, logx.LogFrom{Primary: t.Name()})
-
-	// THEN: the read failure is given, and not a partially-read body.
-	if err == nil {
-		t.Fatalf(
-			"%s\nLookup.getResponse() expected an error reading the body, got none",
-			packageName,
-		)
-	}
-	if e := errfmt.FormatError(err); !util.RegexCheck(`unexpected EOF|connection reset|body length`, e) {
-		t.Fatalf(
-			"%s\nLookup.getResponse() error mismatch\ngot:  %q\nwant: a body-read error",
-			packageName, e,
-		)
-	}
-	if response != nil || body != nil {
-		t.Fatalf(
-			"%s\nLookup.getResponse() returned a response or body alongside its error",
-			packageName,
-		)
-	}
-}
-
-func TestLookup_QueryPage(t *testing.T) {
-	// GIVEN: an instance, and a page to ask it for.
-	tests := []struct {
-		name           string
-		endpoints      map[string]forgeEndpoint
-		page           int
-		latestVersion  string
-		wantNewVersion bool
-		wantNextPage   int
-		wantLatest     string
-		errRegex       string
-	}{
-		{
-			name: "a first version is recorded, but is not announced as new",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			page:       1,
-			wantLatest: "0.17.4",
-			errRegex:   `^$`,
-		},
-		{
-			name: "a version replacing an older one is new",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			page:           1,
-			latestVersion:  "0.1.0",
-			wantNewVersion: true,
-			wantLatest:     "0.17.4",
-			errRegex:       `^$`,
-		},
-		{
-			name: "an unchanged version is neither new nor an error",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			page:          1,
-			latestVersion: "0.17.4",
-			wantLatest:    "0.17.4",
-			errRegex:      `^$`,
-		},
-		{
-			name: "no version on this page, but another page to try",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Pages: []string{
-					`[{"tag_name":"not-a-version","prerelease":false}]`,
-					releasesBody,
-				}},
-			},
-			page:         1,
-			wantNextPage: 2,
-			errRegex:     `^$`,
-		},
-		{
-			name: "no version and no further page is an error",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: `[{"tag_name":"not-a-version","prerelease":false}]`},
-			},
-			page:     1,
-			errRegex: `^no releases were found matching the url_commands on page 1 of the API response$`,
-		},
-		{
-			name:      "a transport-level failure stops the walk",
-			endpoints: map[string]forgeEndpoint{},
-			page:      1,
-			errRegex:  `^not found$`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			server := newForgeServer(t, tc.endpoints)
-			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
-			if tc.latestVersion != "" {
-				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
-			}
-
-			// WHEN: queryPage is called for the second check, so it commits rather than re-checking.
-			newVersion, nextPage, err := lookup.queryPage(
-				1, tc.page, endpointReleases,
-				logx.LogFrom{Primary: t.Name()},
-			)
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.queryPage(page=%d)",
-				packageName, tc.page,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-
-			// AND: whether a new version was found, and the next page, are as expected.
-			if newVersion != tc.wantNewVersion {
-				t.Fatalf(
-					"%s new version mismatch\ngot:  %t\nwant: %t",
-					prefix, newVersion, tc.wantNewVersion,
-				)
-			}
-			if nextPage != tc.wantNextPage {
-				t.Fatalf(
-					"%s next page mismatch\ngot:  %d\nwant: %d",
-					prefix, nextPage, tc.wantNextPage,
-				)
-			}
-			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
-				t.Fatalf(
-					"%s latest version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantLatest,
-				)
-			}
-
-			// AND: it asked for the endpoint it was handed.
-			if requests := server.Requests(); len(requests) != 0 {
-				wantPath := "/api/v1/repos/owner/repo/" + endpointReleases
-				if got := requests[0].Path; got != wantPath {
-					t.Errorf(
-						"%s requested the wrong path\ngot:  %q\nwant: %q",
-						prefix, got, wantPath,
-					)
-				}
-			}
-		})
-	}
-}
-
-func TestLookup_QueryEndpoint(t *testing.T) {
-	// GIVEN: an instance whose pages must be walked.
-	tests := []struct {
-		name           string
-		endpoints      map[string]forgeEndpoint
-		latestVersion  string // Already known to the service.
-		endpoint       string
-		wantNewVersion bool
-		wantLatest     string
-		errRegex       string
-	}{
-		{
-			name: "a version on the first page",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			endpoint:   endpointReleases,
-			wantLatest: "0.17.4",
-			errRegex:   `^$`,
-		},
-		{
-			name: "a newer version on the first page",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-			},
-			latestVersion:  "0.0.1",
-			endpoint:       endpointReleases,
-			wantNewVersion: true,
-			wantLatest:     "0.17.4",
-			errRegex:       `^$`,
-		},
-		{
-			name: "a version only on a later page",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Pages: []string{
-					`[{"tag_name":"not-a-version","prerelease":false}]`,
-					`[{"tag_name":"nor-this","prerelease":false}]`,
-					`[{"tag_name":"3.2.1","prerelease":false,"published_at":"2026-01-01T00:00:00Z"}]`,
-				}},
-			},
-			endpoint:   endpointReleases,
-			wantLatest: "3.2.1",
-			errRegex:   `^$`,
-		},
-		{
-			name: "the tags endpoint is walked",
-			endpoints: map[string]forgeEndpoint{
-				endpointTags: {Body: tagsBody},
-			},
-			endpoint:   endpointTags,
-			wantLatest: "0.12.1",
-			errRegex:   `^$`,
-		},
-		{
-			name: "an empty list stops the walk with nothing to filter",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListCompact},
-			},
-			endpoint: endpointReleases,
-			errRegex: `^empty list$`,
-		},
-		{
-			name: "pages that never yield a version end in an error",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Pages: []string{
-					`[{"tag_name":"not-a-version","prerelease":false}]`,
-					`[{"tag_name":"nor-this","prerelease":false}]`,
-				}},
-			},
-			endpoint: endpointReleases,
-			errRegex: `^no releases were found matching the url_commands on page 2 of the API response$`,
-		},
-		{
-			name: "a next page that does not advance is refused",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {
-					Body: `[{"tag_name":"not-a-version","prerelease":false}]`,
-					Headers: map[string]string{
-						"Link": `<https://root-url.example.com/api/v1/repos/o/r/releases?page=1>; rel="next"`,
-					},
-				},
-			},
-			endpoint: endpointReleases,
-			errRegex: `^/releases did not advance past page 1$`,
-		},
-		{
-			name: "an endless walk stops at the page cap",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {
-					Body:    `[{"tag_name":"not-a-version","prerelease":false}]`,
-					Endless: true,
-				},
-			},
-			endpoint: endpointReleases,
-			errRegex: fmt.Sprintf(`^gave up walking /releases after %d pages$`, maxPages),
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			server := newForgeServer(t, tc.endpoints)
-			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
-			if tc.latestVersion != "" {
-				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
-			}
-
-			// WHEN: queryEndpoint is called.
-			newVersion, err := lookup.queryEndpoint(tc.endpoint, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.queryEndpoint(%q)",
-				packageName, tc.endpoint,
-			)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-
-			// AND: whether the version is new to the service is as expected.
-			if newVersion != tc.wantNewVersion {
-				t.Fatalf(
-					"%s new version mismatch\ngot:  %t\nwant: %t",
-					prefix, newVersion, tc.wantNewVersion,
-				)
-			}
-
-			// AND: the version found is as expected.
-			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
-				t.Fatalf(
-					"%s latest version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantLatest,
-				)
-			}
-		})
-	}
-}
-
-func TestLookup_Query__EndpointFallback(t *testing.T) {
-	// GIVEN: an instance, and a service whose filters may or may not allow the tags fallback.
-	tests := []struct {
-		name          string
-		endpoints     map[string]forgeEndpoint
-		lookupYAML    string
-		wantRequested []string
-		wantLatest    string
-		errRegex      string
-	}{
-		{
-			name: "releases answer, so tags are never asked for",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: releasesBody},
-				endpointTags:     {Body: tagsBody},
-			},
-			lookupYAML:    `url: owner/repo`,
-			wantRequested: []string{endpointReleases},
-			wantLatest:    "0.17.4",
-			errRegex:      `^$`,
-		},
-		{
-			name: "an empty releases list falls through to tags",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-				endpointTags:     {Body: tagsBody},
-			},
-			lookupYAML:    `url: owner/repo`,
-			wantRequested: []string{endpointReleases, endpointTags},
-			wantLatest:    "0.12.1",
-			errRegex:      `^$`,
-		},
-		{
-			name: "filters that tags cannot satisfy stop the fallback",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-				endpointTags:     {Body: tagsBody},
-			},
-			lookupYAML: `
-				url: owner/repo
-				require:
-					regex_content: 'Argus-{{ version }}.linux-amd64'`,
-			wantRequested: []string{endpointReleases},
-			errRegex:      `^no releases were found$`,
-		},
-		{
-			name: "wanting prereleases doesn't stop the tags fallback",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-				endpointTags:     {Body: tagsBody},
-			},
-			lookupYAML: `
-				url: owner/repo
-				use_prerelease: true`,
-			wantRequested: []string{endpointReleases, endpointTags},
-			wantLatest:    "0.12.1",
-			errRegex:      `^$`,
-		},
-		{
-			name: "a pre-release tag is excluded by default as its name labels it",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-				endpointTags:     {Body: preReleaseTagsBody},
-			},
-			lookupYAML:    `url: owner/repo`,
-			wantRequested: []string{endpointReleases, endpointTags},
-			wantLatest:    "0.12.1",
-			errRegex:      `^$`,
-		},
-		{
-			name: "a pre-release tag is taken when prereleases are wanted",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Body: emptyListNewline},
-				endpointTags:     {Body: preReleaseTagsBody},
-			},
-			lookupYAML: `
-				url: owner/repo
-				use_prerelease: true`,
-			wantRequested: []string{endpointReleases, endpointTags},
-			wantLatest:    "0.13.0-rc1",
-			errRegex:      `^$`,
-		},
-		{
-			name: "a rate limit stops the fallback",
-			endpoints: map[string]forgeEndpoint{
-				endpointReleases: {Status: http.StatusTooManyRequests, Body: "<!DOCTYPE html>"},
-				endpointTags:     {Body: tagsBody},
-			},
-			lookupYAML:    `url: owner/repo`,
-			wantRequested: []string{endpointReleases},
-			errRegex:      `^rate limit reached for 127\.0\.0\.1:\d+ - no access_token was sent$`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			server := newForgeServer(t, tc.endpoints)
-			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
-			lookup := testLookup(t, lookupYAML)
-
-			// WHEN: query is called.
-			_, err := lookup.query(logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf("%s\nLookup.query()", packageName)
-
-			// THEN: any error is as expected.
-			e := errfmt.FormatError(err)
-			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
-			}
-
-			// AND: the version found is as expected.
-			if got := lookup.Status.LatestVersion(); got != tc.wantLatest {
-				t.Fatalf(
-					"%s latest version mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.wantLatest,
-				)
-			}
-
-			// AND: only the expected endpoints were asked for.
-			var requested []string
-			for _, request := range server.Requests() {
-				endpoint := path.Base(request.Path)
-				if len(requested) == 0 || requested[len(requested)-1] != endpoint {
-					requested = append(requested, endpoint)
-				}
-			}
-			if !slices.Equal(requested, tc.wantRequested) {
-				t.Fatalf(
-					"%s endpoints requested mismatch\ngot:  %v\nwant: %v",
-					prefix, requested, tc.wantRequested,
-				)
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestLookup_HandleNewVersion(t *testing.T) {
-	// GIVEN: an instance serving a version, and a service that has not seen it.
 	t.Run("the first check re-queries before committing", func(t *testing.T) {
 		t.Parallel()
 
@@ -2304,32 +2042,22 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 		})
 		lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
 
-		// WHEN: handleNewVersion is called as the first check.
+		version := "0.17.4"
 		_, err := lookup.handleNewVersion(
 			0,
-			"0.17.4", "2026-08-01T10:50:00Z", "",
+			version, "2026-08-01T10:50:00Z", "",
 			endpointReleases, 1,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() unexpected error: %v",
-				packageName, err,
-			)
+			t.Fatalf("Lookup.handleNewVersion() failed: %v", err)
 		}
 
-		// THEN: it asked the instance again before recording the version.
-		if got := len(server.Requests()); got != 1 {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() request count mismatch\ngot:  %d\nwant: 1",
-				packageName, got,
-			)
+		if got, want := len(server.Requests()), 1; got != want {
+			t.Fatalf("Server.Requests() length mismatch\ngot:  %d\nwant: %d", got, want)
 		}
-		if got, want := lookup.Status.LatestVersion(), "0.17.4"; got != want {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() latest version mismatch\ngot:  %q\nwant: %q",
-				packageName, got, want,
-			)
+		if got, want := lookup.Status.LatestVersion(), version; got != want {
+			t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, want)
 		}
 	})
 
@@ -2340,63 +2068,49 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			host: https://codeberg.org
 			url: owner/repo`))
 
-		// WHEN: handleNewVersion is called as the second check, with no version known.
+		version := "1.2.3"
+		// The second check, so it commits rather than re-checking.
 		newVersion, err := lookup.handleNewVersion(
 			1,
-			"1.2.3", "2026-01-01T00:00:00Z", "",
+			version, "2026-01-01T00:00:00Z", "",
 			endpointReleases, 1,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() unexpected error: %v",
-				packageName, err,
-			)
+			t.Fatalf("Lookup.handleNewVersion() failed: %v", err)
 		}
 
-		// THEN: it is recorded without being reported as an update.
 		if newVersion {
-			t.Fatalf("%s\nLookup.handleNewVersion() reported the first version as new", packageName)
+			t.Fatal("newVersion mismatch\ngot:  true\nwant: false")
 		}
-		if got, want := lookup.Status.LatestVersion(), "1.2.3"; got != want {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() latest version mismatch\ngot:  %q\nwant: %q",
-				packageName, got, want,
-			)
+		if got, want := lookup.Status.LatestVersion(), version; got != want {
+			t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, want)
 		}
 	})
 
 	t.Run("a version replacing an older one is announced as new", func(t *testing.T) {
 		t.Parallel()
 
-		lookup := testLookup(t, test.TrimYAML(`
-			host: https://codeberg.org
-			url: owner/repo`))
+		lookup := testLookup(t, "host: https://codeberg.org\nurl: owner/repo")
 		lookup.Status.SetLatestVersion("1.0.0", "", false)
 
-		// WHEN: handleNewVersion is called as the second check.
+		version := "1.2.3"
+		// The second check, so it commits rather than re-checking.
 		newVersion, err := lookup.handleNewVersion(
 			1,
-			"1.2.3", "2026-01-01T00:00:00Z", "1.0.0",
+			version, "2026-01-01T00:00:00Z", "1.0.0",
 			endpointReleases, 1,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() unexpected error: %v",
-				packageName, err,
-			)
+			t.Fatalf("Lookup.handleNewVersion() failed: %v", err)
 		}
 
-		// THEN: it is reported as an update.
 		if !newVersion {
-			t.Fatalf("%s\nLookup.handleNewVersion() did not report the version as new", packageName)
+			t.Fatal("newVersion mismatch\ngot:  false\nwant: true")
 		}
-		if got, want := lookup.Status.LatestVersion(), "1.2.3"; got != want {
-			t.Fatalf(
-				"%s\nLookup.handleNewVersion() latest version mismatch\ngot:  %q\nwant: %q",
-				packageName, got, want,
-			)
+		if got, want := lookup.Status.LatestVersion(), version; got != want {
+			t.Fatalf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, want)
 		}
 	})
 }

@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,7 +28,6 @@ import (
 )
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
 	tests := []struct {
 		name  string
 		lType string
@@ -45,45 +45,58 @@ func TestLookup_GetType(t *testing.T) {
 			l := &Lookup{}
 			l.Type = tc.lType
 
-			// WHEN: GetType is called.
 			got := l.GetType()
 
 			wantType := "url"
-			// THEN: the Type is returned.
+
 			if got != wantType {
-				t.Errorf(
-					"%s\nLookup.GetType() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantType,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, wantType)
 			}
 		})
 	}
 }
 
 func TestLookup_AllowInvalidCerts(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
 		want                                      bool
 	}{
 		{
-			name:             "root overrides all",
+			name:             "true/root overrides all",
 			want:             true,
 			rootValue:        new(true),
 			defaultValue:     new(false),
 			hardDefaultValue: new(false),
 		},
 		{
-			name:             "default overrides hardDefault",
+			name:             "true/default overrides hardDefault",
 			want:             true,
 			defaultValue:     new(true),
 			hardDefaultValue: new(false),
 		},
 		{
-			name:             "hardDefault is last resort",
+			name:             "true/hardDefault is last resort",
 			want:             true,
 			hardDefaultValue: new(true),
+		},
+		{
+			name:             "false/root overrides all",
+			want:             false,
+			rootValue:        new(false),
+			defaultValue:     new(true),
+			hardDefaultValue: new(true),
+		},
+		{
+			name:             "false/default overrides hardDefault",
+			want:             false,
+			defaultValue:     new(false),
+			hardDefaultValue: new(true),
+		},
+		{
+			name:             "false/hardDefault is last resort",
+			want:             false,
+			hardDefaultValue: new(false),
 		},
 	}
 
@@ -91,27 +104,21 @@ func TestLookup_AllowInvalidCerts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.AllowInvalidCerts = tc.rootValue
 			lookup.Defaults.AllowInvalidCerts = tc.defaultValue
 			lookup.HardDefaults.AllowInvalidCerts = tc.hardDefaultValue
 
-			// WHEN: allowInvalidCerts is called.
 			got := lookup.allowInvalidCerts()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.allowInvalidCerts() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_Body(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name string
 		body string
@@ -133,25 +140,19 @@ func TestLookup_Body(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.Body = tc.body
 
-			// WHEN: body is called.
 			got := lookup.body()
 
-			// THEN: the function returns the correct result.
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf(
-					"%s\nLookup.body() value mismatch\ngot:  %v\nwant: %v",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %s\nwant: %s", readerString(got), readerString(tc.want))
 			}
 		})
 	}
 }
 
 func TestLookup_Method(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue string
@@ -181,27 +182,21 @@ func TestLookup_Method(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.Method = tc.rootValue
 			lookup.Defaults.Method = tc.defaultValue
 			lookup.HardDefaults.Method = tc.hardDefaultValue
 
-			// WHEN: method is called.
 			got := lookup.method()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.method() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_URL(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name string
 		env  map[string]string
@@ -235,21 +230,25 @@ func TestLookup_URL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.URL = tc.url
 
-			// WHEN: url is called.
 			got := lookup.url()
 
-			// THEN: the function returns the correct result.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.url() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
+}
+
+// readerString returns the quoted contents of r, or nil when r is nil.
+func readerString(r io.Reader) string {
+	if r == nil {
+		return "nil"
+	}
+	b, _ := io.ReadAll(r)
+	return strconv.Quote(string(b))
 }

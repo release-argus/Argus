@@ -22,13 +22,14 @@ import (
 	"testing"
 
 	"golang.org/x/sync/errgroup"
+
+	"github.com/release-argus/Argus/util"
 )
 
 func TestConfig_LoadOrdering(t *testing.T) {
-	// GIVEN: we have configs to load.
 	tests := []struct {
 		name  string
-		file  func(path string)
+		file  func(t *testing.T, path string)
 		order []string
 	}{
 		{
@@ -51,6 +52,11 @@ func TestConfig_LoadOrdering(t *testing.T) {
 				`foo "bar"`,
 				`foo: bar, baz`,
 			},
+		},
+		{
+			name:  "services named like blocks, and a nil service",
+			file:  testYAML_Ordering_8_services_named_like_blocks,
+			order: []string{"settings", "defaults"},
 		},
 		{
 			name:  "service block/none",
@@ -86,39 +92,31 @@ func TestConfig_LoadOrdering(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're accessing flag env vars.
+			// Serial: shares the flag vars.
+
 			g, _ := errgroup.WithContext(t.Context())
 
 			file := filepath.Join(t.TempDir(), "config.yml")
-			tc.file(file)
+			tc.file(t, file)
 
-			// WHEN: they are loaded.
 			flags := make(map[string]bool)
 			var cfg Config
-			loadMu.Lock() // Protect flag env vars.
+			// loadMu guards the flag vars.
+			loadMu.Lock()
 			cfg.Load(t.Context(), g, file, &flags)
 			t.Cleanup(func() {
 				_ = os.Remove(cfg.Settings.DataDatabaseFile())
 				loadMu.Unlock()
 			})
 
-			// THEN: it gets the ordering correctly.
-			gotOrder := cfg.Order
-			for i := range gotOrder {
-				if i >= len(gotOrder) ||
-					tc.order[i] != (gotOrder)[i] {
-					t.Fatalf(
-						"%s\nConfig LoadOrdering %q %s - order:\ngot:  %v\nwant: %v",
-						packageName, file, tc.name, gotOrder, tc.order,
-					)
-				}
+			if !util.AreSlicesEqual(cfg.Order, tc.order) {
+				t.Fatalf("Config.Order mismatch\ngot:  %q\nwant: %q", cfg.Order, tc.order)
 			}
 		})
 	}
 }
 
 func TestIndentation(t *testing.T) {
-	// GIVEN: lines of varying indentation.
 	tests := []struct {
 		name        string
 		input, want string
@@ -154,15 +152,10 @@ func TestIndentation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Indentation is called on it.
 			got := Indentation(tc.input)
 
-			// THEN: we get the indentation.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nIndentation(%q) mismatch:\ngot:  %q\nwant: %q",
-					packageName, tc.input, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

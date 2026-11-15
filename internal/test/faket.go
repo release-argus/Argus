@@ -16,16 +16,25 @@
 
 package test
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"strings"
+)
 
 // TB is the subset of [testing.TB] used by these helpers, so that their
 // reporting paths can be exercised with a [FakeT].
 type TB interface {
+	Context() context.Context
+	Log(args ...any)
+	Logf(format string, args ...any)
 	Errorf(format string, args ...any)
 	Fatalf(format string, args ...any)
 	Helper()
 	Skipf(format string, args ...any)
 }
+
+var _ TB = (*FakeT)(nil)
 
 // abortFakeT is what an aborting [FakeT] panics with.
 type abortFakeT struct{}
@@ -33,6 +42,7 @@ type abortFakeT struct{}
 // FakeT records what a helper reports rather than failing the test, so that a
 // helper's own failure paths can be asserted on.
 type FakeT struct {
+	Logs   []string
 	Errors []string
 	Fatals []string
 	Skips  []string
@@ -41,6 +51,19 @@ type FakeT struct {
 	// [runtime.Goexit] a real [testing.T] performs. Read the outcome with
 	// [FakeT.Aborted].
 	Abort bool
+}
+
+func (f *FakeT) Log(args ...any) {
+	f.Logs = append(f.Logs, strings.TrimSuffix(fmt.Sprintln(args...), "\n"))
+}
+
+func (f *FakeT) Logf(format string, args ...any) {
+	f.Logs = append(f.Logs, fmt.Sprintf(format, args...))
+}
+
+// Context returns a context that is never cancelled.
+func (f *FakeT) Context() context.Context {
+	return context.Background()
 }
 
 func (f *FakeT) Errorf(format string, args ...any) {
@@ -57,9 +80,8 @@ func (f *FakeT) Skipf(format string, args ...any) {
 	f.abort()
 }
 
-func (f *FakeT) Helper() {
-	// No-op.
-}
+// Helper is a no-op.
+func (f *FakeT) Helper() {}
 
 func (f *FakeT) abort() {
 	if f.Abort {

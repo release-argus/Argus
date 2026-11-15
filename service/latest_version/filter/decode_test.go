@@ -29,7 +29,6 @@ import (
 func TestDecode(t *testing.T) {
 	defaults, _ := plainDefaults(t)
 
-	// GIVEN: data in a given format to Decode into a Require.
 	tests := []struct {
 		name         string
 		format, data string
@@ -147,7 +146,6 @@ func TestDecode(t *testing.T) {
 				func(v *Require) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Decode",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -176,11 +174,12 @@ func TestApplyOverrides(t *testing.T) {
 				data: test.TrimJSON(`{
 					"docker": {
 						"type": "ghcr",
-						"image": ` + test.ArgusDockerGHCRRepo + `,
+						"image": "` + test.ArgusDockerGHCRRepo + `"
 					}
 				}`),
 				target: nil,
 			},
+			errRegex: `^$`,
 			want: new(
 				test.TrimYAML(`
 					docker:
@@ -307,6 +306,7 @@ func TestApplyOverrides(t *testing.T) {
 					},
 				},
 			},
+			errRegex: `^$`,
 			want: new(
 				test.TrimYAML(`
 					regex_content: content-v?
@@ -321,7 +321,7 @@ func TestApplyOverrides(t *testing.T) {
 				data: test.TrimJSON(`{
 					"docker": {
 						"type": "ghcr",
-						"image": "` + test.ArgusDockerGHCRRepo + `",
+						"image": "` + test.ArgusDockerGHCRRepo + `"
 					}
 				}`),
 				target: &Require{
@@ -331,9 +331,11 @@ func TestApplyOverrides(t *testing.T) {
 						Type:  "hub",
 						Image: test.ArgusDockerHubRepo,
 						Tag:   "{{ version }}",
+						Auth:  &docker.HubAuth{},
 					},
 				},
 			},
+			errRegex: `^$`,
 			want: new(
 				test.TrimYAML(`
 					regex_content: content-v?
@@ -365,13 +367,12 @@ func TestApplyOverrides(t *testing.T) {
 			if tc.args.target != nil {
 				tc.args.target.defaults = defaults
 			}
-			// Default want to the stringified struct.
+			// Without a want, the target is expected unchanged.
 			want := tc.args.target.String("")
 			if tc.want != nil {
 				want = *tc.want
 			}
 
-			// WHEN: ApplyOverrides is called.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.args.target,
@@ -389,7 +390,6 @@ func TestApplyOverrides(t *testing.T) {
 				want,
 				tc.errRegex,
 				true,
-				packageName,
 				"Require.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
@@ -399,7 +399,6 @@ func TestApplyOverrides(t *testing.T) {
 }
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into a Require.
 	tests := []struct {
 		name         string
 		format, data string
@@ -481,7 +480,7 @@ func TestDecodeDefaults(t *testing.T) {
 			`),
 		},
 		{
-			name:   "JSON/static fields unmarshal fail",
+			name:   "JSON/docker unmarshal fail",
 			format: "json",
 			data:   `{"docker": ["-"]}`,
 			errRegex: test.TrimYAML(`
@@ -498,14 +497,11 @@ func TestDecodeDefaults(t *testing.T) {
 
 			if _, _, testErr := test.AssertDecode(
 				t,
-				func(format string, data []byte) (*RequireDefaults, error) {
-					return DecodeDefaults(format, data)
-				},
+				DecodeDefaults,
 				tc.format, tc.data,
 				func(v *RequireDefaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)

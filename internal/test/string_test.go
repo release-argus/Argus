@@ -21,7 +21,6 @@ import (
 )
 
 func TestIndent(t *testing.T) {
-	// GIVEN: a string and an indent value.
 	tests := []struct {
 		name   string
 		str    string
@@ -64,23 +63,16 @@ func TestIndent(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: Indent is called.
 			result := Indent(tc.str, tc.indent)
 
-			// THEN: the result should be the string with each line indented by the given number of spaces.
 			if result != tc.want {
-				t.Errorf(
-					"%s\nIndent(str=%q, indents=%d) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.str, tc.indent,
-					result, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.want)
 			}
 		})
 	}
 }
 
 func TestTrimJSON(t *testing.T) {
-	// GIVEN: a JSON string.
 	tests := []struct {
 		name string
 		str  string
@@ -112,13 +104,6 @@ func TestTrimJSON(t *testing.T) {
 			want: `{"key":"value"}`,
 		},
 		{
-			name: "with spaces",
-			str: `{
-				"key": "value"
-			}`,
-			want: `{"key":"value"}`,
-		},
-		{
 			name: "mixed",
 			str: `{
 				"key": "value",
@@ -132,22 +117,16 @@ func TestTrimJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: TrimJSON is called.
 			result := TrimJSON(tc.str)
 
-			// THEN: the result should be the JSON string without newlines and tabs.
 			if result != tc.want {
-				t.Errorf(
-					"%s\nTrimJSON() mismatch\ngot:  %q\nwant: %q",
-					packageName, result, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.want)
 			}
 		})
 	}
 }
 
 func TestTrimYAML(t *testing.T) {
-	// GIVEN: a YAML string.
 	tests := []struct {
 		name string
 		str  string
@@ -240,74 +219,73 @@ key2: value2
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: TrimYAML is called.
 			result := TrimYAML(tc.str)
 
-			// THEN: the result should be the YAML string without unnecessary whitespace.
 			if result != tc.want {
-				t.Errorf(
-					"%s\nTrimYAML(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.str,
-					result, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.want)
 			}
 		})
 	}
 }
 
 func TestAddPrefix(t *testing.T) {
-	// GIVEN: a string and a prefix.
 	tests := []struct {
 		name   string
-		want   string
+		target string
 		prefix string
 		expect string
 	}{
 		{
 			name:   "empty string",
-			want:   "",
+			target: "",
 			prefix: "  ",
 			expect: "",
 		},
 		{
 			name:   "single line",
-			want:   "hello",
+			target: "hello",
 			prefix: "- ",
 			expect: "- hello",
 		},
 		{
 			name:   "leading newline is stripped",
-			want:   "\nhello",
+			target: "\nhello",
 			prefix: "  ",
 			expect: "  hello",
 		},
 		{
 			name:   "multi-line string",
-			want:   "a\nb\nc",
+			target: "a\nb\nc",
 			prefix: ">> ",
 			expect: ">> a\n>> b\n>> c",
 		},
 		{
 			name:   "multi-line with leading newline",
-			want:   "\na\nb",
+			target: "\na\nb",
 			prefix: "-- ",
 			expect: "-- a\n-- b",
 		},
 		{
 			name:   "json empty object",
-			want:   "{}",
+			target: "{}",
 			prefix: "  ",
 			expect: "  {}",
 		},
 		{
+			name:   "json empty object with trailing newline",
+			target: "{}\n",
+			prefix: "  ",
+			expect: "{}\n",
+		},
+		{
 			name:   "json empty object with leading newline",
-			want:   "\n{}",
+			target: "\n{}",
 			prefix: "  ",
 			expect: "  {}",
 		},
 		{
 			name:   "prefix is empty",
-			want:   "hello\nworld",
+			target: "hello\nworld",
 			prefix: "",
 			expect: "hello\nworld",
 		},
@@ -317,17 +295,10 @@ func TestAddPrefix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: addPrefix is called.
-			got := addPrefix(tc.want, tc.prefix)
+			got := addPrefix(tc.target, tc.prefix)
 
-			// THEN: the prefix is added, as expected.
 			if got != tc.expect {
-				t.Fatalf(
-					"%s addPrefix(str=%q, prefix=%q) mismatch\ngot:  %q\nwant: %q",
-					packageName,
-					tc.want, tc.prefix,
-					got, tc.expect,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.expect)
 			}
 		})
 	}

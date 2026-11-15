@@ -17,7 +17,6 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -46,7 +45,6 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
-	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
@@ -60,7 +58,6 @@ import (
 //
 
 func TestConvertAndCensorDefaults(t *testing.T) {
-	// GIVEN: a config.Defaults.
 	tests := []struct {
 		name  string
 		input *config.Defaults
@@ -96,7 +93,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "censor service.deployed_version",
+			name: "service.deployed_version",
 			input: &config.Defaults{
 				Service: service.Defaults{
 					DeployedVersionLookup: dvbase.Defaults{
@@ -351,58 +348,38 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorDefaults is called.
 			result := convertAndCensorDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorDefaults()", packageName)
-
-			// THEN: the result should be as expected.
 			got := decode.ToYAMLString(result, "")
 			want := decode.ToYAMLString(tc.want, "")
 			if got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("Defaults mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
-			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+			if gotInput := tc.input.String(""); gotInput != had {
+				t.Errorf("input: Defaults.String() mismatch\ngot:  %q\nwant: %q", gotInput, had)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorDefaults__Default(t *testing.T) {
-	// GIVEN: a bare config.Defaults populated with its hard-coded defaults.
 	defaults := &config.Defaults{}
 	defaults.Default()
 	had := defaults.String("")
 
-	// WHEN: convertAndCensorDefaults is called.
 	result := convertAndCensorDefaults(defaults)
 
-	prefix := fmt.Sprintf("%s\nconvertAndCensorDefaults()", packageName)
-
-	// THEN: the Defaults are converted as expected.
 	got := result.String()
 	if got != stringifiedConvertedDefaults {
 		t.Fatalf(
-			"%s .Defaults() stringified mismatch\ngot:  %q\nwant: %q",
-			prefix, got, stringifiedConvertedDefaults,
+			"Defaults.String() mismatch\ngot:  %q\nwant: %q",
+			got, stringifiedConvertedDefaults,
 		)
 	}
 
-	// AND: the Defaults are unchanged.
-	if got := defaults.String(""); got != had {
-		t.Fatalf(
-			"%s input changed\ngot: %q\nhad: %q",
-			prefix, got, had,
-		)
+	if gotInput := defaults.String(""); gotInput != had {
+		t.Fatalf("input: Defaults.String() mismatch\ngot:  %q\nwant: %q", gotInput, had)
 	}
 }
 
@@ -412,10 +389,9 @@ func TestConvertAndCensorDefaults__Default(t *testing.T) {
 
 func TestConvertAndCensorService(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
-	// GIVEN: a service.Service.
 	tests := []struct {
 		name  string
 		input *service.Service
@@ -441,7 +417,7 @@ func TestConvertAndCensorService(t *testing.T) {
 		{
 			name: "filled",
 			input: test.Must(t, func() (*service.Service, error) {
-				svc, _ := service.DecodeService(
+				svc, err := service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
 						name: Something
 						comment: Comment on the Service
@@ -473,7 +449,10 @@ func TestConvertAndCensorService(t *testing.T) {
 					"test",
 					svcCfg, notifyCfg, whCfg,
 				)
-				svcStatus, _ := statustest.New(
+				if err != nil {
+					return nil, err
+				}
+				svcStatus, err := statustest.New(
 					"yaml", []byte(test.TrimYAML(`
 						approved_version: 2.0.0
 						deployed_version: 1.0.0
@@ -482,7 +461,13 @@ func TestConvertAndCensorService(t *testing.T) {
 						latest_version_timestamp: 2020-01-02T00:00:00Z
 					`)),
 				)
+				if err != nil {
+					return nil, err
+				}
 				svc.Status = *svcStatus.Copy(true)
+				if err, _ := svc.CheckValues(); err != nil {
+					return nil, err
+				}
 				return svc, nil
 			}),
 			want: &apitype.Service{
@@ -532,34 +517,17 @@ func TestConvertAndCensorService(t *testing.T) {
 
 			var had string
 			if tc.input != nil {
-				if err, _ := tc.input.CheckValues(); err != nil {
-					fmt.Printf(
-						"%s\ninvalid test input: %v\n",
-						packageName, err,
-					)
-				}
 				had = tc.input.String("")
 			}
 
-			// WHEN: convertAndCensorService is called.
 			result := convertAndCensorService(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorService()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original notifier\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: Service.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
@@ -570,7 +538,6 @@ func TestConvertAndCensorService(t *testing.T) {
 //
 
 func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
-	// GIVEN: host-keyed Forgejo defaults.
 	tests := []struct {
 		name  string
 		input map[string]lvforgejo.HostDefaults
@@ -686,7 +653,6 @@ func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
 			},
 		},
 		{
-			// Distinct from unset, which resolves to the next layer.
 			name: "certificate trust/allow_invalid_certs=false is passed through, not dropped",
 			input: map[string]lvforgejo.HostDefaults{
 				"https://git.internal.corp": {
@@ -695,6 +661,7 @@ func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
 			},
 			want: map[string]apitype.LatestVersionForgejoHostDefaults{
 				"https://git.internal.corp": {
+					// Distinct from unset, which resolves to the next layer.
 					AllowInvalidCerts: new(false),
 				},
 			},
@@ -741,26 +708,18 @@ func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertAndCensorLatestVersionForgejoHosts is called.
 			result := convertAndCensorLatestVersionForgejoHosts(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionForgejoHosts()", packageName)
-
-			// THEN: the result is as expected.
 			got := decode.ToYAMLString(result, "")
 			want := decode.ToYAMLString(tc.want, "")
 			if got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("hosts mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
-			if got := decode.ToYAMLString(tc.input, ""); got != had {
+			if gotInput := decode.ToYAMLString(tc.input, ""); gotInput != had {
 				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
+					"input: map[string]HostDefaults mismatch\ngot:  %q\nwant: %q",
+					gotInput, had,
 				)
 			}
 		})
@@ -768,7 +727,6 @@ func TestConvertAndCensorLatestVersionForgejoHosts(t *testing.T) {
 }
 
 func TestConvertAndCensorLatestVersionDefaults(t *testing.T) {
-	// GIVEN: a latestver.Defaults.
 	tests := []struct {
 		name  string
 		input *latestver.Defaults
@@ -973,27 +931,16 @@ func TestConvertAndCensorLatestVersionDefaults(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertAndCensorLatestVersionDefaults is called.
 			result := convertAndCensorLatestVersionDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionDefaults()", packageName)
-
-			// THEN: the result is as expected.
 			got := decode.ToYAMLString(result, "")
 			want := decode.ToYAMLString(tc.want, "")
 			if got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("LatestVersionDefaults mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
-			if got := decode.ToYAMLString(tc.input, ""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+			if gotInput := decode.ToYAMLString(tc.input, ""); gotInput != had {
+				t.Errorf("input: Defaults mismatch\ngot:  %q\nwant: %q", gotInput, had)
 			}
 		})
 	}
@@ -1001,7 +948,7 @@ func TestConvertAndCensorLatestVersionDefaults(t *testing.T) {
 
 func TestConvertAndCensorLatestVersion(t *testing.T) {
 	lvCfg := lvtest.PlainDefaultsConfig(t)
-	// GIVEN: a latestver.Lookup.
+
 	tests := []struct {
 		name  string
 		input latestver.Lookup
@@ -1176,47 +1123,22 @@ func TestConvertAndCensorLatestVersion(t *testing.T) {
 				had = tc.input.String("")
 			}
 
-			// WHEN: convertAndCensorLatestVersion is called.
 			result := convertAndCensorLatestVersion(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersion()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("LatestVersion.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
-			if result == nil || tc.input == nil {
-				if tc.input == nil && result != nil {
-					t.Fatalf(
-						"%s mismatch\ngot:  %q\nwant: nil",
-						prefix, result,
-					)
+			if tc.input != nil {
+				if got := tc.input.String(""); got != had {
+					t.Errorf("input: Lookup.String() mismatch\ngot:  %q\nwant: %q", got, had)
 				}
-				if result == nil && tc.want != nil {
-					t.Fatalf(
-						"%s mismatch\ngot:  nil\nwant: non-nil",
-						prefix,
-					)
-				}
-				return
-			}
-			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
-	// GIVEN: a filter.RequireDefaults.
 	tests := []struct {
 		name  string
 		input *filter.RequireDefaults
@@ -1383,34 +1305,119 @@ func TestConvertAndCensorLatestVersionRequireDefaults(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertAndCensorLatestVersionRequireDefaults is called.
 			result := convertAndCensorLatestVersionRequireDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionRequireDefaults()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
 				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
+					"LatestVersionRequireDefaults.String() mismatch\ngot:  %q\nwant: %q",
+					got, want,
 				)
 			}
 
-			// AND: the original input is unchanged.
 			if got := decode.ToYAMLString(tc.input, ""); got != had {
+				t.Errorf("input: RequireDefaults mismatch\ngot:  %q\nwant: %q", got, had)
+			}
+		})
+	}
+}
+
+func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
+	tests := []struct {
+		name  string
+		input docker.RegistryDefaults
+		want  apitype.RequireDockerRegistryDefaults
+	}{
+		{
+			name:  "docker/ghcr/IsZero",
+			input: &docker.GHCRRegistryDefaults{},
+			want:  nil,
+		},
+		{
+			name: "docker/ghcr/converted",
+			input: &docker.GHCRRegistryDefaults{
+				Auth: &docker.GHCRAuthDefaults{
+					Token: "ghcr_X",
+				},
+			},
+			want: &apitype.RequireDockerRegistryDefaultsToken{
+				Token: util.SecretValue,
+			},
+		},
+		{
+			name:  "docker/hub/IsZero",
+			input: &docker.HubRegistryDefaults{},
+			want:  nil,
+		},
+		{
+			name: "docker/hub/converted",
+			input: &docker.HubRegistryDefaults{
+				Auth: &docker.HubAuthDefaults{
+					Username: "something",
+					Token:    "ghcr_X",
+				},
+			},
+			want: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
+				Username: "something",
+				Token:    util.SecretValue,
+			},
+		},
+		{
+			name:  "docker/quay/IsZero",
+			input: &docker.QuayRegistryDefaults{},
+			want:  nil,
+		},
+		{
+			name: "docker/quay/converted",
+			input: &docker.QuayRegistryDefaults{
+				Auth: &docker.QuayAuthDefaults{
+					Token: "quay_X",
+				},
+			},
+			want: &apitype.RequireDockerRegistryDefaultsToken{
+				Token: util.SecretValue,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			had := tc.input.String("")
+
+			result := convertAndCensorRequireDockerRegistryDefaults(tc.input)
+
+			got := decode.ToYAMLString(result, "")
+			want := decode.ToYAMLString(tc.want, "")
+			if got != want {
+				t.Errorf("RequireDockerRegistryDefaults mismatch\ngot:  %q\nwant: %q", got, want)
+			}
+
+			if gotInput := tc.input.String(""); gotInput != had {
 				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
+					"input: RegistryDefaults.String() mismatch\ngot:  %q\nwant: %q",
+					gotInput, had,
 				)
 			}
 		})
 	}
 }
 
+func TestConvertAndCensorRequireDockerRegistryDefaults__unknownType(t *testing.T) {
+	// Non-zero, so it passes the IsZero guard, but matches no type-switch case.
+	input := &dockertest.MockRegistryDefaults{}
+
+	result := convertAndCensorRequireDockerRegistryDefaults(input)
+
+	if result != nil {
+		t.Errorf("mismatch\ngot:  %q\nwant: nil", decode.ToYAMLString(result, ""))
+	}
+}
+
 func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 	configDefaults, _ := plainDefaults(t)
 	defaults := configDefaults.Service.LatestVersion.Common.Require
-	// GIVEN: a filter.Require.
+
 	tests := []struct {
 		name  string
 		input *filter.Require
@@ -1532,7 +1539,7 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 				RegexVersion: `([0-9.]+)`,
 				Command:      command.Command{"echo", "hello"},
 				Docker: test.Must(t, func() (docker.Registry, error) {
-					req, _ := filter.Decode(
+					req, err := filter.Decode(
 						"yaml", []byte(test.TrimYAML(`
 							docker:
 								type: hub
@@ -1547,6 +1554,9 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 						}),
 						&defaults,
 					)
+					if err != nil {
+						return nil, err
+					}
 					return req.Docker, nil
 				}),
 			},
@@ -1571,147 +1581,26 @@ func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorLatestVersionRequire is called.
 			result := convertAndCensorLatestVersionRequire(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorLatestVersionRequire()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					packageName,
-					got, want,
-				)
+				t.Errorf("LatestVersionRequire.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: Require.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
-	}
-}
-
-func TestConvertAndCensorRequireDockerRegistryDefaults(t *testing.T) {
-	// GIVEN: a docker.RegistryDefaults.
-	tests := []struct {
-		name  string
-		input docker.RegistryDefaults
-		want  apitype.RequireDockerRegistryDefaults
-	}{
-		{
-			name:  "docker/ghcr/IsZero",
-			input: &docker.GHCRRegistryDefaults{},
-			want:  nil,
-		},
-		{
-			name: "docker/ghcr/converted",
-			input: &docker.GHCRRegistryDefaults{
-				Auth: &docker.GHCRAuthDefaults{
-					Token: "ghcr_X",
-				},
-			},
-			want: &apitype.RequireDockerRegistryDefaultsToken{
-				Token: util.SecretValue,
-			},
-		},
-		{
-			name:  "docker/hub/IsZero",
-			input: &docker.HubRegistryDefaults{},
-			want:  nil,
-		},
-		{
-			name: "docker/hub/converted",
-			input: &docker.HubRegistryDefaults{
-				Auth: &docker.HubAuthDefaults{
-					Username: "something",
-					Token:    "ghcr_X",
-				},
-			},
-			want: &apitype.RequireDockerCheckRegistryDefaultsTokenWithUsername{
-				Username: "something",
-				Token:    util.SecretValue,
-			},
-		},
-		{
-			name:  "docker/quay/IsZero",
-			input: &docker.QuayRegistryDefaults{},
-			want:  nil,
-		},
-		{
-			name: "docker/quay/converted",
-			input: &docker.QuayRegistryDefaults{
-				Auth: &docker.QuayAuthDefaults{
-					Token: "quay_X",
-				},
-			},
-			want: &apitype.RequireDockerRegistryDefaultsToken{
-				Token: util.SecretValue,
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			had := tc.input.String("")
-
-			// WHEN: convertAndCensorRequireDockerRegistryDefaults is called.
-			result := convertAndCensorRequireDockerRegistryDefaults(tc.input)
-
-			prefix := fmt.Sprintf("%s\nconvertAndCensorRequireDockerRegistryDefaults()", packageName)
-
-			// THEN: the result should be as expected.
-			got := decode.ToYAMLString(result, "")
-			want := decode.ToYAMLString(tc.want, "")
-			if got != want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
-			}
-
-			// AND: the original input is unchanged.
-			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
-			}
-		})
-	}
-}
-
-func TestConvertAndCensorRequireDockerRegistryDefaults__unknownType(t *testing.T) {
-	// GIVEN: a docker.RegistryDefaults of an unknown type.
-	input := &dockertest.MockRegistryDefaults{}
-
-	// WHEN: convertAndCensorRequireDockerRegistryDefaults is called.
-	result := convertAndCensorRequireDockerRegistryDefaults(input)
-
-	// THEN: the result should be as expected.
-	if result != nil {
-		t.Errorf(
-			"%s\nconvertAndCensorRequireDockerRegistryDefaults() result mismatch with unknown struct type\ngot:  %q\nwant: nil",
-			packageName, result,
-		)
 	}
 }
 
 func TestConvertURLCommands(t *testing.T) {
-	// GIVEN: a list of URL Commands.
 	tests := []struct {
 		name  string
 		input filter.URLCommands
 		want  apitype.URLCommands
 	}{
 		{
-
 			name:  "nil",
 			input: nil,
 			want:  nil,
@@ -1769,25 +1658,14 @@ func TestConvertURLCommands(t *testing.T) {
 
 			had := tc.input.String()
 
-			// WHEN: convertURLCommands is called on it.
 			result := convertURLCommands(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertURLCommands()", packageName)
-
-			// THEN: the Webhooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s\nconvertURLCommands() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("URLCommands.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: URLCommands.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
@@ -1799,18 +1677,11 @@ func TestConvertURLCommands(t *testing.T) {
 
 func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 	optCfg := opttest.PlainDefaultsConfig(t)
-	dvCfg := dvtest.PlainDefaultsConfig(t)
+	dvCfg := dvtest.PlainDefaultsConfig()
 
-	// GIVEN: a DeployedVersionLookup.
 	tests := []struct {
-		name                                      string
-		input                                     deployedver.Lookup
-		inputStatus                               *status.Status
-		approvedVersion                           string
-		deployedVersion, deployedVersionTimestamp string
-		latestVersion, latestVersionTimestamp     string
-		lastQueried                               string
-		regexMissesContent, regexMissesVersion    int
+		name  string
+		input deployedver.Lookup
 
 		want *apitype.DeployedVersionLookup
 	}{
@@ -1899,17 +1770,18 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			},
 		},
 		{
-			name:               "url/filled",
-			regexMissesContent: 1,
-			regexMissesVersion: 3,
+			name: "url/filled",
 			input: test.Must(t, func() (deployedver.Lookup, error) {
-				options, _ := opt.Decode(
+				options, err := opt.Decode(
 					"yaml", []byte(test.TrimYAML(`
 						interval: 10m
 						semantic_versioning: true
 					`)),
 					optCfg,
 				)
+				if err != nil {
+					t.Fatalf("opt.Decode() failed: %v", err)
+				}
 
 				return deployedver.Decode(
 					"yaml", []byte(test.TrimYAML(`
@@ -1936,13 +1808,6 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					dvCfg,
 				)
 			}),
-			inputStatus: &status.Status{
-				Fails: status.Fails{},
-				ServiceInfo: serviceinfo.ServiceInfo{
-					ID:     "service-id",
-					WebURL: "https://release-argus.io",
-				},
-			},
 			want: &apitype.DeployedVersionLookup{
 				Type:              "url",
 				Method:            http.MethodPost,
@@ -1974,12 +1839,13 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 					time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
 					&dashboard.Options{},
 				)
-				// Need the ServiceID for the Query that's done because we have both Status and Options.
+				// Status and Options together trigger a Query, which needs the ServiceID.
 				dvStatus.ServiceInfo.ID = "manual"
-				options, _ := opt.Decode(
-					"yaml", []byte("semantic_versioning: true"),
-					optCfg,
-				)
+				options, err := opt.Decode("yaml", []byte("semantic_versioning: true"), optCfg)
+				if err != nil {
+					t.Fatalf("opt.Decode() failed: %v", err)
+				}
+
 				return deployedver.Decode(
 					"yaml", []byte(`type: manual`),
 					options,
@@ -2006,65 +1872,18 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			var had string
 			if tc.input != nil {
 				had = tc.input.String("")
-
-				var dvStatus *status.Status
-				if dv, ok := tc.input.(*dvweb.Lookup); ok {
-					dvStatus = dv.Status
-				}
-
-				if tc.approvedVersion != "" {
-					dvStatus.SetDeployedVersion("1.2.3", "", false)
-					dvStatus.SetLatestVersion("1.2.3", time.Now().Format(time.RFC3339), false)
-					dvStatus.SetApprovedVersion("1.2.3", false)
-					dvStatus.SetLastQueried(time.Now().Format(time.RFC3339))
-				}
-				if tc.inputStatus != nil {
-					dvStatus.Fails.Copy(&tc.inputStatus.Fails)
-					dvStatus.ServiceInfo.ID = tc.inputStatus.ServiceInfo.ID
-					dvStatus.ServiceInfo.WebURL = tc.inputStatus.ServiceInfo.WebURL
-				}
-				for range tc.regexMissesContent {
-					dvStatus.RegexMissContent()
-				}
-				for range tc.regexMissesVersion {
-					dvStatus.RegexMissVersion()
-				}
 			}
 
-			// WHEN: convertAndCensorDeployedVersionLookup is called on it.
 			result := convertAndCensorDeployedVersionLookup(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorDeployedVersionLookup", packageName)
-
-			// THEN: the Webhooks is converted correctly.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("DeployedVersionLookup.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
-			if result == nil || tc.input == nil {
-				if tc.input == nil && result != nil {
-					t.Fatalf(
-						"%s mismatch\ngot:  %q\nwant: nil",
-						prefix, result,
-					)
+			if tc.input != nil {
+				if got := tc.input.String(""); got != had {
+					t.Errorf("input: Lookup.String() mismatch\ngot:  %q\nwant: %q", got, had)
 				}
-				if result == nil && tc.want != nil {
-					t.Fatalf(
-						"%s mismatch\ngot:  nil\nwant: non-nil",
-						prefix,
-					)
-				}
-				return
-			}
-			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
 			}
 		})
 	}
@@ -2075,7 +1894,6 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 //
 
 func TestConvertAndCensorNotifierDefaults(t *testing.T) {
-	// GIVEN: shoutrrr.ShoutrrrsDefaults.
 	tests := []struct {
 		name  string
 		input shoutrrr.ShoutrrrsDefaults
@@ -2187,31 +2005,20 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorNotifiersDefaults is called.
 			result := convertAndCensorNotifiersDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorNotifiersDefaults()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("Notifiers.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: ShoutrrrsDefaults.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorNotifiers(t *testing.T) {
-	// GIVEN: shoutrrr.Shoutrrrs.
 	tests := []struct {
 		name  string
 		input shoutrrr.Shoutrrrs
@@ -2353,23 +2160,14 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorNotifiers is called.
 			result := convertAndCensorNotifiers(tc.input)
 
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s\nconvertAndCensorNotifiers() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("Notifiers.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s\nconvertAndCensorNotifiers() changed original input\ngot:  %q\nwant: %q",
-					packageName, got, had,
-				)
+				t.Errorf("input: Shoutrrrs.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
@@ -2380,7 +2178,6 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 //
 
 func TestConvertCommands(t *testing.T) {
-	// GIVEN: Commands.
 	tests := []struct {
 		name  string
 		input command.Commands
@@ -2424,32 +2221,20 @@ func TestConvertCommands(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertCommands is called on it.
 			got := convertCommands(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nconvertCommands(%+v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the Commands is converted correctly.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a, b apitype.Command) bool { return util.AreSlicesEqual(a, b) },
-				prefix,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: the original input is unchanged.
-			if got := decode.ToYAMLString(tc.input, ""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+			if gotInput := decode.ToYAMLString(tc.input, ""); gotInput != had {
+				t.Errorf("input: Commands mismatch\ngot:  %q\nwant: %q", gotInput, had)
 			}
 		})
 	}
@@ -2460,7 +2245,6 @@ func TestConvertCommands(t *testing.T) {
 //
 
 func TestConvertAndCensorWebhooksDefaults(t *testing.T) {
-	// GIVEN: webhook.WebhooksDefaults.
 	tests := []struct {
 		name  string
 		input webhook.WebhooksDefaults
@@ -2476,17 +2260,6 @@ func TestConvertAndCensorWebhooksDefaults(t *testing.T) {
 			input: webhook.WebhooksDefaults{},
 			want:  apitype.Webhooks{},
 		},
-		// {
-		// 	name: "nil and empty elements",
-		// 	input: &webhook.WebhooksDefaults{
-		// 		"test":  webhook.Defaults{},
-		// 		"other": nil,
-		// 	},
-		// 	want: &apitype.Webhooks{
-		// 		"test":  {},
-		// 		"other": nil,
-		// 	},
-		// },
 		{
 			name: "one",
 			input: webhook.WebhooksDefaults{
@@ -2561,32 +2334,20 @@ func TestConvertAndCensorWebhooksDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebhooksDefaults is called.
 			result := convertAndCensorWebhooksDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhooksDefaults()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					prefix, got, want,
-				)
+				t.Errorf("Webhooks.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: WebhooksDefaults.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorWebhookDefaults(t *testing.T) {
-	// GIVEN: a webhook.Defaults.
 	tests := []struct {
 		name  string
 		input webhook.Defaults
@@ -2638,32 +2399,20 @@ func TestConvertAndCensorWebhookDefaults(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebhookDefaults is called.
 			result := convertAndCensorWebhookDefaults(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhookDefaults()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(""), tc.want.String(""); got != want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("Webhook.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: Defaults.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorWebhooks(t *testing.T) {
-	// GIVEN: webhook.Webhooks.
 	tests := []struct {
 		name  string
 		input webhook.Webhooks
@@ -2757,32 +2506,20 @@ func TestConvertAndCensorWebhooks(t *testing.T) {
 
 			had := tc.input.String()
 
-			// WHEN: convertAndCensorWebhooks is called.
 			result := convertAndCensorWebhooks(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhooks()", packageName)
-
-			// THEN: the result should be as expected.
 			if got, want := result.String(), tc.want.String(); got != want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("Webhooks.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: Webhooks.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
 }
 
 func TestConvertAndCensorWebhook(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name  string
 		input *webhook.Webhook
@@ -2847,32 +2584,20 @@ func TestConvertAndCensorWebhook(t *testing.T) {
 
 			had := tc.input.String("")
 
-			// WHEN: convertAndCensorWebhook is called on it.
 			result := convertAndCensorWebhook(tc.input)
 
-			prefix := fmt.Sprintf("%s\nconvertAndCensorWebhook()", packageName)
-
-			// THEN: the Webhook is converted correctly.
 			if got, want := result.String(""), tc.want.String(""); got != want {
-				t.Errorf(
-					"%s result mismatch\ngot:  %q\nwant: %q",
-					*config.WebRoutePrefix, got, want,
-				)
+				t.Errorf("Webhook.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 
-			// AND: the original input is unchanged.
 			if got := tc.input.String(""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+				t.Errorf("input: Webhook.String() mismatch\ngot:  %q\nwant: %q", got, had)
 			}
 		})
 	}
 }
 
 func TestConvertWebhookHeaders(t *testing.T) {
-	// GIVEN: a webhook.Headers.
 	tests := []struct {
 		name  string
 		input webhook.Headers
@@ -2916,32 +2641,21 @@ func TestConvertWebhookHeaders(t *testing.T) {
 
 			had := decode.ToYAMLString(tc.input, "")
 
-			// WHEN: convertWebhookHeaders is called.
 			got := convertWebhookHeaders(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nconvertWebhookHeaders(%+v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the result should be as expected.
+			// Values are copied uncensored.
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
 				got,
 				tc.want,
 				func(a, b apitype.Header) bool { return a == b },
-				prefix,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
 			}
 
-			// AND: the original input is unchanged.
-			if got := decode.ToYAMLString(tc.input, ""); got != had {
-				t.Errorf(
-					"%s changed original input\ngot:  %q\nwant: %q",
-					prefix, got, had,
-				)
+			if gotInput := decode.ToYAMLString(tc.input, ""); gotInput != had {
+				t.Errorf("input: Headers mismatch\ngot:  %q\nwant: %q", gotInput, had)
 			}
 		})
 	}

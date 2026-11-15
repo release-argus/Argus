@@ -23,9 +23,7 @@ import (
 	"testing"
 )
 
-var packageName = "forgetest"
-
-// get makes a GET against `server` for `path`, carrying `header`.
+// get makes a GET against server for path, carrying header.
 func get(
 	t *testing.T,
 	server *Server,
@@ -36,10 +34,7 @@ func get(
 
 	request, err := http.NewRequest(http.MethodGet, server.URL+path, nil)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncould not build a request for %q: %v",
-			packageName, path, err,
-		)
+		t.Fatalf("http.NewRequest(%q) failed: %v", path, err)
 	}
 	for key, values := range header {
 		for _, value := range values {
@@ -49,25 +44,19 @@ func get(
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		t.Fatalf(
-			"%s\nGET %q failed: %v",
-			packageName, path, err,
-		)
+		t.Fatalf("Client.Do(%q) failed: %v", path, err)
 	}
 	t.Cleanup(func() { _ = response.Body.Close() })
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		t.Fatalf(
-			"%s\ncould not read the body of %q: %v",
-			packageName, path, err,
-		)
+		t.Fatalf("%s: io.ReadAll() failed: %v", path, err)
 	}
 
 	return response, string(body)
 }
 
-// startServing starts `server` over plain HTTP.
+// startServing starts server over plain HTTP.
 func startServing(t *testing.T, server *Server) *Server {
 	t.Helper()
 

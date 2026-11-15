@@ -16,17 +16,21 @@
 
 package test
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/release-argus/Argus/internal/test"
+)
 
 func TestPlainConfig(t *testing.T) {
-	// WHEN: PlainConfig is called.
 	whCfg := PlainConfig(t)
 
-	// THEN: It returns a set of defaults.
-	if whCfg.Root == nil || whCfg.Defaults == nil || whCfg.HardDefaults == nil {
-		t.Fatalf(
-			"%s\nPlainConfig(t) returned nil, root: %v, defaults: %v, hardDefaults: %v",
-			packageName, whCfg.Root, whCfg.Defaults, whCfg.HardDefaults,
-		)
+	fieldTests := []test.FieldAssertion{
+		{Name: "Root", Got: whCfg.Root, Mode: test.CompareNotNil},
+		{Name: "Defaults", Got: whCfg.Defaults, Mode: test.CompareNotNil},
+		{Name: "HardDefaults", Got: whCfg.HardDefaults, Mode: test.CompareNotNil},
+	}
+	if testErr := test.AssertFields(t, fieldTests, "webhook.Config"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }

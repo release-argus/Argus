@@ -28,24 +28,25 @@ import (
 func PlainOptions(t *testing.T, cfg opt.DefaultsConfig) *opt.Options {
 	t.Helper()
 
-	options, _ := opt.Decode(
-		"yaml", nil,
-		cfg,
-	)
+	options, _ := opt.Decode("yaml", nil, cfg)
 
 	return options
 }
 
-func Options(t *testing.T) *opt.Options {
+// Options returns service options with a 1m interval, decoded with plain defaults.
+func Options(t test.TB) *opt.Options {
 	t.Helper()
 
 	optCfg := PlainDefaultsConfig(t)
 
-	options, _ := opt.Decode(
+	options, err := opt.Decode(
 		"yaml", []byte(test.TrimYAML(`
 			interval: 1m
 		`)),
 		optCfg,
 	)
+	if err != nil {
+		t.Fatalf("opt.Decode() failed: %v", err)
+	}
 	return options
 }

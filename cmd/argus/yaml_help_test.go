@@ -17,18 +17,14 @@
 package main
 
 import (
-	"os"
-	"strings"
+	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
-func writeFile(path string, data string) {
-	data = strings.TrimPrefix(data, "\n")
-	_ = os.WriteFile(path, []byte(data), 0644)
-}
+func testYAML_NoServices(t *testing.T, path string) {
+	t.Helper()
 
-func testYAML_NoServices(path string) {
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -75,19 +71,23 @@ func testYAML_NoServices(path string) {
 				max_tries: 1
 	`)
 
-	writeFile(path, data)
+	test.WriteFile(t, path, data)
 }
 
-func testYAML_Invalid(path string) {
+func testYAML_Invalid(t *testing.T, path string) {
+	t.Helper()
+
 	data := test.TrimYAML(`
 		service:
 		  SERVICE_NAME: [
 	`)
 
-	writeFile(path, data)
+	test.WriteFile(t, path, data)
 }
 
-func testYAML_Argus(path string) {
+func testYAML_Argus(t *testing.T, path string) {
+	t.Helper()
+
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -101,20 +101,24 @@ func testYAML_Argus(path string) {
 					url: ` + test.ArgusGitHubRepo + `
 	`)
 
-	writeFile(path, data)
+	test.WriteFile(t, path, data)
 }
 
-func testYAML_AuthEnabled(path string) {
+func testYAML_AuthEnabled(t *testing.T, path string) {
+	t.Helper()
+
 	data := test.TrimYAML(`
 		settings:
 			auth:
 				enabled: true
 	`)
 
-	writeFile(path, data)
+	test.WriteFile(t, path, data)
 }
 
-func testYAML_Argus_SomeInactive(path string) {
+func testYAML_Argus_SomeInactive(t *testing.T, path string) {
+	t.Helper()
+
 	data := test.TrimYAML(`
 		defaults:
 			service:
@@ -146,5 +150,5 @@ func testYAML_Argus_SomeInactive(path string) {
 				#         url: ` + test.ArgusGitHubRepo + `
 	`)
 
-	writeFile(path, data)
+	test.WriteFile(t, path, data)
 }

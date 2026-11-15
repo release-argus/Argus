@@ -27,41 +27,17 @@ import (
 )
 
 func TestLookup_GetType(t *testing.T) {
-	// GIVEN: a Lookup with a Type.
-	tests := []struct {
-		name  string
-		lType string
-	}{
-		{name: "empty", lType: ""},
-		{name: "test", lType: "test"},
-		{name: "x", lType: "x"},
-		{name: "y", lType: "y"},
-	}
+	l := &Lookup{}
+	l.Type = "other"
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	got := l.GetType()
 
-			l := &Lookup{}
-			l.Type = tc.lType
-
-			// WHEN: GetType is called.
-			got := l.GetType()
-
-			wantType := Type
-			// THEN: the Type is returned.
-			if got != wantType {
-				t.Errorf(
-					"%s\nLookup.GetType() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantType,
-				)
-			}
-		})
+	if got != Type {
+		t.Errorf("mismatch\ngot:  %q\nwant: %q", got, Type)
 	}
 }
 
 func TestLookup_AccessToken(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue string
@@ -91,33 +67,27 @@ func TestLookup_AccessToken(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.AccessToken = tc.rootValue
 			lookup.typeDefaults.AccessToken = tc.defaultValue
 			lookup.typeHardDefaults.AccessToken = tc.hardDefaultValue
 
-			// WHEN: accessToken is called.
 			got := lookup.accessToken()
 
-			// THEN: the expected value is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.accessToken() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_URL(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name        string
 		url         string
 		tagFallback bool
 		page        int
-		perPage     int
+		foundOnPage int
 		want        string
 	}{
 		{
@@ -154,22 +124,22 @@ func TestLookup_URL(t *testing.T) {
 			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?page=2",
 		},
 		{
-			name:    "Repo/per_page",
-			url:     test.ArgusGitHubRepo,
-			perPage: 2,
+			name:        "Repo/per_page",
+			url:         test.ArgusGitHubRepo,
+			foundOnPage: 2,
 			want: fmt.Sprintf(
-				"https://api.github.com/repos/"+test.ArgusGitHubRepo+"/releases?per_page=%d",
-				2*defaultPerPage,
+				"https://api.github.com/repos/%s/releases?per_page=%d",
+				test.ArgusGitHubRepo, 2*defaultPerPage,
 			),
 		},
 		{
-			name:    "Repo/page >1 and per_page",
-			url:     test.ArgusGitHubRepo,
-			page:    2,
-			perPage: 4,
+			name:        "Repo/page >1 and per_page",
+			url:         test.ArgusGitHubRepo,
+			page:        2,
+			foundOnPage: 4,
 			want: fmt.Sprintf(
-				"https://api.github.com/repos/"+test.ArgusGitHubRepo+"/releases?page=2&per_page=%d",
-				4*defaultPerPage,
+				"https://api.github.com/repos/%s/releases?page=2&per_page=%d",
+				test.ArgusGitHubRepo, 4*defaultPerPage,
 			),
 		},
 		{
@@ -184,10 +154,10 @@ func TestLookup_URL(t *testing.T) {
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
 			page:        3,
-			perPage:     7,
+			foundOnPage: 7,
 			want: fmt.Sprintf(
-				"https://api.github.com/repos/"+test.ArgusGitHubRepo+"/tags?page=3&per_page=%d",
-				7*defaultPerPage,
+				"https://api.github.com/repos/%s/tags?page=3&per_page=%d",
+				test.ArgusGitHubRepo, 7*defaultPerPage,
 			),
 		},
 	}
@@ -196,30 +166,23 @@ func TestLookup_URL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.URL = tc.url
 			if tc.tagFallback {
 				lookup.GetGitHubData().SetTagFallback()
 			}
-			lookup.data.SetPerPage(tc.perPage)
+			lookup.data.SetPerPage(tc.foundOnPage)
 
-			// WHEN: url is called with the page argument.
 			got := lookup.url(tc.page)
 
-			// THEN: the expected value is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.url(%d) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.page,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_UsePreRelease(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name                                      string
 		rootValue, defaultValue, hardDefaultValue *bool
@@ -255,23 +218,17 @@ func TestLookup_UsePreRelease(t *testing.T) {
 				&Defaults{UsePreRelease: tc.hardDefaultValue},
 			)
 
-			// WHEN: usePreRelease is called.
 			result := lookup.usePreRelease()
 
-			// THEN: the expected value is returned.
 			wantStr := test.StringifyPtr(tc.want)
 			if got := strconv.FormatBool(result); got != wantStr {
-				t.Errorf(
-					"%s\nLookup.usePreRelease() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, wantStr,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, wantStr)
 			}
 		})
 	}
 }
 
 func TestLookup_UseTagsAPI(t *testing.T) {
-	// GIVEN: a Lookup with various combinations of use_prerelease and require.
 	tests := []struct {
 		name          string
 		usePreRelease *bool
@@ -296,7 +253,7 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 		{
 			name:    "require/regex_content=set - blocked",
 			require: &filter.Require{RegexContent: "some-pattern"},
-			want:    false,
+			want:    false, // regex_content needs release assets.
 		},
 		{
 			name:          "use_prerelease/false - allowed",
@@ -314,27 +271,20 @@ func TestLookup_UseTagsAPI(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Lookup with the specified use_prerelease and require.
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.UsePreRelease = tc.usePreRelease
 			lookup.Require = tc.require
 
-			// WHEN: useTagsAPI is called.
 			got := lookup.useTagsAPI()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.useTagsAPI() result mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestServiceURL(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name string
 		url  string
@@ -356,36 +306,25 @@ func TestServiceURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			lookup := testLookup(t, false)
+			lookup := testLookup(t)
 			lookup.URL = tc.url
 
-			// WHEN: ServiceURL is called.
 			got := lookup.ServiceURL()
 
-			// THEN: the expected value is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nLookup.ServiceURL() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_GetGitHubData(t *testing.T) {
-	// GIVEN: a Lookup.
-	lookup := testLookup(t, false)
+	lookup := testLookup(t)
 
-	// WHEN: GetGitHubData is called.
 	got := lookup.GetGitHubData()
 
-	// THEN: the address of the data is returned.
 	want := &lookup.data
 	if got != want {
-		t.Errorf(
-			"%s\nLookup.GetGitHubData() pointer mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+		t.Errorf("mismatch\ngot:  %p\nwant: %p", got, want)
 	}
 }

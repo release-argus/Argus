@@ -17,7 +17,6 @@
 package test
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -25,73 +24,41 @@ import (
 )
 
 // AssertCheckValuesWithErrorAndChanged runs the given function and asserts both error and changed flag.
-//
-// GIVEN: a function that returns (error, bool)
-//
-// WHEN: the function is called.
-//
-// THEN: 'error' matches the supplied regex and 'changed' flag matches expectation.
 func AssertCheckValuesWithErrorAndChanged(
 	t TB,
-	packageName string,
 	wantErrRegex string,
 	wantChanged bool,
 	checkValues func() (error, bool),
 ) (error, bool) {
 	t.Helper()
 
-	// Apply prefix to regex.
-	errRegex := wantErrRegex
-
-	// WHEN: the function is called.
 	err, changed := checkValues()
 
-	prefix := fmt.Sprintf("%s\nCheckValues()", packageName)
-
-	// THEN: The number of lines of error matches expected.
 	e := errfmt.FormatError(err)
 	lines := strings.Split(e, "\n")
 	gotLines := len(lines)
-	wantLines := strings.Count(errRegex, "\n") + 1
+	wantLines := strings.Count(wantErrRegex, "\n") + 1
 	if gotLines < wantLines {
 		t.Fatalf(
-			"%s error stdout line count mismatch\ngot:  %d\nwant: %d\nstdout:\n%q\nerrRegex:\n%q",
-			prefix,
-			gotLines, wantLines,
-			e, errRegex,
+			"error line count mismatch\ngot:  %d\nwant: >= %d\nerror:\n%q\nerrRegex:\n%q",
+			gotLines, wantLines, e, wantErrRegex,
 		)
 	}
 
-	// AND: error matches regex.
-	regex := regexp.MustCompile(errRegex)
-	if !regex.MatchString(e) {
-		t.Fatalf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+	if !regexp.MustCompile(wantErrRegex).MatchString(e) {
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
 	}
 
-	// AND: changed flag matches expectation.
 	if changed != wantChanged {
-		t.Errorf(
-			"%s changed flag mismatch\ngot:  %t\nwant: %t",
-			prefix, changed, wantChanged,
-		)
+		t.Errorf("changed mismatch\ngot:  %t\nwant: %t", changed, wantChanged)
 	}
 
 	return err, changed
 }
 
-// AssertCheckValuesWithError runs the given function and asserts errors match.
-//
-// GIVEN: a function that returns an error
-//
-// WHEN: this function is called.
-//
-// THEN: error matches prefixed regex.
+// AssertCheckValuesWithError runs the given function and asserts its error matches wantErrRegex.
 func AssertCheckValuesWithError(
 	t TB,
-	packageName string,
 	wantErrRegex string,
 	checkValues func() error,
 ) error {
@@ -99,7 +66,6 @@ func AssertCheckValuesWithError(
 
 	err, _ := AssertCheckValuesWithErrorAndChanged(
 		t,
-		packageName,
 		wantErrRegex,
 		false,
 		func() (error, bool) {

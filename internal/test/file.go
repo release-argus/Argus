@@ -12,8 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build unit
+//go:build unit || integration
 
 package test
 
-var packageName = "deployedver_test"
+import (
+	"os"
+	"strings"
+)
+
+// WriteFile writes data to path, minus one leading newline, failing the test on error.
+func WriteFile(t TB, path string, data string) {
+	t.Helper()
+
+	data = strings.TrimPrefix(data, "\n")
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatalf("os.WriteFile(%q) failed: %v", path, err)
+	}
+}

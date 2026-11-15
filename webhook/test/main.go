@@ -101,7 +101,7 @@ func Webhook(t *testing.T, failing, selfSignedCert, headers bool) *webhook.Webho
 		}
 	}
 
-	// Webhooks to InitMetrics.
+	// Only Webhooks exports InitMetrics.
 	webhooks := webhook.Webhooks{"test": wh}
 	webhooks.InitMetrics()
 

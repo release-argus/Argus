@@ -17,7 +17,6 @@
 package latestver
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -31,7 +30,6 @@ import (
 )
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -42,7 +40,6 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				latest_version:
 					jsontext:
@@ -177,7 +174,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -187,7 +183,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -201,6 +196,13 @@ func TestDefaults_IsZero(t *testing.T) {
 		{
 			name: "non-empty/Type",
 			data: &Defaults{Type: "github"},
+			want: false,
+		},
+		{
+			name: "non-empty/Common",
+			data: &Defaults{Common: base.Defaults{Require: filter.RequireDefaults{
+				Docker: docker.Defaults{Type: "hub"},
+			}}},
 			want: false,
 		},
 		{
@@ -261,22 +263,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.data.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a Defaults.
 	defaults := Defaults{}
 	want := Defaults{
 		Type: "github",
@@ -299,41 +295,29 @@ func TestDefaults_Default(t *testing.T) {
 		},
 	}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
 	wantStr := decode.ToYAMLString(want, "")
 	gotStr := decode.ToYAMLString(defaults, "")
-	// THEN: it should set the defaults as expected - common (Require), and every
-	// registered type's own defaults.
+
 	if gotStr != wantStr {
-		t.Errorf(
-			"%s\nDefaults.Default() value mismatch\ngot:  %q\nwant: %q",
-			packageName, gotStr, wantStr,
-		)
+		t.Errorf("Defaults mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 	}
 }
 
 func TestDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: Two sets of Defaults.
 	d := &Defaults{}
 	hd := &Defaults{}
 	hd.Default()
 
-	// WHEN: SetDefaults is called on defaults with these other defaults.
 	d.SetDefaults(hd)
 
-	// THEN: the common Require defaults chain to the hard defaults' Require.
-	if d.Common.Require.Docker.Defaults != &hd.Common.Require.Docker {
-		t.Errorf(
-			"%s\nDefaults.SetDefaults() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, d.Common.Require.Docker.Defaults, &hd.Common.Require.Docker,
-		)
+	if got, want := d.Common.Require.Docker.Defaults, &hd.Common.Require.Docker; got != want {
+		t.Errorf("Defaults.Common.Require.Docker.Defaults mismatch\ngot:  %p\nwant: %p", got, want)
 	}
 }
 
 func TestDefaults_MigrateDeprecated(t *testing.T) {
-	// GIVEN: a Defaults, possibly with deprecated fields set.
 	tests := []struct {
 		name                 string
 		input                *Defaults
@@ -432,72 +416,68 @@ func TestDefaults_MigrateDeprecated(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			prefix := fmt.Sprintf("%s\nDefaults.MigrateDeprecated()", packageName)
-
-			// WHEN: MigrateDeprecated is called.
 			tc.input.MigrateDeprecated()
 
-			// THEN: the deprecated fields were migrated to their new home.
 			if tc.wantAccessToken != "" && tc.input.GitHub.AccessToken != tc.wantAccessToken {
 				t.Errorf(
-					"%s GitHub.AccessToken mismatch\ngot:  %q\nwant: %q",
-					prefix, tc.input.GitHub.AccessToken, tc.wantAccessToken,
+					"Defaults.GitHub.AccessToken mismatch\ngot:  %q\nwant: %q",
+					tc.input.GitHub.AccessToken, tc.wantAccessToken,
 				)
 			}
 			if tc.wantUsePreRelease != nil {
 				if got, want := test.StringifyPtr(tc.input.GitHub.UsePreRelease), test.StringifyPtr(tc.wantUsePreRelease); got != want {
 					t.Errorf(
-						"%s GitHub.UsePreRelease mismatch\ngot:  %v\nwant: %v",
-						prefix, got, want,
+						"Defaults.GitHub.UsePreRelease mismatch\ngot:  %s\nwant: %s",
+						got, want,
 					)
 				}
 			}
 			if tc.wantAllowInvalidCert != nil {
 				if got, want := test.StringifyPtr(tc.input.URL.AllowInvalidCerts), test.StringifyPtr(tc.wantAllowInvalidCert); got != want {
 					t.Errorf(
-						"%s URL.AllowInvalidCerts mismatch\ngot:  %v\nwant: %v",
-						prefix, got, want,
+						"Defaults.URL.AllowInvalidCerts mismatch\ngot:  %s\nwant: %s",
+						got, want,
 					)
 				}
 			}
 			if tc.wantRequire != nil {
 				if got, want := tc.input.Common.Require.Docker.String(""), tc.wantRequire.Docker.String(""); got != want {
 					t.Errorf(
-						"%s Require mismatch\ngot:  %v\nwant: %v",
-						prefix, got, want,
+						"Defaults.Common.Require.Docker.String() mismatch\ngot:  %q\nwant: %q",
+						got, want,
 					)
 				}
 			}
 
-			// AND: the deprecated fields were cleared.
 			if tc.input.AccessTokenDeprecated != "" {
 				t.Errorf(
-					"%s AccessTokenDeprecated not cleared: %q",
-					prefix, tc.input.AccessTokenDeprecated)
+					"Defaults.AccessTokenDeprecated mismatch\ngot:  %q\nwant: \"\" (cleared)",
+					tc.input.AccessTokenDeprecated,
+				)
 			}
 			if tc.input.UsePreReleaseDeprecated != nil {
 				t.Errorf(
-					"%s UsePreReleaseDeprecated not cleared: %v",
-					prefix, tc.input.UsePreReleaseDeprecated)
+					"Defaults.UsePreReleaseDeprecated mismatch\ngot:  %s\nwant: nil (cleared)",
+					test.StringifyPtr(tc.input.UsePreReleaseDeprecated),
+				)
 			}
 			if tc.input.AllowInvalidCertsDeprecated != nil {
 				t.Errorf(
-					"%s AllowInvalidCertsDeprecated not cleared: %v",
-					prefix, tc.input.AllowInvalidCertsDeprecated)
+					"Defaults.AllowInvalidCertsDeprecated mismatch\ngot:  %s\nwant: nil (cleared)",
+					test.StringifyPtr(tc.input.AllowInvalidCertsDeprecated),
+				)
 			}
 			if tc.input.RequireDeprecated != nil {
 				t.Errorf(
-					"%s RequireDeprecated not cleared: %v",
-					prefix, tc.input.RequireDeprecated)
+					"Defaults.RequireDeprecated mismatch\ngot:  %q\nwant: nil (cleared)",
+					decode.ToYAMLString(tc.input.RequireDeprecated, ""),
+				)
 			}
 		})
 	}
 }
 
 func TestDefaults_MigrateDeprecated__PreservesDefaultsChainForSetDefaults(t *testing.T) {
-	// GIVEN: HardDefaults with the Docker tag template set, and the deprecated
-	// 'latest_version.require' key still in its old (pre-'common.require')
-	// spot, as a user upgrading from an old config would have:
 	hd := &Defaults{}
 	hd.Default()
 
@@ -509,42 +489,30 @@ func TestDefaults_MigrateDeprecated__PreservesDefaultsChainForSetDefaults(t *tes
 		},
 	}
 
-	// WHEN: MigrateDeprecated runs on it and SetDefaults wires the (now-migrated) chain.
 	d.MigrateDeprecated()
 	d.SetDefaults(hd)
 
-	prefix := fmt.Sprintf("%s\nDefaults.MigrateDeprecated()+SetDefaults()", packageName)
-
-	// THEN: the migrated Common.Require.Docker must chain to the hard defaults.
 	if d.Common.Require.Docker.Defaults != &hd.Common.Require.Docker {
 		t.Errorf(
-			"%s broke the Require defaults chain\ngot:  %p\nwant: %p",
-			prefix, d.Common.Require.Docker.Defaults, &hd.Common.Require.Docker,
+			"Defaults.Common.Require.Docker.Defaults mismatch\ngot:  %p\nwant: %p",
+			d.Common.Require.Docker.Defaults, &hd.Common.Require.Docker,
 		)
 	}
 	want := hd.Common.Require.Docker.Tag
 	if want == "" {
-		t.Errorf("%s HardDefaults.Common.Require.Docker.Tag should be set! got an empty string", prefix)
+		t.Error("HardDefaults.Common.Require.Docker.Tag mismatch\ngot:  \"\"\nwant: non-empty")
 	}
 	if got := d.Common.Require.Docker.GetTag(); got != want {
-		t.Errorf(
-			"%s lost the hard-default Docker tag template\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("Defaults.Common.Require.Docker.GetTag() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: the migrated Type ('quay', not the hard default 'hub') must be
-	// what a per-service require.docker inherits when it omits its own type.
+	// The migrated quay, rather than the hard default hub.
 	if got, want := d.Common.Require.Docker.GetType(), "quay"; got != want {
-		t.Errorf(
-			"%s lost the migrated Docker type\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("Defaults.Common.Require.Docker.GetType() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
 func TestApplyTypeDefaults(t *testing.T) {
-	// GIVEN: a DefaultsConfig.
 	cfg := DefaultsConfig{
 		Soft: &Defaults{
 			Forgejo: forgejo.Defaults{Common: forgejo.CommonDefaults{UsePreRelease: new(true)}},
@@ -559,80 +527,69 @@ func TestApplyTypeDefaults(t *testing.T) {
 	}
 
 	t.Run("forgejo.Lookup gets the Forgejo-specific defaults", func(t *testing.T) {
-		// AND: a Lookup of type forgejo.Lookup.
 		lookup := &forgejo.Lookup{}
 
-		// WHEN: applyTypeDefaults is called.
 		applyTypeDefaults(lookup, cfg)
 
-		// THEN: the receiver's type defaults point at the given Forgejo defaults.
 		gotSoft, gotHard := lookup.GetTypeDefaults()
 		if gotSoft != &cfg.Soft.Forgejo {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Soft pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotSoft, &cfg.Soft.Forgejo,
+				"Lookup.GetTypeDefaults() defaults mismatch\ngot:  %p\nwant: %p",
+				gotSoft, &cfg.Soft.Forgejo,
 			)
 		}
 		if gotHard != &cfg.Hard.Forgejo {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Hard pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotHard, &cfg.Hard.Forgejo,
+				"Lookup.GetTypeDefaults() hardDefaults mismatch\ngot:  %p\nwant: %p",
+				gotHard, &cfg.Hard.Forgejo,
 			)
 		}
 	})
 
 	t.Run("github.Lookup gets the GitHub-specific defaults", func(t *testing.T) {
-		// AND: a Lookup of type github.Lookup.
 		lookup := &github.Lookup{}
 
-		// WHEN: applyTypeDefaults is called.
 		applyTypeDefaults(lookup, cfg)
 
-		// THEN: the receiver's type defaults point at the given GitHub defaults.
 		gotSoft, gotHard := lookup.GetTypeDefaults()
 		if gotSoft != &cfg.Soft.GitHub {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Soft pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotSoft, &cfg.Soft.GitHub,
+				"Lookup.GetTypeDefaults() defaults mismatch\ngot:  %p\nwant: %p",
+				gotSoft, &cfg.Soft.GitHub,
 			)
 		}
 		if gotHard != &cfg.Hard.GitHub {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Hard pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotHard, &cfg.Hard.GitHub,
+				"Lookup.GetTypeDefaults() hardDefaults mismatch\ngot:  %p\nwant: %p",
+				gotHard, &cfg.Hard.GitHub,
 			)
 		}
 	})
 
 	t.Run("web.Lookup gets the URL-specific defaults", func(t *testing.T) {
-		// AND: a Lookup of type web.Lookup.
 		lookup := &web.Lookup{}
 
-		// WHEN: applyTypeDefaults is called.
 		applyTypeDefaults(lookup, cfg)
 
-		// THEN: the receiver's type defaults point at the given URL defaults.
 		gotSoft, gotHard := lookup.GetTypeDefaults()
 		if gotSoft != &cfg.Soft.URL {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Soft pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotSoft, &cfg.Soft.URL,
+				"Lookup.GetTypeDefaults() defaults mismatch\ngot:  %p\nwant: %p",
+				gotSoft, &cfg.Soft.URL,
 			)
 		}
 		if gotHard != &cfg.Hard.URL {
 			t.Errorf(
-				"%s\napplyTypeDefaults() Hard pointer mismatch\ngot:  %p\nwant: %p",
-				packageName, gotHard, &cfg.Hard.URL,
+				"Lookup.GetTypeDefaults() hardDefaults mismatch\ngot:  %p\nwant: %p",
+				gotHard, &cfg.Hard.URL,
 			)
 		}
 	})
 
 	t.Run("unregistered type is a no-op", func(t *testing.T) {
-		// AND: an unregistered Lookup type.
 		lookup := &mockLookup{}
 
-		// WHEN: applyTypeDefaults is called.
-		// THEN: it must not panic for a type with no SetTypeDefaults dispatch.
+		// No case of the type switch matches, so this must not panic.
 		applyTypeDefaults(lookup, cfg)
 	})
 }

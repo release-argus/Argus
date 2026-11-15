@@ -575,10 +575,14 @@ func insertGroupGrants(
 
 	for _, grant := range grants {
 		if !grant.Valid() {
+			scope := string(grant.Scope.Type)
+			if grant.Scope.Ref != "" {
+				scope += "/" + grant.Scope.Ref
+			}
 			return fmt.Errorf(
-				"%w: %s:%s @ %s/%s",
+				"%w: %s:%s @ %s",
 				ErrInvalidGrant,
-				grant.Resource, grant.Action, grant.Scope.Type, grant.Scope.Ref,
+				grant.Resource, grant.Action, scope,
 			)
 		}
 

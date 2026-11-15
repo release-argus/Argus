@@ -17,17 +17,22 @@
 package v1
 
 import (
-	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/auth/rbac"
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	"github.com/release-argus/Argus/service"
+	svctest "github.com/release-argus/Argus/service/test"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	const editID = "retag-me"
@@ -35,16 +40,15 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 	const allTagsID = "all-tags-svc"
 	const ownedID = "owned"
 
-	// AND: a service tagged "team-a"
 	svcA := testService(t, editID, "url", "url", true)
 	svcA.Dashboard.Tags = []string{"team-a"}
-	// AND: a service tagged "team-b"
+
 	svcB := testService(t, outOfScopeID, "url", "url", true)
 	svcB.Dashboard.Tags = []string{"team-b"}
-	// AND: a service tagged with both "team-a" and "team-b"
-	svcC := testService(t, outOfScopeID, "url", "url", true)
+
+	svcC := testService(t, allTagsID, "url", "url", true)
 	svcC.Dashboard.Tags = []string{"team-a", "team-b"}
-	// AND: a service owned by a service-scoped grant.
+
 	svcOwned := testService(t, ownedID, "url", "url", true)
 
 	api.Config.OrderMu.Lock()
@@ -52,122 +56,101 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 	api.Config.Service[outOfScopeID] = svcB
 	api.Config.Service[allTagsID] = svcC
 	api.Config.Service[ownedID] = svcOwned
-	api.Config.Order = append(api.Config.Order, editID, outOfScopeID, ownedID)
+	api.Config.Order = append(api.Config.Order, editID, outOfScopeID, allTagsID, ownedID)
 	api.Config.OrderMu.Unlock()
 
-	// AND: a user whose only grant is service:update scoped to tag "team-a".
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"team-a-editors",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionUpdate,
-				Scope:    rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "team-a"},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionUpdate, Scope: rbac.Scope{Type: rbac.ScopeServiceTag, Ref: "team-a"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate 'team-a-editors' group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "team-a-editor", "editor-password", "team-a-editors")
 
-	// AND: a user with service:update scoped to the "owned" service.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"owners",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionUpdate,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: ownedID},
-			},
+			{Resource: rbac.ResourceService, Action: rbac.ActionUpdate, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: ownedID}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate 'owners' group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "owner", "owner-password", "owners")
 
-	// Adding tags is fine.
-	// Removing other tags is fine.
-	// Stripping the last tag/scope authorising the caller locks them out and is refused.
-	// A rename also renames a service-scoped grant, so it is never a lockout.
 	tests := []struct {
-		name          string
-		user, pass    string
-		serviceID     string
-		newID         string
-		newTags       string
-		wantForbidden bool
+		name       string
+		user, pass string
+		serviceID  string
+		newID      string
+		newTags    string
+		wantStatus int
 	}{
 		{
 			name: "valid/keep the authorising tag",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     editID,
-			newID:         editID,
-			newTags:       `["team-a"]`,
-			wantForbidden: false,
+			serviceID:  editID,
+			newID:      editID,
+			newTags:    `["team-a"]`,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name: "valid/append a viewer tag",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     editID,
-			newID:         editID,
-			newTags:       `["team-a", "team-b"]`,
-			wantForbidden: false,
+			serviceID:  editID,
+			newID:      editID,
+			newTags:    `["team-a", "team-b"]`,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name: "valid/remove another tag",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     allTagsID,
-			newID:         allTagsID,
-			newTags:       `["team-a"]`,
-			wantForbidden: false,
+			serviceID:  allTagsID,
+			newID:      allTagsID,
+			newTags:    `["team-a"]`,
+			wantStatus: http.StatusOK,
 		},
 		{
 			name: "invalid/tag editor replaces its authorising tag",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     editID,
-			newID:         editID,
-			newTags:       `["team-b"]`,
-			wantForbidden: true,
+			serviceID:  editID,
+			newID:      editID,
+			newTags:    `["team-b"]`,
+			wantStatus: http.StatusForbidden, // The edit would lock the caller out.
 		},
 		{
 			name: "invalid/tag editor strips all tags",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     editID,
-			newID:         editID,
-			newTags:       `[]`,
-			wantForbidden: true,
+			serviceID:  editID,
+			newID:      editID,
+			newTags:    `[]`,
+			wantStatus: http.StatusForbidden, // The edit would lock the caller out.
 		},
 		{
 			name: "invalid/tag editor edits a service outside its scope",
 			user: "team-a-editor", pass: "editor-password",
-			serviceID:     outOfScopeID,
-			newID:         outOfScopeID,
-			newTags:       `["team-a". "team-b"]`,
-			wantForbidden: true,
+			serviceID:  outOfScopeID,
+			newID:      outOfScopeID,
+			newTags:    `["team-a", "team-b"]`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
 			name: "valid/service owner renames their own service",
 			user: "owner", pass: "owner-password",
-			serviceID:     ownedID,
-			newID:         "owned-renamed",
-			newTags:       `[]`,
-			wantForbidden: false,
+			serviceID:  ownedID,
+			newID:      "owned-renamed", // The service-scoped grant is renamed too, so no lockout.
+			newTags:    `[]`,
+			wantStatus: http.StatusOK,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Restore the starting tags.
+			// Serial: shares api.Config.Service.
+
 			hadTags := api.Config.Service[editID].Dashboard.Tags
 			t.Cleanup(func() {
 				api.Config.OrderMu.Lock()
@@ -183,106 +166,92 @@ func TestAPI__auth__ServiceEdit__preventsSelfLockout(t *testing.T) {
 				"dashboard": {"tags": ` + tc.newTags + `}
 			}`)
 
-			// WHEN: the service is edited.
-			w := serveAuth(api, authedRequest(
-				http.MethodPut,
-				"/api/v1/service/config?service_id="+tc.serviceID,
-				body, cookie,
-			))
+			req := authedRequest(
+				http.MethodPut, "/api/v1/service/config?service_id="+tc.serviceID, body, cookie,
+			)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nservice edit self-lockout", packageName)
-
-			// THEN: only an edit that removes the caller's own access is refused.
-			gotForbidden := w.Code == http.StatusForbidden
-			if gotForbidden != tc.wantForbidden {
-				t.Errorf(
-					"%s forbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
-					prefix,
-					gotForbidden, w.Code, w.Body.String(),
-					tc.wantForbidden,
+			if got, want := w.Code, tc.wantStatus; got != want {
+				t.Fatalf(
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
+			}
+
+			if tc.wantStatus != http.StatusOK {
+				return
+			}
+			var wantTags []string
+			if err := decode.Unmarshal("json", []byte(tc.newTags), &wantTags); err != nil {
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
+			}
+			api.Config.OrderMu.RLock()
+			svc := api.Config.Service[tc.newID]
+			api.Config.OrderMu.RUnlock()
+			if svc == nil {
+				t.Fatalf("Config.Service[%q] mismatch\ngot:  absent\nwant: present", tc.newID)
+			}
+			if got := svc.Dashboard.Tags; !slices.Equal(got, wantTags) {
+				t.Errorf("Service.Dashboard.Tags mismatch\ngot:  %q\nwant: %q", got, wantTags)
 			}
 		})
 	}
 }
 
 func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: a user holding notify:execute but no service:update.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"notifier",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceNotify,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
+			{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate notifier group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "notifier-user", "notifier-password", "notifier")
 
-	// AND: a user holding notify:execute, and service:update on "test".
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"notifier-updater",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceNotify,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionUpdate,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
+			{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
+			{Resource: rbac.ResourceService, Action: rbac.ActionUpdate, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate notifier-updater group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "updater-user", "updater-password", "notifier-updater")
 
 	tests := []struct {
-		name          string
-		username      string
-		password      string
-		body          string
-		wantForbidden bool
+		name       string
+		username   string
+		password   string
+		body       string
+		wantStatus int
 	}{
 		{
-			name:          "invalid/inherit without service:update on the source",
-			username:      "notifier-user",
-			password:      "notifier-password",
-			body:          `{"service_id_previous":"test","name_previous":"test"}`,
-			wantForbidden: true,
+			name:       "invalid/inherit without service:update on the source",
+			username:   "notifier-user",
+			password:   "notifier-password",
+			body:       `{"service_id_previous":"test","name_previous":"test"}`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:          "valid/inherit with service:update on the source",
-			username:      "updater-user",
-			password:      "updater-password",
-			body:          `{"service_id_previous":"test","name_previous":"test"}`,
-			wantForbidden: false,
+			name:       "valid/inherit with service:update on the source",
+			username:   "updater-user",
+			password:   "updater-password",
+			body:       `{"service_id_previous":"test","name_previous":"test"}`,
+			wantStatus: http.StatusBadRequest, // Passes the auth check, then fails on its payload.
 		},
 		{
-			name:          "valid/no inheritance needs no service:update",
-			username:      "notifier-user",
-			password:      "notifier-password",
-			body:          `{"service_id":"standalone"}`,
-			wantForbidden: false,
+			name:       "valid/no inheritance needs no service:update",
+			username:   "notifier-user",
+			password:   "notifier-password",
+			body:       `{"service_id":"standalone"}`,
+			wantStatus: http.StatusBadRequest, // Passes the auth check, then fails on its payload.
 		},
 	}
 
@@ -290,20 +259,13 @@ func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cookie := loginCookie(t, api, tc.username, tc.password)
 
-			// WHEN: a notify test is requested.
-			w := serveAuth(
-				api,
-				authedRequest(http.MethodPost, "/api/v1/notify/test", tc.body, cookie),
-			)
+			req := authedRequest(http.MethodPost, "/api/v1/notify/test", tc.body, cookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nnotify test inheritance", packageName)
-
-			// THEN: only a caller lacking update on the source service is refused.
-			gotForbidden := w.Code == http.StatusForbidden
-			if gotForbidden != tc.wantForbidden {
+			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nforbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
-					prefix, gotForbidden, w.Code, w.Body.String(), tc.wantForbidden,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -311,7 +273,6 @@ func TestAPI__auth__notifyTestInheritRequiresServiceUpdate(t *testing.T) {
 }
 
 func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API with a root notifier holding a secret.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	api.Config.Notify = shoutrrr.ShoutrrrsDefaults{
@@ -323,85 +284,63 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 		),
 	}
 
-	// AND: a user holding notify:execute, but no service:update.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"root-notifier",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceNotify,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
+			{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate root-notifier group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "root-notifier-user", "root-notifier-password", "root-notifier")
 
-	// AND: a user holding notify:execute, and service:update on "test" only.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"root-notifier-scoped",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceNotify,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeGlobal},
-			},
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionUpdate,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
+			{Resource: rbac.ResourceNotify, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeGlobal}},
+			{Resource: rbac.ResourceService, Action: rbac.ActionUpdate, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate root-notifier-scoped group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "scoped-user", "scoped-password", "root-notifier-scoped")
 
 	tests := []struct {
-		name          string
-		username      string
-		password      string
-		body          string
-		wantForbidden bool
+		name       string
+		username   string
+		password   string
+		body       string
+		wantStatus int
 	}{
 		{
-			name:          "invalid/root inherit with notify:execute alone",
-			username:      "root-notifier-user",
-			password:      "root-notifier-password",
-			body:          `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
-			wantForbidden: true,
+			name:       "invalid/root inherit with notify:execute alone",
+			username:   "root-notifier-user",
+			password:   "root-notifier-password",
+			body:       `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:          "invalid/root inherit with only service-scoped service:update",
-			username:      "scoped-user",
-			password:      "scoped-password",
-			body:          `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
-			wantForbidden: true,
+			name:       "invalid/root inherit with only service-scoped service:update",
+			username:   "scoped-user",
+			password:   "scoped-password",
+			body:       `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:          "valid/root inherit with global service:update",
-			username:      "admin",
-			password:      "admin-password",
-			body:          `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
-			wantForbidden: false,
+			name:       "valid/root inherit with global service:update",
+			username:   "admin",
+			password:   "admin-password",
+			body:       `{"service_id":"x","service_name":"x","name":"root-gotify"}`,
+			wantStatus: http.StatusBadRequest, // Passes the auth check, then fails on its payload.
 		},
 		{
-			name:          "valid/naming no root notifier needs no service:update",
-			username:      "root-notifier-user",
-			password:      "root-notifier-password",
-			body:          `{"service_id":"x","service_name":"x","name":"not-a-root-notifier"}`,
-			wantForbidden: false,
+			name:       "valid/naming no root notifier needs no service:update",
+			username:   "root-notifier-user",
+			password:   "root-notifier-password",
+			body:       `{"service_id":"x","service_name":"x","name":"not-a-root-notifier"}`,
+			wantStatus: http.StatusBadRequest, // Passes the auth check, then fails on its payload.
 		},
 	}
 
@@ -409,20 +348,13 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 		t.Run(tc.name, func(t *testing.T) {
 			cookie := loginCookie(t, api, tc.username, tc.password)
 
-			// WHEN: a notify test naming that notifier is requested.
-			w := serveAuth(
-				api,
-				authedRequest(http.MethodPost, "/api/v1/notify/test", tc.body, cookie),
-			)
+			req := authedRequest(http.MethodPost, "/api/v1/notify/test", tc.body, cookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nroot notify test inheritance", packageName)
-
-			// THEN: only a caller lacking global service:update is refused.
-			gotForbidden := w.Code == http.StatusForbidden
-			if gotForbidden != tc.wantForbidden {
+			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nforbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
-					prefix, gotForbidden, w.Code, w.Body.String(), tc.wantForbidden,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
@@ -430,83 +362,92 @@ func TestAPI__auth__notifyTestRootInheritRequiresGlobalServiceUpdate(t *testing.
 }
 
 func TestAPI__auth__versionRefreshOverridesRequireServiceUpdate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 
-	// AND: a user able to refresh and read "test", but not update it.
-	if _, err := deps.Store.CreateGroup(
-		t.Context(),
+	createAuthGroup(
+		t,
+		deps,
 		"refresher",
 		"",
 		[]rbac.Grant{
-			{
-				Resource: rbac.ResourceVersionRefresh,
-				Action:   rbac.ActionExecute,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
-			{
-				Resource: rbac.ResourceService,
-				Action:   rbac.ActionRead,
-				Scope:    rbac.Scope{Type: rbac.ScopeService, Ref: "test"},
-			},
+			{Resource: rbac.ResourceVersionRefresh, Action: rbac.ActionExecute, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
+			{Resource: rbac.ResourceService, Action: rbac.ActionRead, Scope: rbac.Scope{Type: rbac.ScopeService, Ref: "test"}},
 		},
-	); err != nil {
-		t.Fatalf(
-			"%s\ncreate refresher group: %v",
-			packageName, err,
-		)
-	}
+	)
 	createAuthUser(t, deps, "refresher-user", "refresher-password", "refresher")
 
+	// "test" and any override query a local version server.
+	serveVersion := func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("1.2.3")) }
+	versionServer := httptest.NewServer(http.HandlerFunc(serveVersion))
+	t.Cleanup(versionServer.Close)
+	svc := test.Must(t, func() (*service.Service, error) {
+		return service.DecodeService(
+			"yaml", []byte(test.TrimYAML(`
+				latest_version:
+					type: url
+					url: `+versionServer.URL+`
+				deployed_version:
+					type: url
+					url: `+versionServer.URL+`
+			`)),
+			"test",
+			svctest.PlainDefaultsConfig(t), shoutrrrtest.PlainConfig(), whtest.PlainConfig(t),
+		)
+	})
+	api.Config.OrderMu.Lock()
+	api.Config.Service["test"] = svc
+	api.Config.OrderMu.Unlock()
+	localOverrides := `{"url":"` + versionServer.URL + `"}`
+
 	tests := []struct {
-		name          string
-		username      string
-		password      string
-		endpoint      string
-		wantForbidden bool
+		name       string
+		username   string
+		password   string
+		endpoint   string
+		wantStatus int
 	}{
 		{
-			name:          "valid/latest_version refresh without overrides",
-			username:      "refresher-user",
-			password:      "refresher-password",
-			endpoint:      "/api/v1/latest_version/refresh?service_id=test",
-			wantForbidden: false,
+			name:       "valid/latest_version refresh without overrides",
+			username:   "refresher-user",
+			password:   "refresher-password",
+			endpoint:   "/api/v1/latest_version/refresh?service_id=test",
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:          "invalid/latest_version refresh with overrides",
-			username:      "refresher-user",
-			password:      "refresher-password",
-			endpoint:      `/api/v1/latest_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
-			wantForbidden: true,
+			name:       "invalid/latest_version refresh with overrides",
+			username:   "refresher-user",
+			password:   "refresher-password",
+			endpoint:   `/api/v1/latest_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:          "valid/deployed_version refresh without overrides",
-			username:      "refresher-user",
-			password:      "refresher-password",
-			endpoint:      "/api/v1/deployed_version/refresh?service_id=test",
-			wantForbidden: false,
+			name:       "valid/deployed_version refresh without overrides",
+			username:   "refresher-user",
+			password:   "refresher-password",
+			endpoint:   "/api/v1/deployed_version/refresh?service_id=test",
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:          "invalid/deployed_version refresh with overrides",
-			username:      "refresher-user",
-			password:      "refresher-password",
-			endpoint:      `/api/v1/deployed_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
-			wantForbidden: true,
+			name:       "invalid/deployed_version refresh with overrides",
+			username:   "refresher-user",
+			password:   "refresher-password",
+			endpoint:   `/api/v1/deployed_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
+			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:          "valid/latest_version overrides with service:update",
-			username:      "admin",
-			password:      "admin-password",
-			endpoint:      `/api/v1/latest_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
-			wantForbidden: false,
+			name:       "valid/latest_version overrides with service:update",
+			username:   "admin",
+			password:   "admin-password",
+			endpoint:   "/api/v1/latest_version/refresh?service_id=test&overrides=" + localOverrides,
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:          "valid/deployed_version overrides with service:update",
-			username:      "admin",
-			password:      "admin-password",
-			endpoint:      `/api/v1/deployed_version/refresh?service_id=test&overrides={"url":"https://attacker.example.com"}`,
-			wantForbidden: false,
+			name:       "valid/deployed_version overrides with service:update",
+			username:   "admin",
+			password:   "admin-password",
+			endpoint:   "/api/v1/deployed_version/refresh?service_id=test&overrides=" + localOverrides,
+			wantStatus: http.StatusOK,
 		},
 	}
 
@@ -514,19 +455,13 @@ func TestAPI__auth__versionRefreshOverridesRequireServiceUpdate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cookie := loginCookie(t, api, tc.username, tc.password)
 
-			// WHEN: the refresh is requested.
-			w := serveAuth(api, authedRequest(http.MethodGet, tc.endpoint, "", cookie))
+			req := authedRequest(http.MethodGet, tc.endpoint, "", cookie)
+			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nversion refresh overrides", packageName)
-
-			// THEN: only overrides from a caller lacking service:update are refused.
-			gotForbidden := w.Code == http.StatusForbidden
-			if gotForbidden != tc.wantForbidden {
+			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nforbidden mismatch\ngot:  %t (status %d - %s)\nwant: %t",
-					prefix,
-					gotForbidden, w.Code, w.Body.String(),
-					tc.wantForbidden,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})

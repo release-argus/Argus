@@ -17,22 +17,21 @@
 package web
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/shared"
 	"github.com/release-argus/Argus/service/status"
 )
 
 func TestLookup_DecodeSelf(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 	optCfg := opttest.PlainDefaultsConfig(t)
 
-	// GIVEN: data in a given format to Decode into an existing Lookup.
 	tests := []struct {
 		name         string
 		format, data string
@@ -104,7 +103,6 @@ func TestLookup_DecodeSelf(t *testing.T) {
 			format:   "json",
 			data:     `{"allow_invalid_certs": "true"}`,
 			errRegex: `^json: .*unmarshal.*$`,
-			want:     "type: url\n",
 		},
 		{
 			name:   "JSON/require extraction, invalid type",
@@ -167,7 +165,6 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a Lookup.
 			options := opttest.PlainOptions(t, optCfg)
 			svcStatus := &status.Status{}
 			lookup := &Lookup{}
@@ -177,8 +174,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 				lvCfg,
 			)
 
-			// WHEN: DecodeSelf is called.
-			decoded, _, testErr := test.AssertDecode(
+			_, _, testErr := test.AssertDecode(
 				t,
 				func(format string, data []byte) (*Lookup, error) {
 					err := lookup.DecodeSelf(format, data)
@@ -188,37 +184,27 @@ func TestLookup_DecodeSelf(t *testing.T) {
 				func(lv *Lookup) string { return decode.ToYAMLString(lv, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"Lookup.DecodeSelf",
 			)
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if decoded == nil {
-				return
-			}
 
-			prefix := fmt.Sprintf(
-				"%s\nLookup.DecodeSelf(format=%q, data=%q)",
-				tc.format, tc.format, tc.data,
-			)
-
-			// THEN: pointers are set as expected.
 			fieldTests := []test.FieldAssertion{
 				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
 				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
 				{Name: "Defaults", Got: lookup.Defaults, Want: lvCfg.Soft, Mode: test.CompareSamePointer},
 				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: lvCfg.Hard, Mode: test.CompareSamePointer},
 			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Lookup"); err != nil {
-				t.Fatal(err)
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
 func TestLookup_ApplyOverrides(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig(t)
 
 	tests := []struct {
 		name     string
@@ -403,12 +389,10 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 
 			tc.previous.Defaults = lvCfg.Soft
 			tc.previous.HardDefaults = lvCfg.Hard
-			// Default want to the stringified struct.
 			if tc.want == "" {
 				tc.want = decode.ToYAMLString(tc.previous, "")
 			}
 
-			// WHEN: ApplyOverrides is called.
 			if _, _, testErr := test.AssertApplyOverrides(
 				t,
 				tc.previous,
@@ -421,8 +405,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 				tc.want,
 				tc.errRegex,
 				true,
-				packageName,
-				"ApplyOverrides",
+				"Lookup.ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
 			}

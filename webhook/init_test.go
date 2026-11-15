@@ -17,7 +17,6 @@
 package webhook
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -27,18 +26,15 @@ import (
 )
 
 func TestWebhooks_Init(t *testing.T) {
-	// GIVEN: a Webhooks and vars for the Init.
 	var notifiers shoutrrr.Shoutrrrs
 	tests := []struct {
-		name                   string
-		webhooks               *Webhooks
-		nilMap                 bool
-		mains                  WebhooksDefaults
-		defaults, hardDefaults *Defaults
+		name     string
+		webhooks *Webhooks
+		mains    WebhooksDefaults
 	}{
 		{
 			name:     "nil map",
-			webhooks: nil, nilMap: true,
+			webhooks: nil,
 		},
 		{
 			name:     "empty map",
@@ -47,8 +43,8 @@ func TestWebhooks_Init(t *testing.T) {
 		{
 			name: "no mains",
 			webhooks: &Webhooks{
-				"fail": testWebhook(true, false, false),
-				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(true, false),
+				"pass": testWebhook(false, false),
 			},
 		},
 		{
@@ -57,29 +53,29 @@ func TestWebhooks_Init(t *testing.T) {
 				"fail": nil,
 			},
 			mains: WebhooksDefaults{
-				"fail": testDefaults(false, false),
+				"fail": testDefaults(t, false),
 			},
 		},
 		{
 			name: "have matching mains",
 			webhooks: &Webhooks{
-				"fail": testWebhook(true, false, false),
-				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(true, false),
+				"pass": testWebhook(false, false),
 			},
 			mains: WebhooksDefaults{
-				"fail": testDefaults(false, false),
-				"pass": testDefaults(true, false),
+				"fail": testDefaults(t, false),
+				"pass": testDefaults(t, true),
 			},
 		},
 		{
 			name: "some matching mains",
 			webhooks: &Webhooks{
-				"fail": testWebhook(true, false, false),
-				"pass": testWebhook(false, false, false),
+				"fail": testWebhook(true, false),
+				"pass": testWebhook(false, false),
 			},
 			mains: WebhooksDefaults{
-				"other": testDefaults(false, false),
-				"pass":  testDefaults(true, false),
+				"other": testDefaults(t, false),
+				"pass":  testDefaults(t, true),
 			},
 		},
 	}
@@ -88,94 +84,67 @@ func TestWebhooks_Init(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if !tc.nilMap {
-				for i := range *tc.webhooks {
-					if (*tc.webhooks)[i] != nil {
-						(*tc.webhooks)[i].ID = tc.name + i
-					}
-				}
-			}
 			serviceStatus := status.Status{}
-			serviceStatus.ServiceInfo.ID = tc.name
-			mainCount := 0
-			if tc.mains != nil {
-				mainCount = len(tc.mains)
-			}
 			serviceStatus.Init(
-				0, 0, mainCount,
+				0, 0, len(tc.mains),
 				status.ServiceInfo{
 					ID: tc.name,
 				},
 				&dashboard.Options{},
 			)
 			parentInterval := "10s"
+			defaults, hardDefaults := &Defaults{}, &Defaults{}
 
-			// WHEN: Init is called on it.
 			tc.webhooks.Init(
 				&serviceStatus,
 				Config{
 					Root:         tc.mains,
-					Defaults:     tc.defaults,
-					HardDefaults: tc.hardDefaults,
+					Defaults:     defaults,
+					HardDefaults: hardDefaults,
 				},
 				&notifiers,
 				&parentInterval,
 			)
 
-			prefix := fmt.Sprintf("%s\nWebhooks.Init()", packageName)
-
-			// THEN: pointers to those vars are handed out to the Webhook:
-			if tc.nilMap {
-				if tc.webhooks != nil {
-					t.Fatalf(
-						"%s map mismatch\ngot:  %v\nwant: nil",
-						prefix, *tc.webhooks,
-					)
-				}
+			// A nil map is a no-op.
+			if tc.webhooks == nil {
 				return
 			}
-
 			for _, webhook := range *tc.webhooks {
-				// 	Main:
-				if webhook.Main == nil {
-					t.Errorf(
-						"%s .Main of the Webhook[%q] was not initialised\ngot: nil",
-						prefix, webhook.ID,
-					)
-				} else if len(tc.mains) != 0 {
-					if wantMain, ok := tc.mains[webhook.ID]; ok {
-						gotMain := webhook.Main
-						gotMain.Delay = tc.name
-						if wantMain.Delay != gotMain.Delay {
-							t.Errorf(
-								"%s Main[%q] was not handed to the Webhook correctly\ngot:  %v\nwant: %v",
-								prefix, webhook.ID,
-								webhook.Main, wantMain,
-							)
-						}
-					}
-				}
+				t.Run(webhook.ID, func(t *testing.T) {
+					t.Parallel()
 
-				fieldTests := []test.FieldAssertion{
-					{Name: "Defaults", Got: webhook.Defaults, Want: tc.defaults, Mode: test.CompareSamePointer},
-					{Name: "HardDefaults", Got: webhook.HardDefaults, Want: tc.hardDefaults, Mode: test.CompareSamePointer},
-					{Name: "Status", Got: webhook.ServiceStatus, Want: &serviceStatus, Mode: test.CompareSamePointer},
-					{Name: "Notifiers.Shoutrrr", Got: webhook.Notifiers.Shoutrrr, Want: &notifiers, Mode: test.CompareSamePointer},
-				}
-				if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-					t.Fatal(err)
-				}
+					if webhook.Main == nil {
+						t.Error("Webhook.Main mismatch\ngot:  nil\nwant: non-nil")
+					} else if wantMain, ok := tc.mains[webhook.ID]; ok && webhook.Main != wantMain {
+						t.Errorf(
+							"Webhook.Main mismatch\ngot:  %p\nwant: %p",
+							webhook.Main, wantMain,
+						)
+					}
+
+					fieldTests := []test.FieldAssertion{
+						{Name: "Defaults", Got: webhook.Defaults, Want: defaults, Mode: test.CompareSamePointer},
+						{Name: "HardDefaults", Got: webhook.HardDefaults, Want: hardDefaults, Mode: test.CompareSamePointer},
+						{Name: "ServiceStatus", Got: webhook.ServiceStatus, Want: &serviceStatus, Mode: test.CompareSamePointer},
+						{Name: "Notifiers.Shoutrrr", Got: webhook.Notifiers.Shoutrrr, Want: &notifiers, Mode: test.CompareSamePointer},
+						{Name: "ParentInterval", Got: webhook.ParentInterval, Want: &parentInterval, Mode: test.CompareSamePointer},
+					}
+					if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+						t.Fatal(testErr)
+					}
+				})
 			}
 		})
 	}
 }
 
 func TestWebhook_Init(t *testing.T) {
-	// GIVEN: a Webhook and vars for the Init.
-	webhook := testWebhook(true, false, false)
+	webhook := testWebhook(true, false)
 	var notifiers shoutrrr.Shoutrrrs
 	var main Defaults
 	var defaults, hardDefaults Defaults
+	parentInterval := "10s"
 	svcStatus := status.Status{}
 	svcStatus.Init(
 		0, 0, 1,
@@ -187,7 +156,6 @@ func TestWebhook_Init(t *testing.T) {
 		},
 	)
 
-	// WHEN: Init is called on it.
 	webhook.init(
 		&svcStatus,
 		&main,
@@ -197,21 +165,18 @@ func TestWebhook_Init(t *testing.T) {
 			HardDefaults: &hardDefaults,
 		},
 		&notifiers,
-		webhook.ParentInterval,
+		&parentInterval,
 	)
-	webhook.ID = "TestInit"
 
-	prefix := fmt.Sprintf("%s\nWebhook.Init()", packageName)
-
-	// THEN: pointers to those vars are handed out to the Webhook:
 	fieldTests := []test.FieldAssertion{
 		{Name: "Main", Got: webhook.Main, Want: &main, Mode: test.CompareSamePointer},
 		{Name: "Defaults", Got: webhook.Defaults, Want: &defaults, Mode: test.CompareSamePointer},
 		{Name: "HardDefaults", Got: webhook.HardDefaults, Want: &hardDefaults, Mode: test.CompareSamePointer},
-		{Name: "Status", Got: webhook.ServiceStatus, Want: &svcStatus, Mode: test.CompareSamePointer},
+		{Name: "ServiceStatus", Got: webhook.ServiceStatus, Want: &svcStatus, Mode: test.CompareSamePointer},
 		{Name: "Notifiers.Shoutrrr", Got: webhook.Notifiers.Shoutrrr, Want: &notifiers, Mode: test.CompareSamePointer},
+		{Name: "ParentInterval", Got: webhook.ParentInterval, Want: &parentInterval, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Webhook"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Webhook"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }

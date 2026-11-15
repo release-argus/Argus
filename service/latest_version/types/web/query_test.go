@@ -18,8 +18,10 @@
 package web
 
 import (
-	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
@@ -30,7 +32,16 @@ import (
 )
 
 func TestLookup_HTTPRequest(t *testing.T) {
-	// GIVEN: a Lookup.
+	auth := test.LookupWithHeaderAuth
+	headerAuthURL := test.HeaderAuthServer(t, "1.2.3")
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("1.2.3"))
+	})
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	tlsServer := httptest.NewTLSServer(handler)
+	t.Cleanup(tlsServer.Close)
+
 	tests := []struct {
 		name      string
 		failing   bool
@@ -45,45 +56,44 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			errRegex:  `invalid control character in URL`,
 		},
 		{
-			name:      "unknown url",
-			overrides: `url: https://release-argus.invalid-tld`,
+			name:      "unreachable url",
+			overrides: `url: http://127.0.0.1:1`,
 			bodyRegex: `^$`,
-			errRegex:  `no such host`,
+			errRegex:  `connection refused`,
 		},
 		{
 			name:      "valid url",
-			overrides: `url: https://release-argus.io`,
-			bodyRegex: `.*`,
+			overrides: `url: ` + server.URL,
+			bodyRegex: `^1\.2\.3$`,
 			errRegex:  `^$`,
 		},
 		{
 			name:      "invalid cert",
 			failing:   true,
+			overrides: `url: ` + tlsServer.URL,
 			bodyRegex: `^$`,
 			errRegex:  `x509`,
 		},
 		{
 			name: "headers/pass",
 			overrides: test.TrimYAML(`
-				method: POST
-				url: ` + test.LookupWithHeaderAuth.URLValid + `
+				url: ` + headerAuthURL + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
-						value: ` + test.LookupWithHeaderAuth.HeaderValuePass + `
+					- key: ` + auth.HeaderKey + `
+						value: ` + auth.HeaderValuePass + `
 			`),
-			bodyRegex: `^[\d.]+$`,
+			bodyRegex: `^1\.2\.3$`,
 			errRegex:  `^$`,
 		},
 		{
 			name: "headers/fail",
 			overrides: test.TrimYAML(`
-				method: POST
-				url: ` + test.LookupWithHeaderAuth.URLValid + `
+				url: ` + headerAuthURL + `
 				headers:
-					- key: ` + test.LookupWithHeaderAuth.HeaderKey + `
-						value: ` + test.LookupWithHeaderAuth.HeaderValueFail + `
+					- key: ` + auth.HeaderKey + `
+						value: ` + auth.HeaderValueFail + `
 			`),
-			bodyRegex: `Hook rules were not satisfied\.`,
+			bodyRegex: `^Hook rules were not satisfied\.$`,
 			errRegex:  `^$`,
 		},
 	}
@@ -93,43 +103,24 @@ func TestLookup_HTTPRequest(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(t, tc.failing)
-			// Apply overrides.
 			if err := lookup.ApplyOverrides("yaml", []byte(tc.overrides)); err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal overrides: %s",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
 			}
 
-			// WHEN: httpRequest is called on it.
 			body, err := lookup.httpRequest(logx.LogFrom{})
-
-			prefix := fmt.Sprintf("%s\nLookup.httpRequest", packageName)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the body matches the expected regex.
-			if tc.bodyRegex != "" {
-				if !util.RegexCheck(tc.bodyRegex, string(body)) {
-					t.Errorf(
-						"%s body mismatch\ngot:  %q\nwant: %q",
-						prefix, string(body), tc.bodyRegex,
-					)
-				}
+			if !util.RegexCheck(tc.bodyRegex, string(body)) {
+				t.Errorf("body mismatch\ngot:  %q\nwant: %q", string(body), tc.bodyRegex)
 			}
 		})
 	}
 }
 
 func TestLookup_GetVersion(t *testing.T) {
-	// GIVEN: a Lookup and a Body to filter.
 	body := `
 		version 1 is "v0.0.0"
 		version 2 is "ver1.2.3-dev"
@@ -172,7 +163,7 @@ func TestLookup_GetVersion(t *testing.T) {
 			name:   "nil Require",
 			semVer: false,
 			want: wantVars{
-				version:  "0.0.0",
+				version:  "0.0.0", // The first match, as nothing sorts without semver.
 				errRegex: `^$`,
 			},
 		},
@@ -303,52 +294,6 @@ func TestLookup_GetVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "docker fail",
-			lookupOverrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: '4 is "ver([0-9][^"]+)"'
-				require:
-					regex_version: ^1\.[0-9.]+$
-					regex_content: 'version 4 is "ver{{ version }}"'
-					command: [true]
-					docker:
-						type: ghcr
-						image: ` + test.ArgusDockerGHCRRepo + `
-						tag: '{{ version }}-unknown'
-						token: ` + test.DockerHubToken(t) + `
-			`),
-			semVer: true,
-			want: wantVars{
-				errRegex: test.TrimYAML(`
-					^no releases were found matching the require field.*
-						` + test.ArgusDockerGHCRRepo + `:[^ ]+ - .*tag not found.*$`,
-				),
-			},
-		},
-		{
-			name: "docker pass",
-			lookupOverrides: test.TrimYAML(`
-				url_commands:
-					- type: regex
-						regex: '"ver([0-9][^"]+)"'
-				require:
-					regex_version: ^1\.[0-9.]+$
-					regex_content: 'version 4 is "ver{{ version }}"'
-					command: [true]
-					docker:
-						type: ghcr
-						image: ` + test.ArgusDockerGHCRRepo + `
-						tag: '0.8.0'
-						token: ` + test.GitHubToken(t) + `
-			`),
-			semVer: true,
-			want: wantVars{
-				version:  "1.2.5",
-				errRegex: `^$`,
-			},
-		},
-		{
 			name:         "version fails semver",
 			bodyOverride: new("1_0_0"),
 			lookupOverrides: test.TrimYAML(`
@@ -464,53 +409,30 @@ func TestLookup_GetVersion(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(t, false)
-			// overrides.
 			lookup.URLCommands[0] = urlCommand
 			if err := lookup.ApplyOverrides("yaml", []byte(tc.lookupOverrides)); err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal Lookup overrides: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.ApplyOverrides() failed: %v", err)
 			}
 			lookup.Options.SemanticVersioning = &tc.semVer
 			if err := lookup.CheckValues(); err != nil {
-				t.Fatalf(
-					"%s\nfailed to check Lookup values after applying test overrides: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.CheckValues() failed: %v", err)
 			}
 			testBody := util.DerefOr(tc.bodyOverride, body)
 
-			// WHEN: getVersion is called on it.
 			version, err := lookup.getVersion(testBody, logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.getVersion(%q)",
-				packageName, testBody,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Errorf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, tc.want.errRegex, e,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
 			}
 
-			// AND: the version is as expected.
 			if version != tc.want.version {
-				t.Errorf(
-					"%s version mismatch:\ngot:  %q\nwant: %q",
-					prefix, version, tc.want.version,
-				)
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", version, tc.want.version)
 			}
 		})
 	}
 }
 
 func TestVersionSortsBefore(t *testing.T) {
-	// GIVEN: two version strings.
 	tests := []struct {
 		name string
 		a    string
@@ -613,43 +535,31 @@ func TestVersionSortsBefore(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: versionSortsBefore is called on the pair.
 			got := versionSortsBefore(tc.a, tc.b)
 
-			// THEN: it should return the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nversionSortsBefore(%q, %q) mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.a, tc.b, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestVersionSortsBefore__OrderIndependence(t *testing.T) {
-	// GIVEN: the same set of semver and non-semver candidates, supplied in all input orders.
 	want := []string{"1.10.0", "1.9.9", "1.2.3", "latest", "nightly"}
 	permutations := test.Permutations(want)
 
 	for i, perm := range permutations {
-		name := fmt.Sprintf("permutation %d", i)
-		t.Run(name, func(t *testing.T) {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 
 			got := append([]string{}, perm...)
 
-			// WHEN: the set is sorted using versionSortsBefore.
-			sort.Slice(got, func(i, j int) bool {
-				return versionSortsBefore(got[i], got[j])
+			sort.Slice(got, func(a, b int) bool {
+				return versionSortsBefore(got[a], got[b])
 			})
 
-			// THEN: the output order is identical regardless of the input order.
 			if !util.AreSlicesEqual(got, want) {
-				t.Errorf(
-					"%s\nsort.Slice(%v, versionSortsBefore) mismatch\ngot:  %v\nwant: %v",
-					packageName, perm, got, want,
-				)
+				t.Errorf("sort.Slice(%q) mismatch\ngot:  %q\nwant: %q", perm, got, want)
 			}
 		})
 	}

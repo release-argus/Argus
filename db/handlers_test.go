@@ -17,8 +17,6 @@
 package db
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -31,14 +29,13 @@ import (
 )
 
 func TestWriteQuoted(t *testing.T) {
-	// GIVEN: a string to write.
 	tests := []struct {
 		name string
 		s    string
 		want string
 	}{
 		{name: "simple string", s: "foo", want: "`foo`"},
-		{name: "string with backticks", s: "foo`bar", want: "`foo`bar`"},
+		{name: "string with backticks (not escaped)", s: "foo`bar", want: "`foo`bar`"},
 		{name: "empty string", s: "", want: "``"},
 	}
 
@@ -46,35 +43,22 @@ func TestWriteQuoted(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: a strings.Builder to write to.
 			var b strings.Builder
 
-			// WHEN: writeQuoted is called with the string and builder.
 			writeQuoted(&b, tc.s)
 
-			prefix := fmt.Sprintf(
-				"%s\nwriteQuoted(%q)",
-				packageName, tc.s,
-			)
-
-			// THEN: the builder contains the string wrapped in backticks.
 			if got := b.String(); got != tc.want {
-				t.Errorf(
-					"%s quoted string mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestAPI_Handler(t *testing.T) {
-	// GIVEN: a DB with a few service status'.
 	tAPI := testAPI(t)
 	tAPI.initialise()
 	go tAPI.Handler(t.Context())
 
-	// WHEN: a message is sent to the DatabaseChannel targeting latest_version.
 	target := "keep0"
 	cell1 := dbtype.Cell{
 		Column: "latest_version", Value: "9.9.9",
@@ -82,8 +66,6 @@ func TestAPI_Handler(t *testing.T) {
 	cell2 := dbtype.Cell{
 		Column: cell1.Column, Value: cell1.Value + "-dev",
 	}
-	want := queryRow(t, tAPI.db, target)
-	want.SetLatestVersion(cell1.Value, "", false)
 	msg1 := dbtype.Message{
 		ServiceID: target,
 		Cells:     []dbtype.Cell{cell1},
@@ -95,21 +77,16 @@ func TestAPI_Handler(t *testing.T) {
 	tAPI.config.DatabaseChannel <- msg1
 	time.Sleep(250 * time.Millisecond)
 
-	prefix := fmt.Sprintf("%s\napi.handler()", packageName)
-
-	// THEN: the cell was changed in the DB.
 	got := queryRow(t, tAPI.db, target)
-	if got.LatestVersion() != want.LatestVersion() {
+	if got.LatestVersion() != cell1.Value {
 		t.Errorf(
-			"%s LatestVersion mismatch (sent %+v)\ngot:  %#v\nwant: %#v",
-			prefix, msg1,
-			got, want,
+			"update: Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+			got.LatestVersion(), cell1.Value,
 		)
 	}
 
 	// ------------------------------
 
-	// WHEN: a message is sent to the DatabaseChannel deleting a row.
 	msg3 := dbtype.Message{
 		ServiceID: target,
 		Delete:    true,
@@ -117,61 +94,57 @@ func TestAPI_Handler(t *testing.T) {
 	tAPI.config.DatabaseChannel <- msg3
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN: the row is deleted from the DB.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != "" ||
 		got.DeployedVersion() != "" {
 		t.Errorf(
-			"%s row not deleted (sent %+v)\ngot:  %#v\nwant: deleted (empty status)",
-			prefix, msg3,
-			got,
+			"delete: Status mismatch\n"+
+				"got:  LatestVersion()=%q, DeployedVersion()=%q\n"+
+				"want: LatestVersion()=\"\", DeployedVersion()=\"\"",
+			got.LatestVersion(), got.DeployedVersion(),
 		)
 	}
 
 	// ------------------------------
 
-	// WHEN: multiple messages are targeting the same row in quick succession.
 	tAPI.config.DatabaseChannel <- msg1
 	wantLatestVersion := msg2.Cells[0].Value
 	tAPI.config.DatabaseChannel <- msg2
 	time.Sleep(250 * time.Millisecond)
 
-	// THEN: the last message is the one applied.
+	// The handler applies messages in channel order.
 	got = queryRow(t, tAPI.db, target)
 	if got.LatestVersion() != wantLatestVersion {
 		t.Errorf(
-			"%s LatestVersion mismatch (sent %+v, then %+v)\ngot:  %#v\nwant: %#v",
-			prefix, msg1, msg2,
-			got, want,
+			"successive updates: Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+			got.LatestVersion(), wantLatestVersion,
 		)
 	}
 }
 
 func TestAPI_Handler__fail(t *testing.T) {
-	// GIVEN: a DB with a few service status'.
 	tAPI := testAPI(t)
 	tAPI.initialise()
 	go tAPI.Handler(t.Context())
 	releaseStdout := test.CaptureLog(t, logx.Default())
 
-	// WHEN: the DatabaseChannel is closed.
 	close(tAPI.config.DatabaseChannel)
-	time.Sleep(10 * time.Millisecond)
 
-	// THEN: the handler exits cleanly.
+	// Fatal logs before it signals, so the line is captured once the signal arrives.
+	select {
+	case <-logx.ExitCodeChannel():
+	case <-time.After(time.Second):
+		t.Fatal("logx.ExitCodeChannel() mismatch\ngot:  absent\nwant: present")
+	}
+
 	stdout := releaseStdout()
 	re := `FATAL: .*Database closed`
 	if !util.RegexCheck(re, stdout) {
-		t.Errorf(
-			"%s stdout mismatch after closing DatabaseChannel:\ngot:  %q\nwant: %q",
-			log.Prefix(), stdout, re,
-		)
+		t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, re)
 	}
-	<-logx.ExitCodeChannel()
 }
 
 func TestBuildUpdateRowStatement(t *testing.T) {
-	// GIVEN: a serviceID and a set of cells to upsert.
 	tests := []struct {
 		name       string
 		serviceID  string
@@ -222,41 +195,27 @@ func TestBuildUpdateRowStatement(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: buildUpdateRowStatement is called with the serviceID and cells.
 			gotSQL, gotParams := buildUpdateRowStatement(tc.serviceID, tc.cells)
 
-			prefix := fmt.Sprintf(
-				"%s\nbuildUpdateRowStatement(%q, %+v)",
-				packageName, tc.serviceID, tc.cells,
-			)
-
-			// THEN: the SQL statement matches the expected upsert statement.
 			if gotSQL != tc.wantSQL {
-				t.Errorf(
-					"%s SQL mismatch\ngot:  %q\nwant: %q",
-					prefix, gotSQL, tc.wantSQL,
-				)
+				t.Errorf("SQL mismatch\ngot:  %q\nwant: %q", gotSQL, tc.wantSQL)
 			}
 
-			// AND: params has serviceID first, then each cell's Value in order.
 			if !util.AreSlicesEqual(gotParams, tc.wantParams) {
-				t.Fatalf(
-					"%s params mismatch\ngot:  %v\nwant: %v",
-					prefix, gotParams, tc.wantParams,
-				)
+				t.Fatalf("params mismatch\ngot:  %v\nwant: %v", gotParams, tc.wantParams)
 			}
 		})
 	}
 }
 
 func TestAPI_UpdateRow(t *testing.T) {
-	// GIVEN: a DB with a few service status'.
 	tests := []struct {
 		name            string
 		cells           []dbtype.Cell
 		target          string
 		exists          bool
 		databaseDeleted bool
+		errorLogRegex   string
 	}{
 		{
 			name:   "no cells",
@@ -274,7 +233,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 			name:   "trailing 0 is kept",
 			target: "existing",
 			cells: []dbtype.Cell{
-				{Column: "latest_version", Value: "1.20"},
+				{Column: "latest_version", Value: "1.20"}, // TEXT column, so not read as a number.
 			},
 			exists: true,
 		},
@@ -303,7 +262,7 @@ func TestAPI_UpdateRow(t *testing.T) {
 			},
 		},
 		{
-			name:   "fail insert with invalid timestamp",
+			name:   "insert with non-RFC3339 timestamp is stored as-is",
 			target: "new",
 			cells: []dbtype.Cell{
 				{Column: "deployed_version", Value: "8.8.8"},
@@ -316,7 +275,8 @@ func TestAPI_UpdateRow(t *testing.T) {
 			cells: []dbtype.Cell{
 				{Column: "foo", Value: "bar"},
 			},
-			exists: true,
+			exists:        true,
+			errorLogRegex: `ERROR: .*failed to upsert status row: .*no column named foo`,
 		},
 		{
 			name:   "fail as db is deleted",
@@ -326,75 +286,86 @@ func TestAPI_UpdateRow(t *testing.T) {
 			},
 			exists:          true,
 			databaseDeleted: true,
+			errorLogRegex:   `ERROR: .*failed to upsert status row: `,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: captures stdout.
+
+			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tAPI := testAPI(t)
 			tAPI.initialise()
 
-			// Ensure the row exists when tc.exists.
 			if tc.exists {
-				_, _ = tAPI.db.Exec("INSERT INTO status (id) VALUES (?)",
-					tc.target,
-				)
+				if _, err := tAPI.db.Exec("INSERT INTO status (id) VALUES (?)", tc.target); err != nil {
+					t.Fatalf("DB.Exec() failed: %v", err)
+				}
 			}
-			// Delete the DB file.
 			if tc.databaseDeleted {
-				_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+				if err := os.Remove(tAPI.config.Settings.Data.DatabaseFile); err != nil {
+					t.Fatalf("os.Remove() failed: %v", err)
+				}
 			}
 
-			// WHEN: updateRow is called targeting single/multiple cells.
 			tAPI.updateRow(tc.target, tc.cells)
 			time.Sleep(100 * time.Millisecond)
 
-			// THEN: those cells are changed in the DB.
-			row := queryRow(t, tAPI.db, tc.target)
-			for _, cell := range tc.cells {
-				var got string
-				switch cell.Column {
-				case "latest_version":
-					got = row.LatestVersion()
-				case "latest_version_timestamp":
-					got = row.LatestVersionTimestamp()
-				case "deployed_version":
-					got = row.DeployedVersion()
-				case "deployed_version_timestamp":
-					got = row.DeployedVersionTimestamp()
-				case "approved_version":
-					got = row.ApprovedVersion()
-				default:
-					continue // Skip unknown columns.
+			stdout := releaseStdout()
+			if tc.errorLogRegex == "" {
+				if errPrefix := "ERROR:"; strings.Contains(stdout, errPrefix) {
+					t.Errorf("stdout mismatch\ngot:  %q\nwant: NOT %q", stdout, errPrefix)
 				}
-				prefix := fmt.Sprintf(
-					"%s\nAPI UpdateRow(target: %q, cell: %q)",
-					packageName, tc.target, cell.Column,
-				)
+			} else if !util.RegexCheck(tc.errorLogRegex, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.errorLogRegex)
+			}
 
-				if got != cell.Value {
-					if !tc.databaseDeleted {
-						t.Errorf(
-							"%s mismatch\ngot:  %q\nwant: %q",
-							prefix, got, cell.Value,
-						)
-					}
-				} else if tc.databaseDeleted {
-					t.Errorf(
-						"%s shouldn't have done anything as the DB was deleted\ngot:  %q\nwant: %q",
-						prefix, got, cell.Value,
-					)
+			row := queryRow(t, tAPI.db, tc.target)
+			if len(tc.cells) == 0 {
+				if id := row.GetServiceInfo().ID; id != "" {
+					t.Errorf("Status.GetServiceInfo().ID mismatch\ngot:  %q\nwant: \"\"", id)
 				}
 			}
-			time.Sleep(100 * time.Millisecond)
+
+			for _, cell := range tc.cells {
+				var got, getter string
+				switch cell.Column {
+				case "latest_version":
+					got, getter = row.LatestVersion(), "LatestVersion()"
+				case "latest_version_timestamp":
+					got, getter = row.LatestVersionTimestamp(), "LatestVersionTimestamp()"
+				case "deployed_version":
+					got, getter = row.DeployedVersion(), "DeployedVersion()"
+				case "deployed_version_timestamp":
+					got, getter = row.DeployedVersionTimestamp(), "DeployedVersionTimestamp()"
+				case "approved_version":
+					got, getter = row.ApprovedVersion(), "ApprovedVersion()"
+				default:
+					continue // Not readable; the error log covers it.
+				}
+				t.Run(cell.Column, func(t *testing.T) {
+					if got != cell.Value {
+						if !tc.databaseDeleted {
+							t.Errorf(
+								"Status.%s mismatch\ngot:  %q\nwant: %q",
+								getter, got, cell.Value,
+							)
+						}
+					} else if tc.databaseDeleted {
+						t.Errorf(
+							"Status.%s mismatch\ngot:  %q\nwant: NOT %q",
+							getter, got, cell.Value,
+						)
+					}
+				})
+			}
 		})
 	}
 }
 
 func TestAPI_DeleteRow(t *testing.T) {
-	// GIVEN: a DB with multiple service status'.
 	tests := []struct {
 		name            string
 		serviceID       string
@@ -421,71 +392,70 @@ func TestAPI_DeleteRow(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			tAPI := testAPI(t)
 			tAPI.initialise()
 
-			// Ensure the row exists if tc.exists.
+			latestVersion, deployedVersion := "9.9.9", "8.8.8"
 			if tc.exists {
 				tAPI.updateRow(
 					tc.serviceID,
 					[]dbtype.Cell{
-						{Column: "latest_version", Value: "9.9.9"},
-						{Column: "deployed_version", Value: "8.8.8"},
+						{Column: "latest_version", Value: latestVersion},
+						{Column: "deployed_version", Value: deployedVersion},
 					},
 				)
 				time.Sleep(100 * time.Millisecond)
+				row := queryRow(t, tAPI.db, tc.serviceID)
+				if row.LatestVersion() != latestVersion || row.DeployedVersion() != deployedVersion {
+					t.Fatalf(
+						"before: Status mismatch\n"+
+							"got:  LatestVersion()=%q, DeployedVersion()=%q\n"+
+							"want: LatestVersion()=%q, DeployedVersion()=%q",
+						row.LatestVersion(), row.DeployedVersion(),
+						latestVersion, deployedVersion,
+					)
+				}
 			}
-			// Check the row existence before the test.
-			row := queryRow(t, tAPI.db, tc.serviceID)
-			if tc.exists && (row.LatestVersion() == "" || row.DeployedVersion() == "") {
-				t.Errorf(
-					"%s\napi.queryRow(%q) mismatch\ngot:  %#v\nwant: row to exist",
-					packageName, tc.serviceID,
-					row,
-				)
-			}
-			// Delete the DB file.
 			if tc.databaseDeleted {
-				_ = os.Remove(tAPI.config.Settings.Data.DatabaseFile)
+				if err := os.Remove(tAPI.config.Settings.Data.DatabaseFile); err != nil {
+					t.Fatalf("os.Remove() failed: %v", err)
+				}
 			}
 
-			// WHEN: deleteRow is called targeting a row.
 			tAPI.deleteRow(tc.serviceID)
 			time.Sleep(100 * time.Millisecond)
 
-			prefix := fmt.Sprintf(
-				"%s\napi.DeleteRow(%q)",
-				packageName, tc.serviceID,
-			)
-
-			// THEN: if we deleted the DB before the statement, we should have logged an error.
 			stdout := releaseStdout()
-			deleteFailRegex := `ERROR: [^)]+\), deleteRow`
-			if tc.databaseDeleted != util.RegexCheck(deleteFailRegex, stdout) {
+			deleteFailRegex := `ERROR: [^)]+\), failed to delete status row`
+			matched := util.RegexCheck(deleteFailRegex, stdout)
+			if tc.databaseDeleted && !matched {
 				t.Errorf(
-					"%s stdout mismatch (DB deleted=%t):\ngot:  %q\nwant: %q (want match: %t)",
-					prefix, tc.databaseDeleted,
-					stdout, deleteFailRegex, tc.databaseDeleted,
+					"after deleteRow: stdout mismatch\ngot:  %q\nwant: %q",
+					stdout, deleteFailRegex,
+				)
+			} else if !tc.databaseDeleted && matched {
+				t.Errorf(
+					"after deleteRow: stdout mismatch\ngot:  %q\nwant: NOT %q",
+					stdout, deleteFailRegex,
 				)
 			}
 
-			// AND: the row is deleted from the DB (if it existed and the DB was not deleted).
-			row = queryRow(t, tAPI.db, tc.serviceID)
-			if row.LatestVersion() != "" || row.DeployedVersion() != "" {
-				// Get values as we didn't delete the db.
-				if !tc.databaseDeleted {
-					t.Errorf(
-						"%s row mismatch when DB not deleted:\ngot:  %#v\nwant: row deleted",
-						prefix, row,
-					)
-				}
-			} else if tc.databaseDeleted {
+			row := queryRow(t, tAPI.db, tc.serviceID)
+			wantLatestVersion, wantDeployedVersion := "", ""
+			if tc.databaseDeleted {
+				wantLatestVersion, wantDeployedVersion = latestVersion, deployedVersion
+			}
+			if row.LatestVersion() != wantLatestVersion || row.DeployedVersion() != wantDeployedVersion {
 				t.Errorf(
-					"%s row mismatch when DB deleted:\ngot:  %#v\nwant: row deleted",
-					packageName, row,
+					"after deleteRow: Status mismatch\n"+
+						"got:  LatestVersion()=%q, DeployedVersion()=%q\n"+
+						"want: LatestVersion()=%q, DeployedVersion()=%q",
+					row.LatestVersion(), row.DeployedVersion(),
+					wantLatestVersion, wantDeployedVersion,
 				)
 			}
 		})

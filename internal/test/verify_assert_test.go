@@ -17,12 +17,11 @@
 package test
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 )
 
 func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
-	// GIVEN: A function to check values, and a function to generate the input struct.
 	tests := []struct {
 		name        string
 		checkValues func() (error, bool)
@@ -49,7 +48,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		{
 			name: "expected error/changed",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), true
+				return errors.New("error happened"), true
 			},
 			errRegex:    `^error happened`,
 			wantChanged: true,
@@ -57,27 +56,27 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		{
 			name: "expected error/unchanged",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), false
+				return errors.New("error happened"), false
 			},
 			errRegex:    `^error happened`,
 			wantChanged: false,
 		},
 		{
-			name: "error line mismatch - unchanged",
+			name: "error line count mismatch/unchanged",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), false
+				return errors.New("error happened"), false
 			},
 			errRegex: TrimYAML(`
 				^error happened
 				123`,
 			),
 			wantErr:     true,
-			wantChanged: true,
+			wantChanged: false,
 		},
 		{
 			name: "expected error/unexpected changed",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), false
+				return errors.New("error happened"), false
 			},
 			errRegex:    `^error happened`,
 			wantErr:     true,
@@ -86,7 +85,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		{
 			name: "error/unchanged",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), false
+				return errors.New("error happened"), false
 			},
 			errRegex:    `^foo`,
 			wantErr:     true,
@@ -95,7 +94,7 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		{
 			name: "error/changed",
 			checkValues: func() (error, bool) {
-				return fmt.Errorf("error happened"), true
+				return errors.New("error happened"), true
 			},
 			errRegex:    `^foo`,
 			wantErr:     true,
@@ -107,22 +106,20 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			fT := &FakeT{}
-			// WHEN: AssertCheckValuesWithErrorAndChanged is called.
+			fakeT := &FakeT{}
+
 			_, _ = AssertCheckValuesWithErrorAndChanged(
-				fT,
-				packageName,
+				fakeT,
 				tc.errRegex,
 				tc.wantChanged,
 				tc.checkValues,
 			)
 
-			// THEN: It errors when expected.
-			gotErr := len(fT.Errors)+len(fT.Fatals) != 0
-			if gotErr != tc.wantErr {
+			didFail := len(fakeT.Errors)+len(fakeT.Fatals) != 0
+			if didFail != tc.wantErr {
 				t.Errorf(
-					"%s\nAssertCheckValuesWithErrorAndChanged() checkValues didn't pass/fail as expected\ngot  fail: %v\nwant fail: %t",
-					packageName, fT.Errors, tc.wantErr,
+					"didFail mismatch\ngot:  %t (errors=%q, fatals=%q)\nwant: %t",
+					didFail, fakeT.Errors, fakeT.Fatals, tc.wantErr,
 				)
 			}
 		})
@@ -130,7 +127,6 @@ func TestAssertCheckValuesWithErrorAndChanged(t *testing.T) {
 }
 
 func TestAssertCheckValuesWithError(t *testing.T) {
-	// GIVEN: A function to check values, and a function to generate the input struct.
 	tests := []struct {
 		name        string
 		checkValues func() error
@@ -147,14 +143,14 @@ func TestAssertCheckValuesWithError(t *testing.T) {
 		{
 			name: "expected error",
 			checkValues: func() error {
-				return fmt.Errorf("error happened")
+				return errors.New("error happened")
 			},
 			errRegex: `^error happened`,
 		},
 		{
 			name: "error",
 			checkValues: func() error {
-				return fmt.Errorf("error happened")
+				return errors.New("error happened")
 			},
 			errRegex: `^foo`,
 			wantErr:  true,
@@ -165,22 +161,19 @@ func TestAssertCheckValuesWithError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			fT := &FakeT{}
-			// WHEN: AssertCheckValuesWithError is called.
+			fakeT := &FakeT{}
+
 			_ = AssertCheckValuesWithError(
-				fT,
-				packageName,
+				fakeT,
 				tc.errRegex,
 				tc.checkValues,
 			)
 
-			gotErr := len(fT.Errors)+len(fT.Fatals) != 0
-
-			// THEN: it errors when expected.
-			if gotErr != tc.wantErr {
+			didFail := len(fakeT.Errors)+len(fakeT.Fatals) != 0
+			if didFail != tc.wantErr {
 				t.Errorf(
-					"%s\nAssertCheckValuesWithError() checkValues didn't pass/fail as expected\ngot  fail: %v\nwant fail: %t",
-					packageName, fT.Errors, tc.wantErr,
+					"didFail mismatch\ngot:  %t (errors=%q, fatals=%q)\nwant: %t",
+					didFail, fakeT.Errors, fakeT.Fatals, tc.wantErr,
 				)
 			}
 		})

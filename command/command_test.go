@@ -17,7 +17,6 @@
 package command
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
@@ -29,7 +28,6 @@ import (
 )
 
 func TestCommand_ApplyTemplate(t *testing.T) {
-	// GIVEN: various Commands.
 	tests := []struct {
 		name          string
 		input         Command
@@ -57,69 +55,62 @@ func TestCommand_ApplyTemplate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.serviceStatus != nil {
-				tc.serviceStatus.Init(
-					1, 0, 0,
-					status.ServiceInfo{
-						ID: tc.name,
-					},
-					&dashboard.Options{},
-				)
-			}
-			if tc.latestVersion != "" {
-				tc.serviceStatus.SetLatestVersion(tc.latestVersion, "", false)
-			}
+			tc.serviceStatus.Init(
+				1, 0, 0,
+				status.ServiceInfo{
+					ID: tc.name,
+				},
+				&dashboard.Options{},
+			)
+			tc.serviceStatus.SetLatestVersion(tc.latestVersion, "", false)
 
 			sInfo := tc.serviceStatus.GetServiceInfo()
-			// WHEN: ApplyTemplate is called on the Command.
+
 			got := tc.input.ApplyTemplate(sInfo)
 
-			// THEN: the result is expected.
 			if !util.AreSlicesEqual(got, tc.want) {
-				t.Fatalf(
-					"%s\nCommand.ApplyTemplate(%+v) on %+v mismatch\ngot:  %v\nwant: %v",
-					packageName, sInfo, tc.input,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestController_Exec(t *testing.T) {
-	// GIVEN: a Controller.
 	tests := []struct {
 		name          string
 		nilController bool
 		commands      Commands
-		err           error
+		errRegex      string
 		stdoutRegexes []string
 		noAnnounce    bool
 	}{
 		{
 			name:          "nil Controller",
 			nilController: true,
+			errRegex:      `^$`,
 			stdoutRegexes: []string{`^$`},
 			noAnnounce:    true,
 		},
 		{
 			name:          "nil Command",
+			errRegex:      `^$`,
 			stdoutRegexes: []string{`^$`},
 			noAnnounce:    true,
 		},
 		{
 			name:          "single Command",
+			errRegex:      `^$`,
 			stdoutRegexes: []string{`[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`},
 			commands: Commands{
 				{"date", "+%m-%d-%Y"},
 			},
 		},
 		{
-			name: "multiple Commands",
-			err:  fmt.Errorf("exit status 1"),
+			name:     "multiple Commands",
+			errRegex: `^exit status 1$`,
 			stdoutRegexes: []string{
-				`Executing 'date \+%m-%d-%Y'`,
-				`Executing 'false'`,
+				`Executing "date \+%m-%d-%Y"`,
+				`Executing "false"`,
 				`[0-9]{2}-[0-9]{2}-[0-9]{4}`,
 				`exit status 1`,
 			},
@@ -132,53 +123,39 @@ func TestController_Exec(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			announceChannel := make(chan []byte, 8)
 			controller := testController(announceChannel)
 
-			// WHEN: the Command @index is executed.
 			controller.Command = tc.commands
 			if tc.nilController {
 				controller = nil
 			}
 			err := controller.Exec(logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nController.Exec(%+v)",
-				packageName, tc.commands,
-			)
-
-			// THEN: the stdout is expected.
-			// 	decode:
-			gotErr := errfmt.FormatError(err)
-			wantErr := errfmt.FormatError(tc.err)
-			if gotErr != wantErr {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, gotErr, wantErr,
-				)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			// 	stdout:
+
 			stdout := releaseStdout()
 			for _, stdoutRegex := range tc.stdoutRegexes {
 				if !util.RegexCheck(stdoutRegex, stdout) {
-					t.Fatalf(
-						"%s stdout mismatch\ngot:  %q\nwant: %q",
-						prefix, stdout, stdoutRegex,
-					)
+					t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, stdoutRegex)
 				}
 			}
-			// 	announced:
+
 			runNumber := 0
 			if !tc.noAnnounce {
 				runNumber = len(controller.Command)
 			}
 			if got := len(announceChannel); got != runNumber {
+				test.LogChannel(t, "Status.AnnounceChannel", announceChannel)
 				t.Fatalf(
-					"%s announce message count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, runNumber,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, runNumber,
 				)
 			}
 		})
@@ -186,7 +163,6 @@ func TestController_Exec(t *testing.T) {
 }
 
 func TestController_ExecIndex(t *testing.T) {
-	// GIVEN: a Status.
 	announceChannel := make(chan []byte, 8)
 	svcStatus := status.New(
 		announceChannel, nil, nil,
@@ -198,7 +174,6 @@ func TestController_ExecIndex(t *testing.T) {
 	)
 	svcStatus.ServiceInfo.ID = "service_id"
 
-	// AND: a Controller with different Commands to execute.
 	controller := NewController(
 		svcStatus,
 		Commands{
@@ -212,25 +187,27 @@ func TestController_ExecIndex(t *testing.T) {
 	tests := []struct {
 		name        string
 		index       int
-		err         error
+		errRegex    string
 		stdoutRegex string
 		noAnnounce  bool
 	}{
 		{
 			name:        "command index out of range",
 			index:       2,
+			errRegex:    `^$`,
 			stdoutRegex: `^$`,
 			noAnnounce:  true,
 		},
 		{
 			name:        "command index that will pass",
 			index:       0,
+			errRegex:    `^$`,
 			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
 		},
 		{
 			name:        "command index that will fail",
 			index:       1,
-			err:         fmt.Errorf("exit status 1"),
+			errRegex:    `^exit status 1$`,
 			stdoutRegex: `exit status 1\s+$`,
 		},
 	}
@@ -238,47 +215,32 @@ func TestController_ExecIndex(t *testing.T) {
 	runNumber := 0
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// WHEN: the Command @index is executed.
 			err := controller.ExecIndex(
 				logx.LogFrom{},
 				tc.index,
 				controller.ServiceStatus.GetServiceInfo(),
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nController.ExecIndex(%d)",
-				packageName, tc.index,
-			)
-
-			// THEN: the stdout is expected.
-			// 	decode:
-			gotErr := errfmt.FormatError(err)
-			wantErr := errfmt.FormatError(tc.err)
-			if gotErr != wantErr {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %s\nwant: %s",
-					prefix, gotErr, wantErr,
-				)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			// 	stdout:
+
 			if stdout := releaseStdout(); !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix,
-					stdout, tc.stdoutRegex,
-				)
+				t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
-			// 	announced:
+
 			if !tc.noAnnounce {
 				runNumber++
 			}
 			if got := len(announceChannel); got != runNumber {
+				test.LogChannel(t, "Status.AnnounceChannel", announceChannel)
 				t.Fatalf(
-					"%s Command run was not announced\ngot:  %d\nwant: %d",
-					prefix, got, runNumber,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					got, runNumber,
 				)
 			}
 		})
@@ -286,55 +248,40 @@ func TestController_ExecIndex(t *testing.T) {
 }
 
 func TestCommand_Exec(t *testing.T) {
-	// GIVEN: different Commands to execute.
 	tests := []struct {
 		name        string
 		cmd         Command
-		err         error
+		errRegex    string
 		stdoutRegex string
 	}{
 		{
 			name:        "command that will pass",
 			cmd:         Command{"date", "+%m-%d-%Y"},
+			errRegex:    `^$`,
 			stdoutRegex: `[0-9]{2}-[0-9]{2}-[0-9]{4}\s+$`,
 		},
 		{
 			name:        "command that will fail",
 			cmd:         Command{"false"},
-			err:         fmt.Errorf("exit status 1"),
+			errRegex:    `^exit status 1$`,
 			stdoutRegex: `ERROR: exit status 1\s$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			// WHEN: Exec is called on it.
 			err := tc.cmd.Exec(logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nCommand.Exec(%+v)",
-				packageName, tc.cmd,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
-			wantErr := errfmt.FormatError(tc.err)
-			if e != wantErr {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, wantErr,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the stdout is expected.
 			if stdout := releaseStdout(); !util.RegexCheck(tc.stdoutRegex, stdout) {
-				t.Fatalf(
-					"%s stdout mismatch\ngot:  %q\nwant: %q",
-					prefix, stdout, tc.stdoutRegex,
-				)
+				t.Fatalf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}

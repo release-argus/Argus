@@ -25,181 +25,161 @@ import (
 
 	"github.com/release-argus/Argus/auth/store"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
 	apitype "github.com/release-argus/Argus/web/api/types"
 )
 
 func TestAPI_HTTPAPITokenList(t *testing.T) {
-	prefix := fmt.Sprintf("%s\nhttpAPITokenList()", packageName)
-
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a logged-in admin (owning a token).
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	authCtx := adminContext(t, api, deps)
-	if _, _, err := deps.Store.CreateAPIToken(t.Context(), authCtx.User.ID, "ci", nil); err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
-	// AND: a logged-in viewer (owning none).
+	createAPIToken(t, deps, authCtx.User.ID, "ci", nil)
+
 	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
 	viewerCookie := loginCookie(t, api, "viewer", "viewer-password")
 
-	// WHEN: the admin lists tokens.
-	w := serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/tokens", "", adminCookie))
+	req := authedRequest(http.MethodGet, "/api/v1/tokens", "", adminCookie)
+	w := serveAuth(api, req)
 
-	// THEN: their token is returned.
 	if got, want := w.Code, http.StatusOK; got != want {
 		t.Fatalf(
-			"%s\nstatus mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"admin list: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var tokens []store.APIToken
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &tokens); err != nil {
-		t.Fatalf(
-			"%s\nparse list: %v",
-			prefix, err,
-		)
+		t.Fatalf("admin list: decode.Unmarshal() failed: %v", err)
 	}
-	if len(tokens) != 1 || tokens[0].Name != "ci" {
-		t.Errorf(
-			"%s\ntoken list mismatch\ngot: %+v",
-			prefix, tokens,
-		)
+	tokenNames := test.AttributesSorted(tokens, func(token store.APIToken) string { return token.Name })
+	if testErr := test.AssertSlicesEqual(
+		t, tokenNames, []string{"ci"}, "APIToken.Name",
+	); testErr != nil {
+		t.Errorf("admin list: %v", testErr)
 	}
 
-	// AND: the viewer's list is empty (own-scoped).
-	w = serveAuth(api,
-		authedRequest(http.MethodGet, "/api/v1/tokens", "", viewerCookie))
+	req = authedRequest(http.MethodGet, "/api/v1/tokens", "", viewerCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusOK; got != want {
+		t.Fatalf(
+			"viewer list: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
+		)
+	}
 	var viewerTokens []store.APIToken
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &viewerTokens); err != nil {
-		t.Fatalf(
-			"%s\nparse viewer list: %v",
-			prefix, err,
-		)
+		t.Fatalf("viewer list: decode.Unmarshal() failed: %v", err)
 	}
-	if len(viewerTokens) != 0 {
+	viewerNames := test.AttributesSorted(viewerTokens, func(token store.APIToken) string { return token.Name })
+	// Own-scoped, so the admin's token is not listed.
+	if testErr := test.AssertSlicesEqual(
+		t, viewerNames, []string{}, "APIToken.Name",
+	); testErr != nil {
+		t.Errorf("viewer list: %v", testErr)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/tokens", nil)
+	api.httpAPITokenList(w, req)
+
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nviewer should have no tokens\ngot: %+v",
-			prefix, viewerTokens,
+			"without auth context: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: a direct call arrives without an auth context.
-	recorder := httptest.NewRecorder()
-	api.httpAPITokenList(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/tokens", nil))
-
-	// THEN: 401.
-	if recorder.Code != http.StatusUnauthorized {
-		t.Errorf(
-			"%s\nwithout auth context\ngot:  %d\nwant: 401",
-			prefix, recorder.Code,
-		)
-	}
-
-	// WHEN: the store breaks beneath a direct call.
 	_ = dbConn.Close()
-	recorder = httptest.NewRecorder()
-	api.httpAPITokenList(recorder,
-		withAuthCtx(httptest.NewRequest(http.MethodGet, "/api/v1/tokens", nil), authCtx))
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/tokens", nil)
+	req = withAuthCtx(req, authCtx)
+	api.httpAPITokenList(w, req)
 
-	// THEN: the failure reads as 500.
-	if recorder.Code != http.StatusInternalServerError {
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nbroken store\ngot:  %d\nwant: 500",
-			prefix, recorder.Code,
+			"broken store: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPAPITokenCreate(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, dbConn := testAuthServer(t, file)
-	// AND: a logged-in admin.
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	authCtx := adminContext(t, api, deps)
 
-	prefix := fmt.Sprintf("%s\nhttpAPITokenCreate()", packageName)
+	body := `{"name":"ci","expires_in":"720h"}`
+	req := authedRequest(http.MethodPost, "/api/v1/tokens", body, adminCookie)
+	w := serveAuth(api, req)
 
-	// WHEN: a token is created with an expiry.
-	w := serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/tokens",
-			`{"name":"ci","expires_in":"720h"}`,
-			adminCookie,
-		),
-	)
-
-	// THEN: the token is created and the plaintext returned once.
 	if got, want := w.Code, http.StatusCreated; got != want {
 		t.Fatalf(
-			"%s\ncreate status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"create with expiry: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var created apitype.APITokenCreated
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &created); err != nil {
-		t.Fatalf(
-			"%s\nparse create response: %v",
-			prefix, err,
+		t.Fatalf("create with expiry: decode.Unmarshal() failed: %v", err)
+	}
+	if created.Name != "ci" {
+		t.Errorf(
+			"create with expiry: APITokenCreated.Name mismatch\ngot:  %q\nwant: %q",
+			created.Name, "ci",
 		)
 	}
-	if !strings.HasPrefix(created.Token, "argus_") ||
-		created.Name != "ci" ||
-		created.ExpiresAt == nil ||
-		!strings.HasPrefix(created.Token, created.Prefix) {
+	if created.ExpiresAt == nil {
+		t.Error("create with expiry: APITokenCreated.ExpiresAt mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if !strings.HasPrefix(created.Token, "argus_") {
 		t.Errorf(
-			"%s\ncreated token mismatch\ngot: %+v",
-			prefix, created,
+			"create with expiry: APITokenCreated.Token prefix mismatch\ngot:  %q\nwant: %q",
+			created.Token, "argus_",
+		)
+	}
+	if created.Prefix == "" {
+		t.Error("create with expiry: APITokenCreated.Prefix mismatch\ngot:  \"\"\nwant: non-empty")
+	} else if !strings.HasPrefix(created.Token, created.Prefix) {
+		t.Errorf(
+			"create with expiry: APITokenCreated.Prefix mismatch\ngot:  %q\nwant: %q",
+			created.Prefix, created.Token[:min(len(created.Token), len(created.Prefix))],
 		)
 	}
 
-	// AND: the JSON headers survive the 201 status line.
 	if got, want := w.Header().Get("Content-Type"), "application/json; charset=utf-8"; got != want {
-		t.Errorf(
-			"%s\ncreate Content-Type mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
-		)
+		t.Errorf("create with expiry: Content-Type header mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 	if got, want := w.Header().Get("X-Content-Type-Options"), "nosniff"; got != want {
 		t.Errorf(
-			"%s\ncreate X-Content-Type-Options mismatch\ngot:  %q\nwant: %q",
-			prefix, got, want,
+			"create with expiry: X-Content-Type-Options header mismatch\ngot:  %q\nwant: %q",
+			got, want,
 		)
 	}
 
-	// AND: a token without an expiry never expires.
-	w = serveAuth(api,
-		authedRequest(http.MethodPost, "/api/v1/tokens",
-			`{"name":"forever"}`,
-			adminCookie,
-		),
-	)
+	body = `{"name":"forever"}`
+	req = authedRequest(http.MethodPost, "/api/v1/tokens", body, adminCookie)
+	w = serveAuth(api, req)
 	if got, want := w.Code, http.StatusCreated; got != want {
 		t.Fatalf(
-			"%s\nno-expiry create\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"no-expiry create: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	var forever apitype.APITokenCreated
 	if err := decode.Unmarshal("json", w.Body.Bytes(), &forever); err != nil {
-		t.Fatalf(
-			"%s\nparse no-expiry response: %v",
-			prefix, err,
-		)
+		t.Fatalf("no-expiry create: decode.Unmarshal() failed: %v", err)
 	}
 	if forever.ExpiresAt != nil {
 		t.Errorf(
-			"%s\nno-expiry token should have a nil ExpiresAt\ngot: %+v",
-			prefix, forever,
+			"no-expiry create: APITokenCreated.ExpiresAt mismatch\ngot:  %v\nwant: nil",
+			*forever.ExpiresAt,
 		)
 	}
 
-	// WHEN: an invalid create arrives.
 	tests := []struct {
 		name string
 		body string
@@ -224,166 +204,165 @@ func TestAPI_HTTPAPITokenCreate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			w := serveAuth(api,
-				authedRequest(http.MethodPost, "/api/v1/tokens",
-					tc.body,
-					adminCookie,
-				),
-			)
+			// Serial: shares dbConn, which the parent closes after the loop.
 
-			// THEN: it is rejected with 400.
+			req := authedRequest(http.MethodPost, "/api/v1/tokens", tc.body, adminCookie)
+			w := serveAuth(api, req)
+
 			if got, want := w.Code, http.StatusBadRequest; got != want {
 				t.Errorf(
-					"%s\n%s\ngot:  %d - %s\nwant: 400",
-					prefix, tc.name, got, w.Body.String(),
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})
 	}
 
-	// WHEN: tokens are created until the per-user cap is reached.
 	var capped *httptest.ResponseRecorder
 	for i := range 21 {
-		capped = serveAuth(api,
-			authedRequest(http.MethodPost, "/api/v1/tokens",
-				fmt.Sprintf(`{"name":"cap-%d"}`, i),
-				adminCookie,
-			),
-		)
+		body = fmt.Sprintf(`{"name":"cap-%d"}`, i)
+		req = authedRequest(http.MethodPost, "/api/v1/tokens", body, adminCookie)
+		capped = serveAuth(api, req)
 		if capped.Code != http.StatusCreated {
 			break
 		}
 	}
 
-	// THEN: the one over the cap is refused.
 	if got, want := capped.Code, http.StatusConflict; got != want {
 		t.Errorf(
-			"%s\nover-cap create\ngot:  %d - %s\nwant: %d",
-			prefix, got, capped.Body.String(), want,
+			"over-cap create: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, capped.Body.String(), want,
 		)
 	}
 
-	// WHEN: a direct call arrives without an auth context.
-	recorder := httptest.NewRecorder()
-	api.httpAPITokenCreate(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/tokens",
-		strings.NewReader(`{"name":"x"}`)))
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/tokens", strings.NewReader(`{"name":"x"}`))
+	api.httpAPITokenCreate(w, req)
 
-	// THEN: 401.
-	if recorder.Code != http.StatusUnauthorized {
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nwithout auth context\ngot:  %d\nwant: 401",
-			prefix, recorder.Code,
+			"without auth context: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the store breaks beneath a direct call.
 	_ = dbConn.Close()
-	recorder = httptest.NewRecorder()
-	api.httpAPITokenCreate(recorder,
-		withAuthCtx(httptest.NewRequest(http.MethodPost, "/api/v1/tokens",
-			strings.NewReader(`{"name":"x"}`)), authCtx))
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/tokens", strings.NewReader(`{"name":"x"}`))
+	req = withAuthCtx(req, authCtx)
+	api.httpAPITokenCreate(w, req)
 
-	// THEN: the failure reads as 500.
-	if recorder.Code != http.StatusInternalServerError {
+	if got, want := w.Code, http.StatusInternalServerError; got != want {
 		t.Errorf(
-			"%s\nbroken store\ngot:  %d\nwant: 500",
-			prefix, recorder.Code,
+			"broken store: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPAPITokenDelete(t *testing.T) {
-	// GIVEN: an auth-enabled API.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
-	// AND: a logged-in admin (owning a token).
+
 	adminCookie := loginCookie(t, api, "admin", "admin-password")
 	authCtx := adminContext(t, api, deps)
-	_, token, err := deps.Store.CreateAPIToken(t.Context(), authCtx.User.ID, "ci", nil)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
-	// AND: a viewer (owning none).
-	createAuthUser(t, deps, "viewer", "viewer-password", store.GroupViewer)
-	viewerCookie := loginCookie(t, api, "viewer", "viewer-password")
+	_, adminToken := createAPIToken(t, deps, authCtx.User.ID, "ci", nil)
 
-	prefix := fmt.Sprintf("%s\nhttpAPITokenDelete()", packageName)
+	viewer1 := createAuthUser(t, deps, "viewer-1", "viewer-password", store.GroupViewer)
+	viewer1Cookie := loginCookie(t, api, "viewer-1", "viewer-password")
+	_, viewer1Token := createAPIToken(t, deps, viewer1.ID, "ci", nil)
 
-	// WHEN/THEN: the viewer cannot delete the admin's token (own-scoped).
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/tokens/"+token.ID, "", viewerCookie),
-	); w.Code != http.StatusNotFound {
+	createAuthUser(t, deps, "viewer-2", "viewer-password", store.GroupViewer)
+	viewer2Cookie := loginCookie(t, api, "viewer-2", "viewer-password")
+
+	// 404, not 403: the lookup is scoped to the caller's own tokens.
+	req := authedRequest(http.MethodDelete, "/api/v1/tokens/"+adminToken.ID, "", viewer1Cookie)
+	w := serveAuth(api, req)
+	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\ncross-user delete\ngot:  %d\nwant: 404",
-			prefix, w.Code,
+			"cross-user (viewer-admin) delete: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// AND: unknown IDs 404.
-	if w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/tokens/no-such-id", "", adminCookie),
-	); w.Code != http.StatusNotFound {
+	req = authedRequest(http.MethodDelete, "/api/v1/tokens/"+viewer1Token.ID, "", viewer2Cookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusNotFound; got != want {
 		t.Errorf(
-			"%s\ndelete unknown\ngot:  %d\nwant: 404",
-			prefix, w.Code,
+			"cross-user (viewer-viewer) delete: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 
-	// WHEN: the admin revokes their token.
-	w := serveAuth(api,
-		authedRequest(http.MethodDelete, "/api/v1/tokens/"+token.ID, "", adminCookie))
+	owners := []struct{ name, userID string }{
+		{name: "admin", userID: authCtx.User.ID},
+		{name: "viewer-1", userID: viewer1.ID},
+	}
+	for _, owner := range owners {
+		t.Run(owner.name, func(t *testing.T) {
+			// Serial: shares deps.Store, whose admin token a later step deletes.
 
-	// THEN: the token is gone.
+			tokens, err := deps.Store.APITokensForUser(t.Context(), owner.userID)
+			if err != nil {
+				t.Fatalf("after refused deletes: Store.APITokensForUser() failed: %v", err)
+			}
+			if got, want := len(tokens), 1; got != want {
+				t.Errorf(
+					"after refused deletes: Store.APITokensForUser() length mismatch\n"+
+						"got:  %d\nwant: %d",
+					got, want,
+				)
+			}
+		})
+	}
+
+	req = authedRequest(http.MethodDelete, "/api/v1/tokens/no-such-id", "", adminCookie)
+	w = serveAuth(api, req)
+	if got, want := w.Code, http.StatusNotFound; got != want {
+		t.Errorf(
+			"delete unknown token: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
+		)
+	}
+
+	req = authedRequest(http.MethodDelete, "/api/v1/tokens/"+adminToken.ID, "", adminCookie)
+	w = serveAuth(api, req)
+
 	if got, want := w.Code, http.StatusNoContent; got != want {
 		t.Fatalf(
-			"%s\ndelete status mismatch\ngot:  %d - %s\nwant: %d",
-			prefix, got, w.Body.String(), want,
+			"delete own token: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 	tokens, err := deps.Store.APITokensForUser(t.Context(), authCtx.User.ID)
 	if err != nil {
-		t.Fatalf(
-			"%s\nAPITokensForUser failed: %v",
-			prefix, err,
-		)
+		t.Fatalf("delete own token: Store.APITokensForUser() failed: %v", err)
 	}
 	if len(tokens) != 0 {
 		t.Errorf(
-			"%s\ntoken should be deleted\ngot: %+v",
-			prefix, tokens,
+			"delete own token: Store.APITokensForUser() length mismatch\n"+
+				"got:  %d\nwant: 0 (deleted)",
+			len(tokens),
 		)
 	}
 
-	// WHEN: a direct call arrives without an auth context.
-	recorder := httptest.NewRecorder()
-	api.httpAPITokenDelete(recorder, httptest.NewRequest(http.MethodDelete, "/api/v1/tokens/x", nil))
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodDelete, "/api/v1/tokens/x", nil)
+	api.httpAPITokenDelete(w, req)
 
-	// THEN: 401.
-	if recorder.Code != http.StatusUnauthorized {
+	if got, want := w.Code, http.StatusUnauthorized; got != want {
 		t.Errorf(
-			"%s\nwithout auth context\ngot:  %d\nwant: 401",
-			prefix, recorder.Code,
+			"without auth context: status code mismatch\ngot:  %d - %q\nwant: %d",
+			got, w.Body.String(), want,
 		)
 	}
 }
 
 func TestAPI_HTTPAPIToken__bearerCannotManageTokens(t *testing.T) {
-	// GIVEN: an auth-enabled API and an admin owning a plaintext API token.
 	file := t.Name() + ".yml"
 	api, deps, _ := testAuthServer(t, file)
 	authCtx := adminContext(t, api, deps)
-	plaintext, token, err := deps.Store.CreateAPIToken(
-		t.Context(), authCtx.User.ID, "ci", nil,
-	)
-	if err != nil {
-		t.Fatalf(
-			"%s\nsetup CreateAPIToken failed: %v",
-			packageName, err,
-		)
-	}
+	plaintext, token := createAPIToken(t, deps, authCtx.User.ID, "ci", nil)
 
 	tests := []struct {
 		name       string
@@ -406,7 +385,7 @@ func TestAPI_HTTPAPIToken__bearerCannotManageTokens(t *testing.T) {
 			wantStatus: http.StatusForbidden,
 		},
 		{
-			name:       "invalid/revoking a sibling is refused",
+			name:       "invalid/revoking itself is refused",
 			method:     http.MethodDelete,
 			target:     "/api/v1/tokens/" + token.ID,
 			wantStatus: http.StatusForbidden,
@@ -415,29 +394,23 @@ func TestAPI_HTTPAPIToken__bearerCannotManageTokens(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: shares token, which the DELETE row revokes.
 
-			// WHEN: the request authenticates with the Bearer token.
 			req := authedRequest(tc.method, tc.target, tc.body, nil)
 			req.Header.Set("Authorization", "Bearer "+plaintext)
 			w := serveAuth(api, req)
 
-			prefix := fmt.Sprintf("%s\nAPI token managing API tokens", packageName)
-
-			// THEN: only the read is allowed.
-			if w.Code != tc.wantStatus {
+			if got, want := w.Code, tc.wantStatus; got != want {
 				t.Errorf(
-					"%s\nstatus mismatch\ngot:  %d (%s)\nwant: %d",
-					prefix, w.Code, w.Body.String(), tc.wantStatus,
+					"Bearer token request: status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 
-			// WHEN: the same operations are made from a browser session.
 			cookie := loginCookie(t, api, "admin", "admin-password")
 			req = authedRequest(tc.method, tc.target, tc.body, cookie)
 			w = serveAuth(api, req)
 
-			// THEN: they succeed.
 			wantStatus := http.StatusOK
 			switch tc.method {
 			case http.MethodPost:
@@ -445,10 +418,10 @@ func TestAPI_HTTPAPIToken__bearerCannotManageTokens(t *testing.T) {
 			case http.MethodDelete:
 				wantStatus = http.StatusNoContent
 			}
-			if w.Code != wantStatus {
+			if got, want := w.Code, wantStatus; got != want {
 				t.Errorf(
-					"%s\na session should still mint/delete tokens\ngot:  %d (%s)\nwant: %d",
-					packageName, w.Code, w.Body.String(), wantStatus,
+					"browser session request: status code mismatch\ngot:  %d - %q\nwant: %d",
+					got, w.Body.String(), want,
 				)
 			}
 		})

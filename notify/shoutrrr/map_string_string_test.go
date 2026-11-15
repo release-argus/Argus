@@ -17,7 +17,6 @@
 package shoutrrr
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -25,7 +24,6 @@ import (
 )
 
 func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
-	// GIVEN: data in a given format to unmarshal into a MapStringStringOmitNull.
 	tests := []struct {
 		name         string
 		format, data string
@@ -36,7 +34,6 @@ func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -141,8 +138,7 @@ func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
 				func(v *MapStringStringOmitNull) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"MapStringStringOmitNull",
+				"MapStringStringOmitNull.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -151,7 +147,7 @@ func TestMapStringStringOmitNull_Unmarshal(t *testing.T) {
 }
 
 func TestMapStringStringOmitNull_Copy(t *testing.T) {
-	type wantCase struct {
+	tests := []struct {
 		name  string
 		input MapStringStringOmitNull
 		// Want the copy to be this after initial copy.
@@ -165,9 +161,7 @@ func TestMapStringStringOmitNull_Copy(t *testing.T) {
 		wantCopyEnd map[string]string
 		// Want the original to only be mutated if mutateOriginal is set.
 		wantOrigEnd map[string]string
-	}
-
-	tests := []wantCase{
+	}{
 		{
 			name:  "nil receiver",
 			input: MapStringStringOmitNull(nil),
@@ -224,81 +218,63 @@ func TestMapStringStringOmitNull_Copy(t *testing.T) {
 			t.Parallel()
 
 			orig := tc.input
-			origNil := orig == nil
 
-			// WHEN: Copy is called.
 			inputCopy := orig.Copy()
 
-			// THEN: the copy should not be nil.
+			// util.CopyMap always makes a map, even for a nil receiver.
 			if inputCopy == nil {
-				t.Fatalf("%s\nCopy() returned nil pointer", packageName)
+				t.Fatal("copy mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if *inputCopy == nil {
-				t.Fatalf("%s\nCopy() returned nil map", packageName)
+				t.Fatal("copy map mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: the copy should be a copy of the original.
 			if testErr := test.AssertMapEqual(
 				t,
 				*inputCopy,
 				tc.wantCopyInitial,
-				fmt.Sprintf("%s\nCopy()", packageName),
-				"",
+				"copy",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("after Copy: %v", testErr)
 			}
 
 			if tc.mutateOriginal != nil {
-				// WHEN: the original is mutated.
 				for k, v := range tc.mutateOriginal {
 					orig[k] = v
 				}
-				// THEN: the copy should be unchanged.
+
 				if testErr := test.AssertMapEqual(
 					t,
 					*inputCopy,
 					tc.wantCopyAfter,
-					fmt.Sprintf("%s\nCopy() mismatch after mutating original", packageName),
-					"result",
+					"copy",
 				); testErr != nil {
-					t.Error(testErr)
+					t.Errorf("mutate original: %v", testErr)
 				}
 			}
 
 			if tc.mutateCopy != nil {
-				// WHEN: the copy is mutated.
 				for k, v := range tc.mutateCopy {
 					(*inputCopy)[k] = v
 				}
-				// THEN: the original should be the mutated value.
+
 				if testErr := test.AssertMapEqual(
 					t,
 					*inputCopy,
 					tc.wantCopyEnd,
-					fmt.Sprintf("%s\nCopy() mismatch after mutating result", packageName),
-					"input",
+					"copy",
 				); testErr != nil {
-					t.Error(testErr)
+					t.Errorf("mutate copy: %v", testErr)
 				}
 			}
 
-			// AND: the original should remain nil if it was nil before.
-			if origNil && orig != nil {
-				t.Fatalf(
-					"%s\noriginal map should still be nil; got len=%d",
-					packageName, len(orig),
-				)
-			}
-
-			// AND: the original should be unchanged after all mutations.
 			if testErr := test.AssertMapEqual(
 				t,
 				orig,
 				tc.wantOrigEnd,
-				fmt.Sprintf("%s\nCopy() mismatch after all mutations -", packageName),
 				"original",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("end: %v", testErr)
 			}
 		})
 	}

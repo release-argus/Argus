@@ -17,7 +17,6 @@
 package filter
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -33,19 +32,16 @@ import (
 // ############
 
 func TestURLCommands_Unmarshal(t *testing.T) {
-	// GIVEN: data in a given format to unmarshal into URLCommands.
 	tests := []struct {
 		name         string
 		format, data string
 		want         string
-		expected     URLCommands
 		errRegex     string
 	}{
 		{
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -69,14 +65,12 @@ func TestURLCommands_Unmarshal(t *testing.T) {
 			name:     "JSON/invalid",
 			format:   "json",
 			data:     `"`,
-			expected: nil,
 			errRegex: `unexpected`,
 		},
 		{
 			name:     "YAML/invalid",
 			format:   "yaml",
 			data:     `"`,
-			expected: nil,
 			errRegex: `^[^\s]+ could not find end character.*`,
 		},
 		{
@@ -212,8 +206,7 @@ func TestURLCommands_Unmarshal(t *testing.T) {
 				func(v *URLCommands) string { return v.String() },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"URLCommands",
+				"URLCommands.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -226,7 +219,6 @@ func TestURLCommands_Unmarshal(t *testing.T) {
 // ##########
 
 func TestURLCommand_IsZero(t *testing.T) {
-	// GIVEN: a URLCommand struct.
 	tests := []struct {
 		name string
 		data URLCommand
@@ -319,15 +311,10 @@ func TestURLCommand_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on it.
 			got := tc.data.IsZero()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nURLCommand.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -338,7 +325,6 @@ func TestURLCommand_IsZero(t *testing.T) {
 // #############
 
 func TestURLCommands_String(t *testing.T) {
-	// GIVEN: a URLCommands.
 	tests := []struct {
 		name        string
 		urlCommands *URLCommands
@@ -437,24 +423,16 @@ func TestURLCommands_String(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
-			// WHEN: String is called on it.
 			got := tc.urlCommands.String()
 
-			// THEN: the expected string is returned.
-			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nURLCommands.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("URLCommands.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestURLCommand_String(t *testing.T) {
-	// GIVEN: a URLCommand.
 	regex := testURLCommandRegex()
 	replace := testURLCommandReplace()
 	split := testURLCommandSplit()
@@ -491,7 +469,7 @@ func TestURLCommand_String(t *testing.T) {
 			`),
 		},
 		{
-			name: "nil slice",
+			name: "nil",
 			cmd:  nil,
 			want: "",
 		},
@@ -501,16 +479,10 @@ func TestURLCommand_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: String is called on it.
 			got := tc.cmd.String()
 
-			// THEN: the expected string is returned.
-			tc.want = strings.TrimPrefix(tc.want, "\n")
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nURLCommand.String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("URLCommand.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
@@ -521,7 +493,6 @@ func TestURLCommand_String(t *testing.T) {
 // ##############
 
 func TestURLCommands_CheckValues(t *testing.T) {
-	// GIVEN: a URLCommands.
 	tests := []struct {
 		name     string
 		input    *URLCommands
@@ -658,22 +629,17 @@ func TestURLCommands_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// CheckValues() shouldn't change the URLCommands.
+			// CheckValues must leave the URLCommands unchanged.
 			want := tc.input.String()
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)
 
-			// AND: the urlCommands is unchanged.
 			if got := tc.input.String(); got != want {
-				t.Errorf(
-					"%s\nURLCommands.CheckValues() changed the slice unexpectedly:\ngot  %q\nwant: %q",
-					packageName, got, want,
-				)
+				t.Errorf("URLCommands.String() mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}
@@ -684,7 +650,6 @@ func TestURLCommands_CheckValues(t *testing.T) {
 // ############
 
 func TestURLCommands_GetVersions(t *testing.T) {
-	// GIVEN: a URLCommands.
 	testText := "abc123-def456"
 	tests := []struct {
 		name         string
@@ -754,7 +719,7 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
-			name: "multiple versions/regex fail",
+			name: "multiple versions/second split fail",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: nil},
 				{Type: "split", Text: "_", Index: new(0)},
@@ -799,38 +764,20 @@ func TestURLCommands_GetVersions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: GetVersions is called on it.
 			versions, err := tc.urlCommands.GetVersions(tc.text, logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nURLCommands.GetVersions(%v)",
-				packageName, tc.text,
-			)
-
-			// THEN: the expected versions are returned.
-			wantVersions := strings.Join(tc.wantVersions, "__")
-			gotVersions := strings.Join(versions, "__")
-			if gotVersions != wantVersions {
-				t.Errorf(
-					"%s result mismatch\ngot:\n%v\nwant:\n%v",
-					prefix, tc.wantVersions, gotVersions,
-				)
-			}
-
-			// AND: the expected error is returned.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			if !util.AreSlicesEqual(versions, tc.wantVersions) {
+				t.Errorf("versions mismatch\ngot:  %q\nwant: %q", versions, tc.wantVersions)
 			}
 		})
 	}
 }
 
 func TestURLCommands_Run(t *testing.T) {
-	// GIVEN: a URLCommands and text to run it on.
 	testText := "abc123-def456"
 	tests := []struct {
 		name        string
@@ -927,7 +874,7 @@ func TestURLCommands_Run(t *testing.T) {
 			want:     []string{"def456"},
 		},
 		{
-			name: "split/negative index",
+			name: "split/zero index",
 			urlCommands: &URLCommands{
 				{Type: "split", Text: "-", Index: new(0)},
 			},
@@ -975,34 +922,16 @@ func TestURLCommands_Run(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			text := testText
-			if tc.text != "" {
-				text = tc.text
-			}
+			text := util.ValueOr(tc.text, testText)
 
-			// WHEN: run is called on it.
 			versions, err := tc.urlCommands.Run(text, logx.LogFrom{})
-
-			prefix := fmt.Sprintf(
-				"%s\nURLCommands.Run(%q)",
-				packageName, tc.name,
-			)
-
-			// THEN: the error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the expected text was returned.
 			if !util.AreSlicesEqual(versions, tc.want) {
-				t.Errorf(
-					"%s versions mismatch\ngot:  %q\nwant: %q",
-					prefix, text, tc.want,
-				)
+				t.Errorf("versions mismatch\ngot:  %q\nwant: %q", versions, tc.want)
 			}
 		})
 	}
@@ -1014,10 +943,10 @@ func TestURLCommand_Regex(t *testing.T) {
 		versions     []string
 	}
 	type wants struct {
-		versions *[]string
+		versions []string
 		errRegex string
 	}
-	// GIVEN: a URLCommand for regex.
+
 	tests := []struct {
 		name    string
 		command URLCommand
@@ -1038,7 +967,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{},
+				versions: []string{},
 				errRegex: `^regex "[^"]+" didn't return any matches`,
 			},
 		},
@@ -1056,7 +985,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"def",
 				},
 				errRegex: `^$`,
@@ -1076,7 +1005,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"def",
 				},
 				errRegex: `^$`,
@@ -1096,7 +1025,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{},
+				versions: []string{},
 				errRegex: `^regex .* returned \d elements on .* but the index wants element number \d`,
 			},
 		},
@@ -1115,7 +1044,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"def_456",
 				},
 				errRegex: `^$`,
@@ -1134,7 +1063,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc",
 					"def",
 				},
@@ -1155,7 +1084,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc_123",
 					"def_456",
 				},
@@ -1176,7 +1105,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"a",
 					"b",
 					"c",
@@ -1200,7 +1129,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 1,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc123",
 					"def",
 					"ghi789",
@@ -1223,7 +1152,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 2,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc123",
 					"def456",
 					"789",
@@ -1247,7 +1176,7 @@ func TestURLCommand_Regex(t *testing.T) {
 				versionIndex: 1,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc123",
 					"def",
 					"ghi789",
@@ -1262,38 +1191,18 @@ func TestURLCommand_Regex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.want.versions == nil {
-				argsVersions := util.CopySlice(tc.args.versions)
-				tc.want.versions = &argsVersions
-			}
-
-			// WHEN: regex is called on it for the version at the given index.
 			versions, err := tc.command.regex(
 				tc.args.versionIndex,
 				tc.args.versions,
 				logx.LogFrom{},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nURLCommands.regex(regex=%q, index=%d, versions=%q) ",
-				packageName, tc.command.Regex, tc.args.versionIndex, tc.want.versions,
-			)
-
-			// THEN: the expected versions are returned.
-			if !util.AreSlicesEqual(versions, *tc.want.versions) {
-				t.Errorf(
-					"%s result mismatch\ngot:  %v\nwant: %v",
-					prefix, versions, *tc.want.versions,
-				)
-			}
-
-			// AND: the expected error is returned.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, tc.want.errRegex, e,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
+			}
+
+			if !util.AreSlicesEqual(versions, tc.want.versions) {
+				t.Errorf("versions mismatch\ngot:  %q\nwant: %q", versions, tc.want.versions)
 			}
 		})
 	}
@@ -1305,10 +1214,10 @@ func TestURLCommand_Split(t *testing.T) {
 		versions     []string
 	}
 	type wants struct {
-		versions *[]string
+		versions []string
 		errRegex string
 	}
-	// GIVEN: a URLCommand for split.
+
 	tests := []struct {
 		name    string
 		command URLCommand
@@ -1329,7 +1238,7 @@ func TestURLCommand_Split(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"def",
 				},
 				errRegex: `^$`,
@@ -1349,7 +1258,7 @@ func TestURLCommand_Split(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"ghi",
 				},
 				errRegex: `^$`,
@@ -1368,7 +1277,7 @@ func TestURLCommand_Split(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{
+				versions: []string{
 					"abc", "def", "ghi",
 				},
 				errRegex: `^$`,
@@ -1388,7 +1297,7 @@ func TestURLCommand_Split(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{},
+				versions: []string{},
 				errRegex: `split .* returned \d elements on "[^']+", but the index wants element number \d`,
 			},
 		},
@@ -1406,7 +1315,7 @@ func TestURLCommand_Split(t *testing.T) {
 				versionIndex: 0,
 			},
 			want: wants{
-				versions: &[]string{},
+				versions: []string{},
 				errRegex: `split didn't find any "_" to split on`,
 			},
 		},
@@ -1416,38 +1325,18 @@ func TestURLCommand_Split(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.want.versions == nil {
-				argsVersions := util.CopySlice(tc.args.versions)
-				tc.want.versions = &argsVersions
-			}
-
-			// WHEN: split is called on it for the version at the given index.
 			versions, err := tc.command.split(
 				tc.args.versionIndex,
 				tc.args.versions,
 				logx.LogFrom{},
 			)
-
-			prefix := fmt.Sprintf(
-				"%s\nURLCommands.split(text=%q, index=%d, versions=%q)",
-				packageName, tc.command.Text, tc.args.versionIndex, tc.want.versions,
-			)
-
-			// THEN: the expected versions are returned.
-			if !util.AreSlicesEqual(versions, *tc.want.versions) {
-				t.Errorf(
-					"%s result mismatch\ngot:  %v\nwant: %v",
-					prefix, versions, *tc.want.versions,
-				)
-			}
-
-			// AND: the expected error is returned.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.want.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.want.errRegex,
-				)
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.want.errRegex)
+			}
+
+			if !util.AreSlicesEqual(versions, tc.want.versions) {
+				t.Errorf("versions mismatch\ngot:  %q\nwant: %q", versions, tc.want.versions)
 			}
 		})
 	}

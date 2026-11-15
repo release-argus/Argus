@@ -20,12 +20,13 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestWebhooks_Metrics(t *testing.T) {
-	// GIVEN: a Webhooks.
 	tests := []struct {
 		name     string
 		webhooks *Webhooks
@@ -47,7 +48,7 @@ func TestWebhooks_Metrics(t *testing.T) {
 			},
 		},
 		{
-			name: "no Main, no metrics",
+			name: "without Main",
 			webhooks: &Webhooks{
 				"foo": &Webhook{},
 			},
@@ -70,7 +71,7 @@ func TestWebhooks_Metrics(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.WebhookResultTotal.
 
 			if tc.webhooks != nil {
 				for name, s := range *tc.webhooks {
@@ -80,38 +81,28 @@ func TestWebhooks_Metrics(t *testing.T) {
 				}
 			}
 
-			// WHEN: the Prometheus metrics are initialised with initMetrics.
 			had := testutil.CollectAndCount(metric.WebhookResultTotal)
 			tc.webhooks.InitMetrics()
 
-			// THEN: it can be counted.
-			got := testutil.CollectAndCount(metric.WebhookResultTotal)
 			want := had
 			if tc.webhooks != nil {
 				want += 2 * len(*tc.webhooks)
 			}
-			if got != want {
-				t.Errorf(
-					"%s\nWebhooks.InitMetrics() metric count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, want,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Webhooks.InitMetrics() WebhookResultTotal",
+				metric.WebhookResultTotal, want,
+			)
 
-			// AND: the metrics can be deleted.
 			tc.webhooks.DeleteMetrics()
-			got = testutil.CollectAndCount(metric.WebhookResultTotal)
-			if got != had {
-				t.Errorf(
-					"%s\nWebhooks.DeleteMetrics() metric count mismatch\ngot:  %d\nwant: %d",
-					packageName, got, had,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Webhooks.DeleteMetrics() WebhookResultTotal",
+				metric.WebhookResultTotal, had,
+			)
 		})
 	}
 }
 
 func TestWebhook_Metrics(t *testing.T) {
-	// GIVEN: a Webhook.
 	tests := []struct {
 		name  string
 		isNil bool
@@ -128,42 +119,32 @@ func TestWebhook_Metrics(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.WebhookResultTotal.
 
-			webhook := testWebhook(true, false, false)
+			webhook := testWebhook(true, false)
 			webhook.ID = tc.name + "TestInitMetrics"
 			webhook.ServiceStatus.ServiceInfo.ID = webhook.ID + "_SVC"
 			if tc.isNil {
 				webhook = nil
 			}
 
-			// WHEN: the Prometheus metrics are initialised with initMetrics.
 			hadC := testutil.CollectAndCount(metric.WebhookResultTotal)
 			webhook.initMetrics()
 
-			// THEN: it can be collected.
-			// counters:
-			gotC := testutil.CollectAndCount(metric.WebhookResultTotal)
-			wantC := 2
+			wantC := hadC + 2
 			if tc.isNil {
-				wantC = 0
+				wantC = hadC
 			}
-			if resC := gotC - hadC; resC != wantC {
-				t.Errorf(
-					"%s\nWebhook.initMetrics() metric count mismatch\ngot:  %d\nwant: %d",
-					packageName, resC, wantC,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Webhook.initMetrics() WebhookResultTotal",
+				metric.WebhookResultTotal, wantC,
+			)
 
-			// AND: it can be deleted.
 			webhook.deleteMetrics()
-			gotC = testutil.CollectAndCount(metric.WebhookResultTotal)
-			if gotC != hadC {
-				t.Errorf(
-					"%s\nWebhook.deleteMetrics() metric count mismatch\ngot:  %d\nwant: %d",
-					packageName, gotC, hadC,
-				)
-			}
+			test.AssertMetricCount(
+				t, "Webhook.deleteMetrics() WebhookResultTotal",
+				metric.WebhookResultTotal, hadC,
+			)
 		})
 	}
 }

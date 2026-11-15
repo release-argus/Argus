@@ -17,14 +17,12 @@
 package docker
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestOldDockerRegistryDefaults_IsZero(t *testing.T) {
-	// GIVEN: oldDockerRegistryDefaults.
 	tests := []struct {
 		name string
 		val  *oldDockerRegistryDefaults
@@ -68,22 +66,16 @@ func TestOldDockerRegistryDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on the Defaults.
 			got := tc.val.IsZero()
 
-			// THEN: the result matches the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\noldDockerRegistryDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestOldDockerDefaults_IsZero(t *testing.T) {
-	// GIVEN: oldDockerDefaults.
 	tests := []struct {
 		name string
 		val  *oldDockerDefaults
@@ -147,22 +139,16 @@ func TestOldDockerDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called on the Defaults.
 			got := tc.val.IsZero()
 
-			// THEN: the result matches the expected value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\noldDockerDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestConvertOldDefaults(t *testing.T) {
-	// GIVEN: oldDockerDefaults.
 	tests := []struct {
 		name string
 		data []byte
@@ -260,7 +246,6 @@ func TestConvertOldDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// AND: Defaults to apply them to.
 			newFormat := &Defaults{
 				Registry: RegistryDefaultsSet{
 					GHCR: RegistryDefaultsMap["ghcr"]().(*GHCRRegistryDefaults),
@@ -269,20 +254,10 @@ func TestConvertOldDefaults(t *testing.T) {
 				},
 			}
 
-			prefix := fmt.Sprintf(
-				"%s\nConvertOldDefaults(format=\"yaml\", data=%q, newFormat=%+v)",
-				packageName, tc.data, newFormat,
-			)
-
-			// WHEN: convertOldDefaults is called on the Defaults.
 			convertOldDefaults("yaml", tc.data, newFormat)
 
-			// THEN: the 'newFormat' struct is modified as expected.
 			if got := newFormat.String(""); got != tc.want {
-				t.Errorf(
-					"%s value mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.want,
-				)
+				t.Errorf("Defaults.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

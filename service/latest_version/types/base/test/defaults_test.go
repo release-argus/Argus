@@ -16,4 +16,15 @@
 
 package test
 
-var packageName = "statustest"
+import "testing"
+
+func TestPlainDefaultsConfig(t *testing.T) {
+	lvCfg := PlainDefaultsConfig(t)
+
+	if lvCfg.Soft == nil {
+		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")
+	}
+	if lvCfg.Hard == nil {
+		t.Error("DefaultsConfig.Hard mismatch\ngot:  nil\nwant: non-nil")
+	}
+}

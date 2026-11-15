@@ -18,7 +18,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -26,12 +25,14 @@ import (
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup.
 	tests := []struct {
 		name              string
 		data              string
 		emptyHardDefaults bool
 		errRegex          string
+		wantMethod        string
+		wantBody          string
+		wantRegexTemplate string
 	}{
 		{
 			name: "valid service",
@@ -40,7 +41,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				regex: '[0-9.]+'
 			`),
-			errRegex: `^$`,
+			errRegex:   `^$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "method/empty string",
@@ -57,7 +59,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				method: 'FOO'
 				url: "https://example.com"
 			`),
-			errRegex: `method: "FOO" <invalid>.*` + http.MethodGet,
+			errRegex:   `method: "FOO" <invalid>.*` + http.MethodGet,
+			wantMethod: "FOO",
 		},
 		{
 			name: "method/valid",
@@ -65,7 +68,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				method: ` + http.MethodGet + `
 				url: "https://example.com"
 			`),
-			errRegex: `^$`,
+			errRegex:   `^$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "method/case insensitive",
@@ -73,7 +77,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				method: 'gEt'
 				url: "https://example.com"
 			`),
-			errRegex: `^$`,
+			errRegex:   `^$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "url/empty string",
@@ -90,7 +95,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				body: "foo"
 			`),
-			errRegex: `^$`,
+			errRegex:   `^$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "body/not removed for POST",
@@ -99,7 +105,9 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				body: "foo"
 			`),
-			errRegex: `^$`,
+			errRegex:   `^$`,
+			wantMethod: http.MethodPost,
+			wantBody:   "foo",
 		},
 		{
 			name: "JSON/invalid, string in square brackets",
@@ -108,7 +116,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				json: 'foo[bar]'
 			`),
-			errRegex: `^json: .* <invalid>.*$`,
+			errRegex:   `^json: .* <invalid>.*$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "regex/invalid",
@@ -117,7 +126,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				regex: '[0-'
 			`),
-			errRegex: `^regex: .* <invalid>.*$`,
+			errRegex:   `^regex: .* <invalid>.*$`,
+			wantMethod: http.MethodGet,
 		},
 		{
 			name: "regex_template, with no regex",
@@ -126,7 +136,9 @@ func TestLookup_CheckValues(t *testing.T) {
 				url: "https://example.com"
 				regex_template: "$1.$2.$3"
 			`),
-			errRegex: `^$`,
+			errRegex:          `^$`,
+			wantMethod:        http.MethodGet,
+			wantRegexTemplate: "",
 		},
 		{
 			name: "all decode",
@@ -144,6 +156,8 @@ func TestLookup_CheckValues(t *testing.T) {
 				json: "[^"]+" <invalid>.*
 				regex: "[^"]+" <invalid>.*$`,
 			),
+			wantMethod:        "ASD",
+			wantRegexTemplate: "$1.$2.$3",
 		},
 	}
 
@@ -151,60 +165,30 @@ func TestLookup_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			input := testLookup(t, false)
+			input := testLookup(t)
 			if tc.emptyHardDefaults {
 				input.HardDefaults = &base.Defaults{}
 			}
-			// Apply the YAML.
 			if err := input.UnmarshalYAML([]byte(tc.data)); err != nil {
-				t.Fatalf(
-					"%s\nLookup.UnmarshalYAML(%q) failed before Lookup.CheckValues(): %v",
-					packageName, tc.data,
-					err,
-				)
+				t.Fatalf("Lookup.UnmarshalYAML() failed: %v", err)
 			}
-			hadBody := input.Body
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				input.CheckValues,
 			)
 
-			// AND: RegexTemplate is empty when Regex is empty.
-			if input.RegexTemplate != "" && input.Regex == "" {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() .RegexTemplate should be empty when Regex is empty",
-					packageName,
-				)
+			if input.Method != tc.wantMethod {
+				t.Errorf("Lookup.Method mismatch\ngot:  %q\nwant: %q", input.Method, tc.wantMethod)
 			}
-
-			// AND: Body is empty when Method is GET.
-			if input.Method == http.MethodGet && input.Body != "" {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() .Body should be empty when Method is GET",
-					packageName,
-				)
+			if input.Body != tc.wantBody {
+				t.Errorf("Lookup.Body mismatch\ngot:  %q\nwant: %q", input.Body, tc.wantBody)
 			}
-
-			// AND: Body is kept when Method is POST.
-			if input.Method == http.MethodPost && hadBody != "" && input.Body == "" {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() .Body should be kept when Method is POST",
-					packageName,
-				)
-			}
-
-			// AND: Method is uppercased.
-			wantMethod := strings.ToUpper(input.Method)
-			if wantMethod == "" {
-				wantMethod = http.MethodGet
-			}
-			if input.Method != "" && input.Method != wantMethod {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() .Method should be uppercased:\ngot:  %q\nwant: %q",
-					packageName, input.Method, wantMethod,
+			if input.RegexTemplate != tc.wantRegexTemplate {
+				t.Errorf(
+					"Lookup.RegexTemplate mismatch\ngot:  %q\nwant: %q",
+					input.RegexTemplate, tc.wantRegexTemplate,
 				)
 			}
 		})

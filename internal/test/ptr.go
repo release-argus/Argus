@@ -18,13 +18,22 @@ package test
 
 import (
 	"fmt"
+	"reflect"
 )
 
-// StringifyPtr returns a string representation of the given pointer.
-func StringifyPtr[T comparable](ptr *T) string {
-	str := "<nil>"
-	if ptr != nil {
-		str = fmt.Sprint(*ptr)
+// StringifyPtr returns a string representation of the given pointer, panicking on a non-pointer.
+func StringifyPtr(ptr any) string {
+	if ptr == nil {
+		return "nil"
 	}
-	return str
+
+	v := reflect.ValueOf(ptr)
+	if v.Kind() != reflect.Pointer {
+		panic(fmt.Sprintf("StringifyPtr: %T is not a pointer", ptr))
+	}
+	if v.IsNil() {
+		return "nil"
+	}
+
+	return fmt.Sprint(v.Elem().Interface())
 }

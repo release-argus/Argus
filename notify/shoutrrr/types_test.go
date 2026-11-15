@@ -17,13 +17,12 @@
 package shoutrrr
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
-	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -33,7 +32,6 @@ import (
 // ############
 
 func TestShoutrrrs_MarshalJSON(t *testing.T) {
-	// GIVEN: various Shoutrrrs states to marshal.
 	tests := []struct {
 		name      string
 		shoutrrrs *Shoutrrrs
@@ -89,28 +87,19 @@ func TestShoutrrrs_MarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: marshaling the Shoutrrrs.
 			data, err := tc.shoutrrrs.MarshalJSON()
 			if err != nil {
-				t.Fatalf(
-					"%s\nShoutrrrs MarshalJSON() returned unexpected error: %v",
-					packageName, err,
-				)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// THEN: the result matches the expected JSON.
 			if dataStr := string(data); dataStr != tc.wantStr {
-				t.Errorf(
-					"%s\nShoutrrrs MarshalJSON() mismatch\ngot:  %q\nwant: %q",
-					packageName, dataStr, tc.wantStr,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", dataStr, tc.wantStr)
 			}
 		})
 	}
 }
 
 func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
-	// GIVEN: various JSON inputs to unmarshal into Shoutrrrs.
 	tests := []struct {
 		name     string
 		data     string
@@ -172,9 +161,12 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 			),
 		},
 		{
-			name:     "invalid JSON",
-			data:     `{`,
-			errRegex: `.+`,
+			name: "invalid JSON",
+			data: `[`,
+			errRegex: test.TrimYAML(`
+				^jsontext: unexpected EOF after offset 1
+					unexpected EOF$`,
+			),
 		},
 		{
 			name:     "wrong shape (object instead of array)",
@@ -187,62 +179,536 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: unmarshaling JSON into a Shoutrrrs.
 			var s Shoutrrrs
 			err := s.UnmarshalJSON([]byte(tc.data))
-
-			prefix := fmt.Sprintf(
-				"%s\nShoutrrrs.UnmarshalJSON(%q)",
-				packageName, tc.data,
-			)
-
-			// THEN: errors produced match the regex.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if e != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: map keys and types are as expected.
 			if gotLen, wantLen := len(s), len(tc.wantKeys); gotLen != wantLen {
 				t.Fatalf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
+					"len(Shoutrrrs) mismatch\ngot:  %d %q\nwant: %d %q",
+					gotLen, util.SortedKeys(s),
+					wantLen, util.SortedKeys(tc.wantKeys),
 				)
 			}
 			for id, wantType := range tc.wantKeys {
 				got, ok := s[id]
 				if !ok {
-					t.Errorf(
-						"%s missing key %q",
-						prefix, id,
-					)
+					t.Errorf("Shoutrrrs[%q] mismatch\ngot:  absent\nwant: present", id)
+					continue
 				}
 				if got == nil {
-					t.Fatalf(
-						"%s value for key %q is nil",
-						prefix, id,
-					)
+					t.Fatalf("Shoutrrrs[%q] mismatch\ngot:  nil\nwant: non-nil", id)
 				}
 				if got.Type != wantType {
 					t.Errorf(
-						"%s .Type mismatch for %q\n got:  %q\nwant: %q",
-						prefix, id,
-						got.Type, wantType,
+						"Shoutrrrs[%q].Type mismatch\ngot:  %q\nwant: %q",
+						id, got.Type, wantType,
 					)
 				}
 				if got.ID != id {
-					t.Errorf(
-						"%s .ID mismatch for key %q\n got:  %q\nwant: %q",
-						packageName, id,
-						got.ID, id,
-					)
+					t.Errorf("Shoutrrrs[%q].ID mismatch\ngot:  %q\nwant: %q", id, got.ID, id)
 				}
+			}
+		})
+	}
+}
+
+func testShoutrrrForCopy(svcStatus *status.Status, id string) *Shoutrrr {
+	main := NewDefaults(
+		"discord",
+		map[string]string{"main": "1"},
+		map[string]string{"main": "1"},
+		map[string]string{"main": "1"},
+	)
+	defaults := NewDefaults(
+		"discord",
+		map[string]string{"def": "2"},
+		map[string]string{"def": "2"},
+		map[string]string{"def": "2"},
+	)
+	hardDefaults := NewDefaults(
+		"discord",
+		map[string]string{"hard": "3"},
+		map[string]string{"hard": "3"},
+		map[string]string{"hard": "3"},
+	)
+
+	shoutrrr := New(
+		&svcStatus.Fails.Shoutrrr,
+		id,
+		"discord",
+		map[string]string{"opt": "1"},
+		map[string]string{"host": "example.com"},
+		map[string]string{"title": "argus"},
+		main,
+		defaults,
+		hardDefaults,
+	)
+	shoutrrr.ServiceStatus = svcStatus
+	shoutrrr.Failed.Set(id, new(false))
+
+	return shoutrrr
+}
+
+func assertFailsShoutrrrState(
+	got *status.FailsShoutrrr,
+	wantFails map[string]*bool,
+	target string,
+) error {
+	var errs []error
+	for _, key := range util.SortedKeys(wantFails) {
+		gotStr := test.StringifyPtr(got.Get(key))
+		wantStr := test.StringifyPtr(wantFails[key])
+		if gotStr != wantStr {
+			errs = append(errs, fmt.Errorf(
+				"%s.Failed.Get(%q) mismatch\ngot:  %s\nwant: %s",
+				target, key,
+				gotStr, wantStr,
+			))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func TestShoutrrrs_Copy(t *testing.T) {
+	tests := []struct {
+		name string
+		// Number of entries in the map.
+		wantLen int
+		// Key to reassign in the original map.
+		reassignOriginalKey string
+		// Mutations to verify that Copy doesn't alias the underlying maps.
+		mutateOriginalOptionsKey, mutateOriginalURLFieldsKey, mutateOriginalParamsKey string
+		mutateOriginalOptionsVal, mutateOriginalURLFieldsVal, mutateOriginalParamsVal string
+		mutateCopyOptionsKey, mutateCopyURLFieldsKey, mutateCopyParamsKey             string
+		mutateCopyOptionsVal, mutateCopyURLFieldsVal, mutateCopyParamsVal             string
+	}{
+		{
+			name:    "empty map",
+			wantLen: 0,
+		},
+		{
+			name:    "copies each entry",
+			wantLen: 2,
+
+			mutateOriginalOptionsKey:   "foo",
+			mutateOriginalURLFieldsKey: "foo",
+			mutateOriginalParamsKey:    "foo",
+			mutateOriginalOptionsVal:   "mutated",
+			mutateOriginalURLFieldsVal: "mutated",
+			mutateOriginalParamsVal:    "mutated",
+
+			mutateCopyOptionsKey:   "bar",
+			mutateCopyURLFieldsKey: "bar",
+			mutateCopyParamsKey:    "bar",
+			mutateCopyOptionsVal:   "copy-mutated",
+			mutateCopyURLFieldsVal: "copy-mutated",
+			mutateCopyParamsVal:    "copy-mutated",
+		},
+		{
+			name:                "reassigning map entry does not affect copy",
+			wantLen:             1,
+			reassignOriginalKey: "foo",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			origStatus := newTestStatus(t, tc.name, 2)
+			copyStatus := newTestStatus(t, tc.name, 2)
+
+			var orig Shoutrrrs
+			switch tc.wantLen {
+			case 0:
+				orig = Shoutrrrs{}
+			case 1:
+				orig = Shoutrrrs{
+					"foo": testShoutrrrForCopy(origStatus, "foo"),
+				}
+			case 2:
+				orig = Shoutrrrs{
+					"foo": testShoutrrrForCopy(origStatus, "foo"),
+					"bar": testShoutrrrForCopy(origStatus, "bar"),
+				}
+			}
+
+			got := orig.Copy(copyStatus)
+
+			if gotLen, wantLen := len(got), tc.wantLen; gotLen != wantLen {
+				t.Fatalf(
+					"after Copy: len(copy) mismatch\ngot:  %d %q\nwant: %d",
+					gotLen, util.SortedKeys(got), wantLen,
+				)
+			}
+
+			for key, want := range orig {
+				t.Run(key, func(t *testing.T) {
+					// Serial: shares orig.
+
+					gotEntry := got[key]
+					if gotEntry == nil {
+						t.Fatalf("after Copy: copy[%q] mismatch\ngot:  nil\nwant: non-nil", key)
+					}
+					if gotEntry == want {
+						t.Fatalf(
+							"after Copy: copy aliases the original\ngot:  %p\nwant: NOT %p",
+							gotEntry, want,
+						)
+					}
+					if gotEntry.ServiceStatus != copyStatus {
+						t.Errorf(
+							"after Copy: copy[%q].ServiceStatus mismatch\ngot:  %p\nwant: %p",
+							key, gotEntry.ServiceStatus, copyStatus,
+						)
+					}
+					if testErr := test.AssertMapEqual(
+						t,
+						gotEntry.Options, want.Options,
+						fmt.Sprintf("copy[%q].Options", key),
+					); testErr != nil {
+						t.Errorf("after Copy: %v", testErr)
+					}
+					if testErr := test.AssertMapEqual(
+						t,
+						gotEntry.URLFields, want.URLFields,
+						fmt.Sprintf("copy[%q].URLFields", key),
+					); testErr != nil {
+						t.Errorf("after Copy: %v", testErr)
+					}
+					if testErr := test.AssertMapEqual(
+						t,
+						gotEntry.Params, want.Params,
+						fmt.Sprintf("copy[%q].Params", key),
+					); testErr != nil {
+						t.Errorf("after Copy: %v", testErr)
+					}
+
+					if tc.reassignOriginalKey != "" {
+						reassignTo := testShoutrrrForCopy(origStatus, "replacement")
+						orig[tc.reassignOriginalKey] = reassignTo
+						if _, ok := got[tc.reassignOriginalKey]; !ok {
+							t.Fatalf(
+								"reassign: copy[%q] mismatch\ngot:  absent\nwant: present",
+								tc.reassignOriginalKey,
+							)
+						}
+						if got[tc.reassignOriginalKey] == reassignTo {
+							t.Fatalf(
+								"reassign: copy[%q] mismatch\ngot:  %p\nwant: NOT %p",
+								tc.reassignOriginalKey, got[tc.reassignOriginalKey], reassignTo,
+							)
+						}
+					}
+
+					if tc.mutateOriginalOptionsKey != "" || tc.mutateOriginalURLFieldsKey != "" || tc.mutateOriginalParamsKey != "" {
+						originalVal := gotEntry.Options[tc.mutateOriginalOptionsKey]
+						want.Options[tc.mutateOriginalOptionsKey] = tc.mutateOriginalOptionsVal
+						if g := gotEntry.Options[tc.mutateOriginalOptionsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate original: copy[%q].Options mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+						originalVal = gotEntry.URLFields[tc.mutateOriginalURLFieldsKey]
+						want.URLFields[tc.mutateOriginalURLFieldsKey] = tc.mutateOriginalURLFieldsVal
+						if g := gotEntry.URLFields[tc.mutateOriginalURLFieldsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate original: copy[%q].URLFields mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+						originalVal = gotEntry.Params[tc.mutateOriginalParamsKey]
+						want.Params[tc.mutateOriginalParamsKey] = tc.mutateOriginalParamsVal
+						if g := gotEntry.Params[tc.mutateOriginalParamsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate original: copy[%q].Params mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+					}
+
+					if tc.mutateCopyOptionsKey != "" || tc.mutateCopyURLFieldsKey != "" || tc.mutateCopyParamsKey != "" {
+						originalVal := want.Options[tc.mutateCopyOptionsKey]
+						gotEntry.Options[tc.mutateCopyOptionsKey] = tc.mutateCopyOptionsVal
+						if g := want.Options[tc.mutateCopyOptionsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate copy: Shoutrrrs[%q].Options mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+						originalVal = want.URLFields[tc.mutateCopyURLFieldsKey]
+						gotEntry.URLFields[tc.mutateCopyURLFieldsKey] = tc.mutateCopyURLFieldsVal
+						if g := want.URLFields[tc.mutateCopyURLFieldsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate copy: Shoutrrrs[%q].URLFields mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+						originalVal = want.Params[tc.mutateCopyParamsKey]
+						gotEntry.Params[tc.mutateCopyParamsKey] = tc.mutateCopyParamsVal
+						if g := want.Params[tc.mutateCopyParamsKey]; g != originalVal {
+							t.Fatalf(
+								"mutate copy: Shoutrrrs[%q].Params mismatch\ngot:  %q\nwant: %q",
+								key, g, originalVal,
+							)
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestShoutrrr_Copy(t *testing.T) {
+	tests := []struct {
+		name     string
+		shoutrrr *Shoutrrr
+		// If true, the receiver is nil.
+		wantNil bool
+		// Mutations to verify that Copy doesn't alias the underlying maps.
+		mutateOriginalOptions, mutateOriginalURLFields, mutateOriginalParams map[string]string
+		mutateCopyOptions, mutateCopyURLFields, mutateCopyParams             map[string]string
+		mutateOriginalFails                                                  map[string]*bool
+		mutateCopyFails                                                      map[string]*bool
+	}{
+		{
+			name:    "nil receiver",
+			wantNil: true,
+		},
+		{
+			name:                    "copies fields and deep-copies maps and fails",
+			mutateOriginalOptions:   map[string]string{"opt": "mutated"},
+			mutateCopyOptions:       map[string]string{"opt": "copy-mutated"},
+			mutateOriginalURLFields: map[string]string{"host": "mutated"},
+			mutateCopyURLFields:     map[string]string{"host": "copy-mutated"},
+			mutateOriginalParams:    map[string]string{"title": "mutated"},
+			mutateCopyParams:        map[string]string{"title": "copy-mutated"},
+			mutateOriginalFails:     map[string]*bool{"notify": new(true)},
+			mutateCopyFails:         map[string]*bool{"notify": nil},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			origStatus := newTestStatus(t, tc.name, 2)
+			copyStatus := newTestStatus(t, tc.name, 2)
+
+			var orig *Shoutrrr
+			if !tc.wantNil {
+				orig = testShoutrrrForCopy(origStatus, "notify")
+			}
+			var wantOrigOptions, wantOrigURLFields, wantOrigParams map[string]string
+			if orig != nil {
+				wantOrigOptions = util.CopyMap(orig.Options)
+				wantOrigURLFields = util.CopyMap(orig.URLFields)
+				wantOrigParams = util.CopyMap(orig.Params)
+			}
+
+			got := orig.Copy(copyStatus)
+
+			if tc.wantNil {
+				if got != nil {
+					t.Fatal("after Copy: copy mismatch\ngot:  non-nil\nwant: nil")
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("after Copy: copy mismatch\ngot:  nil\nwant: non-nil")
+			}
+
+			fieldTests := []test.FieldAssertion{
+				{Name: "ID", Got: got.ID, Want: orig.ID, Mode: test.CompareEqual},
+				{Name: "Type", Got: got.Type, Want: orig.Type, Mode: test.CompareEqual},
+				{Name: "Main", Got: got.Main, Want: orig.Main, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: got.Defaults, Want: orig.Defaults, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: got.HardDefaults, Want: orig.HardDefaults, Mode: test.CompareSamePointer},
+				{Name: "ServiceStatus", Got: got.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "copy"); testErr != nil {
+				t.Fatalf("after Copy: %v", testErr)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Options,
+				orig.Options,
+				"copy.Options",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.URLFields,
+				orig.URLFields,
+				"copy.URLFields",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Params,
+				orig.Params,
+				"copy.Params",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+			if got.Failed == orig.Failed {
+				t.Errorf(
+					"after Copy: Shoutrrr.Failed: copy aliases the original\n"+
+						"got:  %p\nwant: NOT %p",
+					got.Failed, orig.Failed,
+				)
+			}
+			if testErr := assertFailsShoutrrrState(
+				got.Failed,
+				map[string]*bool{"notify": new(false)},
+				"copy",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			wantMutatedOrigOptions := *orig.Options.Copy()
+			wantMutatedOrigURLFields := *orig.URLFields.Copy()
+			wantMutatedOrigParams := *orig.Params.Copy()
+			for k, v := range tc.mutateOriginalOptions {
+				orig.Options[k] = v
+				wantMutatedOrigOptions[k] = v
+			}
+			for k, v := range tc.mutateOriginalURLFields {
+				orig.URLFields[k] = v
+				wantMutatedOrigURLFields[k] = v
+			}
+			for k, v := range tc.mutateOriginalParams {
+				orig.Params[k] = v
+				wantMutatedOrigParams[k] = v
+			}
+			for k, v := range tc.mutateOriginalFails {
+				orig.Failed.Set(k, v)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Options,
+				wantOrigOptions,
+				"copy.Options",
+			); testErr != nil {
+				t.Errorf("mutate original: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.URLFields,
+				wantOrigURLFields,
+				"copy.URLFields",
+			); testErr != nil {
+				t.Errorf("mutate original: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Params,
+				wantOrigParams,
+				"copy.Params",
+			); testErr != nil {
+				t.Errorf("mutate original: %v", testErr)
+			}
+			if testErr := assertFailsShoutrrrState(
+				got.Failed,
+				map[string]*bool{"notify": new(false)},
+				"copy",
+			); testErr != nil {
+				t.Errorf("mutate original: %v", testErr)
+			}
+
+			wantCopyOptions := *got.Options.Copy()
+			wantCopyURLFields := *got.URLFields.Copy()
+			wantCopyParams := *got.Params.Copy()
+			for k, v := range tc.mutateCopyOptions {
+				got.Options[k] = v
+				wantCopyOptions[k] = v
+			}
+			for k, v := range tc.mutateCopyURLFields {
+				got.URLFields[k] = v
+				wantCopyURLFields[k] = v
+			}
+			for k, v := range tc.mutateCopyParams {
+				got.Params[k] = v
+				wantCopyParams[k] = v
+			}
+			for k, v := range tc.mutateCopyFails {
+				got.Failed.Set(k, v)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Options,
+				wantCopyOptions,
+				"copy.Options",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.URLFields,
+				wantCopyURLFields,
+				"copy.URLFields",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Params,
+				wantCopyParams,
+				"copy.Params",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := assertFailsShoutrrrState(
+				got.Failed,
+				tc.mutateCopyFails,
+				"copy",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+
+			if testErr := test.AssertMapEqual(
+				t,
+				orig.Options,
+				wantMutatedOrigOptions,
+				"Shoutrrr.Options",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				orig.URLFields,
+				wantMutatedOrigURLFields,
+				"Shoutrrr.URLFields",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				orig.Params,
+				wantMutatedOrigParams,
+				"Shoutrrr.Params",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
+			}
+			if testErr := assertFailsShoutrrrState(
+				orig.Failed,
+				tc.mutateOriginalFails,
+				"Shoutrrr",
+			); testErr != nil {
+				t.Errorf("mutate copy: %v", testErr)
 			}
 		})
 	}
@@ -253,7 +719,6 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 // #########
 
 func TestShoutrrrsDefaults_IsZero(t *testing.T) {
-	// GIVEN: ShoutrrrsDefaults.
 	tests := []struct {
 		name              string
 		shoutrrrsDefaults *ShoutrrrsDefaults
@@ -312,22 +777,16 @@ func TestShoutrrrsDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.shoutrrrsDefaults.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nShoutrrrsDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -399,22 +858,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.defaults.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrrs_IsZero(t *testing.T) {
-	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name      string
 		shoutrrrs *Shoutrrrs
@@ -442,7 +895,7 @@ func TestShoutrrrs_IsZero(t *testing.T) {
 			shoutrrrs: &Shoutrrrs{
 				"bop": &Shoutrrr{},
 			},
-			want: false,
+			want: false, // IsZero counts entries, not their contents.
 		},
 		{
 			name: "non-empty/multiple elements",
@@ -468,22 +921,16 @@ func TestShoutrrrs_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.shoutrrrs.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nShoutrrrs.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_IsDefault(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
 		name     string
 		shoutrrr *Shoutrrr
@@ -513,7 +960,7 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 			shoutrrr: &Shoutrrr{
 				Type: "discord",
 			},
-			want: true,
+			want: true, // IsDefault ignores Type.
 		},
 		{
 			name: "non-empty Options",
@@ -564,591 +1011,10 @@ func TestShoutrrr_IsDefault(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsDefault is called on it.
 			got := tc.shoutrrr.IsDefault()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nShoutrrr.IsDefault() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
-func testShoutrrrForCopy(t *testing.T, svcStatus *status.Status, id string) *Shoutrrr {
-	t.Helper()
-
-	main := NewDefaults(
-		"discord",
-		map[string]string{"main": "1"},
-		map[string]string{"main": "1"},
-		map[string]string{"main": "1"},
-	)
-	defaults := NewDefaults(
-		"discord",
-		map[string]string{"def": "2"},
-		map[string]string{"def": "2"},
-		map[string]string{"def": "2"},
-	)
-	hardDefaults := NewDefaults(
-		"discord",
-		map[string]string{"hard": "3"},
-		map[string]string{"hard": "3"},
-		map[string]string{"hard": "3"},
-	)
-
-	shoutrrr := New(
-		&svcStatus.Fails.Shoutrrr,
-		id,
-		"discord",
-		map[string]string{"opt": "1"},
-		map[string]string{"host": "example.com"},
-		map[string]string{"title": "argus"},
-		main,
-		defaults,
-		hardDefaults,
-	)
-	shoutrrr.ServiceStatus = svcStatus
-	shoutrrr.Failed.Set(id, new(false))
-
-	return shoutrrr
-}
-
-func assertFailsShoutrrrState(
-	t *testing.T,
-	got *status.FailsShoutrrr,
-	wantFails map[string]*bool,
-	prefix, target string,
-) {
-	t.Helper()
-
-	for key, wantFail := range wantFails {
-		gotFail := got.Get(key)
-		gotStr := test.StringifyPtr(gotFail)
-		wantStr := test.StringifyPtr(wantFail)
-		if gotStr != wantStr {
-			t.Errorf(
-				"%s %s[%q] mismatch\ngot:  %s\nwant: %s",
-				prefix, target, key,
-				gotStr, wantStr,
-			)
-		}
-	}
-}
-
-func TestShoutrrr_Copy(t *testing.T) {
-	tests := []struct {
-		name     string
-		shoutrrr *Shoutrrr
-		// If true, the receiver is nil.
-		wantNil bool
-		// Mutations to verify that Copy doesn't alias the underlying maps.
-		mutateOriginalOptions, mutateOriginalURLFields, mutateOriginalParams map[string]string
-		mutateCopyOptions, mutateCopyURLFields, mutateCopyParams             map[string]string
-		mutateOriginalFails                                                  map[string]*bool
-		mutateCopyFails                                                      map[string]*bool
-	}{
-		{
-			name:    "nil receiver",
-			wantNil: true,
-		},
-		{
-			name:                    "copies fields and deep-copies maps and fails",
-			mutateOriginalOptions:   map[string]string{"opt": "mutated"},
-			mutateCopyOptions:       map[string]string{"opt": "copy-mutated"},
-			mutateOriginalURLFields: map[string]string{"host": "mutated"},
-			mutateCopyURLFields:     map[string]string{"host": "copy-mutated"},
-			mutateOriginalParams:    map[string]string{"title": "mutated"},
-			mutateCopyParams:        map[string]string{"title": "copy-mutated"},
-			mutateOriginalFails:     map[string]*bool{"notify": new(true)},
-			mutateCopyFails:         map[string]*bool{"notify": new(false)},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// GIVEN: a Status.
-			origStatus, _ := statustest.New("yaml", nil)
-			origStatus.Fails.Shoutrrr.Init(2)
-			copyStatus, _ := statustest.New("yaml", nil)
-			copyStatus.Fails.Shoutrrr.Init(2)
-
-			// AND: a Shoutrrr.
-			var orig *Shoutrrr
-			if !tc.wantNil {
-				orig = testShoutrrrForCopy(t, origStatus, "notify")
-			}
-			var wantOrigOptions, wantOrigURLFields, wantOrigParams map[string]string
-			if orig != nil {
-				wantOrigOptions = util.CopyMap(orig.Options)
-				wantOrigURLFields = util.CopyMap(orig.URLFields)
-				wantOrigParams = util.CopyMap(orig.Params)
-			}
-
-			// WHEN: Copy is called.
-			got := orig.Copy(copyStatus)
-
-			prefix := fmt.Sprintf("%s\nShoutrrr.Copy()", packageName)
-
-			// THEN: nil handling.
-			if tc.wantNil {
-				if got != nil {
-					t.Fatalf("%s got %v want nil", prefix, got)
-				}
-				return
-			}
-			if got == nil {
-				t.Fatalf("%s got nil want non-nil", prefix)
-			}
-
-			// AND: scalar fields and shared defaults pointers match.
-			fieldTests := []test.FieldAssertion{
-				{Name: "ID", Got: got.ID, Want: orig.ID, Mode: test.CompareEqual},
-				{Name: "Type", Got: got.Type, Want: orig.Type, Mode: test.CompareEqual},
-				{Name: "Main", Got: got.Main, Want: orig.Main, Mode: test.CompareSamePointer},
-				{Name: "Defaults", Got: got.Defaults, Want: orig.Defaults, Mode: test.CompareSamePointer},
-				{Name: "HardDefaults", Got: got.HardDefaults, Want: orig.HardDefaults, Mode: test.CompareSamePointer},
-				{Name: "ServiceStatus", Got: got.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
-			}
-			if err := test.AssertFields(t, fieldTests, prefix, "Shoutrrr"); err != nil {
-				t.Fatal(err)
-			}
-
-			// AND: maps and fails are deep-copied.
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Options,
-				orig.Options,
-				prefix,
-				"Options",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				got.URLFields,
-				orig.URLFields,
-				prefix,
-				"URLFields",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Params,
-				orig.Params,
-				prefix,
-				"Params",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			if got.Failed == orig.Failed {
-				t.Errorf("%s Failed should be a distinct copy", prefix)
-			}
-			assertFailsShoutrrrState(
-				t,
-				got.Failed,
-				map[string]*bool{"notify": new(false)},
-				prefix,
-				"Failed",
-			)
-
-			// WHEN: the original is mutated.
-			var wantMutatedOrigOptions, wantMutatedOrigURLFields, wantMutatedOrigParams MapStringStringOmitNull
-			if got != nil {
-				wantMutatedOrigOptions = *got.Options.Copy()
-				wantMutatedOrigURLFields = *got.URLFields.Copy()
-				wantMutatedOrigParams = *got.Params.Copy()
-			}
-			for k, v := range tc.mutateOriginalOptions {
-				orig.Options[k] = v
-				wantMutatedOrigOptions[k] = v
-			}
-			for k, v := range tc.mutateOriginalURLFields {
-				orig.URLFields[k] = v
-				wantMutatedOrigURLFields[k] = v
-			}
-			for k, v := range tc.mutateOriginalParams {
-				orig.Params[k] = v
-				wantMutatedOrigParams[k] = v
-			}
-			for k, v := range tc.mutateOriginalFails {
-				orig.Failed.Set(k, v)
-			}
-
-			// THEN: the copy is unchanged.
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Options,
-				wantOrigOptions,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"Options",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				got.URLFields,
-				wantOrigURLFields,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"URLFields",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Params,
-				wantOrigParams,
-				fmt.Sprintf("%s after mutating original", prefix),
-				"Params",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			assertFailsShoutrrrState(
-				t,
-				got.Failed,
-				map[string]*bool{"notify": new(false)},
-				fmt.Sprintf("%s after mutating original", prefix),
-				"Failed",
-			)
-
-			// WHEN: the copy is mutated.
-			var wantCopyOptions, wantCopyURLFields, wantCopyParams MapStringStringOmitNull
-			if got != nil {
-				wantCopyOptions = *got.Options.Copy()
-				wantCopyURLFields = *got.URLFields.Copy()
-				wantCopyParams = *got.Params.Copy()
-			}
-			for k, v := range tc.mutateCopyOptions {
-				got.Options[k] = v
-				wantCopyOptions[k] = v
-			}
-			for k, v := range tc.mutateCopyURLFields {
-				got.URLFields[k] = v
-				wantCopyURLFields[k] = v
-			}
-			for k, v := range tc.mutateCopyParams {
-				got.Params[k] = v
-				wantCopyParams[k] = v
-			}
-			for k, v := range tc.mutateCopyFails {
-				got.Failed.Set(k, v)
-			}
-
-			// THEN: the copy reflects mutations.
-			//   Options.
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Options,
-				wantCopyOptions,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"Options",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   URLFields.
-			if testErr := test.AssertMapEqual(
-				t,
-				got.URLFields,
-				wantCopyURLFields,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"URLFields",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   Params.
-			if testErr := test.AssertMapEqual(
-				t,
-				got.Params,
-				wantCopyParams,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"Params",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   Failed.
-			assertFailsShoutrrrState(
-				t,
-				got.Failed,
-				tc.mutateCopyFails,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"Failed",
-			)
-
-			// AND: the original does not reflect copy mutations.
-			//   Options.
-			if testErr := test.AssertMapEqual(
-				t,
-				orig.Options,
-				wantMutatedOrigOptions,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original Options",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   URLFields.
-			if testErr := test.AssertMapEqual(
-				t,
-				orig.URLFields,
-				wantMutatedOrigURLFields,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original URLFields",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   Params.
-			if testErr := test.AssertMapEqual(
-				t,
-				orig.Params,
-				wantMutatedOrigParams,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original Params",
-			); testErr != nil {
-				t.Error(testErr)
-			}
-			//   Failed.
-			assertFailsShoutrrrState(
-				t,
-				orig.Failed,
-				tc.mutateOriginalFails,
-				fmt.Sprintf("%s after mutating copy", prefix),
-				"original fails",
-			)
-		})
-	}
-}
-
-func TestShoutrrrs_Copy(t *testing.T) {
-	tests := []struct {
-		name      string
-		shoutrrrs Shoutrrrs
-		// Number of entries in the map.
-		wantLen int
-		// Key to reassign in the original map.
-		reassignOriginalKey string
-		reassignTo          *Shoutrrr
-		// Mutations to verify that Copy doesn't alias the underlying maps.
-		mutateOriginalOptionsKey, mutateOriginalURLFieldsKey, mutateOriginalParamsKey string
-		mutateOriginalOptionsVal, mutateOriginalURLFieldsVal, mutateOriginalParamsVal string
-		mutateCopyOptionsKey, mutateCopyURLFieldsKey, mutateCopyParamsKey             string
-		mutateCopyOptionsVal, mutateCopyURLFieldsVal, mutateCopyParamsVal             string
-	}{
-		{
-			name:    "empty map",
-			wantLen: 0,
-		},
-		{
-			name:    "copies each entry",
-			wantLen: 2,
-
-			mutateOriginalOptionsKey:   "foo",
-			mutateOriginalURLFieldsKey: "foo",
-			mutateOriginalParamsKey:    "foo",
-			mutateOriginalOptionsVal:   "mutated",
-			mutateOriginalURLFieldsVal: "mutated",
-			mutateOriginalParamsVal:    "mutated",
-
-			mutateCopyOptionsKey:   "bar",
-			mutateCopyURLFieldsKey: "bar",
-			mutateCopyParamsKey:    "bar",
-			mutateCopyOptionsVal:   "copy-mutated",
-			mutateCopyURLFieldsVal: "copy-mutated",
-			mutateCopyParamsVal:    "copy-mutated",
-		},
-		{
-			name:                "reassigning map entry does not affect copy",
-			wantLen:             1,
-			reassignOriginalKey: "foo",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			origStatus, _ := statustest.New("yaml", nil)
-			origStatus.Fails.Shoutrrr.Init(2)
-			copyStatus, _ := statustest.New("yaml", nil)
-			copyStatus.Fails.Shoutrrr.Init(2)
-
-			var orig Shoutrrrs
-			switch tc.wantLen {
-			case 0:
-				orig = Shoutrrrs{}
-			case 1:
-				orig = Shoutrrrs{
-					"foo": testShoutrrrForCopy(t, origStatus, "foo"),
-				}
-			case 2:
-				orig = Shoutrrrs{
-					"foo": testShoutrrrForCopy(t, origStatus, "foo"),
-					"bar": testShoutrrrForCopy(t, origStatus, "bar"),
-				}
-			}
-
-			// WHEN: Copy is called.
-			got := orig.Copy(copyStatus)
-
-			prefix := fmt.Sprintf("%s\nShoutrrrs.Copy()", packageName)
-
-			// THEN: length matches.
-			if gotLen, wantLen := len(got), tc.wantLen; gotLen != wantLen {
-				t.Fatalf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
-			}
-
-			// AND: each entry is a distinct copy.
-			for key, want := range orig {
-				gotEntry := got[key]
-				if gotEntry == nil {
-					t.Fatalf(
-						"%s missing copied entry %q",
-						prefix, key,
-					)
-				}
-				if gotEntry == want {
-					t.Fatalf("%s entry %q should be a distinct copy\ngot:  %p\nwant: %p",
-						prefix, key,
-						gotEntry, want,
-					)
-				}
-
-				if gotEntry.ServiceStatus != copyStatus {
-					t.Errorf("%s entry %q should use provided Status\ngot:  %p\nwant: %p",
-						prefix, key,
-						gotEntry.ServiceStatus, copyStatus,
-					)
-
-					fieldTests := []test.FieldAssertion{
-						{Name: "ServiceStatus", Got: gotEntry.ServiceStatus, Want: copyStatus, Mode: test.CompareSamePointer},
-						{Name: "Options", Got: gotEntry.Options, Want: want.Options, Mode: test.CompareSamePointer},
-						{Name: "URLFields", Got: gotEntry.URLFields, Want: want.URLFields, Mode: test.CompareSamePointer},
-						{Name: "Params", Got: gotEntry.Params, Want: want.Params, Mode: test.CompareSamePointer},
-						{Name: "Failed", Got: gotEntry.Failed, Want: want.Failed, Mode: test.CompareSamePointer},
-					}
-					if err := test.AssertFields(t, fieldTests, prefix, "Shoutrrr"); err != nil {
-						t.Fatal(err)
-					}
-				}
-				// Options.
-				if testErr := test.AssertMapEqual(
-					t,
-					gotEntry.Options,
-					want.Options,
-					prefix,
-					fmt.Sprintf("%q options", key),
-				); testErr != nil {
-					t.Error(testErr)
-				}
-				// URLFields.
-				if testErr := test.AssertMapEqual(
-					t,
-					gotEntry.URLFields,
-					want.URLFields,
-					prefix,
-					fmt.Sprintf("%q URLFields", key),
-				); testErr != nil {
-					t.Error(testErr)
-				}
-				// Params.
-				if testErr := test.AssertMapEqual(
-					t,
-					gotEntry.Params,
-					want.Params,
-					prefix,
-					fmt.Sprintf("%q Params", key),
-				); testErr != nil {
-					t.Error(testErr)
-				}
-
-				// AND: reassigning map entry does not affect copy.
-				//   Options.
-				if tc.reassignOriginalKey != "" {
-					reassignTo := tc.reassignTo
-					if reassignTo == nil {
-						reassignTo = testShoutrrrForCopy(t, origStatus, "replacement")
-					}
-					orig[tc.reassignOriginalKey] = reassignTo
-					if _, ok := got[tc.reassignOriginalKey]; !ok {
-						t.Fatalf(
-							"%s missing entry %q after reassigning original",
-							prefix, tc.reassignOriginalKey,
-						)
-					}
-					if got[tc.reassignOriginalKey] == reassignTo {
-						t.Fatalf(
-							"%s entry %q should not point at the replacement value",
-							prefix,
-							tc.reassignOriginalKey,
-						)
-					}
-				}
-
-				// AND: mutating original map entries does not affect copy.
-				if tc.mutateOriginalOptionsKey != "" || tc.mutateOriginalURLFieldsKey != "" || tc.mutateOriginalParamsKey != "" {
-					// Options.
-					originalVal := gotEntry.Options[tc.mutateOriginalOptionsKey]
-					want.Options[tc.mutateOriginalOptionsKey] = tc.mutateOriginalOptionsVal
-					if g := gotEntry.Options[tc.mutateOriginalOptionsKey]; g != originalVal {
-						t.Fatalf("%s Options mismatch after mutating original [%q]=%q\ngot:  %q\nwant: %q",
-							prefix, tc.mutateOriginalOptionsKey, tc.mutateOriginalOptionsVal,
-							g, originalVal,
-						)
-					}
-					// URLFields.
-					originalVal = gotEntry.URLFields[tc.mutateOriginalURLFieldsKey]
-					want.URLFields[tc.mutateOriginalURLFieldsKey] = tc.mutateOriginalURLFieldsVal
-					if g := gotEntry.URLFields[tc.mutateOriginalURLFieldsKey]; g != originalVal {
-						t.Fatalf("%s URLFields mismatch after mutating original [%q]=%q\ngot:  %q\nwant: %q",
-							prefix, tc.mutateOriginalURLFieldsKey, tc.mutateOriginalURLFieldsVal,
-							g, originalVal,
-						)
-					}
-					// Params.
-					originalVal = gotEntry.Params[tc.mutateOriginalParamsKey]
-					want.Params[tc.mutateOriginalParamsKey] = tc.mutateOriginalParamsVal
-					if g := gotEntry.Params[tc.mutateOriginalParamsKey]; g != originalVal {
-						t.Fatalf("%s Params mismatch after mutating original [%q]=%q\ngot:  %q\nwant: %q",
-							prefix, tc.mutateOriginalParamsKey, tc.mutateOriginalParamsVal,
-							g, originalVal,
-						)
-					}
-				}
-
-				// AND: mutating copy map entries does not affect original.
-				if tc.mutateCopyOptionsKey != "" || tc.mutateCopyURLFieldsKey != "" || tc.mutateCopyParamsKey != "" {
-					// Options.
-					originalVal := want.Options[tc.mutateCopyOptionsKey]
-					gotEntry.Options[tc.mutateCopyOptionsKey] = tc.mutateCopyOptionsVal
-					if g := want.Options[tc.mutateCopyOptionsKey]; g != originalVal {
-						t.Fatalf("%s Options mismatch after mutating copy\ngot:  %q\nwant: %q",
-							prefix, g, originalVal,
-						)
-					}
-					// URLFields.
-					originalVal = want.URLFields[tc.mutateCopyURLFieldsKey]
-					gotEntry.URLFields[tc.mutateCopyURLFieldsKey] = tc.mutateCopyURLFieldsVal
-					if g := want.URLFields[tc.mutateCopyURLFieldsKey]; g != originalVal {
-						t.Fatalf("%s URLFields mismatch after mutating copy\ngot:  %q\nwant: %q",
-							prefix, g, originalVal,
-						)
-					}
-					// Params.
-					originalVal = want.Params[tc.mutateCopyParamsKey]
-					gotEntry.Params[tc.mutateCopyParamsKey] = tc.mutateCopyParamsVal
-					if g := want.Params[tc.mutateCopyParamsKey]; g != originalVal {
-						t.Fatalf("%s Params mismatch after mutating copy\ngot:  %q\nwant: %q",
-							prefix, g, originalVal,
-						)
-					}
-				}
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
@@ -1159,7 +1025,6 @@ func TestShoutrrrs_Copy(t *testing.T) {
 // #############
 
 func TestShoutrrrs_String(t *testing.T) {
-	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name      string
 		shoutrrrs *Shoutrrrs
@@ -1221,7 +1086,7 @@ func TestShoutrrrs_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Shoutrrrs.String",
 				tc.shoutrrrs.String,
 				tc.want,
 			)
@@ -1230,12 +1095,10 @@ func TestShoutrrrs_String(t *testing.T) {
 }
 
 func TestShoutrrr_String(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
-		name          string
-		shoutrrr      *Shoutrrr
-		latestVersion string
-		want          string
+		name     string
+		shoutrrr *Shoutrrr
+		want     string
 	}{
 		{
 			name:     "nil",
@@ -1248,8 +1111,7 @@ func TestShoutrrr_String(t *testing.T) {
 			want:     "{}\n",
 		},
 		{
-			name:          "filled",
-			latestVersion: "1.2.3",
+			name: "filled",
 			shoutrrr: New(
 				nil,
 				"foo", "discord",
@@ -1300,23 +1162,9 @@ func TestShoutrrr_String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.latestVersion != "" {
-				if tc.shoutrrr.ServiceStatus == nil {
-					tc.shoutrrr.ServiceStatus = status.New(
-						nil, nil, nil,
-						"",
-						"", "",
-						"", "",
-						"",
-						&dashboard.Options{},
-					)
-				}
-				tc.shoutrrr.ServiceStatus.SetLatestVersion(tc.latestVersion, "", false)
-			}
-
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Shoutrrr.String",
 				tc.shoutrrr.String,
 				tc.want,
 			)
@@ -1325,7 +1173,6 @@ func TestShoutrrr_String(t *testing.T) {
 }
 
 func TestShoutrrrsDefaults_String(t *testing.T) {
-	// GIVEN: Shoutrrrs.
 	tests := []struct {
 		name              string
 		shoutrrrsDefaults *ShoutrrrsDefaults
@@ -1409,7 +1256,7 @@ func TestShoutrrrsDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"ShoutrrrsDefaults.String",
 				tc.shoutrrrsDefaults.String,
 				tc.want,
 			)
@@ -1418,7 +1265,6 @@ func TestShoutrrrsDefaults_String(t *testing.T) {
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		shoutrrr *Defaults
@@ -1466,7 +1312,7 @@ func TestDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Defaults.String",
 				tc.shoutrrr.String,
 				tc.want,
 			)

@@ -17,14 +17,12 @@
 package util
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
 )
 
 func TestEnsureMap(t *testing.T) {
-	// GIVEN: a map.
 	tests := []struct {
 		name  string
 		input map[string]string
@@ -59,25 +57,16 @@ func TestEnsureMap(t *testing.T) {
 
 			had := CopyMap(tc.input)
 
-			// WHEN: EnsureMap is called.
 			result := EnsureMap(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nEnsureMap(%v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the map is initialised correctly.
 			if result == nil {
-				t.Fatalf("%s map is still nil", prefix)
+				t.Fatal("result mismatch\ngot:  nil\nwant: non-nil")
 			}
 
-			// AND: any values inside haven't changed.
 			if testErr := test.AssertMapEqual(
 				t,
 				result,
 				had,
-				prefix,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
@@ -87,7 +76,6 @@ func TestEnsureMap(t *testing.T) {
 }
 
 func TestMergeMaps(t *testing.T) {
-	// GIVEN: two maps and a list of fields that may contain secrets.
 	tests := []struct {
 		name         string
 		m1, m2, want map[string]string
@@ -178,20 +166,12 @@ func TestMergeMaps(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: MergeMaps is called.
 			result := MergeMaps(tc.m1, tc.m2)
 
-			prefix := fmt.Sprintf(
-				"%s\nMergeMaps(m1=%v, m2=%v)",
-				packageName, tc.m1, tc.m2,
-			)
-
-			// THEN: the maps are merged correctly.
 			if testErr := test.AssertMapEqual(
 				t,
 				result,
 				tc.want,
-				prefix,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
@@ -201,7 +181,6 @@ func TestMergeMaps(t *testing.T) {
 }
 
 func TestCopyMap(t *testing.T) {
-	// GIVEN: different byte strings.
 	tests := []struct {
 		name        string
 		input, want map[string]string
@@ -239,33 +218,27 @@ func TestCopyMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: CopyMap is called.
 			result := CopyMap(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nCopyMap(%v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the map is copied correctly.
-			if &result == &tc.want {
-				t.Fatalf("%s map wasn't copied as they have the same addresses", prefix)
-			}
 			if testErr := test.AssertMapEqual(
 				t,
 				result,
-				tc.input,
-				prefix,
+				tc.want,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+
+			key := "TestCopyMap"
+			result[key] = "mutated"
+			if got, found := tc.input[key]; found {
+				t.Errorf("input[key] mismatch\ngot:  %q\nwant: absent", got)
 			}
 		})
 	}
 }
 
 func TestLowercaseKeys(t *testing.T) {
-	// GIVEN: different byte strings.
 	tests := []struct {
 		name        string
 		input, want map[string]string
@@ -273,7 +246,7 @@ func TestLowercaseKeys(t *testing.T) {
 		{
 			name:  "nil map",
 			input: nil,
-			want:  map[string]string{},
+			want:  nil,
 		},
 		{
 			name:  "empty map",
@@ -341,45 +314,32 @@ func TestLowercaseKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: LowercaseKeys is called.
 			result := LowercaseKeys(tc.input)
 
-			prefix := fmt.Sprintf(
-				"%s\nLowercaseKeys(%v)",
-				packageName, tc.input,
-			)
-
-			// THEN: the map remains nil if it was nil.
 			if tc.input == nil {
 				if result != nil {
-					t.Fatalf(
-						"%s input map was nil but got: %v",
-						prefix, result,
-					)
+					t.Fatalf("result mismatch\ngot:  %v\nwant: nil", result)
 				}
 				return
 			}
-			// THEN: the map keys are lower-cased correctly.
+
+			if result == nil {
+				t.Fatal("result mismatch\ngot:  nil\nwant: non-nil")
+			}
+
 			if testErr := test.AssertMapEqual(
 				t,
 				result,
 				tc.want,
-				prefix,
 				"",
 			); testErr != nil {
 				t.Error(testErr)
-			}
-
-			// AND: the map is not nil.
-			if result == nil {
-				t.Fatalf("%s map is nil", prefix)
 			}
 		})
 	}
 }
 
 func TestSortedKeys(t *testing.T) {
-	// GIVEN: a string map.
 	strMap := map[string]int{
 		"a": 0,
 		"b": 0,
@@ -408,10 +368,6 @@ func TestSortedKeys(t *testing.T) {
 		"z": 0,
 	}
 
-	// WHEN: SortedKeys is called on it.
-	sorted := SortedKeys(strMap)
-
-	// THEN: the keys of the map are returned alphabetically sorted.
 	want := []string{
 		"a",
 		"b",
@@ -440,40 +396,32 @@ func TestSortedKeys(t *testing.T) {
 		"z",
 	}
 
-	prefix := fmt.Sprintf("%s\nSortedKeys(%v)", packageName, strMap)
+	for i := range 1000 { // Repeat, as map iteration order is random.
+		sorted := SortedKeys(strMap)
 
-	for i := 1; i < 1000; i++ { // repeat due to random ordering.
 		if testErr := test.AssertSlicesEqualFunc(
 			t,
 			sorted,
 			want,
 			func(a, b string) bool { return a == b },
-			prefix,
 			"",
 		); testErr != nil {
-			t.Error(testErr)
+			t.Fatalf("attempt %d: %v", i, testErr)
 		}
 	}
 }
 
 func TestSortedKeys_NilMap(t *testing.T) {
-	// GIVEN: a nil map.
 	var strMap map[string]int
 
-	// WHEN: SortedKeys is called on it.
 	sorted := SortedKeys(strMap)
 
-	// THEN: the returned slice is empty.
-	if got := len(sorted); got != 0 {
-		t.Errorf(
-			"%s\nSortedKeys() length mismatch\ngot:  %d\nwant: 0",
-			packageName, got,
-		)
+	if got, want := len(sorted), 0; got != want {
+		t.Errorf("length mismatch\ngot:  %d\nwant: %d", got, want)
 	}
 }
 
 func TestFirstNonEmptyMap(t *testing.T) {
-	// GIVEN: a bunch of maps.
 	tests := []struct {
 		name      string
 		maps      []map[string]string
@@ -517,49 +465,24 @@ func TestFirstNonEmptyMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: FirstNonEmptyMap is called.
 			result := FirstNonEmptyMap(tc.maps...)
 
-			prefix := fmt.Sprintf(
-				"%s\nFirstNonEmptyMap(%v)",
-				packageName, tc.maps,
-			)
-
-			// THEN: the first non-empty map is returned.
 			if tc.wantIndex == -1 {
 				if result != nil {
-					t.Fatalf("%s map is nil", prefix)
+					t.Fatalf("result mismatch\ngot:  %v\nwant: nil", result)
 				}
 				return
 			}
 			wantMap := tc.maps[tc.wantIndex]
-			if gotLen, wantLen := len(result), len(wantMap); gotLen != wantLen {
-				t.Fatalf(
-					"%s length mismatch\ngot:  %d\nwant: %d",
-					prefix, gotLen, wantLen,
-				)
-			}
-			for i := range result {
-				if got, want := result[i], wantMap[i]; got != want {
-					t.Fatalf(
-						"%s value mismatch at %q\ngot:  %q (%+v)\nwant: %q (%+v)",
-						prefix, i,
-						got, result,
-						want, wantMap,
-					)
-				}
+			if testErr := test.AssertMapEqual(t, result, wantMap, ""); testErr != nil {
+				t.Fatal(testErr)
 			}
 
-			// AND: modifications to the slice returned are reflected in the original.
+			// Returned, not copied, so writes reach the original.
 			key := "TestFirstNonEmptyMap"
 			result[key] = "bar"
 			if got, want := tc.maps[tc.wantIndex][key], result[key]; got != want {
-				t.Errorf(
-					"%s modified %q in returned slice, but original slice is unchanged\ngot:  %q (%+v)\nwant: %q (%+v)",
-					prefix, key,
-					got, tc.maps[tc.wantIndex],
-					want, result,
-				)
+				t.Errorf("original[key] mismatch\ngot:  %q\nwant: %q", got, want)
 			}
 		})
 	}

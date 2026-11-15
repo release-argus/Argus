@@ -18,8 +18,6 @@ package test
 
 import "github.com/goccy/go-yaml"
 
-var packageName = "test"
-
 type testStruct struct {
 	String string `json:"string,omitzero" yaml:"string,omitzero"`
 	Int    int    `json:"int,omitzero" yaml:"int,omitzero"`

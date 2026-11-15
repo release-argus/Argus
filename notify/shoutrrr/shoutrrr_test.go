@@ -24,18 +24,18 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
-	"github.com/release-argus/Argus/service/dashboard"
 	"github.com/release-argus/Argus/service/status"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
+	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestShoutrrr_BuildURL(t *testing.T) {
-	// GIVEN: a Shoutrrr.
 	tests := []struct {
-		name                       string
-		sType                      string
-		options, urlFields, params map[string]string
-		want                       string
+		name              string
+		sType             string
+		urlFields, params map[string]string
+		want              string
 	}{
 		{
 			name:  "bark/base",
@@ -155,7 +155,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "googlechat",
+			name:  "googlechat/base",
 			sType: "googlechat",
 			want:  "googlechat://RAW",
 			urlFields: map[string]string{
@@ -219,7 +219,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "ifttt",
+			name:  "ifttt/base",
 			sType: "ifttt",
 			want:  "ifttt://WEBHOOKID/?events=EVENT1,EVENT2",
 			urlFields: map[string]string{
@@ -230,7 +230,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "join",
+			name:  "join/base",
 			sType: "join",
 			want:  "join://shoutrrr:APIKEY@join/?devices=DEVICE1,DEVICE2",
 			urlFields: map[string]string{
@@ -574,7 +574,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "telegram",
+			name:  "telegram/base",
 			sType: "telegram",
 			want:  "telegram://TOKEN@telegram?chats=CHATS",
 			urlFields: map[string]string{
@@ -595,7 +595,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip/base + token",
+			name:  "zulip/base + topic",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?topic=TOPIC",
 			urlFields: map[string]string{
@@ -621,7 +621,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip/base + stream + token ",
+			name:  "zulip/base + stream + topic",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?stream=STREAM&topic=TOPIC",
 			urlFields: map[string]string{
@@ -635,7 +635,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "zulip//base + direct message",
+			name:  "zulip/base + direct message",
 			sType: "zulip",
 			want:  "zulip://BOTMAIL:BOTKEY@HOST?to=user%40example.com&type=direct",
 			urlFields: map[string]string{
@@ -678,7 +678,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
-			name:  "shoutrrr",
+			name:  "shoutrrr/base",
 			sType: "shoutrrr",
 			want:  "RAW",
 			urlFields: map[string]string{
@@ -696,22 +696,16 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			shoutrrr.URLFields = tc.urlFields
 			shoutrrr.Params = tc.params
 
-			// WHEN: BuildURL is called.
 			got := shoutrrr.BuildURL()
 
-			// THEN: the expected URL is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nShoutrrr.BuildURL() mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_BuildParams(t *testing.T) {
-	// GIVEN: a Shoutrrr and ServiceInfo.
 	svcInfo := serviceinfo.ServiceInfo{
 		ID:              "service_id",
 		Name:            "service_name",
@@ -770,11 +764,8 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 			hardDefaultValue: new("not_this"),
 		},
 		{
-			name: "django vars",
-			want: fmt.Sprintf(
-				"foo%s-%s",
-				svcInfo.ID, svcInfo.LatestVersion,
-			),
+			name:             "django vars",
+			want:             fmt.Sprintf("foo%s-%s", svcInfo.ID, svcInfo.LatestVersion),
 			rootValue:        new("foo{{ service_id }}-{{ version }}"),
 			mainValue:        nil,
 			defaultValue:     new("not_this"),
@@ -810,7 +801,7 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			test.SetEnv(t, tc.env)
+			test.IsolateEnv(t, tc.env)
 
 			key := "test"
 			shoutrrr := testShoutrrr(false, false)
@@ -827,23 +818,16 @@ func TestShoutrrr_BuildParams(t *testing.T) {
 				shoutrrr.HardDefaults.Params[key] = *tc.hardDefaultValue
 			}
 
-			// WHEN: BuildParams is called.
 			result := shoutrrr.BuildParams(svcInfo)
 
-			// THEN: the function returns the params to use.
 			if got := (*result)[key]; got != tc.want {
-				t.Fatalf(
-					"%s\nShoutrrr.BuildParams(%+v) mismatch\ngot:  %q\nwant: %q",
-					packageName, svcInfo,
-					got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
-	// GIVEN: Shoutrrrs with an 'auth' Param, of an SMTP and a non-SMTP type.
 	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
 	tests := []struct {
 		name     string
@@ -886,23 +870,19 @@ func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
 			shoutrrr.Params["toaddresses"] = "TO"
 			shoutrrr.Params["auth"] = tc.auth
 
-			// WHEN: BuildParams is called.
 			params := *shoutrrr.BuildParams(svcInfo)
 
-			// THEN: 'Unknown' only survives for non-SMTP types.
 			if _, kept := params["auth"]; kept != tc.wantKept {
 				t.Errorf(
-					"%s\nShoutrrr.BuildParams() 'auth' presence mismatch\ngot:  %t\nwant: %t",
-					packageName, kept, tc.wantKept,
+					"params[\"auth\"] mismatch\ngot:  %s\nwant: %s",
+					test.Presence(kept), test.Presence(tc.wantKept),
 				)
 			}
-
 		})
 	}
 }
 
 func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
-	// GIVEN: Shoutrrrs carrying a deprecated Param, at their own or the Defaults level.
 	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
 	tests := []struct {
 		name           string
@@ -975,23 +955,17 @@ func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
 					}
 					target.Params[tc.oldKey] = tc.value
 
-					// WHEN: correctSelf and BuildParams are called.
 					target.correctSelf(tc.Type)
 					params := *shoutrrr.BuildParams(svcInfo)
 
-					// THEN: the deprecated key is not sent.
 					if _, found := params[tc.oldKey]; found {
-						t.Errorf(
-							"%s\nShoutrrr.BuildParams() still sends the deprecated %q\nparams: %v",
-							packageName, tc.oldKey, params,
-						)
+						t.Errorf("params[%q] mismatch\ngot:  present\nwant: absent", tc.oldKey)
 					}
 
-					// AND: its value arrives under the current key.
 					if got := params[tc.newKey]; got != tc.value {
 						t.Errorf(
-							"%s\nShoutrrr.BuildParams()[%q] mismatch\ngot:  %q\nwant: %q",
-							packageName, tc.newKey, got, tc.value,
+							"params[%q] mismatch\ngot:  %q\nwant: %q",
+							tc.newKey, got, tc.value,
 						)
 					}
 				})
@@ -1002,11 +976,10 @@ func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
 
 func TestShoutrrr_GetSender(t *testing.T) {
 	type wants struct {
-		err        bool
+		errRegex   string
 		title, msg string
-		params     string
 	}
-	// GIVEN: a Shoutrrr, ServiceInfo and the hard defaults.
+
 	svcInfo := serviceinfo.ServiceInfo{
 		ID:            "service_id",
 		LatestVersion: "1.2.3",
@@ -1041,8 +1014,9 @@ func TestShoutrrr_GetSender(t *testing.T) {
 			`),
 			url: "gotify://HOST:443/TOKEN",
 			wants: wants{
-				title: "Test Title",
-				msg:   "Test Message {{ version }}",
+				errRegex: `^$`,
+				title:    "Test Title",
+				msg:      "Test Message {{ version }}",
 			},
 		},
 		{
@@ -1055,11 +1029,9 @@ func TestShoutrrr_GetSender(t *testing.T) {
 					token: TOKEN
 			`),
 			wants: wants{
-				title: "",
-				msg: fmt.Sprintf(
-					`%s - %s released`,
-					svcInfo.ID, svcInfo.LatestVersion,
-				),
+				errRegex: `^$`,
+				title:    "Argus",
+				msg:      fmt.Sprintf(`%s - %s released`, svcInfo.ID, svcInfo.LatestVersion),
 			},
 		},
 		{
@@ -1070,7 +1042,7 @@ func TestShoutrrr_GetSender(t *testing.T) {
 					host: "invalid:	//example.com"
 			`),
 			wants: wants{
-				err: true,
+				errRegex: `^failed to create Shoutrrr sender:\n`,
 			},
 		},
 	}
@@ -1081,62 +1053,34 @@ func TestShoutrrr_GetSender(t *testing.T) {
 
 			shoutrrr := &Shoutrrr{}
 			if err := decode.Unmarshal("yaml", []byte(tc.shoutrrrYAML), shoutrrr); err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal Shoutrrr: %v",
-					packageName, err,
-				)
+				t.Fatalf("Shoutrrr: decode.Unmarshal() failed: %v", err)
 			}
 			main := &Defaults{}
 			if err := decode.Unmarshal("yaml", []byte(tc.mainYAML), main); err != nil {
-				t.Fatalf(
-					"%s\nfailed to unmarshal Shoutrrr.Main: %v",
-					packageName, err,
-				)
+				t.Fatalf("Shoutrrr.Main: decode.Unmarshal() failed: %v", err)
 			}
-			svcStatus := status.Status{}
-			svcStatus.Init(
-				0, 1, 0,
-				status.ServiceInfo{
-					ID: tc.name,
-				},
-				&dashboard.Options{},
-			)
+			svcStatus := newTestStatus(t, tc.name, 1)
 			shoutrrr.Init(
-				&svcStatus,
+				svcStatus,
 				main,
 				&Defaults{}, hardDefaults[shoutrrr.Type],
 			)
 
-			// WHEN: getSender is called.
 			_, message, params, url, err := shoutrrr.getSender(tc.title, tc.msg, svcInfo)
-
-			prefix := fmt.Sprintf("%s\nShoutrrr.getSender()", packageName)
-
-			// THEN: the expected results are returned.
-			if gotErr := (err != nil); gotErr != tc.wants.err {
-				t.Fatalf(
-					"%s error mismatch\ngot:  decode=%t\nwant: decode=%t",
-					prefix, gotErr, tc.wants.err,
-				)
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.wants.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.wants.errRegex)
 			}
+
 			if err == nil {
 				if url != tc.url {
-					t.Errorf(
-						"%s url mismatch\ngot:  %q\n\nwant: %q",
-						prefix, url, tc.url,
-					)
+					t.Errorf("url mismatch\ngot:  %q\nwant: %q", url, tc.url)
 				}
 				if message != tc.wants.msg {
-					t.Errorf(
-						"%s message mismatch\ngot:  %q\n\nwant: %q",
-						prefix, message, tc.wants.msg,
-					)
+					t.Errorf("message mismatch\ngot:  %q\nwant: %q", message, tc.wants.msg)
 				}
-				if got := (*params)["title"]; tc.wants.title != "" && got != tc.wants.title {
-					t.Errorf(
-						"%s params.title mismatch\ngot:  %q\n\nwant: %q",
-						prefix, got, tc.wants.title,
-					)
+				if got := (*params)["title"]; got != tc.wants.title {
+					t.Errorf("params[\"title\"] mismatch\ngot:  %q\nwant: %q", got, tc.wants.title)
 				}
 			}
 		})
@@ -1144,7 +1088,6 @@ func TestShoutrrr_GetSender(t *testing.T) {
 }
 
 func TestShoutrrr_ParseSend(t *testing.T) {
-	// GIVEN: a possible list of errors from a send operation.
 	tests := []struct {
 		name        string
 		errs        []error
@@ -1202,7 +1145,7 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're testing metrics.
+			// Serial: shares metric.NotifyResultTotal.
 
 			shoutrrr := testShoutrrr(false, false)
 			shoutrrr.ServiceStatus = &status.Status{}
@@ -1212,25 +1155,16 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 			logFrom := logx.LogFrom{Primary: "test", Secondary: "test"}
 			combinedErrs := map[string]int{}
 
-			// WHEN: parseSend is called on them.
 			failed := shoutrrr.parseSend(tc.errs, combinedErrs, tc.serviceName, logFrom)
 
-			prefix := fmt.Sprintf("%s\nShoutrrr.parseSend()", packageName)
-
-			// THEN: the boolean result is as expected.
 			if failed != tc.wantFailed {
-				t.Errorf(
-					"%s resi;t mismatch\ngot:  %t\nwant: %t",
-					prefix, tc.wantFailed, failed,
-				)
+				t.Errorf("failed mismatch\ngot:  %t\nwant: %t", failed, tc.wantFailed)
 			}
 
-			// AND: the errors are combined as expected.
 			if testErr := test.AssertMapEqual(
 				t,
 				combinedErrs,
 				tc.errCounts,
-				prefix,
 				"combinedErrs",
 			); testErr != nil {
 				t.Error(testErr)
@@ -1240,7 +1174,6 @@ func TestShoutrrr_ParseSend(t *testing.T) {
 }
 
 func TestQueryParam(t *testing.T) {
-	// GIVEN: a key and value.
 	tests := []struct {
 		name string
 		key  string
@@ -1301,23 +1234,16 @@ func TestQueryParam(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: queryParam is called.
 			got := queryParam(tc.key, tc.val)
 
-			// THEN: the expected string is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nqueryParam(%q, %q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.key, tc.val,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestJSONMapToString(t *testing.T) {
-	// GIVEN: a JSON string.
 	tests := []struct {
 		name    string
 		jsonStr string
@@ -1359,16 +1285,10 @@ func TestJSONMapToString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: jsonMapToString is called.
 			got := jsonMapToString(tc.jsonStr, "@")
 
-			// THEN: the expected URL is returned.
 			if got != tc.want {
-				t.Errorf(
-					"%s\njsonMapToString(%q, @) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.jsonStr,
-					got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

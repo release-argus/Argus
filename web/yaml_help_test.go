@@ -23,6 +23,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 )
 
+// writeFile writes data, minus a leading newline, to path, panicking on failure.
 func writeFile(path string, data string) {
 	data = strings.TrimPrefix(data, "\n")
 	if err := os.WriteFile(path, []byte(data), 0644); err != nil {

@@ -17,7 +17,6 @@
 package service
 
 import (
-	"fmt"
 	"regexp"
 	"slices"
 	"sync"
@@ -25,18 +24,16 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/release-argus/Argus/config/decode"
-	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
-	whtest "github.com/release-argus/Argus/webhook/test"
 
+	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
-	apitype "github.com/release-argus/Argus/web/api/types"
+	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/web/metric"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 func TestServices_Track(t *testing.T) {
-	// GIVEN: a Services.
 	tests := []struct {
 		name     string
 		ordering []string
@@ -83,68 +80,64 @@ func TestServices_Track(t *testing.T) {
 				}
 			})
 
-			// WHEN: Track is called on it.
 			services.Track(&tc.ordering, &sync.RWMutex{})
 
-			prefix := fmt.Sprintf("%s\nServices.Track()", packageName)
-
-			// THEN: the function exits straight away.
 			time.Sleep(2 * time.Second)
 			for i := range *services {
-				if !slices.Contains(tc.ordering, i) {
-					if wantLatestVersion := ""; (*services)[i].Status.LatestVersion() != wantLatestVersion {
+				switch {
+				case !slices.Contains(tc.ordering, i):
+					if got, want := (*services)[i].Status.LatestVersion(), ""; got != want {
 						t.Fatalf(
-							"%s query on Services[%q] shouldn't have happened as not in ordering\ngot:  latest_version=%q\nwant: latest_version=%q\norder: %v",
-							prefix, i,
-							wantLatestVersion, (*services)[i].Status.String(),
-							tc.ordering,
+							"not in ordering: Services[%q].Status.LatestVersion() mismatch\n"+
+								"got:  %q\nwant: %q",
+							i, got, want,
 						)
 					}
-				} else if (*services)[i].Options.GetActive() {
-					if (*services)[i].Status.LatestVersion() == "" {
+				case (*services)[i].Options.GetActive():
+					if got, want := (*services)[i].Status.LatestVersion(), ""; got == want {
 						t.Fatalf(
-							"%s query on Services[%q] didn't find LatestVersion\ngot:  ''\nwant: %q",
-							prefix, i,
-							(*services)[i].Status.String(),
+							"active: Services[%q].Status.LatestVersion() mismatch\n"+
+								"got:  %q\nwant: NOT %q",
+							i, got, want,
 						)
 					}
-				} else if (*services)[i].Status.LatestVersion() != "" {
-					t.Fatalf(
-						"%s query on Services[%q] shouldn't have updated LatestVersion\ngot:  %q\nwant: ''",
-						prefix, i,
-						(*services)[i].Status.String(),
-					)
+				default:
+					if got, want := (*services)[i].Status.LatestVersion(), ""; got != want {
+						t.Fatalf(
+							"inactive: Services[%q].Status.LatestVersion() mismatch\n"+
+								"got:  %q\nwant: %q",
+							i, got, want,
+						)
+					}
 				}
 			}
 
-			// AND: the Services haven't changed.
 			// Clear 'options.active: true' as that's nil'd on Track.
 			servicesBefore = regexp.MustCompile(`\n +options:\n +active: true`).ReplaceAllString(servicesBefore, "")
 			servicesAfter := decode.ToYAMLString(services, "")
 			if servicesAfter != servicesBefore {
-				t.Fatalf(
-					"%s Services shouldn't have changed\ngot:  %q\nwant: %q",
-					prefix, servicesAfter, servicesBefore,
-				)
+				t.Fatalf("Services mismatch\ngot:  %q\nwant: %q", servicesAfter, servicesBefore)
 			}
 		})
 	}
 }
 
 func TestService_Track(t *testing.T) {
-	svcCfg := plainDefaultsConfig(t)
-	notifyCfg := shoutrrrtest.PlainConfig(t)
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig(t)
 
 	testURLService := testService(t, t.Name(), "url", "url")
-	_, _ = testURLService.LatestVersion.Query(false, logx.LogFrom{})
+	if _, err := testURLService.LatestVersion.Query(false, logx.LogFrom{}); err != nil {
+		t.Fatalf("Lookup.Query() failed: %v", err)
+	}
 	testURLLatestVersion := testURLService.Status.LatestVersion()
 
 	type versions struct {
 		startLatestVersion, wantLatestVersion     string
 		startDeployedVersion, wantDeployedVersion string
 	}
-	// GIVEN: a Service.
+
 	tests := []struct {
 		name                 string
 		latestVersionType    string
@@ -153,7 +146,6 @@ func TestService_Track(t *testing.T) {
 		keepDeployedLookup   bool
 		livenessMetric       metric.LatestVersionQueryResult
 		ignoreLivenessMetric bool
-		takesAtLeast         time.Duration
 		versions             versions
 		wantAnnounces        int
 		wantDatabaseMessages int
@@ -488,25 +480,25 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "3.2.1",
 			},
 			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
-			wantDatabaseMessages: 1, // db: 1 for deployed change.
+			wantDatabaseMessages: 1, // DB: 1 for deployed change.
 		},
 		{
 			name:              "track that last did a Query less than interval ago waits until interval",
 			latestVersionType: "url",
 			overrides: []byte(test.TrimYAML(`
 				deployed_version:
-					json: bar
+					url: ` + test.LookupBare.URLValid + `/` + testURLLatestVersion + `
 			`)),
 			wantQueryIn:        "5s",
-			keepDeployedLookup: false,
+			keepDeployedLookup: true,
 			livenessMetric:     metric.LatestVersionQueryResultSuccess,
-			takesAtLeast:       5 * time.Second,
 			versions: versions{
-				startLatestVersion: testURLLatestVersion,
-				wantLatestVersion:  testURLLatestVersion,
+				startLatestVersion:  testURLLatestVersion,
+				wantLatestVersion:   testURLLatestVersion,
+				wantDeployedVersion: testURLLatestVersion,
 			},
-			wantAnnounces:        1, // announce: 1 for latest query.
-			wantDatabaseMessages: 0, // db: 0 for nothing changing.
+			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
+			wantDatabaseMessages: 1, // DB: 1 for deployed change.
 		},
 		{
 			name:              "inactive service doesn't track",
@@ -515,6 +507,7 @@ func TestService_Track(t *testing.T) {
 				options:
 					active: false
 			`)),
+			// Never queried, so the gauge keeps its zero value, Failed.
 			livenessMetric: metric.LatestVersionQueryResultFailed,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
@@ -525,8 +518,9 @@ func TestService_Track(t *testing.T) {
 		{
 			name:              "deleting service stops track",
 			latestVersionType: "url",
-			livenessMetric:    metric.LatestVersionQueryResultFailed,
-			deleting:          true,
+			// Never queried, so the gauge keeps its zero value, Failed.
+			livenessMetric: metric.LatestVersionQueryResultFailed,
+			deleting:       true,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "", wantDeployedVersion: "",
@@ -537,7 +531,6 @@ func TestService_Track(t *testing.T) {
 			name:              "nil latest_version doesn't track",
 			latestVersionType: "url",
 			overrides:         []byte("latest_version: null"),
-			livenessMetric:    metric.LatestVersionQueryResultFailed,
 			versions: versions{
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "", wantDeployedVersion: "",
@@ -557,7 +550,6 @@ func TestService_Track(t *testing.T) {
 				svc.Status.SetDeleting()
 			})
 
-			// Overrides.
 			if tc.overrides != nil {
 				var err error
 				svc, err = ApplyOverrides(
@@ -567,10 +559,7 @@ func TestService_Track(t *testing.T) {
 					svcCfg, notifyCfg, whCfg,
 				)
 				if err != nil {
-					t.Fatalf(
-						"%s\nfailed to unmarshal overrides: %s",
-						packageName, err,
-					)
+					t.Fatalf("ApplyOverrides() failed: %v", err)
 				}
 				svc.Status.AnnounceChannel = svcStatus.AnnounceChannel
 				svc.Status.DatabaseChannel = svcStatus.DatabaseChannel
@@ -578,9 +567,7 @@ func TestService_Track(t *testing.T) {
 			}
 
 			svc.Status.SetLatestVersion(tc.versions.startLatestVersion, "", false)
-			latestVersionTimestamp := svc.Status.LatestVersionTimestamp()
 			svc.Status.SetDeployedVersion(tc.versions.startDeployedVersion, "", false)
-			deployedVersionTimestamp := svc.Status.DeployedVersionTimestamp()
 			if tc.deleting {
 				svc.Status.SetDeleting()
 			}
@@ -588,17 +575,20 @@ func TestService_Track(t *testing.T) {
 				svc.DeployedVersionLookup = nil
 			}
 			interval := svc.Options.GetIntervalDuration()
-			// Subtract this from now to get the timestamp.
+			// Neither Lookup may query before this.
+			var queryNotBefore time.Time
 			if tc.wantQueryIn != "" {
-				wantQueryIn, _ := time.ParseDuration(tc.wantQueryIn)
-				svc.Status.SetLastQueried(
-					time.Now().Add(-interval + wantQueryIn).UTC().Format(time.RFC3339),
-				)
+				wantQueryIn, err := time.ParseDuration(tc.wantQueryIn)
+				if err != nil {
+					t.Fatalf("time.ParseDuration() failed: %v", err)
+				}
+				lastQueried := time.Now().Add(-interval + wantQueryIn).UTC().Truncate(time.Second)
+				svc.Status.SetLastQueried(lastQueried.Format(time.RFC3339))
+				queryNotBefore = lastQueried.Add(interval)
 			}
 			didFinish := make(chan bool, 1)
 			svcBefore := svc.String("")
 
-			// WHEN: Track is called on it.
 			go func() {
 				svc.Track()
 				didFinish <- true
@@ -619,18 +609,17 @@ func TestService_Track(t *testing.T) {
 				}
 				if passQ != float64(0) || failQ != float64(0) {
 					if tc.keepDeployedLookup {
-						passQ := testutil.ToFloat64(
+						dvPassQ := testutil.ToFloat64(
 							metric.DeployedVersionQueryResultTotal.WithLabelValues(
 								svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultSuccess,
 							),
 						)
-						failQ := testutil.ToFloat64(
+						dvFailQ := testutil.ToFloat64(
 							metric.DeployedVersionQueryResultTotal.WithLabelValues(
 								svc.ID, svc.DeployedVersionLookup.GetType(), metric.ActionResultFail,
 							),
 						)
-						// if deployedVersionLookup hasn't queried, keep waiting.
-						if passQ != float64(0) || failQ != float64(0) {
+						if dvPassQ != float64(0) || dvFailQ != float64(0) {
 							break
 						}
 					} else {
@@ -650,52 +639,38 @@ func TestService_Track(t *testing.T) {
 			// Catch any unexpected extra message.
 			time.Sleep(1000 * time.Millisecond)
 
-			prefix := fmt.Sprintf("%s\nService.Track()", packageName)
-
-			// Check that we waited until interval had passed since the last latestVersionLookup.
 			if tc.wantQueryIn != "" {
-				// When we'd expect the query to be done after.
-				timeUntilInterval, _ := time.ParseDuration(tc.wantQueryIn)
-				lvPreviousTimestamp, _ := time.Parse(time.RFC3339, latestVersionTimestamp)
-				lvExpectedAfter := lvPreviousTimestamp.Add(timeUntilInterval)
-				dvPreviousTimestamp, _ := time.Parse(time.RFC3339, deployedVersionTimestamp)
-				dvExpectedAfter := dvPreviousTimestamp.Add(timeUntilInterval)
-
-				// When we actually did the query.
-				didAt, _ := time.Parse(time.RFC3339, svc.Status.LastQueried())
-				if didAt.Before(lvExpectedAfter) {
+				want := queryNotBefore.Format(time.RFC3339)
+				lvQueried := svc.Status.LastQueried()
+				if got, err := time.Parse(time.RFC3339, lvQueried); err != nil || got.Before(queryNotBefore) {
 					t.Errorf(
-						"%s LatestVersionLookup happened too early\ngot:  %s\nwant: %s or later\nnow:  %s",
-						prefix,
-						svc.Status.LastQueried(), lvExpectedAfter,
-						time.Now().UTC(),
+						"Status.LastQueried() mismatch\ngot:  %q (err=%v)\nwant: %q or later",
+						lvQueried, err, want,
 					)
 				}
-				if didAt.Before(dvExpectedAfter) {
+				// The DeployedVersion changes on this query, so its timestamp is the query time.
+				dvQueried := svc.Status.DeployedVersionTimestamp()
+				if got, err := time.Parse(time.RFC3339, dvQueried); err != nil || got.Before(queryNotBefore) {
 					t.Errorf(
-						"%s DeployedVersionLookup happened too early\ngot  %s\nwant: %s or later\nnow:  %s",
-						prefix,
-						svc.Status.LastQueried(),
-						dvExpectedAfter,
-						time.Now().UTC(),
+						"Status.DeployedVersionTimestamp() mismatch\n"+
+							"got:  %q (err=%v)\nwant: %q or later",
+						dvQueried, err, want,
 					)
 				}
 			}
 
-			// THEN: the scrape updates the Status correctly.
 			if got := svc.Status.LatestVersion(); got != tc.versions.wantLatestVersion {
 				t.Fatalf(
-					"%s LatestVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.versions.wantLatestVersion,
+					"Status.LatestVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.versions.wantLatestVersion,
 				)
 			}
 			if got := svc.Status.DeployedVersion(); got != tc.versions.wantDeployedVersion {
 				t.Fatalf(
-					"%s DeployedVersion() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, tc.versions.wantDeployedVersion,
+					"Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					got, tc.versions.wantDeployedVersion,
 				)
 			}
-			// LatestVersionQueryResultTotal.
 			if svc.LatestVersion != nil {
 				gotMetric := testutil.ToFloat64(
 					metric.LatestVersionQueryResultLast.WithLabelValues(
@@ -704,63 +679,46 @@ func TestService_Track(t *testing.T) {
 				)
 				if gotMetric != float64(tc.livenessMetric) && !tc.ignoreLivenessMetric {
 					t.Errorf(
-						"%s LatestVersionQueryResultLast metric mismatch\ngot:  %d\nwant: %d",
-						prefix, int(gotMetric), tc.livenessMetric,
+						"metric.LatestVersionQueryResultLast mismatch\ngot:  %d\nwant: %d",
+						int(gotMetric), tc.livenessMetric,
 					)
 				}
 			}
-			// AnnounceChannel.
 			if gotAnnounceMessages := len(svc.Status.AnnounceChannel); gotAnnounceMessages != tc.wantAnnounces {
 				t.Errorf(
-					"%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotAnnounceMessages, tc.wantAnnounces,
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotAnnounceMessages, tc.wantAnnounces,
 				)
-				for gotAnnounceMessages > 0 {
-					var msg apitype.WebSocketMessage
-					msgBytes := <-svc.Status.AnnounceChannel
-					_ = decode.Unmarshal("json", msgBytes, &msg)
-					t.Logf(
-						"%s - AnnounceChannel message: {%+v}",
-						prefix, msg,
-					)
-					gotAnnounceMessages = len(svc.Status.AnnounceChannel)
-				}
+				test.LogChannel(t, "Status.AnnounceChannel", svc.Status.AnnounceChannel)
 			}
-			// DatabaseChannel.
 			if gotDatabaseMessages := len(svc.Status.DatabaseChannel); gotDatabaseMessages != tc.wantDatabaseMessages {
 				t.Errorf(
-					"%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotDatabaseMessages, tc.wantDatabaseMessages,
+					"Status.DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotDatabaseMessages, tc.wantDatabaseMessages,
 				)
-				for gotDatabaseMessages > 0 {
+				for len(svc.Status.DatabaseChannel) != 0 {
 					msg := <-svc.Status.DatabaseChannel
+					cells := make([]string, len(msg.Cells))
+					for i, cell := range msg.Cells {
+						cells[i] = cell.Column + "=" + cell.Value
+					}
 					t.Logf(
-						"%s - DatabaseChannel message:\n{%v}\n",
-						prefix, msg,
+						"database message: ServiceID=%q, Delete=%t, Cells=%q",
+						msg.ServiceID, msg.Delete, cells,
 					)
-					gotDatabaseMessages = len(svc.Status.DatabaseChannel)
 				}
 			}
-			// Track should finish if it is not Active and is not being deleted.
+			// Track returns only when inactive, deleting, or LatestVersion is nil.
 			shouldFinish := !svc.Options.GetActive() || tc.deleting || svc.LatestVersion == nil
-			// Didn't finish, but should have.
-			if shouldFinish && len(didFinish) == 0 {
+			if gotFinished := len(didFinish) != 0; gotFinished != shouldFinish {
 				t.Fatalf(
-					"%s expected to finish when not active, deleting, or LatestVersion is nil",
-					prefix,
+					"Service.Track() finished mismatch\ngot:  %t\nwant: %t",
+					gotFinished, shouldFinish,
 				)
-			}
-			// Finished when it shouldn't have.
-			if !shouldFinish && len(didFinish) != 0 {
-				t.Fatalf("%s unexpected finish", prefix)
 			}
 
-			// AND: the service should marshal the same.
 			if got := svc.String(""); got != svcBefore {
-				t.Errorf(
-					"%s String() mismatch\ngot:  %q\nwant: %q",
-					prefix, got, svcBefore,
-				)
+				t.Errorf("Service.String() mismatch\ngot:  %q\nwant: %q", got, svcBefore)
 			}
 		})
 	}

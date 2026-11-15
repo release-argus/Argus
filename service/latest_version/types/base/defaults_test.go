@@ -27,7 +27,6 @@ import (
 )
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		data *Defaults
@@ -58,22 +57,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.data.IsZero()
 
-			// THEN: the result is expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -84,7 +77,6 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				latest_version:
 					jsontext:
@@ -145,7 +137,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return decode.ToYAMLString(v, "") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -155,7 +146,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a LookupDefault.
 	defaults := Defaults{}
 	want := Defaults{
 		Require: filter.RequireDefaults{
@@ -166,34 +156,27 @@ func TestDefaults_Default(t *testing.T) {
 		},
 	}
 
-	// WHEN: Default is called.
 	defaults.Default()
 
 	wantStr := decode.ToYAMLString(want, "")
 	gotStr := decode.ToYAMLString(defaults, "")
-	// THEN: it should set the defaults as expected.
+
 	if gotStr != wantStr {
-		t.Errorf(
-			"%s\nDefaults.Default() value mismatch\ngot:  %q\nwant: %q",
-			packageName, gotStr, wantStr,
-		)
+		t.Errorf("Defaults mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 	}
 }
 
 func TestDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: Two sets of Defaults.
 	d := &Defaults{}
 	hd := &Defaults{}
 	hd.Default()
 
-	// WHEN: SetDefaults is called on defaults with these other defaults.
 	d.SetDefaults(hd)
 
-	// THEN: the struct is populated with default values.
 	if d.Require.Docker.Defaults != &hd.Require.Docker {
 		t.Errorf(
-			"%s\nDefaults.SetDefaults() pointer mismatch\ngot:  %p\nwant: %p",
-			packageName, d.Require.Docker.Defaults, hd.Require.Docker.Defaults,
+			"Defaults.Require.Docker.Defaults mismatch\ngot:  %p\nwant: %p",
+			d.Require.Docker.Defaults, &hd.Require.Docker,
 		)
 	}
 }
@@ -201,7 +184,6 @@ func TestDefaults_SetDefaults(t *testing.T) {
 func TestDefaults_CheckValues(t *testing.T) {
 	lvCfg := plainDefaultsConfig(t)
 
-	// GIVEN: a Defaults.
 	tests := []struct {
 		name     string
 		input    *Defaults
@@ -251,7 +233,6 @@ func TestDefaults_CheckValues(t *testing.T) {
 
 			_ = test.AssertCheckValuesWithError(
 				t,
-				packageName,
 				tc.errRegex,
 				tc.input.CheckValues,
 			)

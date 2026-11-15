@@ -17,7 +17,6 @@
 package service
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/command"
@@ -35,7 +34,6 @@ import (
 )
 
 func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name string
 		opt  *Defaults
@@ -142,22 +140,16 @@ func TestDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero() is called on it.
 			got := tc.opt.IsZero()
 
-			// THEN: it should return the want value.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nDefaults.IsZero() value mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: JSON and/or YAML string to unmarshal into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -168,7 +160,6 @@ func TestDefaults_Unmarshal(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
 				^jsontext:
 					unexpected EOF$`,
@@ -199,7 +190,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 			format: "yaml",
 			data:   "latest_version: false",
 			errRegex: test.TrimYAML(`
-				latest_version:
+				^latest_version:
 					[^\s]+ boolean was used.*`,
 			),
 		},
@@ -246,6 +237,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 				dashboard:
 					auto_approve: true
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/filled",
@@ -283,6 +275,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 				dashboard:
 					auto_approve: true
 			`),
+			errRegex: `^$`,
 		},
 	}
 
@@ -301,8 +294,7 @@ func TestDefaults_Unmarshal(t *testing.T) {
 				func(d *Defaults) string { return d.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
-				"Defaults",
+				"Defaults.Unmarshal",
 			); testErr != nil {
 				t.Error(testErr)
 			}
@@ -311,7 +303,6 @@ func TestDefaults_Unmarshal(t *testing.T) {
 }
 
 func TestDecodeDefaults(t *testing.T) {
-	// GIVEN: data in a given format to Decode into Defaults.
 	tests := []struct {
 		name         string
 		format, data string
@@ -322,9 +313,8 @@ func TestDecodeDefaults(t *testing.T) {
 			name:   "JSON/empty",
 			format: "json",
 			data:   "",
-			want:   "",
 			errRegex: test.TrimYAML(`
-				service:
+				^service:
 					jsontext:
 						unexpected EOF$`,
 			),
@@ -341,7 +331,7 @@ func TestDecodeDefaults(t *testing.T) {
 			format:   "yaml",
 			data:     "",
 			want:     "{}\n",
-			errRegex: "^$",
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/filled",
@@ -386,6 +376,7 @@ func TestDecodeDefaults(t *testing.T) {
 				dashboard:
 					auto_approve: true
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "YAML/filled",
@@ -423,6 +414,7 @@ func TestDecodeDefaults(t *testing.T) {
 				dashboard:
 					auto_approve: true
 			`),
+			errRegex: `^$`,
 		},
 		{
 			name:   "JSON/invalid latest_version format",
@@ -491,7 +483,6 @@ func TestDecodeDefaults(t *testing.T) {
 				func(v *Defaults) string { return v.String("") },
 				tc.want,
 				tc.errRegex,
-				packageName,
 				"DecodeDefaults",
 			); testErr != nil {
 				t.Fatal(testErr)
@@ -501,7 +492,6 @@ func TestDecodeDefaults(t *testing.T) {
 }
 
 func TestDefaults_String(t *testing.T) {
-	// GIVEN: Defaults.
 	tests := []struct {
 		name     string
 		defaults *Defaults
@@ -632,7 +622,7 @@ func TestDefaults_String(t *testing.T) {
 
 			test.AssertStringWithPrefixes(
 				t,
-				packageName,
+				"Defaults.String",
 				tc.defaults.String,
 				tc.want,
 			)
@@ -641,105 +631,48 @@ func TestDefaults_String(t *testing.T) {
 }
 
 func TestDefaults_Default(t *testing.T) {
-	// GIVEN: Defaults.
 	d := &Defaults{}
 
-	// WHEN: Default is called.
 	d.Default()
 
-	prefix := fmt.Sprintf("%s\nDefaults.Default()", packageName)
-
-	// THEN: the struct is populated with default values.
-	if d.Options.Interval != "10m" {
-		t.Errorf(
-			"%s .Options.Interval mismatch\ngot:  %s\nwant: 10m",
-			prefix, d.Options.Interval,
-		)
+	if got, want := d.Options.Interval, "10m"; got != want {
+		t.Errorf("Defaults.Options.Interval mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 	if d.Dashboard.AutoApprove == nil {
-		t.Errorf("%s .Dashboard.AutoApprove should be non-nil", packageName)
+		t.Error("Defaults.Dashboard.AutoApprove mismatch\ngot:  nil\nwant: non-nil")
 	}
 
-	// AND: the X.Options vars are pointing to the Options struct.
-	if d.LatestVersion.Common.Options != &d.Options {
-		t.Errorf(
-			"%s invalid .LatestVersion.Options pointer:\ngot:  %p\nwant: %p",
-			packageName, d.LatestVersion.Common.Options, &d.Options,
-		)
-	}
-	if d.DeployedVersionLookup.Options != &d.Options {
-		t.Errorf(
-			"%s\ninvalid .DeployedVersionLookup.Options pointer:\ngot:  %p\nwant: %p",
-			packageName, d.DeployedVersionLookup.Options, &d.Options,
-		)
+	if testErr := test.AssertFields(
+		t,
+		[]test.FieldAssertion{
+			{Name: "LatestVersion.Options -> Options", Got: d.LatestVersion.Common.Options, Want: &d.Options, Mode: test.CompareSamePointer},
+			{Name: "DeployedVersionLookup.Options -> Options", Got: d.DeployedVersionLookup.Options, Want: &d.Options, Mode: test.CompareSamePointer},
+		},
+		"Defaults",
+	); testErr != nil {
+		t.Fatal(testErr)
 	}
 }
 
 func TestDefaults_SetDefaults(t *testing.T) {
-	// GIVEN: Defaults.
 	d := &Defaults{}
 
-	// AND: HardDefaults.
 	hd := &Defaults{}
 	hd.Default()
 
-	// WHEN: SetDefaults is called.
 	d.SetDefaults(hd)
 
-	prefix := fmt.Sprintf("%s\nDefaults.SetDefaults(&Defaults{})", packageName)
-
-	// THEN: the struct is populated with default values.
 	fieldTests := []test.FieldAssertion{
-		{
-			Name: "LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults -> HardDefaults",
-			Got:  d.LatestVersion.Common.Require.Docker.ContainerDetailDefaults.Defaults,
-			Want: &hd.LatestVersion.Common.Require.Docker.ContainerDetailDefaults,
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "LatestVersion.Require.Docker.Registry.GHCR.Auth.Defaults -> HardDefaults...Registry.GHCR.Auth",
-			Got:  d.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth(),
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "LatestVersion.Require.Docker.Registry.Hub.Auth.Defaults -> HardDefaults...Registry.Hub.Auth",
-			Got:  d.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth(),
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "LatestVersion.Require.Docker.Registry.Quay.Auth.Defaults -> HardDefaults...Registry.Quay.Auth",
-			Got:  d.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth().Defaults(),
-			Want: hd.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth(),
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "LatestVersion.Options -> Options",
-			Got:  d.LatestVersion.Common.Options,
-			Want: &d.Options,
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "DeployedVersionLookup.Options -> Options",
-			Got:  d.DeployedVersionLookup.Options,
-			Want: &d.Options,
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "LatestVersion.Options.Defaults -> HardDefaults.Options",
-			Got:  hd.LatestVersion.Common.Options,
-			Want: &hd.Options,
-			Mode: test.CompareSamePointer,
-		},
-		{
-			Name: "DeployedVersionLookup.Options.Defaults -> HardDefaults.Options",
-			Got:  hd.DeployedVersionLookup.Options,
-			Want: &hd.Options,
-			Mode: test.CompareSamePointer,
-		},
+		{Name: "LatestVersion.Require.Docker.ContainerDetailDefaults.Defaults -> HardDefaults", Got: d.LatestVersion.Common.Require.Docker.ContainerDetailDefaults.Defaults, Want: &hd.LatestVersion.Common.Require.Docker.ContainerDetailDefaults, Mode: test.CompareSamePointer},
+		{Name: "LatestVersion.Require.Docker.Registry.GHCR.Auth.Defaults -> HardDefaults...Registry.GHCR.Auth", Got: d.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth().Defaults(), Want: hd.LatestVersion.Common.Require.Docker.Registry.GHCR.GetAuth(), Mode: test.CompareSamePointer},
+		{Name: "LatestVersion.Require.Docker.Registry.Hub.Auth.Defaults -> HardDefaults...Registry.Hub.Auth", Got: d.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth().Defaults(), Want: hd.LatestVersion.Common.Require.Docker.Registry.Hub.GetAuth(), Mode: test.CompareSamePointer},
+		{Name: "LatestVersion.Require.Docker.Registry.Quay.Auth.Defaults -> HardDefaults...Registry.Quay.Auth", Got: d.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth().Defaults(), Want: hd.LatestVersion.Common.Require.Docker.Registry.Quay.GetAuth(), Mode: test.CompareSamePointer},
+		{Name: "LatestVersion.Options -> Options", Got: d.LatestVersion.Common.Options, Want: &d.Options, Mode: test.CompareSamePointer},
+		{Name: "DeployedVersionLookup.Options -> Options", Got: d.DeployedVersionLookup.Options, Want: &d.Options, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults.LatestVersion.Options -> HardDefaults.Options", Got: hd.LatestVersion.Common.Options, Want: &hd.Options, Mode: test.CompareSamePointer},
+		{Name: "HardDefaults.DeployedVersionLookup.Options -> HardDefaults.Options", Got: hd.DeployedVersionLookup.Options, Want: &hd.Options, Mode: test.CompareSamePointer},
 	}
-	if err := test.AssertFields(t, fieldTests, prefix, "Defaults"); err != nil {
-		t.Fatal(err)
+	if testErr := test.AssertFields(t, fieldTests, "Defaults"); testErr != nil {
+		t.Fatal(testErr)
 	}
 }

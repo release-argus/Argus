@@ -23,110 +23,84 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
+	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/web/metric"
 )
 
 func TestLookup_Metrics(t *testing.T) {
-	// GIVEN: a Lookup.
 	lookup := Lookup{
 		Type: "test",
 	}
 	lookup.Status = &status.Status{}
 	lookup.Status.ServiceInfo.ID = t.Name()
 
-	// WHEN: the Prometheus metrics are initialised with initMetrics.
 	hadC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
 	hadG := testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
 	lookup.InitMetrics(&lookup)
 
-	// THEN: it can be collected.
-	// counters:
-	gotC := testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
-	wantC := 2 + hadC
-	if gotC != wantC {
-		t.Errorf(
-			"%s\nLookup.InitMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
-			packageName, gotC, wantC,
-		)
-	}
-	// gauges:
-	gotG := testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
-	wantG := 0 + hadG
-	if gotG != wantG {
-		t.Errorf(
-			"%s\nLookup.InitMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-			packageName, gotG, wantG,
-		)
-	}
-	// But can be added.
+	test.AssertMetricCount(
+		t, "Lookup.InitMetrics() LatestVersionQueryResultTotal",
+		metric.LatestVersionQueryResultTotal, hadC+2,
+	)
+	test.AssertMetricCount(
+		t, "Lookup.InitMetrics() LatestVersionQueryResultLast",
+		metric.LatestVersionQueryResultLast, hadG,
+	)
 	lookup.QueryMetrics(&lookup, nil)
-	gotG = testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
-	wantG = 1 + hadG
-	if gotG != wantG {
-		t.Errorf(
-			"%s\nLookup.QueryMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-			packageName, gotG, wantG,
-		)
-	}
+	test.AssertMetricCount(
+		t, "Lookup.QueryMetrics() LatestVersionQueryResultLast",
+		metric.LatestVersionQueryResultLast, hadG+1,
+	)
 
-	// AND: it can be deleted.
 	lookup.DeleteMetrics(&lookup)
-	// counters:
-	gotC = testutil.CollectAndCount(metric.LatestVersionQueryResultTotal)
-	if gotC != hadC {
-		t.Errorf(
-			"%s\nLookup.DeleteMetrics() Counter metrics mismatch\ngot:  %d\nwant: %d",
-			packageName, gotC, hadC,
-		)
-	}
-	// gauges:
-	gotG = testutil.CollectAndCount(metric.LatestVersionQueryResultLast)
-	if gotG != hadG {
-		t.Errorf(
-			"%s\nLookup.DeleteMetrics() Gauge metrics mismatch\ngot:  %d\nwant: %d",
-			packageName, gotG, hadG,
-		)
-	}
+	test.AssertMetricCount(
+		t, "Lookup.DeleteMetrics() LatestVersionQueryResultTotal",
+		metric.LatestVersionQueryResultTotal, hadC,
+	)
+	test.AssertMetricCount(
+		t, "Lookup.DeleteMetrics() LatestVersionQueryResultLast",
+		metric.LatestVersionQueryResultLast, hadG,
+	)
 }
 
 func TestLookup_QueryMetrics(t *testing.T) {
 	type args struct {
 		err error
 	}
-	// GIVEN: a Lookup and args for QueryMetrics.
+
 	tests := []struct {
-		name     string
-		args     args
-		liveness metric.LatestVersionQueryResult
+		name   string
+		args   args
+		result metric.LatestVersionQueryResult
 	}{
 		{
 			name: "success",
 			args: args{
 				err: nil,
 			},
-			liveness: metric.LatestVersionQueryResultSuccess,
+			result: metric.LatestVersionQueryResultSuccess,
 		},
 		{
 			name: "regex error",
 			args: args{
 				err: errors.New("no releases were found matching the stuff"),
 			},
-			liveness: metric.LatestVersionQueryResultNoMatch,
+			result: metric.LatestVersionQueryResultNoMatch,
 		},
 		{
 			name: "semantic version error",
 			args: args{
 				err: errors.New("failed to convert \"x\" to a semantic version."),
 			},
-			liveness: metric.LatestVersionQueryResultSemanticVersionFail,
+			result: metric.LatestVersionQueryResultSemanticVersionFail,
 		},
 		{
 			name: "other error",
 			args: args{
 				err: errors.New("some other error"),
 			},
-			liveness: metric.LatestVersionQueryResultFailed,
+			result: metric.LatestVersionQueryResultFailed,
 		},
 	}
 
@@ -145,7 +119,6 @@ func TestLookup_QueryMetrics(t *testing.T) {
 				lookup.DeleteMetrics(&lookup)
 			})
 
-			// AND: the Prometheus metrics are initialised to 0.
 			counterSuccess := testutil.ToFloat64(
 				metric.LatestVersionQueryResultTotal.WithLabelValues(
 					serviceID, lookup.GetType(), metric.ActionResultSuccess,
@@ -163,19 +136,18 @@ func TestLookup_QueryMetrics(t *testing.T) {
 			)
 			if counterSuccess != 0 || counterFail != 0 || gauge != 0 {
 				t.Errorf(
-					"%s\nLookup.InitMetrics() did not initialise metrics correctly\n"+
-						"Got success_count=%f, fail_count=%f, last_query_result=%f",
-					packageName, counterSuccess, counterFail, gauge,
+					"Lookup.InitMetrics() metrics mismatch\n"+
+						"got:  success_count=%f, fail_count=%f, last_query_result=%f\n"+
+						"want: success_count=0, fail_count=0, last_query_result=0",
+					counterSuccess, counterFail, gauge,
 				)
 			}
 
-			// WHEN: QueryMetrics is called.
 			lookup.QueryMetrics(&lookup, tc.args.err)
 
-			// THEN: the Prometheus metrics are updated.
 			wantSuccess := float64(0)
 			wantFail := float64(0)
-			wantGauge := float64(tc.liveness)
+			wantGauge := float64(tc.result)
 			if tc.args.err == nil {
 				wantSuccess = 1
 			} else {
@@ -201,10 +173,9 @@ func TestLookup_QueryMetrics(t *testing.T) {
 				counterFail != wantFail ||
 				gauge != wantGauge {
 				t.Errorf(
-					"%s\nMetrics mismatch after Lookup QueryMetrics(%v)\n"+
+					"Lookup.QueryMetrics() metrics mismatch\n"+
 						"got:  success_count=%f, fail_count=%f, last_query_result=%f\n"+
 						"want: success_count=%f, fail_count=%f, last_query_result=%f",
-					packageName, tc.args.err,
 					counterSuccess, counterFail, gauge,
 					wantSuccess, wantFail, wantGauge,
 				)

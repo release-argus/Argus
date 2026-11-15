@@ -17,7 +17,6 @@
 package deployedver
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -50,7 +49,6 @@ func TestRefresh__manual(t *testing.T) {
 	// to save the config.
 	const wantSaves = 0
 
-	// GIVEN: a `manual` Lookup, and overrides for a deployed_version/refresh.
 	tests := []struct {
 		name     string
 		args     args
@@ -182,7 +180,6 @@ func TestRefresh__manual(t *testing.T) {
 			}
 			hadTimestamp := svcStatus.DeployedVersionTimestamp()
 
-			// WHEN: Refresh is called with those overrides.
 			got, err := Refresh(
 				lookup,
 				previousType,
@@ -190,35 +187,26 @@ func TestRefresh__manual(t *testing.T) {
 				nil,
 				nil,
 			)
-
-			prefix := fmt.Sprintf("%s\nRefresh()", packageName)
-
-			// THEN: we get an error only when expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: the version found is returned to the caller.
 			if err == nil && got != tc.wants.version {
-				t.Errorf("%s mismatch on version returned\ngot:  %q\nwant: %q",
-					prefix, got, tc.wants.version,
-				)
+				t.Errorf("version mismatch\ngot:  %q\nwant: %q", got, tc.wants.version)
 			}
 
-			// AND: only a commit reaches the Service's Status.
 			if gotVersion := svcStatus.DeployedVersion(); gotVersion != tc.wants.statusVersion {
-				t.Errorf("%s mismatch on Status.DeployedVersion()\ngot:  %q\nwant: %q",
-					prefix, gotVersion, tc.wants.statusVersion,
+				t.Errorf(
+					"Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
+					gotVersion, tc.wants.statusVersion,
 				)
 			}
 
-			// AND: it reaches the database, so that it survives a restart.
 			if gotDBMessages := len(svcStatus.DatabaseChannel); gotDBMessages != tc.wants.dbMessages {
-				t.Errorf("%s DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotDBMessages, tc.wants.dbMessages,
+				t.Errorf(
+					"Status.DatabaseChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotDBMessages, tc.wants.dbMessages,
 				)
 			} else if gotDBMessages > 0 {
 				message := <-svcStatus.DatabaseChannel
@@ -229,38 +217,47 @@ func TestRefresh__manual(t *testing.T) {
 					}
 				}
 				if gotCell != tc.wants.version {
-					t.Errorf("%s mismatch on the `deployed_version` cell sent to the DB\ngot:  %q\nwant: %q",
-						prefix, gotCell, tc.wants.version,
+					t.Errorf(
+						"Status.DatabaseChannel deployed_version cell mismatch\ngot:  %q\nwant: %q",
+						gotCell, tc.wants.version,
 					)
 				}
 			}
 
-			// AND: it reaches the WebSocket clients, carrying the new version.
 			if gotAnnounces := len(svcStatus.AnnounceChannel); gotAnnounces != tc.wants.announces {
-				t.Errorf("%s AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotAnnounces, tc.wants.announces,
+				t.Errorf(
+					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotAnnounces, tc.wants.announces,
 				)
 			} else if gotAnnounces > 0 {
-				got := string(<-svcStatus.AnnounceChannel)
-				if !strings.Contains(got, tc.wants.version) {
-					t.Errorf("%s announced payload missing version %q\ngot: %s",
-						prefix, tc.wants.version, got,
+				payload := string(<-svcStatus.AnnounceChannel)
+				if !strings.Contains(payload, tc.wants.version) {
+					t.Errorf(
+						"Status.AnnounceChannel payload mismatch\ngot:  %s\nwant: %q",
+						payload, tc.wants.version,
 					)
 				}
 			}
 
-			// AND: the timestamp only moves when the version changed.
-			gotTimestampChanged := svcStatus.DeployedVersionTimestamp() != hadTimestamp
-			if gotTimestampChanged != tc.wants.timestampChanged {
-				t.Errorf("%s mismatch on Status.DeployedVersionTimestamp() changing\ngot:  %t\nwant: %t",
-					prefix, gotTimestampChanged, tc.wants.timestampChanged,
+			gotTimestamp := svcStatus.DeployedVersionTimestamp()
+			if tc.wants.timestampChanged {
+				if gotTimestamp == hadTimestamp {
+					t.Errorf(
+						"Status.DeployedVersionTimestamp() mismatch\ngot:  %q\nwant: NOT %q",
+						gotTimestamp, hadTimestamp,
+					)
+				}
+			} else if gotTimestamp != hadTimestamp {
+				t.Errorf(
+					"Status.DeployedVersionTimestamp() mismatch\ngot:  %q\nwant: %q",
+					gotTimestamp, hadTimestamp,
 				)
 			}
 
-			// AND: no save is queued - a refresh consumes the Version on its own copy.
 			if gotSaves := len(svcStatus.SaveChannel); gotSaves != wantSaves {
-				t.Errorf("%s SaveChannel message count mismatch\ngot:  %d\nwant: %d",
-					prefix, gotSaves, wantSaves,
+				t.Errorf(
+					"Status.SaveChannel message count mismatch\ngot:  %d\nwant: %d",
+					gotSaves, wantSaves,
 				)
 			}
 		})
@@ -268,27 +265,27 @@ func TestRefresh__manual(t *testing.T) {
 }
 
 func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
-	// GIVEN: a Lookup whose Status carries the live Service's channels.
-	tests := map[string]struct {
+	tests := []struct {
+		name               string
 		semanticVersioning *string
 	}{
-		"semantic_versioning toggled off": {
+		{
+			name:               "semantic_versioning toggled off",
 			semanticVersioning: new("false"),
 		},
-		"semantic_versioning reset to the default": {
+		{
+			name:               "semantic_versioning reset to the default",
 			semanticVersioning: new("null"),
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(t, manual.Type, false, "")
 			hadStatus := lookup.GetStatus()
 
-			// WHEN: Refresh previews a `semantic_versioning` change with no overrides.
-			// (`applyOverridesJSON` has nothing to apply, so it returns this same Lookup.)
 			_, err := Refresh(
 				lookup,
 				manual.Type,
@@ -296,62 +293,43 @@ func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
 				tc.semanticVersioning,
 				nil,
 			)
-
-			prefix := fmt.Sprintf("%s\nRefresh()", packageName)
-
-			// THEN: no error is given.
 			if err != nil {
-				t.Fatalf("%s unexpected error: %v", prefix, err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// AND: the live Status is left in place - detaching it would sever the
-			// Service from the database and the WebSocket clients.
+			// applyOverridesJSON returns this same Lookup, so a detached Lookup.GetStatus would cut the
+			// Service off from the database and the WebSocket clients.
 			if gotStatus := lookup.GetStatus(); gotStatus != hadStatus {
-				t.Errorf("%s replaced the live Status\ngot:  %p\nwant: %p",
-					prefix, gotStatus, hadStatus,
-				)
+				t.Errorf("Lookup.GetStatus() mismatch\ngot:  %p\nwant: %p", gotStatus, hadStatus)
 			}
 
-			// AND: it keeps the channels that carry version changes outward.
 			if lookup.GetStatus().AnnounceChannel == nil {
-				t.Errorf("%s lost Status.AnnounceChannel", prefix)
+				t.Error("Status.AnnounceChannel mismatch\ngot:  nil\nwant: non-nil")
 			}
 			if lookup.GetStatus().DatabaseChannel == nil {
-				t.Errorf("%s lost Status.DatabaseChannel", prefix)
+				t.Error("Status.DatabaseChannel mismatch\ngot:  nil\nwant: non-nil")
 			}
 		})
 	}
 }
 
 func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
-	// GIVEN: a Lookup, and overrides that remove it.
 	lookup := testLookup(t, manual.Type, false, "")
-	overrides := []byte("null")
 
-	// WHEN: Refresh is called with those overrides.
 	got, err := Refresh(
 		lookup,
 		lookup.GetType(),
-		overrides,
+		[]byte("null"),
 		nil,
 		nil,
 	)
-
-	prefix := fmt.Sprintf("%s\nRefresh()", packageName)
-
-	// THEN: an error is returned.
 	e := errfmt.FormatError(err)
-	if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
-		t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, wantErrRegex,
-		)
+	if wantErrRegex := `^deployed_version: removed by overrides$`; !util.RegexCheck(wantErrRegex, e) {
+		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
 	}
 
-	// AND: no version is returned.
 	if got != "" {
-		t.Errorf("%s mismatch on version returned\ngot:  %q\nwant: %q",
-			prefix, got, "",
-		)
+		t.Errorf("version mismatch\ngot:  %q\nwant: \"\"", got)
 	}
 }
 
@@ -362,10 +340,13 @@ func TestApplyOverridesJSON(t *testing.T) {
 		semanticVerDiff    bool
 		semanticVersioning *string
 	}
+	defaultURL := test.LookupBare.URLInvalid + "/"
 	tests := []struct {
-		name     string
-		args     args
-		errRegex string
+		name                   string
+		args                   args
+		wantURL                string
+		wantSemanticVersioning string
+		errRegex               string
 	}{
 		{
 			name: "no overrides, no semantic versioning change",
@@ -375,7 +356,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `^$`,
+			wantURL:                defaultURL,
+			wantSemanticVersioning: "nil",
+			errRegex:               `^$`,
 		},
 		{
 			name: "invalid semantic versioning",
@@ -399,7 +382,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    true,
 				semanticVersioning: new("true"),
 			},
-			errRegex: `^$`,
+			wantURL:                defaultURL,
+			wantSemanticVersioning: "true",
+			errRegex:               `^$`,
 		},
 		{
 			name: "overrides/valid",
@@ -409,7 +394,9 @@ func TestApplyOverridesJSON(t *testing.T) {
 				semanticVerDiff:    false,
 				semanticVersioning: nil,
 			},
-			errRegex: `^$`,
+			wantURL:                test.LookupJSON.URLValid,
+			wantSemanticVersioning: "nil",
+			errRegex:               `^$`,
 		},
 		{
 			name: "overrides/invalid JSON",
@@ -443,19 +430,28 @@ func TestApplyOverridesJSON(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := applyOverridesJSON(
+			got, err := applyOverridesJSON(
 				tc.args.lookup,
 				tc.args.overrides,
 				tc.args.semanticVerDiff,
 				tc.args.semanticVersioning,
 			)
-
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if err != nil {
+				return
+			}
+
+			if gotURL := got.(*web.Lookup).URL; gotURL != tc.wantURL {
+				t.Errorf("Lookup.URL mismatch\ngot:  %q\nwant: %q", gotURL, tc.wantURL)
+			}
+			gotSemanticVersioning := test.StringifyPtr(got.GetOptions().SemanticVersioning)
+			if gotSemanticVersioning != tc.wantSemanticVersioning {
 				t.Errorf(
-					"%s\napplyOverridesJSON(%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.args.overrides,
-					e, tc.errRegex,
+					"Lookup.GetOptions().SemanticVersioning mismatch\ngot:  %s\nwant: %s",
+					gotSemanticVersioning, tc.wantSemanticVersioning,
 				)
 			}
 		})
