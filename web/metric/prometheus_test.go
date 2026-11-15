@@ -17,18 +17,16 @@
 package metric
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+
+	"github.com/release-argus/Argus/internal/test"
 	serviceinfo "github.com/release-argus/Argus/service/status/info"
 )
 
-var packageName = "metric"
-
 func TestPrometheusCounterVec(t *testing.T) {
-	// GIVEN: a metric.
 	tests := []struct {
 		name   string
 		metric *prometheus.CounterVec
@@ -73,96 +71,64 @@ func TestPrometheusCounterVec(t *testing.T) {
 			t.Parallel()
 
 			// Make args unique and remove empty strings.
+			labels := make([]string, len(tc.args))
 			unorderedArgs := make([]string, 0, len(tc.args))
-			for i := range tc.args {
-				if tc.args[i] != "" {
-					tc.args[i] += "---" + tc.name
-					unorderedArgs = append(unorderedArgs, tc.args[i])
+			for i, arg := range tc.args {
+				if arg != "" {
+					labels[i] = arg + "---" + tc.name
+					unorderedArgs = append(unorderedArgs, labels[i])
 				}
 			}
-			// Order the args.
 			args := make([]string, len(unorderedArgs))
 			for i, j := range tc.ordering {
 				args[i] = unorderedArgs[j]
 			}
-			got := testutil.CollectAndCount(tc.metric)
-			want := 0
-			if got != want {
-				t.Errorf(
-					"%s\nmetric count mismatch before InitPrometheusCounter()\ngot:  %d\nwant: %d",
-					packageName, got, want,
-				)
-			}
+			test.AssertMetricCount(t, "before InitPrometheusCounter: metric", tc.metric, 0)
 
-			prefix := fmt.Sprintf(
-				"%s\nInitPrometheusCounter(metric=%q, id=%q, serviceID=%q, srcType=%q, result=%q)",
-				packageName, tc.name, tc.args[0], tc.args[1], tc.args[2], tc.args[3],
-			)
-
-			// WHEN: it is initialised with InitPrometheusCounter.
 			// id, service_id, type, result.
 			InitPrometheusCounter(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
-				tc.args[2],
-				tc.args[3],
+				labels[0],
+				labels[1],
+				labels[2],
+				labels[3],
 			)
-			got = testutil.CollectAndCount(tc.metric)
-			want = 1
-			if got != want {
-				t.Errorf(
-					"%s count mismatch\ngot:  %d\nwant: %d",
-					prefix, got, want,
-				)
-			}
+			test.AssertMetricCount(t, "after InitPrometheusCounter: metric", tc.metric, 1)
 			var wantValue float64
 			if gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(args...)); gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after InitPrometheusCounter: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 
-			prefix = fmt.Sprintf(
-				"%s\nIncPrometheusCounter(metric=%q, id=%q, serviceID=%q, srcType=%q, result=%q)",
-				packageName, tc.name, tc.args[0], tc.args[1], tc.args[2], tc.args[3],
-			)
-
-			// THEN: it can be increased.
 			wantValue++
 			IncPrometheusCounter(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
-				tc.args[2],
-				tc.args[3],
+				labels[0],
+				labels[1],
+				labels[2],
+				labels[3],
 			)
 			if gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(args...)); gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after IncPrometheusCounter: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 
-			prefix = fmt.Sprintf(
-				"%s\nDeletePrometheusCounter(metric=%q, id=%q, serviceID=%q, srcType=%q, result=%q)",
-				packageName, tc.name, tc.args[0], tc.args[1], tc.args[2], tc.args[3],
-			)
-
-			// AND: it can be deleted.
 			wantValue = 0
 			DeletePrometheusCounter(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
-				tc.args[2],
-				tc.args[3],
+				labels[0],
+				labels[1],
+				labels[2],
+				labels[3],
 			)
 			if gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(args...)); gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after DeletePrometheusCounter: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 		})
@@ -170,13 +136,10 @@ func TestPrometheusCounterVec(t *testing.T) {
 }
 
 func TestPrometheusGaugeVec(t *testing.T) {
-	// GIVEN: a metric.
 	tests := []struct {
-		name       string
-		metric     *prometheus.GaugeVec
-		args       []string
-		isGaugeVec bool
-		value      float64
+		name   string
+		metric *prometheus.GaugeVec
+		args   []string
 	}{
 		{
 			name:   "LatestVersionQueryResultLast",
@@ -200,90 +163,61 @@ func TestPrometheusGaugeVec(t *testing.T) {
 			t.Parallel()
 
 			// Make args unique and remove empty strings.
+			labels := make([]string, len(tc.args))
 			args := make([]string, 0, len(tc.args))
-			for i := range tc.args {
-				if tc.args[i] != "" {
-					tc.args[i] += "---" + tc.name
-					args = append(args, tc.args[i])
+			for i, arg := range tc.args {
+				if arg != "" {
+					labels[i] = arg + "---" + tc.name
+					args = append(args, labels[i])
 				}
 			}
-			if got, want := testutil.CollectAndCount(tc.metric), 0; got != want {
-				t.Errorf(
-					"%s\nPrometheusGaugeVec() count mismatch on test start\ngot:  %d\nwant: %d",
-					packageName, got, want,
-				)
-			}
+			test.AssertMetricCount(t, "before SetPrometheusGauge: metric", tc.metric, 0)
 
-			// WHEN: it is initialised with SetPrometheusGauge.
 			wantValue := float64(3)
 			SetPrometheusGauge(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
+				labels[0],
+				labels[1],
 				wantValue,
 			)
 
-			prefix := fmt.Sprintf(
-				"%s\nSetPrometheusGauge(id=%q, srcType=%q, value=%d)",
-				packageName, tc.name, tc.args[0], int(wantValue),
-			)
-
-			// THEN: changes can be noticed.
-			if got, want := testutil.CollectAndCount(tc.metric), 1; got != want {
-				t.Errorf(
-					"%s count mismatch after Set\ngot:  %d\nwant: %d",
-					prefix, got, want,
-				)
-			}
+			test.AssertMetricCount(t, "after first SetPrometheusGauge: metric", tc.metric, 1)
 			gotValue := testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch (first Set)\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after first SetPrometheusGauge: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 
-			// WHEN: changed.
 			wantValue = float64(2)
 			SetPrometheusGauge(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
+				labels[0],
+				labels[1],
 				wantValue,
 			)
 
-			prefix = fmt.Sprintf(
-				"%s\nSetPrometheusGauge(id=%q, srcType=%q, value=%d)",
-				packageName, tc.name, tc.args[0], int(wantValue),
-			)
-
-			// THEN: changes can be noticed.
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch (second Set)\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after second SetPrometheusGauge: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 
-			// AND: it can be deleted.
 			wantValue = 0
 			DeletePrometheusGauge(
 				tc.metric,
-				tc.args[0],
-				tc.args[1],
-			)
-
-			prefix = fmt.Sprintf(
-				"%s\nDeletePrometheusGauge(id=%q, srcType=%q)",
-				packageName, tc.args[0], tc.args[1],
+				labels[0],
+				labels[1],
 			)
 
 			gotValue = testutil.ToFloat64(tc.metric.WithLabelValues(args...))
 			if gotValue != wantValue {
 				t.Errorf(
-					"%s value mismatch\ngot:  %f\nwant: %f",
-					prefix, gotValue, wantValue,
+					"after DeletePrometheusGauge: metric mismatch\ngot:  %f\nwant: %f",
+					gotValue, wantValue,
 				)
 			}
 		})
@@ -291,7 +225,6 @@ func TestPrometheusGaugeVec(t *testing.T) {
 }
 
 func TestServiceCountCurrentAdd(t *testing.T) {
-	// GIVEN: a delta amount and an active state.
 	tests := []struct {
 		name   string
 		delta  int
@@ -302,7 +235,6 @@ func TestServiceCountCurrentAdd(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			var targetMetric prometheus.Gauge
 			if tc.active {
 				targetMetric = ServiceCountCurrent.WithLabelValues(ServiceStateActive)
@@ -311,40 +243,27 @@ func TestServiceCountCurrentAdd(t *testing.T) {
 			}
 			hadValue := testutil.ToFloat64(targetMetric)
 
-			// WHEN: ServiceCountCurrentAdd is called with the active state and the delta amount.
 			ServiceCountCurrentAdd(new(tc.active), tc.delta)
 
-			// THEN: the metric should be incremented by this delta.
 			gotValue := testutil.ToFloat64(targetMetric)
 			wantValue := hadValue + float64(tc.delta)
 			if gotValue != wantValue {
-				t.Errorf(
-					"%s\nServiceCountCurrentAdd(active=%t, delta=%d) metric mismatch\ngot:  %f\nwant: %f",
-					packageName, tc.active, tc.delta,
-					gotValue, wantValue,
-				)
+				t.Errorf("+delta: metric mismatch\ngot:  %f\nwant: %f", gotValue, wantValue)
 			}
 
-			// WHEN: ServiceCountCurrentAdd is called again with the inverse delta.
 			ServiceCountCurrentAdd(new(tc.active), -tc.delta)
 
-			// THEN: the metric should be decremented by this delta.
 			hadValue = gotValue
 			gotValue = testutil.ToFloat64(targetMetric)
 			wantValue = hadValue - float64(tc.delta)
 			if gotValue != wantValue {
-				t.Errorf(
-					"%s\nServiceCountCurrentAdd(active=%t, delta=%d) metric mismatch\ngot:  %f\nwant: %f",
-					packageName, tc.active, tc.delta,
-					gotValue, wantValue,
-				)
+				t.Errorf("-delta: metric mismatch\ngot:  %f\nwant: %f", gotValue, wantValue)
 			}
 		})
 	}
 }
 
 func TestMetricsAndVersionState(t *testing.T) {
-	// GIVEN: the Prometheus metrics are initialised.
 	InitMetrics()
 
 	tests := []struct {
@@ -360,7 +279,7 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: "1.0.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.2.0",
-			expectedState:   LatestVersionDeployed, // Latest version deployed.
+			expectedState:   LatestVersionDeployed,
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 0,
 				"SKIPPED":   0,
@@ -371,7 +290,7 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: "1.2.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.0.0",
-			expectedState:   LatestVersionApproved, // Latest version approved.
+			expectedState:   LatestVersionApproved,
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   0,
@@ -382,7 +301,7 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: serviceinfo.SkippedVersion("1.2.0"),
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.0.0",
-			expectedState:   LatestVersionSkipped, // Latest version skipped.
+			expectedState:   LatestVersionSkipped,
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   1,
@@ -393,7 +312,7 @@ func TestMetricsAndVersionState(t *testing.T) {
 			approvedVersion: "1.0.0",
 			latestVersion:   "1.2.0",
 			deployedVersion: "1.1.0",
-			expectedState:   LatestVersionUnactioned, // Latest version not deployed/approved/skipped.
+			expectedState:   LatestVersionUnactioned,
 			expectedMetrics: map[string]float64{
 				"AVAILABLE": 1,
 				"SKIPPED":   0,
@@ -405,6 +324,10 @@ func TestMetricsAndVersionState(t *testing.T) {
 			latestVersion:   "1.2.3",
 			deployedVersion: "",
 			expectedState:   LatestVersionUnknown,
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 0,
+				"SKIPPED":   0,
+			},
 		},
 		{
 			name:            "latest version unknown, deployed version known",
@@ -412,6 +335,10 @@ func TestMetricsAndVersionState(t *testing.T) {
 			latestVersion:   "",
 			deployedVersion: "1.2.3",
 			expectedState:   LatestVersionUnknown,
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 0,
+				"SKIPPED":   0,
+			},
 		},
 		{
 			name:            "latest+deployed version unknown",
@@ -419,13 +346,17 @@ func TestMetricsAndVersionState(t *testing.T) {
 			latestVersion:   "",
 			deployedVersion: "",
 			expectedState:   LatestVersionUnknown,
+			expectedMetrics: map[string]float64{
+				"AVAILABLE": 0,
+				"SKIPPED":   0,
+			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			// Serial: resets metric.UpdatesCurrent.
 
-			// Reset metrics for each test.
 			InitMetrics()
 			serviceInfo := serviceinfo.ServiceInfo{
 				ApprovedVersion: tc.approvedVersion,
@@ -433,47 +364,38 @@ func TestMetricsAndVersionState(t *testing.T) {
 				DeployedVersion: tc.deployedVersion,
 			}
 
-			// WHEN: GetVersionDeployedState is called.
 			state := GetVersionDeployedState(serviceInfo)
 
-			// THEN: the returned state should match the expected state.
 			if state != tc.expectedState {
 				t.Errorf(
-					"%s\nGetVersionDeployedState(%+v) mismatch\ngot:  %v\nwant: %v",
-					packageName, serviceInfo,
+					"GetVersionDeployedState() mismatch\ngot:  %v\nwant: %v",
 					state, tc.expectedState,
 				)
 			}
 
-			// WHEN: SetUpdatesCurrent is called.
 			var delta float64 = 1
 			SetUpdatesCurrent(delta, state)
 
-			// THEN: metrics should match the expected values.
 			for label, expected := range tc.expectedMetrics {
 				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
 				if metric != expected {
 					t.Errorf(
-						"%s\nSetUpdatesCurrent(delta=%f, result=%d) metric mismatch for %q\ngot:  %v\nwant: %v",
-						packageName, delta, state, label,
-						metric, expected,
+						"+1: UpdatesCurrent.WithLabelValues(%q) mismatch\ngot:  %v\nwant: %v",
+						label, metric, expected,
 					)
 				}
 			}
 
-			// WHEN: SetUpdatesCurrent is called again with the inverse delta.
 			delta = -1
 			SetUpdatesCurrent(delta, state)
 
-			// THEN: metrics should reset back to 0.
 			for label := range tc.expectedMetrics {
 				metric := testutil.ToFloat64(UpdatesCurrent.WithLabelValues(label))
 				var want float64 = 0
 				if metric != want {
 					t.Errorf(
-						"%s\nSetUpdatesCurrent(delta=%f, result=%d) metric mismatch for %q\ngot:  %f\nwant: %f",
-						packageName, delta, state, label,
-						metric, want,
+						"-1: UpdatesCurrent.WithLabelValues(%q) mismatch\ngot:  %v\nwant: %v",
+						label, metric, want,
 					)
 				}
 			}

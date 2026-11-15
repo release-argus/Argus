@@ -24,7 +24,6 @@ import (
 )
 
 func TestWebSocketMessage_String(t *testing.T) {
-	// GIVEN: a WebSocketMessage.
 	tests := []struct {
 		name             string
 		websocketMessage WebSocketMessage
@@ -99,15 +98,10 @@ func TestWebSocketMessage_String(t *testing.T) {
 
 			tc.want = test.TrimJSON(tc.want)
 
-			// WHEN: the Data is stringified with String.
 			got := tc.websocketMessage.String()
 
-			// THEN: the result is as expected.
 			if got != tc.want {
-				t.Errorf(
-					"%s\nWebSocketMessage String() value mismatch\ngot:  %q\nwant: %q",
-					packageName, got, tc.want,
-				)
+				t.Errorf("WebSocketMessage.String() mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

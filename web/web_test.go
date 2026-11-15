@@ -19,6 +19,7 @@ package web
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -33,109 +34,90 @@ import (
 )
 
 func TestWebSocketHandler(t *testing.T) {
-	// GIVEN: a WebSocket is running (TestMain) and we have the URL.
 	url := fmt.Sprintf("ws://%s:%s/ws", host, port)
 
 	t.Run("ConnectWebSocket", func(t *testing.T) {
-		// WHEN: we attempt to connect.
 		ws, resp, err := websocket.DefaultDialer.Dial(url, nil)
 		if err != nil {
-			t.Fatalf(
-				"failed to connect to WebSocket: %v (HTTP status %d)",
-				err, resp.StatusCode,
-			)
+			status := 0
+			if resp != nil {
+				status = resp.StatusCode
+			}
+			t.Fatalf("Dialer.Dial(%q) failed: %v (HTTP status %d)", url, err, status)
 		}
 		defer ws.Close()
 
-		// THEN: connection should be open.
 		if ws.NetConn() == nil {
-			t.Errorf("expected WebSocket underlying connection to be non-nil")
+			t.Error("Conn.NetConn() mismatch\ngot:  nil\nwant: non-nil")
 		}
 
-		// Optional: test sending/receiving a message
-		testMsg := "hello"
-		if err := ws.WriteMessage(websocket.TextMessage, []byte(testMsg)); err != nil {
-			t.Errorf("failed to send message: %v", err)
+		if err := ws.WriteMessage(websocket.TextMessage, []byte("hello")); err != nil {
+			t.Errorf("Conn.WriteMessage() failed: %v", err)
 		}
 	})
 }
 
 func TestRun_Error(t *testing.T) {
-	// GIVEN: a config that wants to use a port that is already in use (TestMain).
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.ListenHost = host
+	// TestMain's live server already holds port, so Run cannot listen.
 	cfg.Settings.Web.ListenPort = port
 
-	// WHEN: Run is called.
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- Run(t.Context(), cfg, nil)
 	}()
 
-	prefix := fmt.Sprintf("%s\nRun()", packageName)
-
-	// THEN: it should return an error since port already in use.
 	select {
 	case err := <-errChan:
 		if err == nil {
-			t.Fatalf(
-				"%s should have failed as port was in use\ngot:  nil\nwant: error",
-				prefix,
-			)
+			t.Fatal("Run() error mismatch\ngot:  nil\nwant: non-nil")
 		}
 	case <-time.After(1 * time.Second):
-		t.Fatalf(
-			"%s should have failed as port was in use\ngot:  timeout waiting for Run to return\nwant: error",
-			prefix,
-		)
+		t.Fatal("Run() error mismatch\ngot:  timeout after 1s\nwant: non-nil")
 	}
 }
 
 func TestMainWithRoutePrefix(t *testing.T) {
-	// GIVEN: a valid config with a Service.
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.RoutePrefix = "/test"
 
-	// AND: a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// WHEN: the Web UI is started with this Config.
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- Run(ctx, cfg, nil)
 	}()
 
-	// THEN: Web UI is accessible.
 	url := fmt.Sprintf(
 		"http://localhost:%s%s/metrics",
 		cfg.Settings.Web.ListenPort, cfg.Settings.Web.RoutePrefix,
 	)
 	if err := waitForServer(url, time.Second); err != nil {
-		t.Fatal(err)
+		t.Fatalf("waitForServer() failed: %v", err)
 	}
 	resp, err := http.Get(url)
 	if err != nil {
-		t.Fatalf(
-			"%s\nError making request: %s",
-			packageName, err,
-		)
+		t.Fatalf("http.Get(%q) failed: %v", url, err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("io.ReadAll() failed: %v", err)
 	}
 	wantStatusCode := http.StatusOK
 	if resp.StatusCode != wantStatusCode {
 		t.Errorf(
-			"%s\nRun(%q) status code mismatch\ngot:  %d\nwant: %d",
-			packageName, url,
-			resp.StatusCode, wantStatusCode,
+			"status code mismatch\ngot:  %d - %q\nwant: %d",
+			resp.StatusCode, body, wantStatusCode,
 		)
 	}
 
-	// AND: the server shuts down cleanly.
 	assertServerShutdown(t, cancel, errCh, url)
 }
 
 func TestWebAccessible(t *testing.T) {
-	// GIVEN: we have the Web UI Router from TestMain().
 	tests := []struct {
 		path      string
 		bodyRegex string
@@ -150,10 +132,8 @@ func TestWebAccessible(t *testing.T) {
 			path:      "/api/v1/healthcheck",
 			bodyRegex: `^Alive$`},
 		{
-			path: "/api/v1/version",
-			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
-				util.GoVersion,
-			),
+			path:      "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, util.GoVersion),
 		},
 	}
 
@@ -161,30 +141,25 @@ func TestWebAccessible(t *testing.T) {
 		t.Run(tc.path, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: we make a request to path.
-			req, _ := http.NewRequest(http.MethodGet, tc.path, nil)
+			req, err := http.NewRequest(http.MethodGet, tc.path, nil)
+			if err != nil {
+				t.Fatalf("http.NewRequest() failed: %v", err)
+			}
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, req)
 
-			// THEN: we get a Status OK.
 			wantStatusCode := http.StatusOK
 			if response.Code != wantStatusCode {
 				t.Errorf(
-					"%s\nGET %q status code mismatch\ngot:  %d\nwant: %d",
-					packageName, tc.path,
-					response.Code, wantStatusCode,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					response.Code, response.Body.String(), wantStatusCode,
 				)
 			}
 
-			// AND: the body matches the expected string RegEx.
 			if tc.bodyRegex != "" {
 				body := response.Body.String()
 				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf(
-						"%s\nGET %q body mismatch\ngot:  %q\nwant: %q",
-						packageName, tc.path,
-						body, tc.bodyRegex,
-					)
+					t.Errorf("body mismatch\ngot:  %q\nwant: %q", body, tc.bodyRegex)
 				}
 			}
 		})
@@ -192,9 +167,7 @@ func TestWebAccessible(t *testing.T) {
 }
 
 func TestAccessibleHTTPS(t *testing.T) {
-	// GIVEN: a bunch of URLs to test and the webserver is running with HTTPS.
 	tests := []struct {
-		name      string
 		path      string
 		bodyRegex string
 	}{
@@ -208,75 +181,68 @@ func TestAccessibleHTTPS(t *testing.T) {
 			path:      "/api/v1/healthcheck",
 			bodyRegex: `^Alive$`},
 		{
-			path: "/api/v1/version",
-			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`,
-				util.GoVersion,
-			),
+			path:      "/api/v1/version",
+			bodyRegex: fmt.Sprintf(`"goVersion":"%s"`, util.GoVersion),
 		},
 	}
 	cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 	cfg.Settings.Web.CertFile = t.Name() + "_Cert.pem"
 	cfg.Settings.Web.KeyFile = t.Name() + "_Key.pem"
-	_ = generateCertFiles(cfg.Settings.Web.CertFile, cfg.Settings.Web.KeyFile)
 	t.Cleanup(func() {
 		_ = os.Remove(cfg.Settings.Web.CertFile)
 		_ = os.Remove(cfg.Settings.Web.KeyFile)
 	})
+	generateCertFiles(t, cfg.Settings.Web.CertFile, cfg.Settings.Web.KeyFile)
 
-	address := fmt.Sprintf("https://localhost:%s", cfg.Settings.Web.ListenPort)
+	address := "https://localhost:" + cfg.Settings.Web.ListenPort
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	router = newWebUI(t.Context(), cfg, nil)
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- Run(ctx, cfg, nil)
 	}()
 
 	if err := waitForServer(address, time.Second); err != nil {
-		t.Fatal(err)
+		t.Fatalf("waitForServer() failed: %v", err)
 	}
 
+	client := insecureClient()
 	for _, tc := range tests {
 		t.Run(tc.path, func(t *testing.T) {
-			t.Parallel()
+			// Serial: shares the server, which the parent stops on return.
 
-			// WHEN: we make a HTTPS request to path.
-			req, _ := http.NewRequest(http.MethodGet, address+tc.path, nil)
-			response := httptest.NewRecorder()
-			router.ServeHTTP(response, req)
+			resp, err := client.Get(address + tc.path)
+			if err != nil {
+				t.Fatalf("Client.Get() failed: %v", err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("io.ReadAll() failed: %v", err)
+			}
 
-			// THEN: we get a Status OK.
 			wantStatusCode := http.StatusOK
-			if response.Code != wantStatusCode {
+			if resp.StatusCode != wantStatusCode {
 				t.Errorf(
-					"%s\nGET %q status code mismatch\ngot:  %d\nwant: %d",
-					packageName, address+tc.path,
-					response.Code, wantStatusCode,
+					"status code mismatch\ngot:  %d - %q\nwant: %d",
+					resp.StatusCode, body, wantStatusCode,
 				)
 			}
 
-			// AND: the body matches the expected string RegEx.
 			if tc.bodyRegex != "" {
-				body := response.Body.String()
-				if !util.RegexCheck(tc.bodyRegex, body) {
-					t.Errorf(
-						"%s\nGET %q body mismatch\ngot:  %q\nwant: %q",
-						packageName, address+tc.path,
-						body, tc.bodyRegex,
-					)
+				if !util.RegexCheck(tc.bodyRegex, string(body)) {
+					t.Errorf("body mismatch\ngot:  %q\nwant: %q", body, tc.bodyRegex)
 				}
 			}
 		})
 	}
 
-	// AND: the server shuts down cleanly.
 	assertServerShutdown(t, cancel, errCh, address)
 }
 
 func TestNewWebUI__auth(t *testing.T) {
-	// GIVEN: web UIs built with and without auth.
 	tests := []struct {
 		name     string
 		authDeps *v1.AuthDeps
@@ -300,16 +266,11 @@ func TestNewWebUI__auth(t *testing.T) {
 
 			cfg := testConfig(t, filepath.Join(t.TempDir(), "config.yml"))
 
-			// WHEN: the web UI is built.
-			router := newWebUI(t.Context(), cfg, tc.authDeps)
+			webUI := newWebUI(t.Context(), cfg, tc.authDeps)
 
-			// THEN: the login route is served only when auth is enabled.
-			got := hasRoute(t, router, "/api/v1/auth/login")
+			got := hasRoute(t, webUI, "/api/v1/auth/login")
 			if got != tc.wantAuth {
-				t.Errorf(
-					"%s\nauth routing mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.wantAuth,
-				)
+				t.Errorf("hasRoute() mismatch\ngot:  %t\nwant: %t", got, tc.wantAuth)
 			}
 		})
 	}

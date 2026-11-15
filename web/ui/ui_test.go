@@ -21,20 +21,17 @@ import (
 )
 
 func TestGetFS(t *testing.T) {
-	// GIVEN: there's a static folder with the web ui inside.
-
-	// WHEN: the FS is retrieved.
 	fs := GetFS()
 
-	// THEN: those files can be accessed.
-	fileThatExists := "index.html"
-	_, errFileShouldExist := fs.Open(fileThatExists)
-	fileThatDoesNotExist := fileThatExists + "a"
-	_, errDoesNotExist := fs.Open(fileThatDoesNotExist)
-	if errFileShouldExist != nil {
-		t.Errorf("%q should exist in FS", fileThatExists)
+	f, err := fs.Open("index.html")
+	if err != nil {
+		t.Errorf("exists: ReadDirFS.Open() failed: %v", err)
+	} else {
+		_ = f.Close()
 	}
-	if errDoesNotExist == nil {
-		t.Errorf("%q shouldn't exist in FS", fileThatDoesNotExist)
+
+	if f, err := fs.Open("index.htmla"); err == nil {
+		_ = f.Close()
+		t.Error("missing: ReadDirFS.Open() error mismatch\ngot:  nil\nwant: non-nil")
 	}
 }
