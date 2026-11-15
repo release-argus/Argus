@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -30,71 +29,66 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/mux"
-
-	dbtype "github.com/release-argus/Argus/db/types"
-	"github.com/release-argus/Argus/internal/logx"
-	whtest "github.com/release-argus/Argus/webhook/test"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/release-argus/Argus/config"
+	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/httpx"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/webhook"
+	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
 var (
-	packageName = "web"
-	mainCfg     *config.Config
-	host        = "localhost"
-	port        string
-	router      *mux.Router
+	mainCfg *config.Config
+	host    = "localhost"
+	port    string
+	router  *mux.Router
 )
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// GIVEN: a valid config with a Service.
 	file := "TestWebMain.yml"
 	mainCfg = testConfig(nil, file)
 	port = mainCfg.Settings.Web.ListenPort
 	mainCfg.Settings.Web.ListenHost = host
 
-	// Create a cancellable context for shutdown.
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	// WHEN: the Router is fetched for this Config.
 	router = newWebUI(ctx, mainCfg, nil)
-	go Run(ctx, mainCfg, nil)
+	go func() { _ = Run(ctx, mainCfg, nil) }()
 	url := fmt.Sprintf(
 		"http://%s:%s%s",
 		host, port, mainCfg.Settings.Web.RoutePrefix,
 	)
 	if err := waitForServer(url, 1*time.Second); err != nil {
 		fmt.Println(err.Error())
+		cancel()
 		os.Exit(1)
 	}
 
-	// THEN: Web UI is accessible for the tests.
 	exitCode := m.Run()
+	cancel()
 	_ = os.Remove(file)
 	_ = os.Remove(mainCfg.Settings.Data.DatabaseFile)
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -113,19 +107,12 @@ func hasRoute(t *testing.T, router *mux.Router, path string) bool {
 			return nil
 		},
 	); err != nil {
-		t.Fatalf(
-			"%s\nWalk() failed: %v",
-			packageName, err,
-		)
+		t.Fatalf("Router.Walk() failed: %v", err)
 	}
 	return found
 }
 
-func getFreePort(t *testing.T) (int, error) {
-	if t != nil {
-		t.Helper()
-	}
-
+func getFreePort() (int, error) {
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return 0, err
@@ -134,11 +121,7 @@ func getFreePort(t *testing.T) (int, error) {
 	return ln.Addr().(*net.TCPAddr).Port, nil
 }
 
-func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
-	if t != nil {
-		t.Helper()
-	}
-
+func plainDefaults() (*config.Defaults, *config.Defaults) {
 	defaults, _ := config.DecodeDefaults("yaml", nil)
 	defaults.Notify = shoutrrr.ShoutrrrsDefaults{}
 
@@ -164,19 +147,20 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 	cfg = &config.Config{}
 
 	flags := make(map[string]bool)
-	cfg.Load(ctx, g, path, &flags)
+	if !cfg.Load(ctx, g, path, &flags) {
+		panic(fmt.Sprintf("Config.Load(%q) failed", path))
+	}
 	if t != nil {
 		t.Cleanup(func() { _ = os.Remove(cfg.Settings.DataDatabaseFile()) })
 	}
 
-	// Settings.Web.
-	port, err := getFreePort(t)
+	freePort, err := getFreePort()
 	if err != nil {
 		panic(err)
 	}
 	var (
 		listenHost  = "0.0.0.0"
-		listenPort  = fmt.Sprint(port)
+		listenPort  = strconv.Itoa(freePort)
 		routePrefix = "/"
 	)
 	cfg.Settings.Web = config.WebSettings{
@@ -185,8 +169,7 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 		RoutePrefix: routePrefix,
 	}
 
-	// Defaults.
-	defaults, hardDefaults := plainDefaults(t)
+	defaults, hardDefaults := plainDefaults()
 	cfg.Defaults, cfg.HardDefaults = *defaults, *hardDefaults
 	cfg.Webhook = webhook.WebhooksDefaults{}
 	cfg.Notify = shoutrrr.ShoutrrrsDefaults{}
@@ -195,17 +178,16 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 		Hard: &cfg.HardDefaults.Service,
 	}
 
-	// Service.
 	svc := testService(t, "test", svcCfg)
 	go func() {
 		<-cfg.HardDefaults.Service.Status.SaveChannel
 	}()
-	_ = cfg.AddService(svc.ID, svc)
+	if err := cfg.AddService(svc.ID, svc); err != nil {
+		panic(err)
+	}
 
-	// Notify.
 	cfg.Notify = cfg.Defaults.Notify
 
-	// Webhook.
 	whPass := testWebhookDefaults(false)
 	whFail := testWebhookDefaults(true)
 	cfg.Webhook = webhook.WebhooksDefaults{
@@ -213,7 +195,6 @@ func testConfig(t *testing.T, path string) (cfg *config.Config) {
 		"fail": whFail,
 	}
 
-	// Order.
 	cfg.Order = []string{svc.ID}
 
 	return
@@ -223,7 +204,6 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig()
 
-	// Service.
 	svc := test.Must(t, func() (*service.Service, error) {
 		return service.DecodeService(
 			"yaml", []byte(test.TrimYAML(`
@@ -278,9 +258,10 @@ func testService(t *testing.T, id string, svcCfg service.DefaultsConfig) *servic
 			svcCfg, notifyCfg, whCfg,
 		)
 	})
-	svc.Status.SetLatestVersion("3.0.0", "", false)
-	svc.Status.SetDeployedVersion("3.0.0", "", false)
-	svc.Status.SetApprovedVersion("3.0.0", false)
+	version := "3.0.0"
+	svc.Status.SetLatestVersion(version, "", false)
+	svc.Status.SetDeployedVersion(version, "", false)
+	svc.Status.SetApprovedVersion(version, false)
 
 	return svc
 }
@@ -291,7 +272,7 @@ func testWebhookDefaults(failing bool) *webhook.Defaults {
 		secret = "notArgus"
 	}
 
-	wh, _ := webhook.DecodeDefaults(
+	wh, err := webhook.DecodeDefaults(
 		"yaml", []byte(test.TrimYAML(`
 			allow_invalid_certs: false
 			delay: 0s
@@ -303,18 +284,20 @@ func testWebhookDefaults(failing bool) *webhook.Defaults {
 			url: `+test.WebhookGitHub.URLValid+`
 		`)),
 	)
+	if err != nil {
+		panic(err)
+	}
 	return wh
 }
 
-func generateCertFiles(certFile, keyFile string) error {
-	// Generate the certificate and private key:
-	// 	Generate a private key.
+func generateCertFiles(t *testing.T, certFile, keyFile string) {
+	t.Helper()
+
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return err
+		t.Fatalf("rsa.GenerateKey() failed: %v", err)
 	}
 
-	// 	Create a self-signed certificate.
 	template := x509.Certificate{
 		SerialNumber:          big.NewInt(1),
 		Subject:               pkix.Name{CommonName: "localhost"},
@@ -328,25 +311,21 @@ func generateCertFiles(certFile, keyFile string) error {
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
 	if err != nil {
-		return err
+		t.Fatalf("x509.CreateCertificate() failed: %v", err)
 	}
 
-	// Convert the certificate and private key to PEM format.
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 
-	// Write the certificate and private key to files.
 	if err := os.WriteFile(certFile, certPEM, 0644); err != nil {
-		return err
+		t.Fatalf("os.WriteFile(%q) failed: %v", certFile, err)
 	}
 	if err := os.WriteFile(keyFile, keyPEM, 0600); err != nil {
-		return err
+		t.Fatalf("os.WriteFile(%q) failed: %v", keyFile, err)
 	}
-
-	return nil
 }
 
-// assertServerShutdown verifies that the server shuts down correctly when the context is cancelled.
+// assertServerShutdown fails unless Run returns after cancel and testURL then refuses requests.
 func assertServerShutdown(
 	t *testing.T,
 	cancelFunc context.CancelFunc,
@@ -355,61 +334,46 @@ func assertServerShutdown(
 ) {
 	t.Helper()
 
-	// Cancel the context to trigger shutdown.
 	cancelFunc()
 
-	// Wait for the server to return.
 	select {
 	case err := <-errCh:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			t.Errorf(
-				"%s\nserver returned unexpected error on shutdown: %v",
-				packageName, err,
+				"Run() error type mismatch\ngot:  %v\nwant: nil or %v",
+				err, http.ErrServerClosed,
 			)
 		}
 	case <-time.After(time.Second):
-		t.Errorf("%s\nserver did not shutdown in time", packageName)
+		t.Error("Run() mismatch\ngot:  still running after 1s\nwant: returned")
 	}
 
-	// Test that the server no longer accepts requests.
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 500 * time.Millisecond,
-	}
-	if _, err := client.Get(testURL); err == nil {
-		t.Errorf("%s\nexpected request to fail after shutdown, but it succeeded", packageName)
+	if resp, err := insecureClient().Get(testURL); err == nil {
+		_ = resp.Body.Close()
+		t.Errorf("Client.Get(%q) error mismatch\ngot:  nil\nwant: non-nil (shut down)", testURL)
 	}
 }
 
 // waitForServer waits until the server at the given URL is ready, or the timeout is reached.
 func waitForServer(url string, timeout time.Duration) error {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 500 * time.Millisecond,
-	}
+	client := insecureClient()
 	deadline := time.Now().Add(timeout)
 	for {
 		resp, err := client.Get(url)
-
-		// Server is ready.
 		if err == nil {
 			_ = resp.Body.Close()
 			return nil
 		}
 
-		// Timeout reached.
 		if time.Now().After(deadline) {
-			return fmt.Errorf(
-				"%s\nserver did not start in time: %v",
-				packageName, err,
-			)
+			return fmt.Errorf("server did not start in time: %w", err)
 		}
 
-		// Delay before retrying.
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// insecureClient returns an HTTP client that accepts the self-signed test certificate.
+func insecureClient() *http.Client {
+	return &http.Client{Transport: httpx.InsecureTransport, Timeout: 500 * time.Millisecond}
 }

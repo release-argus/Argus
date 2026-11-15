@@ -20,20 +20,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
-
-// packageName identifies this package in test failures.
-const packageName = "web_ui"
 
 // statBlindFS serves its files but cannot stat them, so the shell reads back
 // while the overlay finds nothing to replace.
@@ -43,51 +40,62 @@ type statBlindFS struct {
 
 func (statBlindFS) Stat(string) (fs.FileInfo, error) { return nil, fs.ErrNotExist }
 
+// testShell is an app shell with its <base href> at the root.
+const testShell = `<!DOCTYPE html><html><head>` +
+	baseHrefStart + `<base href="/" />` + baseHrefEnd +
+	`</head></html>`
+
+// gzipFixture returns body gzipped.
+func gzipFixture(t *testing.T, body string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	writer := gzip.NewWriter(&buf)
+	if _, err := writer.Write([]byte(body)); err != nil {
+		t.Fatalf("Writer.Write() failed: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Writer.Close() failed: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func gunzipFixture(t *testing.T, data []byte) []byte {
+	t.Helper()
+	reader, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("gzip.NewReader() failed: %v", err)
+	}
+	got, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("io.ReadAll() failed: %v", err)
+	}
+	return got
+}
+
 func TestRewritten__nothingToOverlay(t *testing.T) {
-	// GIVEN: an FS holding a shell that cannot be stat-ed.
-	const shell = `<!DOCTYPE html><html><head>` +
-		baseHrefStart + `<base href="/" />` + baseHrefEnd +
-		`</head></html>`
+	// A shell that cannot be stat-ed leaves the overlay nothing to replace.
 	fSys := statBlindFS{
-		ReadDirFS: fstest.MapFS{indexFile: {Data: []byte(shell)}},
+		ReadDirFS: fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 	}
 
-	// WHEN: the UI is rewritten for a route prefix.
-	_, err := rewritten(fSys, "/")
-
-	prefix := fmt.Sprintf("%s\nrewritten()", packageName)
-
-	// THEN: it reports that there was nothing to overlay.
+	got, err := rewritten(fSys, "/argus")
 	e := errfmt.FormatError(err)
 	errRegex := `no index.html to overlay`
 	if !util.RegexCheck(errRegex, e) {
-		t.Errorf(
-			"%s error mismatch\ngot:  %q\nwant: %q",
-			prefix, e, errRegex,
-		)
+		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
+	}
+
+	// Unchanged, so it still serves from the root.
+	shell, err := fs.ReadFile(got, indexFile)
+	if err != nil {
+		t.Fatalf("fs.ReadFile() failed: %v", err)
+	}
+	if string(shell) != testShell {
+		t.Errorf("shell mismatch\ngot:  %q\nwant: %q", shell, testShell)
 	}
 }
 
 func TestRewritten(t *testing.T) {
-	// GIVEN: an embedded UI, as a dev build (plain shell),
-	// or a release one (gzipped shell).
-	const shell = `<!DOCTYPE html><html><head>` +
-		baseHrefStart + `<base href="/" />` + baseHrefEnd +
-		`</head></html>`
-
-	gzipped := func(t *testing.T, body string) []byte {
-		t.Helper()
-		var buf bytes.Buffer
-		writer := gzip.NewWriter(&buf)
-		if _, err := writer.Write([]byte(body)); err != nil {
-			t.Fatal(err)
-		}
-		if err := writer.Close(); err != nil {
-			t.Fatal(err)
-		}
-		return buf.Bytes()
-	}
-
 	tests := []struct {
 		name  string
 		files fstest.MapFS
@@ -98,29 +106,32 @@ func TestRewritten(t *testing.T) {
 		{
 			name: "dev build/plain shell",
 			files: fstest.MapFS{
-				indexFile:    {Data: []byte(shell)},
+				indexFile:    {Data: []byte(testShell)},
 				"robots.txt": {Data: []byte("some-other-file")},
 			},
 			shellFiles: []string{indexFile},
+			errRegex:   `^$`,
 		},
 		{
 			name: "release build/gzipped shell",
 			files: fstest.MapFS{
-				indexFileGz:     {Data: gzipped(t, shell)},
-				"robots.txt.gz": {Data: gzipped(t, "some-other-file")},
+				indexFileGz:     {Data: gzipFixture(t, testShell)},
+				"robots.txt.gz": {Data: gzipFixture(t, "some-other-file")},
 			},
 			shellFiles: []string{indexFileGz},
+			errRegex:   `^$`,
 		},
 		{
 			name: "both encodings present/both are rewritten",
 			files: fstest.MapFS{
-				indexFile:   {Data: []byte(shell)},
-				indexFileGz: {Data: gzipped(t, shell)},
+				indexFile:   {Data: []byte(testShell)},
+				indexFileGz: {Data: gzipFixture(t, testShell)},
 			},
 			shellFiles: []string{indexFile, indexFileGz},
+			errRegex:   `^$`,
 		},
 		{
-			name:     "invalid/no shell to overlay",
+			name:     "invalid/no shell to read",
 			files:    fstest.MapFS{"robots.txt": {Data: []byte("some-other-file")}},
 			errRegex: `read index.html`,
 		},
@@ -130,187 +141,106 @@ func TestRewritten(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: the UI is rewritten for a route prefix.
 			fSys, err := rewritten(tc.files, "/argus")
-
-			prefix := fmt.Sprintf("%s\nRewritten()", packageName)
-
-			// THEN: errors match expectations.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if tc.errRegex != "" {
+
+			for name, file := range tc.files {
+				if slices.Contains(tc.shellFiles, name) {
+					continue
+				}
+				through, readErr := fs.ReadFile(fSys, name)
+				if readErr != nil {
+					t.Fatalf("fs.ReadFile(%q) failed: %v", name, readErr)
+				}
+				if !bytes.Equal(through, file.Data) {
+					t.Errorf(
+						"fs.ReadFile(%q) mismatch\ngot:  %q\nwant: %q",
+						name, through, file.Data,
+					)
+				}
+			}
+			if err != nil {
 				return
 			}
 
 			entries, err := fSys.ReadDir(".")
 			if err != nil {
-				t.Fatalf(
-					"%s ReadDir: %v",
-					prefix, err,
-				)
+				t.Fatalf("ReadDirFS.ReadDir() failed: %v", err)
 			}
 
 			for _, shellFile := range tc.shellFiles {
-				// AND: the shell reads back with its <base href> at the prefix.
-				got, err := fs.ReadFile(fSys, shellFile)
-				if err != nil {
-					t.Fatalf(
-						"%s read %q: %v",
-						prefix, shellFile, err,
-					)
-				}
-				if strings.HasSuffix(shellFile, ".gz") {
-					reader, err := gzip.NewReader(bytes.NewReader(got))
+				t.Run(shellFile, func(t *testing.T) {
+					t.Parallel()
+
+					got, err := fs.ReadFile(fSys, shellFile)
 					if err != nil {
-						t.Fatalf(
-							"%s %q is not gzip: %v",
-							prefix, shellFile, err,
+						t.Fatalf("fs.ReadFile() failed: %v", err)
+					}
+					if strings.HasSuffix(shellFile, ".gz") {
+						got = gunzipFixture(t, got)
+					}
+					want := `<base href="/argus/" />`
+					if !bytes.Contains(got, []byte(want)) {
+						t.Errorf("shell mismatch\ngot:  %q\nwant: %q", got, want)
+					}
+
+					// statigz indexes by name, so the shell must stay listed.
+					if !slices.ContainsFunc(entries, func(entry fs.DirEntry) bool {
+						return entry.Name() == shellFile
+					}) {
+						names := make([]string, len(entries))
+						for i, entry := range entries {
+							names[i] = entry.Name()
+						}
+						t.Errorf(
+							"ReadDirFS.ReadDir() mismatch\ngot:  %q\nwant: %q",
+							names, shellFile,
 						)
 					}
-					if got, err = io.ReadAll(reader); err != nil {
-						t.Fatalf(
-							"%s %q does not decompress: %v",
-							prefix, shellFile, err,
-						)
-					}
-				}
-				want := `<base href="/argus/" />`
-				if !bytes.Contains(got, []byte(want)) {
-					t.Errorf(
-						"%s %q mismatch\nwant to contain: %q\ngot:             %q",
-						prefix, shellFile, want, got,
-					)
-				}
-
-				// AND: it is still listed, since statigz indexes by name.
-				if !slices.ContainsFunc(entries, func(entry fs.DirEntry) bool {
-					return entry.Name() == shellFile
-				}) {
-					t.Errorf(
-						"%s ReadDir() missing %q\ngot: %v",
-						prefix, shellFile, entries,
-					)
-				}
-			}
-
-			// AND: every other file passes through untouched.
-			for name, file := range tc.files {
-				if slices.Contains(tc.shellFiles, name) {
-					continue
-				}
-				through, err := fs.ReadFile(fSys, name)
-				if err != nil {
-					t.Fatalf(
-						"%s read %q: %v",
-						prefix, name, err,
-					)
-				}
-				if !bytes.Equal(through, file.Data) {
-					t.Errorf(
-						"%s %q was modified\ngot:  %q\nwant: %q",
-						prefix, name, through, file.Data,
-					)
-				}
+				})
 			}
 		})
 	}
 }
 
 func TestRewritten__embedded(t *testing.T) {
-	// GIVEN: the UI actually embedded in the binary, rather than a fixture.
 	routePrefix := "/argus"
 
-	prefix := fmt.Sprintf("%s\nRewritten()", packageName)
-
-	// WHEN: it is rewritten for a route prefix.
 	fSys, err := Rewritten(routePrefix)
 	if err != nil {
-		t.Fatalf(
-			"%s error: %v",
-			prefix, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// THEN: the shell serves with its <base href> at the prefix.
 	var got []byte
 	if got, err = fs.ReadFile(fSys, indexFile); err != nil {
 		gzipped, gzErr := fs.ReadFile(fSys, indexFileGz)
 		if gzErr != nil {
-			t.Fatalf(
-				"%s no shell to read: %v",
-				prefix, errors.Join(err, gzErr),
-			)
+			t.Fatalf("fs.ReadFile() failed: %v", errors.Join(err, gzErr))
 		}
-		reader, gzErr := gzip.NewReader(bytes.NewReader(gzipped))
-		if gzErr != nil {
-			t.Fatalf(
-				"%s %q is not gzip: %v",
-				prefix, indexFileGz, gzErr,
-			)
-		}
-		if got, err = io.ReadAll(reader); err != nil {
-			t.Fatalf(
-				"%s %q does not decompress: %v",
-				prefix, indexFileGz, err,
-			)
-		}
+		got = gunzipFixture(t, gzipped)
 	}
 	want := `<base href="` + routePrefix + `/" />`
 	if !bytes.Contains(got, []byte(want)) {
-		t.Errorf(
-			"%s shell mismatch\nwant to contain: %q\ngot:             %q",
-			prefix, want, got,
-		)
+		t.Errorf("shell mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
-	// AND: an asset beside it is untouched.
 	direct, err := fs.ReadFile(GetFS(), "robots.txt")
 	if err != nil {
-		t.Fatalf(
-			"%s read robots.txt from the embed: %v",
-			prefix, err,
-		)
+		t.Fatalf("direct: fs.ReadFile() failed: %v", err)
 	}
 	through, err := fs.ReadFile(fSys, "robots.txt")
 	if err != nil {
-		t.Fatalf(
-			"%s read robots.txt: %v",
-			prefix, err,
-		)
+		t.Fatalf("through: fs.ReadFile() failed: %v", err)
 	}
 	if !bytes.Equal(through, direct) {
-		t.Errorf(
-			"%s robots.txt was modified\ngot:  %q\nwant: %q",
-			prefix, through, direct,
-		)
+		t.Errorf("robots.txt mismatch\ngot:  %q\nwant: %q", through, direct)
 	}
 }
 
 func TestIndexHTML(t *testing.T) {
-	// GIVEN: an embedded app shell (plain or gzipped) and a route prefix.
-	const shell = `<!DOCTYPE html><html><head>` +
-		baseHrefStart + `<base href="/" />` + baseHrefEnd +
-		`</head></html>`
-
-	gzipped := func(t *testing.T, body string) []byte {
-		t.Helper()
-		var buf bytes.Buffer
-		writer := gzip.NewWriter(&buf)
-		if _, err := writer.Write([]byte(body)); err != nil {
-			t.Fatal(err)
-		}
-		if err := writer.Close(); err != nil {
-			t.Fatal(err)
-		}
-		return buf.Bytes()
-	}
-
 	tests := []struct {
 		name        string
 		files       fstest.MapFS
@@ -320,49 +250,55 @@ func TestIndexHTML(t *testing.T) {
 	}{
 		{
 			name:        "root prefix",
-			files:       fstest.MapFS{"index.html": {Data: []byte(shell)}},
+			files:       fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 			routePrefix: "/",
 			want:        `<base href="/" />`,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "route prefix",
-			files:       fstest.MapFS{"index.html": {Data: []byte(shell)}},
+			files:       fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 			routePrefix: "/argus",
 			want:        `<base href="/argus/" />`,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "route prefix/trailing slash is not doubled",
-			files:       fstest.MapFS{"index.html": {Data: []byte(shell)}},
+			files:       fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 			routePrefix: "/argus/",
 			want:        `<base href="/argus/" />`,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "gzipped shell is decompressed",
-			files:       fstest.MapFS{"index.html.gz": {Data: gzipped(t, shell)}},
+			files:       fstest.MapFS{indexFileGz: {Data: gzipFixture(t, testShell)}},
 			routePrefix: "/argus",
 			want:        `<base href="/argus/" />`,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "prefix is escaped into the attribute",
-			files:       fstest.MapFS{"index.html": {Data: []byte(shell)}},
+			files:       fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 			routePrefix: `/a"b`,
 			want:        `<base href="/a&#34;b/" />`,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "markers are kept, so the shell can be rewritten again",
-			files:       fstest.MapFS{"index.html": {Data: []byte(shell)}},
+			files:       fstest.MapFS{indexFile: {Data: []byte(testShell)}},
 			routePrefix: "/argus",
 			want:        baseHrefStart + `<base href="/argus/" />` + baseHrefEnd,
+			errRegex:    `^$`,
 		},
 		{
 			name:        "invalid/no markers to rewrite between",
-			files:       fstest.MapFS{"index.html": {Data: []byte("<html></html>")}},
+			files:       fstest.MapFS{indexFile: {Data: []byte("<html></html>")}},
 			routePrefix: "/argus",
 			errRegex:    `no <!--ARGUS_BASE_HREF_START.*to rewrite`,
 		},
 		{
 			name:        "invalid/only the start marker",
-			files:       fstest.MapFS{"index.html": {Data: []byte("<head>" + baseHrefStart + "</head>")}},
+			files:       fstest.MapFS{indexFile: {Data: []byte("<head>" + baseHrefStart + "</head>")}},
 			routePrefix: "/argus",
 			errRegex:    `no <!--ARGUS_BASE_HREF_START.*to rewrite`,
 		},
@@ -393,114 +329,54 @@ func TestIndexHTML(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: indexHTML is called.
 			got, err := indexHTML(tc.files, tc.routePrefix)
-
-			// THEN: errors match expectations.
-			errRegex := util.ValueOr(tc.errRegex, `^$`)
 			e := errfmt.FormatError(err)
-			if !util.RegexCheck(errRegex, e) {
-				t.Fatalf(
-					"%s\nindexHTML(%q) error mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.routePrefix, e, errRegex,
-				)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
-			if tc.errRegex != "" {
+			if err != nil {
 				return
 			}
 
-			// AND: the base href points at the route prefix.
 			if !strings.Contains(string(got), tc.want) {
-				t.Errorf(
-					"%s\nindexHTML() mismatch\nwant to contain: %q\ngot:             %q",
-					packageName, tc.want, got,
-				)
+				t.Errorf("shell mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestIndexHTML__embedded(t *testing.T) {
-	// GIVEN: the index.html actually embedded in the binary, rather than a fixture.
-
-	// WHEN: it is rewritten for a route prefix.
 	got, err := indexHTML(GetFS(), "/argus")
 
-	// THEN: the rewrite finds its markers.
+	// Fails if react-app/index.html loses the markers.
 	if err != nil {
-		t.Fatalf(
-			"%s\nindexHTML(embedded) error: %v",
-			packageName, err,
-		)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// AND: the base href points at the prefix.
 	want := `<base href="/argus/" />`
 	if !bytes.Contains(got, []byte(want)) {
-		t.Errorf(
-			"%s\nindexHTML(embedded) mismatch\nwant to contain: %q\ngot:             %q",
-			packageName, want, got,
-		)
+		t.Errorf("shell mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 }
 
-func TestMemFileInfo(t *testing.T) {
-	// GIVEN: a shell served out of the overlay.
-	const body = "<html>the shell</html>"
-	fSys := overlaidFS{
-		ReadDirFS: fstest.MapFS{indexFile: {Data: []byte("the embedded one")}},
-		overlay:   map[string][]byte{indexFile: []byte(body)},
+func TestGzipBytes(t *testing.T) {
+	gzipped, err := gzipBytes([]byte(testShell))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// WHEN: its [fs.FileInfo] is read.
-	file, err := fSys.Open(indexFile)
-	if err != nil {
-		t.Fatalf(
-			"%s\noverlaidFS.Open() error: %v",
-			packageName, err,
-		)
-	}
-	t.Cleanup(func() { file.Close() })
-	info, err := file.Stat()
-	if err != nil {
-		t.Fatalf(
-			"%s\nmemFile.Stat() error: %v",
-			packageName, err,
-		)
+	got := gunzipFixture(t, gzipped)
+	if string(got) != testShell {
+		t.Errorf("shell mismatch\ngot:  %q\nwant: %q", got, testShell)
 	}
 
-	// THEN: it describes the overlaid content, not the file underneath.
-	if got := info.Name(); got != indexFile {
-		t.Errorf("%s\nmemFileInfo.Name() mismatch\ngot:  %q\nwant: %q",
-			packageName, got, indexFile)
-	}
-	if got, want := info.Size(), int64(len(body)); got != want {
-		t.Errorf("%s\nmemFileInfo.Size() mismatch\ngot:  %d\nwant: %d",
-			packageName, got, want)
-	}
-	if got := info.Mode(); got != 0o444 {
-		t.Errorf("%s\nmemFileInfo.Mode() mismatch\ngot:  %v\nwant: %v",
-			packageName, got, fs.FileMode(0o444))
-	}
-	// Zero, so statigz falls back to its own hash for caching rather than a
-	// modtime that would change on every restart.
-	if got := info.ModTime(); !got.IsZero() {
-		t.Errorf("%s\nmemFileInfo.ModTime() mismatch\ngot:  %v\nwant: the zero time",
-			packageName, got)
-	}
-	if info.IsDir() {
-		t.Errorf("%s\nmemFileInfo.IsDir() mismatch\ngot:  true\nwant: false",
-			packageName)
-	}
-	if got := info.Sys(); got != nil {
-		t.Errorf("%s\nmemFileInfo.Sys() mismatch\ngot:  %v\nwant: nil",
-			packageName, got)
+	// gzip writes XFL 2 only for BestCompression.
+	if xfl, want := gzipped[8], byte(2); xfl != want {
+		t.Errorf("gzipped[8] mismatch\ngot:  %d\nwant: %d", xfl, want)
 	}
 }
 
 func TestMemFile__seek(t *testing.T) {
-	// GIVEN: a shell served out of the overlay - range requests are served by
-	// seeking it.
 	const body = "0123456789"
 	fSys := overlaidFS{
 		ReadDirFS: fstest.MapFS{},
@@ -508,38 +384,66 @@ func TestMemFile__seek(t *testing.T) {
 	}
 	file, err := fSys.Open(indexFile)
 	if err != nil {
-		t.Fatalf(
-			"%s\noverlaidFS.Open() error: %v",
-			packageName, err,
-		)
+		t.Fatalf("overlaidFS.Open() failed: %v", err)
 	}
-	t.Cleanup(func() { file.Close() })
+	t.Cleanup(func() { _ = file.Close() })
 
+	// Range requests seek into the overlay.
 	seeker, ok := file.(io.ReadSeeker)
 	if !ok {
-		t.Fatalf("%s\nmemFile is not an io.ReadSeeker", packageName)
+		t.Fatalf("overlaidFS.Open() type mismatch\ngot:  %T\nwant: io.ReadSeeker", file)
 	}
 
-	// WHEN: it is seeked into and read from.
-	if _, err := seeker.Seek(4, io.SeekStart); err != nil {
-		t.Fatalf(
-			"%s\nmemFile.Seek() error: %v",
-			packageName, err,
-		)
+	offset := int64(4)
+	_, err = seeker.Seek(offset, io.SeekStart)
+	if err != nil {
+		t.Fatalf("ReadSeeker.Seek() failed: %v", err)
 	}
 	got, err := io.ReadAll(seeker)
 	if err != nil {
-		t.Fatalf(
-			"%s\nmemFile read after seek: %v",
-			packageName, err,
-		)
+		t.Fatalf("io.ReadAll() failed: %v", err)
 	}
 
-	// THEN: the remainder is returned.
-	if want := body[4:]; string(got) != want {
-		t.Errorf(
-			"%s\nmemFile read after seek mismatch\ngot:  %q\nwant: %q",
-			packageName, got, want,
-		)
+	if want := body[offset:]; string(got) != want {
+		t.Errorf("io.ReadAll() mismatch\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
+func TestMemFileInfo(t *testing.T) {
+	// The embedded file differs in size, so Size() tells the two apart.
+	const body = "<html>the shell</html>"
+	fSys := overlaidFS{
+		ReadDirFS: fstest.MapFS{indexFile: {Data: []byte("the embedded one")}},
+		overlay:   map[string][]byte{indexFile: []byte(body)},
+	}
+
+	file, err := fSys.Open(indexFile)
+	if err != nil {
+		t.Fatalf("overlaidFS.Open() failed: %v", err)
+	}
+	t.Cleanup(func() { _ = file.Close() })
+	info, err := file.Stat()
+	if err != nil {
+		t.Fatalf("memFile.Stat() failed: %v", err)
+	}
+
+	if got := info.Name(); got != indexFile {
+		t.Errorf("memFileInfo.Name() mismatch\ngot:  %q\nwant: %q", got, indexFile)
+	}
+	if got, want := info.Size(), int64(len(body)); got != want {
+		t.Errorf("memFileInfo.Size() mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+	if got := info.Mode(); got != 0o444 {
+		t.Errorf("memFileInfo.Mode() mismatch\ngot:  %v\nwant: %v", got, fs.FileMode(0o444))
+	}
+	// statigz ETags on its own content hash, so it never reads ModTime.
+	if got := info.ModTime(); !got.IsZero() {
+		t.Errorf("memFileInfo.ModTime() mismatch\ngot:  %v\nwant: %v", got, time.Time{})
+	}
+	if info.IsDir() {
+		t.Error("memFileInfo.IsDir() mismatch\ngot:  true\nwant: false")
+	}
+	if got := info.Sys(); got != nil {
+		t.Errorf("memFileInfo.Sys() mismatch\ngot:  %v\nwant: nil", got)
 	}
 }

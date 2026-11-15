@@ -27,25 +27,25 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-var packageName = "api.types"
 var secretValueMarshaled string
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Marshal the secret value '<secret>' -> '\u003csecret\u003e'.
-	secretValueMarshaledBytes, _ := decode.Marshal("json", util.SecretValue)
+	// decode.Marshal escapes '<secret>' to '\u003csecret\u003e'.
+	secretValueMarshaledBytes, err := decode.Marshal("json", util.SecretValue)
+	if err != nil {
+		fmt.Printf("decode.Marshal() failed: %v\n", err)
+		os.Exit(1)
+	}
 	secretValueMarshaled = string(secretValueMarshaledBytes)
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
