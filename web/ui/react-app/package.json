@@ -43,7 +43,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "yaml": "^2.9.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.6"
   },
   "description": "Automated checks for new software releases",
   "devDependencies": {
