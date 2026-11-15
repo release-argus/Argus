@@ -213,9 +213,9 @@ func testLoadBasic(t *testing.T, file string) *Config {
 func testServiceURL(t *testing.T, id string) *service.Service {
 	t.Helper()
 
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	svc, err := service.DecodeService(
 		"yaml", []byte(test.TrimYAML(`
@@ -262,9 +262,9 @@ func testServiceURL(t *testing.T, id string) *service.Service {
 func testServiceManualDV(t *testing.T, id, version string) *service.Service {
 	t.Helper()
 
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	svc, err := service.DecodeService(
 		"yaml", []byte(test.TrimYAML(`
@@ -294,12 +294,10 @@ func testServiceManualDV(t *testing.T, id, version string) *service.Service {
 }
 
 // plainDefaults returns plain defaults and hardDefaults for testing.
-func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
-	t.Helper()
-
-	svcCfg := svctest.PlainDefaultsConfig(t)
+func plainDefaults() (*Defaults, *Defaults) {
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 	defaults := &Defaults{
 		Service: *svcCfg.Soft,
 		Notify:  notifyCfg.Defaults,

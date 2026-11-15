@@ -18,16 +18,12 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/internal/test"
 	opt "github.com/release-argus/Argus/service/option"
 )
 
 // PlainOptions returns service options decoded with the given defaults config.
-func PlainOptions(t *testing.T, cfg opt.DefaultsConfig) *opt.Options {
-	t.Helper()
-
+func PlainOptions(cfg opt.DefaultsConfig) *opt.Options {
 	options, _ := opt.Decode("yaml", nil, cfg)
 
 	return options
@@ -37,7 +33,7 @@ func PlainOptions(t *testing.T, cfg opt.DefaultsConfig) *opt.Options {
 func Options(t test.TB) *opt.Options {
 	t.Helper()
 
-	optCfg := PlainDefaultsConfig(t)
+	optCfg := PlainDefaultsConfig()
 
 	options, err := opt.Decode(
 		"yaml", []byte(test.TrimYAML(`

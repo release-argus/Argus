@@ -693,7 +693,7 @@ func TestDefaults_Default(t *testing.T) {
 }
 
 func TestDefaults_SetDefaults(t *testing.T) {
-	_, hardDefaults := plainDefaults(t)
+	_, hardDefaults := plainDefaults()
 
 	tests := []struct {
 		name     string
@@ -717,7 +717,7 @@ func TestDefaults_SetDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			defaults, _ := plainDefaults(t)
+			defaults, _ := plainDefaults()
 			defaults.Defaults = nil
 
 			defaults.SetDefaults(tc.defaults)
@@ -908,7 +908,7 @@ func TestGetRegistryDefaults(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, defaults := plainDefaults(t)
+			_, defaults := plainDefaults()
 			want := tc.arrange(defaults)
 
 			// Siblings stay populated, so a wrong switch arm returns a non-nil sibling and fails.

@@ -724,7 +724,7 @@ func TestLookup_HandleResponse(t *testing.T) {
 }
 
 func TestLookup_ReleaseMeetsRequirements(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
 
 	type wants struct {
 		version     string

@@ -388,9 +388,9 @@ func TestConvertAndCensorDefaults__Default(t *testing.T) {
 //
 
 func TestConvertAndCensorService(t *testing.T) {
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name  string
@@ -947,7 +947,7 @@ func TestConvertAndCensorLatestVersionDefaults(t *testing.T) {
 }
 
 func TestConvertAndCensorLatestVersion(t *testing.T) {
-	lvCfg := lvtest.PlainDefaultsConfig(t)
+	lvCfg := lvtest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name  string
@@ -1415,7 +1415,7 @@ func TestConvertAndCensorRequireDockerRegistryDefaults__unknownType(t *testing.T
 }
 
 func TestConvertAndCensorLatestVersionRequire(t *testing.T) {
-	configDefaults, _ := plainDefaults(t)
+	configDefaults, _ := plainDefaults()
 	defaults := configDefaults.Service.LatestVersion.Common.Require
 
 	tests := []struct {
@@ -1676,7 +1676,7 @@ func TestConvertURLCommands(t *testing.T) {
 //
 
 func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 	dvCfg := dvtest.PlainDefaultsConfig()
 
 	tests := []struct {

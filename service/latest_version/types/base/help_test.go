@@ -83,10 +83,8 @@ func decodeTestLookup(
 }
 
 // plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) DefaultsConfig {
-	t.Helper()
-
-	optCfg := opttest.PlainDefaultsConfig(t)
+func plainDefaultsConfig() DefaultsConfig {
+	optCfg := opttest.PlainDefaultsConfig()
 
 	defaults, _ := DecodeDefaults("yaml", nil)
 	defaults.Options = optCfg.Soft

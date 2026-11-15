@@ -28,7 +28,7 @@ import (
 
 func TestDecode(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format, data string
@@ -117,7 +117,7 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus, _ := statustest.New("yaml", nil)
 
 			lookup, err, testErr := test.AssertDecode(
@@ -158,7 +158,7 @@ func TestDecode(t *testing.T) {
 
 func TestApplyOverrides(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format, data string
@@ -271,7 +271,7 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus := status.New(
 				nil, nil, nil,
 				"",

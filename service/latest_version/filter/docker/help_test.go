@@ -41,9 +41,7 @@ func TestMain(m *testing.M) {
 }
 
 // plainDefaults returns plain defaults and hardDefaults for testing.
-func plainDefaults(t *testing.T) (*Defaults, *Defaults) {
-	t.Helper()
-
+func plainDefaults() (*Defaults, *Defaults) {
 	hardDefaults, _ := DecodeDefaults("yaml", nil, nil)
 	hardDefaults.Default()
 	defaults, _ := DecodeDefaults("yaml", nil, hardDefaults)

@@ -18,19 +18,18 @@
 package forgejo
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestLookup_CheckValues(t *testing.T) {
-	// GIVEN: a Lookup in YAML.
 	t.Setenv("ARGUS_TEST_LV_FORGEJO_OWNER", "owner")
 	t.Setenv("ARGUS_TEST_LV_FORGEJO_REPO", "repo")
 	tests := []struct {
@@ -257,18 +256,18 @@ func TestLookup_CheckValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svcStatus, _ := statustest.New("yaml", []byte(`id: "`+t.Name()+`"`))
+			svcStatus, err := statustest.New("yaml", []byte(`id: "`+t.Name()+`"`))
+			if err != nil {
+				t.Fatalf("statustest.New() failed: %v", err)
+			}
 			lookup, err := Decode(
 				"yaml", []byte(test.TrimYAML(tc.lookupYAML)),
 				nil,
 				svcStatus,
-				plainDefaultsConfig(t),
+				lvbasetest.PlainDefaultsConfig(),
 			)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed to decode Lookup: %v",
-					packageName, err,
-				)
+				t.Fatalf("Decode() failed: %v", err)
 			}
 			lookup.SetTypeDefaults(
 				&Defaults{Host: tc.defaults},
@@ -276,29 +275,20 @@ func TestLookup_CheckValues(t *testing.T) {
 			)
 			hadHost, hadURL := lookup.Host, lookup.URL
 
-			// WHEN: CheckValues is called.
 			err = lookup.CheckValues()
-
-			prefix := fmt.Sprintf(
-				"%s\nLookup.CheckValues() on %q",
-				packageName, tc.lookupYAML,
-			)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 
-			// AND: nothing beyond a trailing '/' on the host was touched.
+			// Only a trailing / on the host may change; the rest stays as written.
 			hadHost = strings.TrimRight(hadHost, "/")
 			if lookup.Host != hadHost || lookup.URL != hadURL {
 				t.Fatalf(
-					"%s\nLookup.CheckValues() rewrote what the user wrote\ngot:  host=%q, url=%q\nwant: host=%q, url=%q",
-					packageName, lookup.Host, lookup.URL, hadHost, hadURL,
+					"Lookup.Host, Lookup.URL mismatch\n"+
+						"got:  Host=%q, URL=%q\nwant: Host=%q, URL=%q",
+					lookup.Host, lookup.URL,
+					hadHost, hadURL,
 				)
 			}
 		})
@@ -306,7 +296,6 @@ func TestLookup_CheckValues(t *testing.T) {
 }
 
 func TestLookup_CheckValues__warnsOnPlaintextToken(t *testing.T) {
-	// GIVEN: a Lookup with a token, on an http and on an https host.
 	tests := []struct {
 		name     string
 		host     string
@@ -334,10 +323,14 @@ func TestLookup_CheckValues__warnsOnPlaintextToken(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
-			svcStatus, _ := statustest.New("yaml", []byte(`id: "`+t.Name()+`"`))
+			svcStatus, err := statustest.New("yaml", []byte(`id: "`+t.Name()+`"`))
+			if err != nil {
+				t.Fatalf("statustest.New() failed: %v", err)
+			}
 			lookup, err := Decode(
 				"yaml", []byte(test.TrimYAML(`
 					host: `+tc.host+`
@@ -345,45 +338,33 @@ func TestLookup_CheckValues__warnsOnPlaintextToken(t *testing.T) {
 					access_token: `+tc.token)),
 				nil,
 				svcStatus,
-				plainDefaultsConfig(t),
+				lvbasetest.PlainDefaultsConfig(),
 			)
 			if err != nil {
-				t.Fatalf(
-					"%s\nfailed to decode Lookup: %v",
-					packageName, err,
-				)
+				t.Fatalf("Decode() failed: %v", err)
 			}
 			lookup.SetTypeDefaults(&Defaults{}, &Defaults{})
 
-			// WHEN: CheckValues is called.
 			err = lookup.CheckValues()
 
-			prefix := fmt.Sprintf("%s\nLookup.CheckValues()", packageName)
-
-			// THEN: the plaintext-credential warning is logged only when expected.
 			logged := releaseStdout()
 			if gotWarn := strings.Contains(
 				logged, "access_token will be sent unencrypted",
 			); gotWarn != tc.wantWarn {
 				t.Fatalf(
-					"%s warn mismatch\ngot:  %t\nwant: %t\nlog:  %q",
-					prefix, gotWarn, tc.wantWarn, logged,
+					"warn mismatch\ngot:  %t\nwant: %t\nlog:  %q",
+					gotWarn, tc.wantWarn, logged,
 				)
 			}
 
-			// AND: no error is returned.
 			if err != nil {
-				t.Fatalf(
-					"%s unexpected error: %v",
-					prefix, err,
-				)
+				t.Fatalf("Lookup.CheckValues() failed: %v", err)
 			}
 		})
 	}
 }
 
 func TestLookup_CheckValues__TrimsTrailingSlash(t *testing.T) {
-	// GIVEN: hosts written with trailing slashes.
 	tests := []struct {
 		name string
 		host string
@@ -419,27 +400,19 @@ func TestLookup_CheckValues__TrimsTrailingSlash(t *testing.T) {
 				host: `+tc.host+`
 				url: owner/repo`))
 
-			// WHEN: CheckValues is called.
-			if err := lookup.CheckValues(); err != nil {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() unexpected error: %v",
-					packageName, err,
-				)
+			err := lookup.CheckValues()
+			if err != nil {
+				t.Fatalf("Lookup.CheckValues() failed: %v", err)
 			}
 
-			// THEN: the trailing slash is trimmed from the receiver.
 			if lookup.Host != tc.want {
-				t.Fatalf(
-					"%s\nLookup.CheckValues() host mismatch\ngot:  %q\nwant: %q",
-					packageName, lookup.Host, tc.want,
-				)
+				t.Fatalf("Lookup.Host mismatch\ngot:  %q\nwant: %q", lookup.Host, tc.want)
 			}
 		})
 	}
 }
 
 func TestLookup_HostProblem(t *testing.T) {
-	// GIVEN: a host spelling.
 	tests := []struct {
 		name  string
 		host  string
@@ -467,7 +440,7 @@ func TestLookup_HostProblem(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "ok/schema, host, port, sub-path",
+			name: "ok/scheme, host, port, sub-path",
 			host: "http://forge.example.com:3000/git",
 			want: "",
 		},
@@ -542,15 +515,10 @@ func TestLookup_HostProblem(t *testing.T) {
 				&Defaults{},
 			)
 
-			// WHEN: hostProblem is called.
 			got := lookup.hostProblem()
 
-			// THEN: it names what is wrong, or nothing at all.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nLookup{host: %q}.hostProblem() mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.host, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

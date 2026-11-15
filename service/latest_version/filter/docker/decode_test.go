@@ -26,7 +26,7 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name         string
@@ -155,7 +155,7 @@ func withUnknownRegistryType(t *testing.T) {
 func TestDecode_UnknownStructType(t *testing.T) {
 	withUnknownRegistryType(t)
 
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	errRegex := test.TrimYAML(`
 		^docker:
@@ -170,7 +170,7 @@ func TestDecode_UnknownStructType(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name        string
@@ -553,7 +553,7 @@ func TestApplyOverrides(t *testing.T) {
 func TestApplyOverrides_UnknownStructType(t *testing.T) {
 	withUnknownRegistryType(t)
 
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	errRegex := test.TrimYAML(`
 		^docker:

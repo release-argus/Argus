@@ -238,7 +238,7 @@ func TestShoutrrrs_Init(t *testing.T) {
 			} else {
 				mainCount = len(*tc.mains)
 			}
-			serviceStatus := newTestStatus(t, tc.name, mainCount)
+			serviceStatus := newTestStatus(tc.name, mainCount)
 			defaults := ShoutrrrsDefaults{"gotify": &Defaults{}}
 			hardDefaults := ShoutrrrsDefaults{"gotify": &Defaults{}}
 

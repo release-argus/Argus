@@ -26,13 +26,7 @@ func TestPlainOptions(t *testing.T) {
 	defaults := &opt.Defaults{}
 	hardDefaults := &opt.Defaults{}
 
-	got := PlainOptions(
-		t,
-		opt.DefaultsConfig{
-			Soft: defaults,
-			Hard: hardDefaults,
-		},
-	)
+	got := PlainOptions(opt.DefaultsConfig{Soft: defaults, Hard: hardDefaults})
 
 	if got == nil {
 		t.Fatal("PlainOptions() mismatch\ngot:  nil\nwant: non-nil")

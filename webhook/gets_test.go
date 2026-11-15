@@ -371,7 +371,7 @@ func TestWebhook_GetDesiredStatusCode(t *testing.T) {
 }
 
 func TestWebhook_SetAndGetFail(t *testing.T) {
-	whCfg := plainConfig(t)
+	whCfg := plainConfig()
 
 	tests := []struct {
 		name         string
@@ -432,7 +432,7 @@ func TestWebhook_SetAndGetFail(t *testing.T) {
 }
 
 func TestWebhook_SetAndGetNextRunnable(t *testing.T) {
-	whCfg := plainConfig(t)
+	whCfg := plainConfig()
 
 	tests := []struct {
 		name         string

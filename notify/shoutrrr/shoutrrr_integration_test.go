@@ -169,7 +169,7 @@ func TestShoutrrr_Send(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			svcStatus := newTestStatus(t, "TestShoutrrr_Send - "+tc.name, 1)
+			svcStatus := newTestStatus("TestShoutrrr_Send - "+tc.name, 1)
 			tc.shoutrrr.Init(
 				svcStatus,
 				&Defaults{},

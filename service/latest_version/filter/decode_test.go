@@ -27,7 +27,7 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	tests := []struct {
 		name         string
@@ -155,7 +155,7 @@ func TestDecode(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 
 	type Args struct {
 		format, data string

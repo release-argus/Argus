@@ -19,7 +19,7 @@ package test
 import "testing"
 
 func TestPlainDefaultsConfig(t *testing.T) {
-	optCfg := PlainDefaultsConfig(t)
+	optCfg := PlainDefaultsConfig()
 
 	if optCfg.Soft == nil {
 		t.Error("DefaultsConfig.Soft mismatch\ngot:  nil\nwant: non-nil")

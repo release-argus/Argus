@@ -59,7 +59,7 @@ func TestRequireDefaults_IsZero(t *testing.T) {
 }
 
 func TestRequireDefaults_SetDefaults(t *testing.T) {
-	defaults, _ := plainDefaults(t)
+	defaults, _ := plainDefaults()
 	req, _ := DecodeDefaults("yaml", nil)
 
 	req.SetDefaults(defaults)

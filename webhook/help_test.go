@@ -117,9 +117,7 @@ func testDefaults(t *testing.T, failing bool) *Defaults {
 }
 
 // plainConfig returns plain defaults and hardDefaults for testing.
-func plainConfig(t *testing.T) Config {
-	t.Helper()
-
+func plainConfig() Config {
 	defaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults, _ := DecodeDefaults("yaml", nil)
 	hardDefaults.Default()

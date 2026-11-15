@@ -18,7 +18,6 @@
 package forgejo
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -30,7 +29,6 @@ import (
 )
 
 func TestHostDefaults_IsZero(t *testing.T) {
-	// GIVEN: a HostDefaults with some combination of its fields set.
 	tests := []struct {
 		name  string
 		entry HostDefaults
@@ -66,22 +64,16 @@ func TestHostDefaults_IsZero(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: IsZero is called.
 			got := tc.entry.IsZero()
 
-			// THEN: it reports whether anything is set.
 			if got != tc.want {
-				t.Fatalf(
-					"%s\nHostDefaults.IsZero() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
 		})
 	}
 }
 
 func TestHostDefaults_Inherit(t *testing.T) {
-	// GIVEN: an entry, and the entry it falls back on.
 	tests := []struct {
 		name  string
 		host  HostDefaults
@@ -124,107 +116,23 @@ func TestHostDefaults_Inherit(t *testing.T) {
 
 			got := tc.host
 
-			// WHEN: inherit is called with the entry to fall back on.
 			got.inherit(tc.entry)
 
-			// THEN: only the unset fields were filled.
-			for _, check := range []struct {
-				name, got, want string
-			}{
-				{
-					name: "url",
-					got:  got.URL,
-					want: tc.want.URL,
-				},
-				{
-					name: "access_token",
-					got:  got.AccessToken,
-					want: tc.want.AccessToken,
-				},
-				{
-					name: "allow_invalid_certs",
-					got:  test.StringifyPtr(got.AllowInvalidCerts),
-					want: test.StringifyPtr(tc.want.AllowInvalidCerts),
-				},
-			} {
-				if check.got != check.want {
-					t.Errorf(
-						"%s\nHostDefaults.inherit() %s mismatch\ngot:  %q\nwant: %q",
-						packageName, check.name,
-						check.got, check.want,
-					)
-				}
+			fieldTests := []test.FieldAssertion{
+				{Name: "URL", Got: got.URL, Want: tc.want.URL, Mode: test.CompareEqual},
+				{Name: "AccessToken", Got: got.AccessToken, Want: tc.want.AccessToken, Mode: test.CompareEqual},
+				{Name: "AllowInvalidCerts", Got: test.StringifyPtr(got.AllowInvalidCerts), Want: test.StringifyPtr(tc.want.AllowInvalidCerts), Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "HostDefaults"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
-	}
-}
-
-func TestDefaults_IsZero(t *testing.T) {
-	// GIVEN: a Defaults with some combination of its fields set.
-	tests := []struct {
-		name     string
-		defaults Defaults
-		want     bool
-	}{
-		{
-			name: "empty",
-			want: true,
-		},
-		{
-			name:     "common only",
-			defaults: Defaults{Common: CommonDefaults{UsePreRelease: new(false)}},
-		},
-		{
-			name: "one instance",
-			defaults: Defaults{Host: map[string]HostDefaults{
-				"Codeberg": {URL: "https://codeberg.org"},
-			}},
-		},
-		{
-			name: "an empty instance still counts",
-			defaults: Defaults{Host: map[string]HostDefaults{
-				"Codeberg": {},
-			}},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// WHEN: IsZero is called.
-			got := tc.defaults.IsZero()
-
-			// THEN: it reports whether anything is set.
-			if got != tc.want {
-				t.Fatalf(
-					"%s\nDefaults.IsZero() mismatch\ngot:  %t\nwant: %t",
-					packageName, got, tc.want,
-				)
-			}
-		})
-	}
-}
-
-func TestDefaults_Default(t *testing.T) {
-	// GIVEN: a Defaults.
-	defaults := Defaults{}
-
-	// WHEN: Default is called.
-	defaults.Default()
-
-	// THEN: prereleases are excluded.
-	if defaults.Common.UsePreRelease == nil || *defaults.Common.UsePreRelease {
-		t.Fatalf(
-			"%s\nDefaults.Default() common.use_prerelease mismatch\ngot:  %v\nwant: false",
-			packageName, defaults.Common.UsePreRelease,
-		)
 	}
 }
 
 func TestDefaults_SetDefaults(t *testing.T) {
 	host := "Codeberg"
-	// GIVEN: a Defaults naming an instance it gives no URL.
+
 	defaults := Defaults{Host: map[string]HostDefaults{
 		host: {AccessToken: "cb-token"},
 	}}
@@ -232,40 +140,38 @@ func TestDefaults_SetDefaults(t *testing.T) {
 		host: {URL: "https://codeberg.org"},
 	}}
 
-	// WHEN: nothing has been set to fall back on.
 	resolved, _ := defaults.resolvedHost(host)
 	if g, w := resolved.URL, ""; g != w {
 		t.Fatalf(
-			"%s\nDefaults.resolvedHost().URL before SetDefaults mismatch\ngot:  %q\nwant: %q",
-			packageName, g, w,
+			"before SetDefaults: Defaults.resolvedHost().URL mismatch\ngot:  %q\nwant: %q",
+			g, w,
 		)
 	}
 
-	// WHEN: SetDefaults gives it a layer to fall back on.
 	defaults.SetDefaults(&hardDefaults)
 
-	// THEN: that layer is consulted.
 	resolved, _ = defaults.resolvedHost(host)
 	if g, w := resolved.URL, hardDefaults.Host[host].URL; g != w {
 		t.Fatalf(
-			"%s\nDefaults.resolvedHost().URL after SetDefaults mismatch\ngot:  %q\nwant: %q",
-			packageName, g, w,
+			"after SetDefaults: Defaults.resolvedHost().URL mismatch\ngot:  %q\nwant: %q",
+			g, w,
 		)
 	}
 
-	// AND: a nil Defaults takes a layer without panicking.
+	// Must not panic on a nil receiver.
 	var nilDefaults *Defaults
 	nilDefaults.SetDefaults(&hardDefaults)
-	if resolved, named := nilDefaults.resolvedHost(host); named || resolved.URL != "" {
+	wantURL := ""
+	if resolved, named := nilDefaults.resolvedHost(host); named || resolved.URL != wantURL {
 		t.Errorf(
-			"%s\nnil Defaults.resolvedHost() mismatch\ngot:  url=%q named=%t\nwant: url=\"\" named=false",
-			packageName, resolved.URL, named,
+			"nil: Defaults.resolvedHost() mismatch\n"+
+				"got:  URL=%q, named=%t\nwant: URL=%q, named=false",
+			resolved.URL, named, wantURL,
 		)
 	}
 }
 
 func TestDefaults_ResolvedHost(t *testing.T) {
-	// GIVEN: a host, and instances layered under it.
 	tests := []struct {
 		name      string
 		host      string
@@ -358,56 +264,79 @@ func TestDefaults_ResolvedHost(t *testing.T) {
 				defaults.SetDefaults(&Defaults{Host: *tc.defaults})
 			}
 
-			// WHEN: resolvedHost is called.
 			got, gotNamed := defaults.resolvedHost(tc.host)
 
-			prefix := fmt.Sprintf(
-				"%s\nDefaults{host: %q}.resolvedHost()",
-				packageName, tc.host,
-			)
-
-			// THEN: every field resolves across the layers.
-			for _, check := range []struct {
-				name, got, want string
-			}{
-				{
-					name: "url",
-					got:  got.URL,
-					want: tc.want.URL,
-				},
-				{
-					name: "access_token",
-					got:  got.AccessToken,
-					want: tc.want.AccessToken,
-				},
-				{
-					name: "allow_invalid_certs",
-					got:  test.StringifyPtr(got.AllowInvalidCerts),
-					want: test.StringifyPtr(tc.want.AllowInvalidCerts),
-				},
-			} {
-				if check.got != check.want {
-					t.Errorf(
-						"%s %s mismatch\ngot:  %q\nwant: %q",
-						prefix, check.name,
-						check.got, check.want,
-					)
-				}
+			fieldTests := []test.FieldAssertion{
+				{Name: "URL", Got: got.URL, Want: tc.want.URL, Mode: test.CompareEqual},
+				{Name: "AccessToken", Got: got.AccessToken, Want: tc.want.AccessToken, Mode: test.CompareEqual},
+				{Name: "AllowInvalidCerts", Got: test.StringifyPtr(got.AllowInvalidCerts), Want: test.StringifyPtr(tc.want.AllowInvalidCerts), Mode: test.CompareEqual},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "HostDefaults"); testErr != nil {
+				t.Error(testErr)
 			}
 
-			// AND: whether any layer names the instance is reported correctly.
 			if gotNamed != tc.wantNamed {
-				t.Errorf(
-					"%s named mismatch\ngot:  %t\nwant: %t",
-					prefix, gotNamed, tc.wantNamed,
-				)
+				t.Errorf("named mismatch\ngot:  %t\nwant: %t", gotNamed, tc.wantNamed)
 			}
 		})
 	}
 }
 
+func TestDefaults_IsZero(t *testing.T) {
+	tests := []struct {
+		name     string
+		defaults Defaults
+		want     bool
+	}{
+		{
+			name: "empty",
+			want: true,
+		},
+		{
+			name:     "common only",
+			defaults: Defaults{Common: CommonDefaults{UsePreRelease: new(false)}},
+		},
+		{
+			name: "one instance",
+			defaults: Defaults{Host: map[string]HostDefaults{
+				"Codeberg": {URL: "https://codeberg.org"},
+			}},
+		},
+		{
+			name: "an empty instance still counts",
+			defaults: Defaults{Host: map[string]HostDefaults{
+				"Codeberg": {},
+			}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tc.defaults.IsZero()
+
+			if got != tc.want {
+				t.Fatalf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDefaults_Default(t *testing.T) {
+	defaults := Defaults{}
+
+	defaults.Default()
+
+	if defaults.Common.UsePreRelease == nil || *defaults.Common.UsePreRelease {
+		t.Fatalf(
+			"Defaults.Common.UsePreRelease mismatch\ngot:  %s\nwant: false",
+			test.StringifyPtr(defaults.Common.UsePreRelease),
+		)
+	}
+}
+
 func TestDefaults_HostEntry(t *testing.T) {
-	// GIVEN: named instances, and a host naming one of them.
 	hosts := map[string]HostDefaults{
 		"Codeberg": {URL: "https://codeberg.org", AccessToken: "cb-token"},
 		"Work":     {URL: "https://git.example.com:8443/forge", AccessToken: "work-token"},
@@ -480,20 +409,15 @@ func TestDefaults_HostEntry(t *testing.T) {
 			}
 			defaults := Defaults{Host: entries}
 
-			// WHEN: hostEntry is called.
 			got, found := defaults.hostEntry(tc.host)
 
-			// THEN: the entry naming that instance is returned, if any.
 			if found != tc.found {
-				t.Fatalf(
-					"%s\nDefaults.hostEntry(%q) found mismatch\ngot:  %t\nwant: %t",
-					packageName, tc.host, found, tc.found,
-				)
+				t.Fatalf("found mismatch\ngot:  %t\nwant: %t", found, tc.found)
 			}
 			if got.AccessToken != tc.want {
 				t.Fatalf(
-					"%s\nDefaults.hostEntry(%q) mismatch\ngot:  %q\nwant: %q",
-					packageName, tc.host, got.AccessToken, tc.want,
+					"HostDefaults.AccessToken mismatch\ngot:  %q\nwant: %q",
+					got.AccessToken, tc.want,
 				)
 			}
 		})
@@ -501,7 +425,6 @@ func TestDefaults_HostEntry(t *testing.T) {
 }
 
 func TestDefaults_CheckValues(t *testing.T) {
-	// GIVEN: named instances.
 	tests := []struct {
 		name     string
 		hosts    map[string]HostDefaults
@@ -703,23 +626,16 @@ func TestDefaults_CheckValues(t *testing.T) {
 				defaults.SetDefaults(&Defaults{Host: tc.defaults})
 			}
 
-			// WHEN: CheckValues is called.
 			err := defaults.CheckValues()
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s\nDefaults.CheckValues() error mismatch\ngot:  %q\nwant: %q",
-					packageName, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}
 }
 
 func TestDefaults_CheckValues__warnsOnPlaintextToken(t *testing.T) {
-	// GIVEN: named instances, each with a token, on http and on https.
 	tests := []struct {
 		name     string
 		hosts    map[string]HostDefaults
@@ -769,7 +685,8 @@ func TestDefaults_CheckValues__warnsOnPlaintextToken(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// t.Parallel() - Cannot run in parallel since we're using stdout.
+			// Serial: captures stdout.
+
 			releaseStdout := test.CaptureLog(t, logx.Default())
 
 			defaults := Defaults{Host: tc.hosts}
@@ -777,33 +694,26 @@ func TestDefaults_CheckValues__warnsOnPlaintextToken(t *testing.T) {
 				defaults.SetDefaults(&Defaults{Host: tc.defaults})
 			}
 
-			// WHEN: CheckValues is called.
 			err := defaults.CheckValues()
 
-			// THEN: the plaintext-credential warning is logged only when expected.
 			logged := releaseStdout()
 			if gotWarn := strings.Contains(
-				logged, "access_token will be sent unencrypted",
+				logged, "access_token will be sent unencrypted as the url uses http",
 			); gotWarn != tc.wantWarn {
 				t.Fatalf(
-					"%s\nDefaults.CheckValues() warn mismatch\ngot:  %t\nwant: %t\nlog:  %q",
-					packageName, gotWarn, tc.wantWarn, logged,
+					"warn mismatch\ngot:  %t\nwant: %t\nlog:  %q",
+					gotWarn, tc.wantWarn, logged,
 				)
 			}
 
-			// AND: no error is returned.
 			if err != nil {
-				t.Fatalf(
-					"%s\nDefaults.CheckValues() unexpected error: %v",
-					packageName, err,
-				)
+				t.Fatalf("Defaults.CheckValues() failed: %v", err)
 			}
 		})
 	}
 }
 
 func TestDefaults_Unmarshal(t *testing.T) {
-	// GIVEN: a defaults document holding common values and named instances.
 	tests := []struct {
 		name     string
 		yaml     string
@@ -887,48 +797,42 @@ func TestDefaults_Unmarshal(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		for _, format := range []string{"json", "yaml"} {
-			t.Run(tc.name+"/"+format, func(t *testing.T) {
-				t.Parallel()
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-				var data string
-				if format == "yaml" {
-					data = test.TrimYAML(tc.yaml)
-				} else {
-					data = test.TrimJSON(tc.json)
-				}
+			for _, format := range []string{"json", "yaml"} {
+				t.Run(format, func(t *testing.T) {
+					t.Parallel()
 
-				// WHEN: it is unmarshalled.
-				var got Defaults
-				err := decode.Unmarshal(format, []byte(data), &got)
+					var data string
+					if format == "yaml" {
+						data = test.TrimYAML(tc.yaml)
+					} else {
+						data = test.TrimJSON(tc.json)
+					}
 
-				prefix := fmt.Sprintf(
-					"%s\nDefaults.Unmarshal(format=%q, data=%q)",
-					packageName, format, data,
-				)
+					var got Defaults
+					err := decode.Unmarshal(format, []byte(data), &got)
+					e := errfmt.FormatError(err)
+					if !util.RegexCheck(tc.errRegex, e) {
+						t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+					}
+					if err != nil {
+						return
+					}
 
-				// THEN: any error is as expected.
-				e := errfmt.FormatError(err)
-				if !util.RegexCheck(tc.errRegex, e) {
-					t.Fatalf("%s error mismatch\ngot:  %q\nwant: %q", prefix, e, tc.errRegex)
-				}
-				if tc.errRegex != `^$` {
-					return
-				}
-
-				// AND: the fields are as expected.
-				gotStr := decode.ToYAMLString(got, "")
-				wantStr := decode.ToYAMLString(tc.want, "")
-				if gotStr != wantStr {
-					t.Fatalf("%s mismatch\ngot:  %q\nwant: %q", prefix, gotStr, wantStr)
-				}
-			})
-		}
+					gotStr := decode.ToYAMLString(got, "")
+					wantStr := decode.ToYAMLString(tc.want, "")
+					if gotStr != wantStr {
+						t.Fatalf("Defaults mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
+					}
+				})
+			}
+		})
 	}
 }
 
 func TestDefaults_Marshal(t *testing.T) {
-	// GIVEN: a Defaults holding common values and named instances.
 	defaults := Defaults{
 		Common: CommonDefaults{UsePreRelease: new(true)},
 		Host: map[string]HostDefaults{
@@ -941,25 +845,19 @@ func TestDefaults_Marshal(t *testing.T) {
 		t.Run(format, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: it is marshalled and unmarshalled again.
 			data, err := decode.Marshal(format, defaults)
 			if err != nil {
-				t.Fatalf("%s\nDefaults.Marshal(%q) failed: %v", packageName, format, err)
+				t.Fatalf("decode.Marshal() failed: %v", err)
 			}
 			var got Defaults
 			if err := decode.Unmarshal(format, data, &got); err != nil {
-				t.Fatalf("%s\nDefaults.Unmarshal(%q, %q) failed: %v",
-					packageName, format, string(data), err)
+				t.Fatalf("decode.Unmarshal() failed: %v", err)
 			}
 
-			// THEN: nothing is lost on the way round.
 			gotStr := decode.ToYAMLString(got, "")
 			wantStr := decode.ToYAMLString(defaults, "")
 			if gotStr != wantStr {
-				t.Fatalf(
-					"%s\nDefaults round-trip (%s) mismatch\ngot:  %q\nwant: %q",
-					packageName, format, gotStr, wantStr,
-				)
+				t.Fatalf("Defaults mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 		})
 	}

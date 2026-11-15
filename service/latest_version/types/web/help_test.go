@@ -19,51 +19,39 @@ package web
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
 	"github.com/release-argus/Argus/service/dashboard"
-	"github.com/release-argus/Argus/service/latest_version/types/base"
-	opt "github.com/release-argus/Argus/service/option"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	opttest "github.com/release-argus/Argus/service/option/test"
 	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "latestver_web"
-
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
+// testLookup returns a Lookup on the invalid-cert server, refusing its cert when failing.
 func testLookup(t *testing.T, failing bool) *Lookup {
 	t.Helper()
 
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
 
-	// Options.
-	options, _ := opt.Decode(
-		"yaml", nil,
-		optCfg,
-	)
-	fmt.Println(options.Defaults == nil)
-	fmt.Println(options.HardDefaults == nil)
-	// Status.
+	options := opttest.PlainOptions(opttest.PlainDefaultsConfig())
 	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Init(
 		0, 0, 0,
@@ -75,48 +63,25 @@ func testLookup(t *testing.T, failing bool) *Lookup {
 		},
 	)
 
-	lookup, _ := Decode(
+	lookup, err := Decode(
 		"yaml", []byte(test.TrimYAML(`
 			url: `+test.LookupPlain.URLInvalid+`
 			url_commands:
 				- type: regex
 					regex: 'ver([0-9.]+)'
-			allow_invalid_certs: `+fmt.Sprint(!failing)+`
+			allow_invalid_certs: `+strconv.FormatBool(!failing)+`
 		`)),
 		options,
 		svcStatus,
 		lvCfg,
 	)
+	if err != nil {
+		t.Fatalf("Decode() failed: %v", err)
+	}
 
 	var typeHardDefaults Defaults
 	typeHardDefaults.Default()
 	lookup.SetTypeDefaults(&Defaults{}, &typeHardDefaults)
 
-	if failing {
-		*lookup.AllowInvalidCerts = false
-	}
-
 	return lookup
-}
-
-// plainDefaultsConfig returns plain defaults and hardDefaults for testing.
-func plainDefaultsConfig(t *testing.T) base.DefaultsConfig {
-	t.Helper()
-
-	optDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults, _ := opt.DecodeDefaults("yaml", nil)
-	optHardDefaults.Default()
-
-	defaults, _ := base.DecodeDefaults("yaml", nil)
-	defaults.Options = optDefaults
-	hardDefaults, _ := base.DecodeDefaults("yaml", nil)
-	hardDefaults.Default()
-	hardDefaults.Options = optHardDefaults
-
-	defaults.Require.SetDefaults(&hardDefaults.Require)
-
-	return base.DefaultsConfig{
-		Soft: defaults,
-		Hard: hardDefaults,
-	}
 }

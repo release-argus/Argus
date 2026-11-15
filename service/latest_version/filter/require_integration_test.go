@@ -17,7 +17,6 @@
 package filter
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -27,11 +26,8 @@ import (
 )
 
 func TestRequire_DockerTagCheck(t *testing.T) {
-	defaults, _ := DecodeDefaults("yaml", nil)
-	hardDefaults, _ := DecodeDefaults("yaml", nil)
-	defaults.SetDefaults(hardDefaults)
+	defaults, _ := plainDefaults()
 
-	// GIVEN: a Require with a docker registry.
 	tests := []struct {
 		name     string
 		yaml     string
@@ -151,28 +147,14 @@ func TestRequire_DockerTagCheck(t *testing.T) {
 				return Decode("yaml", []byte(tc.yaml), svcStatus, defaults)
 			})
 
-			// WHEN: DockerTagCheck is called.
 			err := require.DockerTagCheck(tc.version)
-
-			prefix := fmt.Sprintf(
-				"%s\nRequire.DockerTagCheck(%q)",
-				packageName, tc.version,
-			)
-
-			// THEN: the error matches expectation.
 			e := errfmt.FormatError(err)
 			// Registries throttle repeated runs (unauthenticated ECR especially).
 			if util.RegexCheck(`(?i)TOOMANYREQUESTS|rate exceeded|rate limit exceeded`, e) {
-				t.Skipf(
-					"%s registry rate-limited:\n%s",
-					prefix, e,
-				)
+				t.Skipf("registry rate-limited:\n%s", e)
 			}
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}

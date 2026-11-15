@@ -29,8 +29,8 @@ import (
 )
 
 func TestLookup_DecodeSelf(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name         string
@@ -123,7 +123,7 @@ func TestLookup_DecodeSelf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus := &status.Status{}
 			lookup := &Lookup{}
 			lookup.Init(
@@ -255,7 +255,7 @@ func TestDecode(t *testing.T) {
 					return Decode(
 						format, data,
 						nil, nil,
-						lvbasetest.PlainDefaultsConfig(t),
+						lvbasetest.PlainDefaultsConfig(),
 					)
 				},
 				tc.format, tc.data,
@@ -271,8 +271,8 @@ func TestDecode(t *testing.T) {
 }
 
 func TestLookup_ApplyOverrides(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format, data string
@@ -505,7 +505,7 @@ func TestLookup_ApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus := &status.Status{}
 			tc.args.target.Init(options, svcStatus, lvCfg)
 			if tc.want == "" {

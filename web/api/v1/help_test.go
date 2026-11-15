@@ -143,9 +143,7 @@ func (f *failWriter) Write(p []byte) (int, error) {
 }
 
 // plainDefaults returns plain defaults and hardDefaults for testing.
-func plainDefaults(t *testing.T) (*config.Defaults, *config.Defaults) {
-	t.Helper()
-
+func plainDefaults() (*config.Defaults, *config.Defaults) {
 	dockerDefaults, _ := docker.DecodeDefaults("yaml", nil, nil)
 	defaults := config.Defaults{
 		Service: service.Defaults{
@@ -216,9 +214,9 @@ func testService(
 ) *service.Service {
 	t.Helper()
 
-	svcCfg := svctest.PlainDefaultsConfig(t)
+	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	svc := test.Must(t, func() (*service.Service, error) {
 		return service.DecodeService(

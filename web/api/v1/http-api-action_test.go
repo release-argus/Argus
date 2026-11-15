@@ -40,7 +40,7 @@ import (
 )
 
 func TestHTTP_HTTPServiceGetActions(t *testing.T) {
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 	type wants struct {
 		stdoutRegex, bodyRegex string
 		statusCode             int
@@ -94,14 +94,14 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 		{
 			name: "known service_id/0 command, 1 webhooks",
 			webhooks: webhook.Webhooks{
-				"fail0": whtest.Webhook(t, true, false, false),
+				"fail0": whtest.Webhook(true, false, false),
 			},
 		},
 		{
 			name: "known service_id/0 command, 2 webhooks",
 			webhooks: webhook.Webhooks{
-				"fail0": whtest.Webhook(t, true, false, false),
-				"pass0": whtest.Webhook(t, false, false, false),
+				"fail0": whtest.Webhook(true, false, false),
+				"pass0": whtest.Webhook(false, false, false),
 			},
 		},
 		{
@@ -111,8 +111,8 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				testCommand(false),
 			},
 			webhooks: webhook.Webhooks{
-				"fail0": whtest.Webhook(t, true, false, false),
-				"pass0": whtest.Webhook(t, false, false, false),
+				"fail0": whtest.Webhook(true, false, false),
+				"pass0": whtest.Webhook(false, false, false),
 			},
 		},
 		{
@@ -128,9 +128,9 @@ func TestHTTP_HTTPServiceGetActions(t *testing.T) {
 				nil,
 			},
 			webhooks: webhook.Webhooks{
-				"fail0":  whtest.Webhook(t, true, false, false),
-				"pass0":  whtest.Webhook(t, false, false, false),
-				"unsent": whtest.Webhook(t, false, false, false),
+				"fail0":  whtest.Webhook(true, false, false),
+				"pass0":  whtest.Webhook(false, false, false),
+				"unsent": whtest.Webhook(false, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"fail0": new(true),
@@ -391,7 +391,7 @@ func TestHTTP_HTTPServiceGetActions__requiresActionExecute(t *testing.T) {
 }
 
 func TestHTTP_HTTPServiceRunActions(t *testing.T) {
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 	type wants struct {
 		statusCode                  int
 		stdoutRegex, bodyRegex      string
@@ -502,7 +502,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			name:   "ARGUS_ALL/known service_id with webhook",
 			target: new(ActionAll),
 			webhooks: webhook.Webhooks{
-				"known-service-and-webhook": whtest.Webhook(t, true, false, false),
+				"known-service-and-webhook": whtest.Webhook(true, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -513,8 +513,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			name:   "ARGUS_ALL/known service_id with multiple webhooks",
 			target: new(ActionAll),
 			webhooks: webhook.Webhooks{
-				"known-service-and-multiple-webhook-0": whtest.Webhook(t, true, false, false),
-				"known-service-and-multiple-webhook-1": whtest.Webhook(t, true, false, false),
+				"known-service-and-multiple-webhook-0": whtest.Webhook(true, false, false),
+				"known-service-and-multiple-webhook-1": whtest.Webhook(true, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -543,7 +543,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				{"ls", "-b"},
 			},
 			webhooks: webhook.Webhooks{
-				"known-service-dvl-webhook-0": whtest.Webhook(t, false, false, false),
+				"known-service-dvl-webhook-0": whtest.Webhook(false, false, false),
 			},
 			latestVersion: "0.9.0",
 			wants: wants{
@@ -559,7 +559,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				{"ls", "-c"},
 			},
 			webhooks: webhook.Webhooks{
-				"known-service-upgrade-deployed-version-webhook-0": whtest.Webhook(t, false, false, false),
+				"known-service-upgrade-deployed-version-webhook-0": whtest.Webhook(false, false, false),
 			},
 			removeDVL:     true,
 			latestVersion: "0.9.0",
@@ -579,7 +579,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				{"ls", "-d"},
 			},
 			webhooks: webhook.Webhooks{
-				"known-service-fail-webhook-0": whtest.Webhook(t, true, false, false),
+				"known-service-fail-webhook-0": whtest.Webhook(true, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -593,7 +593,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				{"fail"},
 			},
 			webhooks: webhook.Webhooks{
-				"known-service-pass-webhook-0": whtest.Webhook(t, false, false, false),
+				"known-service-pass-webhook-0": whtest.Webhook(false, false, false),
 			},
 			wants: wants{
 				statusCode: http.StatusOK,
@@ -610,8 +610,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				new(false),
 			},
 			webhooks: webhook.Webhooks{
-				"will_pass":  whtest.Webhook(t, false, false, false),
-				"would_fail": whtest.Webhook(t, true, false, false),
+				"will_pass":  whtest.Webhook(false, false, false),
+				"would_fail": whtest.Webhook(true, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"will_pass":  new(true),
@@ -629,8 +629,8 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 			name:   "webhook_NAME/runs the targeted webhook even though it already succeeded",
 			target: new("webhook_already_passed"),
 			webhooks: webhook.Webhooks{
-				"already_passed": whtest.Webhook(t, false, false, false),
-				"unsent":         whtest.Webhook(t, false, false, false),
+				"already_passed": whtest.Webhook(false, false, false),
+				"unsent":         whtest.Webhook(false, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"already_passed": new(false),
@@ -655,7 +655,7 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				new(true),
 			},
 			webhooks: webhook.Webhooks{
-				"would_fail": whtest.Webhook(t, true, false, false),
+				"would_fail": whtest.Webhook(true, false, false),
 			},
 			webhookFails: map[string]*bool{
 				"would_fail": new(false),

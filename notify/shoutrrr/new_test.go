@@ -28,7 +28,7 @@ import (
 )
 
 func TestShoutrrr_FromPayload(t *testing.T) {
-	dashCfg := dashtest.PlainDefaultsConfig(t)
+	dashCfg := dashtest.PlainDefaultsConfig()
 
 	testToken := "Aod9Cb0zXCeOrnD"
 	typeWithDefaults := "gotify"

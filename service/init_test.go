@@ -136,7 +136,7 @@ func TestService_IconURL(t *testing.T) {
 func TestService_Init(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name                    string
@@ -279,7 +279,7 @@ func TestService_Init(t *testing.T) {
 							- - ls
 						webhook:
 							test:
-						`+whtest.Webhook(t, false, false, false).String(".   ")+`
+						`+whtest.Webhook(false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -403,7 +403,7 @@ func TestService_Init(t *testing.T) {
 							url: `+test.ArgusGitHubRepo+`
 						webhook:
 							test:
-						`+whtest.Webhook(t, false, false, false).String(".   ")+`
+						`+whtest.Webhook(false, false, false).String(".   ")+`
 					`)),
 					"Init",
 					svcCfg, notifyCfg, whCfg,
@@ -671,7 +671,7 @@ func TestService_Init(t *testing.T) {
 func TestService_InitMetrics_then_DeleteMetrics(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name               string
@@ -718,8 +718,8 @@ func TestService_InitMetrics_then_DeleteMetrics(t *testing.T) {
 					// Serial: shares metric.ServiceCountCurrent and metric.LatestVersionQueryResultTotal.
 
 					testCommand := command.Command{"ls"}
-					testNotify := shoutrrrtest.Shoutrrr(t, false, false)
-					testWebhook := whtest.Webhook(t, false, false, false)
+					testNotify := shoutrrrtest.Shoutrrr(false, false)
+					testWebhook := whtest.Webhook(false, false, false)
 					svc := test.Must(t, func() (s *Service, err error) {
 						return DecodeService(
 							"yaml", []byte(test.TrimYAML(`

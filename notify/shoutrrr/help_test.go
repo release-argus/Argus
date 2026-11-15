@@ -122,9 +122,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 }
 
 // newTestStatus returns a Status for service id, initialised for the given number of Shoutrrrs.
-func newTestStatus(t *testing.T, id string, shoutrrrs int) *status.Status {
-	t.Helper()
-
+func newTestStatus(id string, shoutrrrs int) *status.Status {
 	svcStatus, _ := statustest.New("yaml", nil)
 	svcStatus.Init(
 		0, shoutrrrs, 0,

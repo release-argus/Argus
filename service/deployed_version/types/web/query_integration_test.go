@@ -285,7 +285,7 @@ func TestLookup_Track(t *testing.T) {
 				tc.lookup.BasicAuth = tc.basicAuth
 				tc.lookup.Defaults = dvCfg.Soft
 				tc.lookup.HardDefaults = dvCfg.Hard
-				optCfg := opttest.PlainDefaultsConfig(t)
+				optCfg := opttest.PlainDefaultsConfig()
 				tc.lookup.Options, err = opt.Decode(
 					"yaml", []byte("interval: 2s"),
 					optCfg,

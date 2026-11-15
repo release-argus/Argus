@@ -34,8 +34,6 @@ import (
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-var packageName = "latestver_forge"
-
 // testBody is a releases response in the shape a supported forge returns.
 var testBody = []byte(
 	test.TrimJSON(`[
@@ -64,20 +62,20 @@ var testBody = []byte(
 var testBodyObject []forgetypes.Release
 
 func TestMain(m *testing.M) {
-	// Log.
 	logtest.InitLog()
 
-	_ = decode.Unmarshal("json", testBody, &testBodyObject)
+	if err := decode.Unmarshal("json", testBody, &testBodyObject); err != nil {
+		fmt.Println("decode.Unmarshal() failed:", err)
+		os.Exit(1)
+	}
 
-	// Run other tests.
 	exitCode := m.Run()
 
 	if len(logx.ExitCodeChannel()) > 0 {
-		fmt.Printf("%s\nexit code channel not empty", packageName)
+		fmt.Println("exit code channel not empty")
 		exitCode = 1
 	}
 
-	// Exit.
 	os.Exit(exitCode)
 }
 
@@ -109,10 +107,7 @@ func testRequire(t *testing.T, requireYAML string) *filter.Require {
 		&defaults.Require,
 	)
 	if err != nil {
-		t.Fatalf(
-			"%s\nfailed to decode Require: %v",
-			packageName, err,
-		)
+		t.Fatalf("filter.Decode() failed: %v", err)
 	}
 	require.Init(svcStatus, &defaults.Require)
 

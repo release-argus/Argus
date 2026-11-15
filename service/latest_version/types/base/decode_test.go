@@ -30,8 +30,8 @@ import (
 )
 
 func TestDecode(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format string
@@ -138,7 +138,7 @@ func TestDecode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus := &status.Status{}
 
 			lookup, err, testErr := test.AssertDecode(
@@ -179,8 +179,8 @@ func TestDecode(t *testing.T) {
 }
 
 func TestApplyOverrides(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	type Args struct {
 		format string
@@ -845,7 +845,7 @@ func TestApplyOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			options := opttest.PlainOptions(t, optCfg)
+			options := opttest.PlainOptions(optCfg)
 			svcStatus := &status.Status{}
 			var hadRequire *filter.Require
 			if tc.args.target != nil {
@@ -908,7 +908,7 @@ func TestApplyOverrides(t *testing.T) {
 }
 
 func TestUnmarshalRequire(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	type Args struct {
 		format string

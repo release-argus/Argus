@@ -218,7 +218,7 @@ func TestSecretRefs_UnmarshalJSON(t *testing.T) {
 func TestFromPayload(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	type fromDefaults struct {
 		command bool
@@ -1402,7 +1402,7 @@ func TestFromPayload(t *testing.T) {
 func TestFromPayload__noServiceCreated(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	original := decodeServiceFromPayload
 	decodeServiceFromPayload = func(
@@ -1439,7 +1439,7 @@ func TestFromPayload__noServiceCreated(t *testing.T) {
 func TestFromPayload_ReadFromFail(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	payload := io.NopCloser(bytes.NewReader([]byte("this is a long payload")))
 	payload = http.MaxBytesReader(nil, payload, 5)
@@ -1459,7 +1459,7 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 func TestService_CheckFetches(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 	id := t.Name()
 
 	// Queried for the versions CheckFetches should find.
@@ -1668,7 +1668,7 @@ func TestService_CheckFetches(t *testing.T) {
 func TestService_GiveSecrets(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 	id := t.Name()
 	timestamp := "2024-01-02T03:04:05Z"
 
@@ -2554,7 +2554,7 @@ func TestService_GiveSecrets(t *testing.T) {
 }
 
 func TestService_GiveSecretsLatestVersion(t *testing.T) {
-	lvCfg := lvtest.PlainDefaultsConfig(t)
+	lvCfg := lvtest.PlainDefaultsConfig()
 	githubLookupWithETag := func(etag string) latestver.Lookup {
 		t.Helper()
 		lookup := test.Must(t, func() (latestver.Lookup, error) {
@@ -5011,7 +5011,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 func TestService_GiveSecretsWebhook(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name                  string

@@ -69,7 +69,7 @@ func TestGetDefaultOfDockerType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := GetDefaultOfDockerType(t, tc.dType, defaults)
+			got, err := GetDefaultOfDockerType(tc.dType, defaults)
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
@@ -79,5 +79,25 @@ func TestGetDefaultOfDockerType(t *testing.T) {
 				t.Fatalf("RegistryDefaults mismatch\ngot:  %p\nwant: %p", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestMockRegistryDefaults_GetType(t *testing.T) {
+	fake := &MockRegistryDefaults{}
+
+	got := fake.GetType()
+
+	if want := "fake"; got != want {
+		t.Errorf("MockRegistryDefaults.GetType() mismatch\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
+func TestMockRegistryDefaults_String(t *testing.T) {
+	fake := &MockRegistryDefaults{}
+
+	got := fake.String("  ")
+
+	if got != "" {
+		t.Errorf("MockRegistryDefaults.String() mismatch\ngot:  %q\nwant: \"\"", got)
 	}
 }

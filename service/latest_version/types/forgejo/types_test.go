@@ -127,7 +127,7 @@ func TestLookup_Marshal_dropsNothing(t *testing.T) {
 }
 
 func TestLookup_Unmarshal(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name              string
@@ -251,8 +251,8 @@ func TestLookup_String(t *testing.T) {
 }
 
 func TestLookup_Copy(t *testing.T) {
-	lvCfg := lvbasetest.PlainDefaultsConfig(t)
-	optCfg := opttest.PlainDefaultsConfig(t)
+	lvCfg := lvbasetest.PlainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
 	tests := []struct {
 		name   string

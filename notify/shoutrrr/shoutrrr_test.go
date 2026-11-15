@@ -1059,7 +1059,7 @@ func TestShoutrrr_GetSender(t *testing.T) {
 			if err := decode.Unmarshal("yaml", []byte(tc.mainYAML), main); err != nil {
 				t.Fatalf("Shoutrrr.Main: decode.Unmarshal() failed: %v", err)
 			}
-			svcStatus := newTestStatus(t, tc.name, 1)
+			svcStatus := newTestStatus(tc.name, 1)
 			shoutrrr.Init(
 				svcStatus,
 				main,

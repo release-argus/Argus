@@ -16,16 +16,12 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/release-argus/Argus/service/dashboard"
 )
 
 // PlainOptions returns [dashboard.Options] decoded with plain defaults.
-func PlainOptions(t *testing.T) *dashboard.Options {
-	t.Helper()
-
-	dashCfg := PlainDefaultsConfig(t)
+func PlainOptions() *dashboard.Options {
+	dashCfg := PlainDefaultsConfig()
 
 	options, _ := dashboard.Decode("yaml", nil, dashCfg)
 

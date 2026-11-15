@@ -281,7 +281,7 @@ func TestService_HandleCommand(t *testing.T) {
 }
 
 func TestService_HandleWebhook(t *testing.T) {
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name                                  string
@@ -302,7 +302,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that failed passes",
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			webhook:               "pass",
 			wantAnnounces:         1,
@@ -318,7 +318,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that passed fails",
 			webhooks: webhook.Webhooks{
-				"fail": whtest.Webhook(t, true, false, false),
+				"fail": whtest.Webhook(true, false, false),
 			},
 			webhook:               "fail",
 			wantAnnounces:         1,
@@ -334,7 +334,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that's not runnable doesn't run",
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, true, false, false),
+				"pass": whtest.Webhook(true, false, false),
 			},
 			webhook:               "pass",
 			wantAnnounces:         0,
@@ -351,7 +351,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that's runnable does run",
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			webhook:               "pass",
 			wantAnnounces:         1,
@@ -368,7 +368,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that passes updates deployed_version",
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			webhook:               "pass",
 			wantAnnounces:         2, // 2 = 1 webhook, 1 deployed version.
@@ -383,7 +383,7 @@ func TestService_HandleWebhook(t *testing.T) {
 		{
 			name: "Webhook that fails doesn't update deployed_version",
 			webhooks: webhook.Webhooks{
-				"fail": whtest.Webhook(t, true, false, false),
+				"fail": whtest.Webhook(true, false, false),
 			},
 			webhook:               "fail",
 			wantAnnounces:         1,
@@ -447,7 +447,7 @@ func TestService_HandleWebhook(t *testing.T) {
 }
 
 func TestService_HandleUpdateActions(t *testing.T) {
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name                               string
@@ -468,7 +468,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			wantAnnounces:         1, // 1 = 1 approval request.
 			deployedBecomesLatest: false,
 			webhooks: webhook.Webhooks{
-				"fail": whtest.Webhook(t, true, false, false),
+				"fail": whtest.Webhook(true, false, false),
 			},
 		},
 		{
@@ -477,7 +477,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			wantAnnounces:         1, // 1 = 1 webhook run.
 			deployedBecomesLatest: false,
 			webhooks: webhook.Webhooks{
-				"fail": whtest.Webhook(t, true, false, false),
+				"fail": whtest.Webhook(true, false, false),
 			},
 		},
 		{
@@ -486,7 +486,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 			wantAnnounces:         2, // 2 = 1 webhook run, 1 deployed version.
 			deployedBecomesLatest: true,
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 		},
 		{
@@ -609,7 +609,7 @@ func TestService_HandleUpdateActions(t *testing.T) {
 }
 
 func TestService_HandleFailedActions(t *testing.T) {
-	whCfg := whtest.PlainConfig(t)
+	whCfg := whtest.PlainConfig()
 
 	tests := []struct {
 		name                                string
@@ -635,7 +635,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"will_fail": whtest.Webhook(t, true, false, false),
+				"will_fail": whtest.Webhook(true, false, false),
 			},
 			startFailsCommand: []*bool{
 				nil, nil,
@@ -660,7 +660,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			startFailsCommand: []*bool{
 				new(true),
@@ -691,7 +691,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			startFailsCommand: []*bool{
 				new(true),
@@ -727,7 +727,7 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"pass": whtest.Webhook(t, false, false, false),
+				"pass": whtest.Webhook(false, false, false),
 			},
 			startFailsCommand: []*bool{new(true), new(false)},
 			wantFailsCommand: []*bool{
@@ -747,9 +747,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"will_fail":  whtest.Webhook(t, true, false, false),
-				"will_pass":  whtest.Webhook(t, false, false, false),
-				"would_fail": whtest.Webhook(t, true, false, false),
+				"will_fail":  whtest.Webhook(true, false, false),
+				"will_pass":  whtest.Webhook(false, false, false),
+				"would_fail": whtest.Webhook(true, false, false),
 			},
 			startFailsCommand: []*bool{
 				new(false),
@@ -775,9 +775,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"is_runnable":  whtest.Webhook(t, false, false, false),
-				"not_runnable": whtest.Webhook(t, true, false, false),
-				"would_fail":   whtest.Webhook(t, true, false, false),
+				"is_runnable":  whtest.Webhook(false, false, false),
+				"not_runnable": whtest.Webhook(true, false, false),
+				"would_fail":   whtest.Webhook(true, false, false),
 			},
 			startFailsCommand: []*bool{
 				new(false),
@@ -808,9 +808,9 @@ func TestService_HandleFailedActions(t *testing.T) {
 				{"false"},
 			},
 			webhooks: webhook.Webhooks{
-				"will_pass0": whtest.Webhook(t, false, false, false),
-				"will_pass1": whtest.Webhook(t, false, false, false),
-				"would_fail": whtest.Webhook(t, true, false, false),
+				"will_pass0": whtest.Webhook(false, false, false),
+				"will_pass1": whtest.Webhook(false, false, false),
+				"would_fail": whtest.Webhook(true, false, false),
 			},
 			startFailsCommand: []*bool{
 				new(false),

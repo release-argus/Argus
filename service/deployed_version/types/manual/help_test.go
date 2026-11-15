@@ -48,7 +48,7 @@ func testLookup(t *testing.T, version string) *Lookup {
 	t.Helper()
 
 	dvCfg := plainDefaultsConfig()
-	optCfg := opttest.PlainDefaultsConfig(t)
+	optCfg := opttest.PlainDefaultsConfig()
 
 	options, err := opt.Decode("yaml", []byte("semantic_versioning: true"), optCfg)
 	if err != nil {

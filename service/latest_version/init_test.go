@@ -26,7 +26,7 @@ import (
 )
 
 func TestLookup_Init(t *testing.T) {
-	lvCfg := plainDefaultsConfig(t)
+	lvCfg := plainDefaultsConfig()
 
 	lookup := testLookup(t, "github", false)
 	svcStatus := status.Status{}

@@ -258,7 +258,7 @@ func TestService_Copy(t *testing.T) {
 			yaml: `
 				notify:
 					test:
-				` + shoutrrrtest.Shoutrrr(t, false, false).String("    ") + `
+				` + shoutrrrtest.Shoutrrr(false, false).String("    ") + `
 			`,
 		},
 		{
@@ -273,7 +273,7 @@ func TestService_Copy(t *testing.T) {
 			yaml: `
 				webhook:
 					test:
-				` + whtest.Webhook(t, false, false, true).String("    ") + `
+				` + whtest.Webhook(false, false, true).String("    ") + `
 			`,
 		},
 	}
@@ -360,7 +360,7 @@ func decodeWithStatus(t *testing.T, id, yaml string) *Service {
 	svc, err := DecodeService(
 		"yaml", []byte(test.TrimYAML(yaml)),
 		id,
-		plainDefaultsConfig(), shoutrrrtest.PlainConfig(), whtest.PlainConfig(t),
+		plainDefaultsConfig(), shoutrrrtest.PlainConfig(), whtest.PlainConfig(),
 	)
 	if err != nil {
 		t.Fatalf("DecodeService(id=%q) failed: %v", id, err)

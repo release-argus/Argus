@@ -19,9 +19,10 @@ package forgejo
 
 import (
 	"errors"
-	"fmt"
+	"maps"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ var (
 const (
 	repoHappy          = "argus/releases-happy"        // Releases and tags, in version order.
 	repoOutOfOrder     = "argus/releases-out-of-order" // A lower version published most recently.
-	repoTagsOnly       = "argus/argus-mirror"          // A pull mirror - git references, no releases.
+	repoTagsOnly       = "argus/argus-mirror"          // A pull mirror, with tags but no releases.
 	repoNothing        = "argus/no-tags-no-releases"   // Empty of both.
 	repoReleasesOff    = "argus/releases-disabled"     // Releases unit disabled; tags remain.
 	repoPreReleaseOnly = "argus/prerelease-only"       // Every release flagged pre-release.
@@ -106,26 +107,8 @@ func skipIfUnavailable(t *testing.T, target integrationTarget, err error) {
 	t.Helper()
 
 	if target.thirdParty && isUnavailable(err) {
-		t.Skipf(
-			"%s\n%s did not answer: %v",
-			packageName, target.name, err,
-		)
+		t.Skipf("%s did not answer: %v", target.name, err)
 	}
-}
-
-// unavailable is [skipIfUnavailable] for a case with further targets to assert against.
-func unavailable(t *testing.T, target integrationTarget, err error) bool {
-	t.Helper()
-
-	if target.thirdParty && isUnavailable(err) {
-		t.Logf(
-			"%s\n%s did not answer, moving on: %v",
-			packageName, target.name, err,
-		)
-		return true
-	}
-
-	return false
 }
 
 // skipIfThrottled is [skipIfUnavailable] for a response read before its status was mapped.
@@ -133,10 +116,7 @@ func skipIfThrottled(t *testing.T, target integrationTarget, resp *http.Response
 	t.Helper()
 
 	if target.thirdParty && resp != nil && isRateLimited(resp) {
-		t.Skipf(
-			"%s\n%s rate-limited (%d)",
-			packageName, target.name, resp.StatusCode,
-		)
+		t.Skipf("%s rate-limited (%d)", target.name, resp.StatusCode)
 	}
 }
 
@@ -161,22 +141,19 @@ func integrationTargets(host, repo string) []integrationTarget {
 }
 
 func TestLookup_Query__integration(t *testing.T) {
-	// GIVEN: a repository on a live instance, and the outcome it must produce.
 	tests := []struct {
 		name            string
-		host            string // host to query. Empty = all integration instances.
-		repo            string // repo to query. Empty = instance's own.
+		host            string // Empty queries every integration instance.
+		repo            string // Empty queries the instance's own repo.
 		lookupOverrides string
 		defaults        map[string]HostDefaults
 		useToken        bool // Give the queried host the instance's read-only token.
-		wantVersion     bool
 		wantPreRelease  bool
 		errRegex        string
 	}{
 		{
-			name:        "repository with releases reports a semantic version",
-			wantVersion: true,
-			errRegex:    `^$`,
+			name:     "repository with releases reports a semantic version",
+			errRegex: `^$`,
 		},
 		{
 			name:     "not found/repository that does not exist names both causes",
@@ -184,24 +161,22 @@ func TestLookup_Query__integration(t *testing.T) {
 			errRegex: `^repository not found, or its releases and tags are disabled$`,
 		},
 		{
-			name:        "tag fallback/pull mirror carries git references but no releases",
-			host:        testInstanceHost,
-			repo:        repoTagsOnly,
-			wantVersion: true,
-			errRegex:    `^$`,
+			name:     "tag fallback/pull mirror carries git references but no releases",
+			host:     testInstanceHost,
+			repo:     repoTagsOnly,
+			errRegex: `^$`,
 		},
 		{
-			name:        "tag fallback/releases disabled",
-			host:        testInstanceHost,
-			repo:        repoReleasesOff,
-			wantVersion: true,
-			errRegex:    `^$`,
+			name:     "tag fallback/releases disabled",
+			host:     testInstanceHost,
+			repo:     repoReleasesOff,
+			errRegex: `^$`,
 		},
 		{
 			name: "releases disabled/with the fallback suppressed, the error names both causes",
 			host: testInstanceHost,
 			repo: repoReleasesOff,
-			// A content filter rules tags out - they carry no release assets.
+			// A content filter rules tags out, as they carry no release assets.
 			lookupOverrides: "require:\n  regex_content: 'xxxx'",
 			errRegex:        `^repository not found, or its releases are disabled$`,
 		},
@@ -222,7 +197,6 @@ func TestLookup_Query__integration(t *testing.T) {
 			host:            testInstanceHost,
 			repo:            repoPreReleaseOnly,
 			lookupOverrides: "use_prerelease: true",
-			wantVersion:     true,
 			wantPreRelease:  true,
 			errRegex:        `^$`,
 		},
@@ -235,8 +209,7 @@ func TestLookup_Query__integration(t *testing.T) {
 					AllowInvalidCerts: new(true),
 				},
 			},
-			wantVersion: true,
-			errRegex:    `^$`,
+			errRegex: `^$`,
 		},
 		{
 			name:     "certificate trust/no host allows them",
@@ -245,12 +218,11 @@ func TestLookup_Query__integration(t *testing.T) {
 			errRegex: `certificate|x509`,
 		},
 		{
-			name:        "private repository/the host's token grants access",
-			host:        testInstanceHost,
-			repo:        repoPrivate,
-			useToken:    true,
-			wantVersion: true,
-			errRegex:    `^$`,
+			name:     "private repository/the host's token grants access",
+			host:     testInstanceHost,
+			repo:     repoPrivate,
+			useToken: true,
+			errRegex: `^$`,
 		},
 		{
 			name:     "private repository/no token gives the ambiguous not-found",
@@ -284,35 +256,31 @@ func TestLookup_Query__integration(t *testing.T) {
 					}
 					setHostDefaults(lookup, defaults, nil)
 
-					// WHEN: it is queried.
 					_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
 					skipIfUnavailable(t, target, err)
-
-					prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-					// THEN: any error is expected.
 					e := errfmt.FormatError(err)
 					if !util.RegexCheck(tc.errRegex, e) {
-						t.Fatalf(
-							"%s error mismatch\ngot:  %q\nwant: %q",
-							prefix, e, tc.errRegex,
-						)
+						t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 					}
 					if err != nil {
 						return
 					}
 
-					// AND: a version is reported.
 					version := lookup.Status.LatestVersion()
 					if version == "" {
-						t.Fatalf("%s reported no version", prefix)
+						t.Fatal("Status.LatestVersion() mismatch\ngot:  \"\"\nwant: non-empty")
 					}
 
-					// AND: it parses as a semantic version.
-					if _, err := semver.NewVersion(version); err != nil {
-						t.Fatalf(
-							"%s version %q is not semantic: %v",
-							prefix, version, err,
+					v, err := semver.NewVersion(version)
+					if err != nil {
+						t.Fatalf("semver.NewVersion(%q) failed: %v", version, err)
+					}
+
+					if got := v.Prerelease() != ""; got != tc.wantPreRelease {
+						t.Errorf(
+							"semver.NewVersion(%q).Prerelease() non-empty mismatch\n"+
+								"got:  %t\nwant: %t",
+							version, got, tc.wantPreRelease,
 						)
 					}
 				})
@@ -322,7 +290,6 @@ func TestLookup_Query__integration(t *testing.T) {
 }
 
 func TestLookup_Query__integration__highestVersionWins(t *testing.T) {
-	// GIVEN: a repository on a live instance.
 	tests := []struct {
 		name               string
 		host               string
@@ -352,34 +319,31 @@ func TestLookup_Query__integration__highestVersionWins(t *testing.T) {
 					t.Parallel()
 
 					logFrom := logx.LogFrom{Primary: t.Name()}
-					lookup := testLookup(t, test.TrimYAML(`
-						host: `+target.host+`
-						url: `+target.repo))
-
-					prefix := fmt.Sprintf(
-						"%s\nLookup{host: %q, url: %q}.Query()",
-						packageName, target.host, target.repo,
+					lookup := testLookup(
+						t,
+						test.TrimYAML(`
+							host: `+target.host+`
+							url: `+target.repo,
+						),
 					)
 
-					// WHEN: it is queried.
 					_, err := lookup.Query(false, logFrom)
 					skipIfUnavailable(t, target, err)
 					if err != nil {
-						t.Fatalf("%s unexpected error: %v", prefix, err)
+						t.Fatalf("Lookup.Query() failed: %v", err)
 					}
 					reported, err := semver.NewVersion(lookup.Status.LatestVersion())
 					if err != nil {
 						t.Fatalf(
-							"%s version %q is not semantic: %v",
-							prefix, lookup.Status.LatestVersion(), err,
+							"semver.NewVersion(%q) failed: %v",
+							lookup.Status.LatestVersion(), err,
 						)
 					}
 
-					// THEN: no release on the first page sorts above it.
 					body, _, err := lookup.httpRequest(endpointReleases, 1, logFrom)
 					skipIfUnavailable(t, target, err)
 					if err != nil {
-						t.Fatalf("%s reading page 1: %v", prefix, err)
+						t.Fatalf("releases: Lookup.httpRequest() failed: %v", err)
 					}
 					releases := test.Must(t, func() ([]forgetypes.Release, error) {
 						return forge.UnmarshalReleases(body)
@@ -398,51 +362,42 @@ func TestLookup_Query__integration__highestVersionWins(t *testing.T) {
 						compared++
 						if version.GreaterThan(reported) {
 							t.Fatalf(
-								"%s reported %q, but %q is higher",
-								prefix, reported, version,
+								"Status.LatestVersion() mismatch\ngot:  %q\nwant: >= %q",
+								reported, version,
 							)
 						}
 					}
 					if compared == 0 {
-						t.Fatalf("%s no release on page 1 was comparable, so nothing was asserted", prefix)
+						t.Fatal("page 1 comparable release count mismatch\ngot:  0\nwant: > 0")
 					}
 
-					// AND: the forge's own latest-release endpoint never answers higher -
-					// and answers strictly lower where the repository is out of order.
 					latestBody, _, err := lookup.httpRequest(endpointReleases+"/latest", 1, logFrom)
 					skipIfUnavailable(t, target, err)
 					if err != nil {
-						t.Fatalf(
-							"%s reading the latest-release endpoint: %v",
-							prefix, err,
-						)
+						t.Fatalf("latest: Lookup.httpRequest() failed: %v", err)
 					}
 					var latest forgetypes.Release
 					if err := decode.Unmarshal("json", latestBody, &latest); err != nil {
-						t.Fatalf(
-							"%s decoding the latest release: %v",
-							prefix, err,
-						)
+						t.Fatalf("decode.Unmarshal() failed: %v", err)
 					}
 					endpointVersion, err := semver.NewVersion(latest.TagName)
 					if err != nil {
-						t.Fatalf(
-							"%s the latest-release endpoint gave %q, which is not semantic: %v",
-							prefix, latest.TagName, err,
-						)
+						t.Fatalf("semver.NewVersion(%q) failed: %v", latest.TagName, err)
 					}
 
 					if endpointVersion.GreaterThan(reported) {
 						t.Fatalf(
-							"%s reported %q, below the latest-release endpoint's %q",
-							prefix, reported, endpointVersion,
+							"Status.LatestVersion() mismatch\n"+
+								"got:  %q\nwant: >= %q (/releases/latest)",
+							reported, endpointVersion,
 						)
 					}
+					// Failing here means the fixture repo no longer shows the ordering problem.
 					if tc.releasesOutOfOrder && !reported.GreaterThan(endpointVersion) {
 						t.Fatalf(
-							"%s reported %q and the latest-release endpoint gave %q - this"+
-								" repository no longer demonstrates the ordering problem",
-							prefix, reported, endpointVersion,
+							"Status.LatestVersion() mismatch\n"+
+								"got:  %q\nwant: > %q (/releases/latest)",
+							reported, endpointVersion,
 						)
 					}
 				})
@@ -452,7 +407,6 @@ func TestLookup_Query__integration__highestVersionWins(t *testing.T) {
 }
 
 func TestLookup_Query__integration__releasesEndpoint(t *testing.T) {
-	// GIVEN: a repository on a public instance.
 	for _, target := range integrationTargets("", "") {
 		t.Run(target.name, func(t *testing.T) {
 			t.Parallel()
@@ -462,63 +416,48 @@ func TestLookup_Query__integration__releasesEndpoint(t *testing.T) {
 				url: `+target.repo))
 			logFrom := logx.LogFrom{Primary: t.Name()}
 
-			// WHEN: the releases endpoint is read.
 			request, err := lookup.createRequest(endpointReleases, 1, logFrom)
 			if err != nil {
-				t.Fatalf(
-					"%s\nLookup.createRequest() unexpected error: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.createRequest() failed: %v", err)
 			}
-			response, releasesBody, err := lookup.getResponse(request, logFrom)
+			response, releasesJSON, err := lookup.getResponse(request, logFrom)
 			skipIfUnavailable(t, target, err)
 			skipIfThrottled(t, target, response)
 			if err != nil {
-				t.Fatalf(
-					"%s\nLookup.getResponse() unexpected error: %v",
-					packageName, err,
-				)
+				t.Fatalf("Lookup.getResponse() failed: %v", err)
 			}
 
-			// THEN: the response carries no ETag.
-			if etag := response.Header.Get("ETag"); etag != "" {
-				t.Fatalf(
-					"%s\n%s issued an ETag %q - conditional requests may now be worth having",
-					packageName, target.host, etag,
-				)
+			// If an ETag appears, conditional requests may be worth adding.
+			if etag, expected := response.Header.Get("ETag"), ""; etag != expected {
+				t.Fatalf("Response.Header[ETag] mismatch\ngot:  %q\nwant: %q", etag, expected)
 			}
 
-			// AND: the tags endpoint holds versions too.
-			tagsBody, _, err := lookup.httpRequest(endpointTags, 1, logFrom)
+			tagsJSON, _, err := lookup.httpRequest(endpointTags, 1, logFrom)
 			skipIfUnavailable(t, target, err)
 			if err != nil {
-				t.Fatalf(
-					"%s\nLookup.httpRequest(%q) unexpected error: %v",
-					packageName, endpointTags, err,
-				)
+				t.Fatalf("Lookup.httpRequest(%q) failed: %v", endpointTags, err)
 			}
 
-			releases := test.Must(t, func() ([]forgetypes.Release, error) { return (forge.UnmarshalReleases(releasesBody)) })
+			releases := test.Must(t, func() ([]forgetypes.Release, error) { return forge.UnmarshalReleases(releasesJSON) })
 			releases = lookup.filterReleases(releases, logFrom)
-			tags := test.Must(t, func() ([]forgetypes.Release, error) { return (forge.UnmarshalReleases(tagsBody)) })
+			tags := test.Must(t, func() ([]forgetypes.Release, error) { return forge.UnmarshalReleases(tagsJSON) })
 			tags = lookup.filterReleases(tags, logFrom)
 			if gotReleases, gotTags := len(releases), len(tags); gotReleases == 0 || gotTags == 0 {
 				t.Fatalf(
-					"%s\nexpected both endpoints to hold versions\ngot:  %d releases, %d tags",
-					packageName, gotReleases, gotTags,
+					"releases, tags length mismatch\ngot:  %d, %d\nwant: > 0, > 0",
+					gotReleases, gotTags,
 				)
 			}
 
-			// AND: every release has a tag of the same name
-			// (only check latest since not every tag must have a release).
 			tagNames := make(map[string]bool, len(tags))
 			for _, tag := range tags {
 				tagNames[tag.SemanticVersion.String()] = true
 			}
+			// Only the latest is checked, since not every tag must have a release.
 			if !tagNames[releases[0].SemanticVersion.String()] {
 				t.Fatalf(
-					"%s\nthe highest release %q has no matching tag\ngot tags: %v",
-					packageName, releases[0].SemanticVersion, tagNames,
+					"tagNames[%q] mismatch\ngot:  absent (keys=%q)\nwant: present",
+					releases[0].SemanticVersion.String(), slices.Sorted(maps.Keys(tagNames)),
 				)
 			}
 		})
@@ -526,101 +465,77 @@ func TestLookup_Query__integration__releasesEndpoint(t *testing.T) {
 }
 
 func TestLookup_Query__integration__paginatesPastThePageSizeCap(t *testing.T) {
-	// GIVEN: the public instances, at least one of which holds more releases than a page can.
-	logFrom := logx.LogFrom{Primary: t.Name()}
 	var paginated bool
 
 	for _, target := range integrationTargets("", "") {
-		lookup := testLookup(t, test.TrimYAML(`
-				host: `+target.host+`
-				url: `+target.repo))
+		t.Run(target.name, func(t *testing.T) {
+			// Serial: shares paginated, which the parent reads after the loop.
 
-		// WHEN: the first page is requested.
-		body, nextPage, err := lookup.httpRequest(endpointReleases, 1, logFrom)
-		if unavailable(t, target, err) {
-			continue
-		}
-		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.httpRequest(%q) on %s unexpected error: %v",
-				packageName, endpointReleases, target.host, err,
-			)
-		}
+			lookup := testLookup(t, "host: "+target.host+"\nurl: "+target.repo)
+			logFrom := logx.LogFrom{Primary: t.Name()}
 
-		// THEN: the target never serves more than limit in one response.
-		releases := test.Must(t, func() ([]forgetypes.Release, error) { return (forge.UnmarshalReleases(body)) })
-		if got := len(releases); got > apiPageSize {
-			t.Fatalf(
-				"%s\n%s served %d releases on one page, above the cap of %d",
-				packageName, target.host, got, apiPageSize,
-			)
-		}
-
-		// Not enough releases to fill a page - nothing to paginate.
-		if len(releases) < apiPageSize {
-			continue
-		}
-
-		// A page can be exactly full with nothing after it. Confirm rather than assume.
-		if nextPage < 2 {
-			beyond, _, err := lookup.httpRequest(endpointReleases, 2, logFrom)
-			if unavailable(t, target, err) {
-				continue
-			}
+			body, nextPage, err := lookup.httpRequest(endpointReleases, 1, logFrom)
+			skipIfUnavailable(t, target, err)
 			if err != nil {
-				t.Fatalf(
-					"%s\nLookup.httpRequest(%q, page 2) on %s unexpected error: %v",
-					packageName, endpointReleases, target.host, err,
-				)
-			}
-			if !isEmptyJSONList(beyond) {
-				t.Fatalf(
-					"%s\n%s advertised no next page, but page 2 of %s holds releases\ngot:  %q",
-					packageName, target.host, target.repo, string(beyond),
-				)
+				t.Fatalf("Lookup.httpRequest(page=1) failed: %v", err)
 			}
 
-			continue
-		}
+			releases := test.Must(t, func() ([]forgetypes.Release, error) { return forge.UnmarshalReleases(body) })
+			if got := len(releases); got > apiPageSize {
+				t.Fatalf(
+					"page 1: len(forge.UnmarshalReleases()) mismatch\ngot:  %d\nwant: <= %d",
+					got, apiPageSize,
+				)
+			}
 
-		// AND: where a next page is advertised, it holds different releases.
-		nextBody, _, err := lookup.httpRequest(endpointReleases, nextPage, logFrom)
-		if unavailable(t, target, err) {
-			continue
-		}
-		if err != nil {
-			t.Fatalf(
-				"%s\nLookup.httpRequest(%q, page %d) on %s unexpected error: %v",
-				packageName, endpointReleases, nextPage, target.host, err,
-			)
-		}
-		nextReleases := test.Must(t, func() ([]forgetypes.Release, error) { return (forge.UnmarshalReleases(nextBody)) })
-		if len(nextReleases) == 0 {
-			t.Fatalf(
-				"%s\npage %d of %s held no releases",
-				packageName, nextPage, target.repo,
-			)
-		}
-		if nextReleases[0].TagName == releases[0].TagName {
-			t.Fatalf(
-				"%s\npage %d of %s repeated page 1 - the page parameter had no effect",
-				packageName, nextPage, target.repo,
-			)
-		}
+			// Not enough releases to fill a page, so nothing to paginate.
+			if len(releases) < apiPageSize {
+				return
+			}
 
-		paginated = true
+			// A page can be exactly full with nothing after it, so check page 2 is empty.
+			if nextPage < 2 {
+				beyond, _, err := lookup.httpRequest(endpointReleases, 2, logFrom)
+				skipIfUnavailable(t, target, err)
+				if err != nil {
+					t.Fatalf("Lookup.httpRequest(page=2) failed: %v", err)
+				}
+				if !isEmptyJSONList(beyond) {
+					t.Fatalf("page 2: body mismatch\ngot:  %q\nwant: []", string(beyond))
+				}
+
+				return
+			}
+
+			nextBody, _, err := lookup.httpRequest(endpointReleases, nextPage, logFrom)
+			skipIfUnavailable(t, target, err)
+			if err != nil {
+				t.Fatalf("Lookup.httpRequest(page=%d) failed: %v", nextPage, err)
+			}
+			nextReleases := test.Must(t, func() ([]forgetypes.Release, error) { return forge.UnmarshalReleases(nextBody) })
+			if len(nextReleases) == 0 {
+				t.Fatalf(
+					"page %d: len(forge.UnmarshalReleases()) mismatch\ngot:  0\nwant: > 0",
+					nextPage,
+				)
+			}
+			if nextReleases[0].TagName == releases[0].TagName {
+				t.Fatalf(
+					"page %d: Release.TagName mismatch\ngot:  %q\nwant: NOT %q",
+					nextPage, nextReleases[0].TagName, releases[0].TagName,
+				)
+			}
+
+			paginated = true
+		})
 	}
 
 	if !paginated {
-		t.Skipf(
-			"%s\nno target held more than %d releases - pagination went untested",
-			packageName, apiPageSize,
-		)
+		t.Skipf("no target held more than %d releases - pagination went untested", apiPageSize)
 	}
 }
 
 func TestLookup_Query__integration__dockerTag(t *testing.T) {
-	// GIVEN: a require.docker naming a tag that does, and does not, exist.
 	tests := []struct {
 		name     string
 		tag      string
@@ -650,21 +565,13 @@ func TestLookup_Query__integration__dockerTag(t *testing.T) {
 						type: ghcr
 						image: `+test.ArgusDockerGHCRRepo+`
 						tag: "`+tc.tag+`"
-						token: `+test.DockerHubToken(t)+`
+						token: `+test.GitHubToken(t)+`
 			`))
 
-			// WHEN: it is queried.
 			_, err := lookup.Query(false, logx.LogFrom{Primary: t.Name()})
-
-			prefix := fmt.Sprintf("%s\nLookup.Query()", packageName)
-
-			// THEN: any error is as expected.
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
-				t.Fatalf(
-					"%s error mismatch\ngot:  %q\nwant: %q",
-					prefix, e, tc.errRegex,
-				)
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
 		})
 	}

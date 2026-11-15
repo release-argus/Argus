@@ -22,19 +22,13 @@ import (
 )
 
 func TestServiceInfo_SetMutex(t *testing.T) {
-	// GIVEN: a ServiceInfo struct and a mutex.
 	serviceInfo := &ServiceInfo{}
 	mu := &sync.RWMutex{}
 
-	// WHEN: SetMutex is called.
 	serviceInfo.SetMutex(mu)
 
-	// THEN: the mutex is set correctly.
 	if serviceInfo.mu != mu {
-		t.Errorf(
-			"%s\nSetMutex(%p) mu mismatch\ngot:  %p",
-			packageName, &mu, serviceInfo.mu,
-		)
+		t.Errorf("ServiceInfo.mu mismatch\ngot:  %p\nwant: %p", serviceInfo.mu, mu)
 	}
 }
 
@@ -57,22 +51,16 @@ func TestServiceInfo_GetIcon(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a ServiceInfo struct with a mutex and an Icon value.
 			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
 				mu:   mu,
 				Icon: tc.value,
 			}
 
-			// WHEN: GetIcon is called.
 			result := serviceInfo.GetIcon()
 
-			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf(
-					"%s\nServiceInfo.GetIcon() mismatch\ngot:  %s\nwant: %s",
-					packageName, result, tc.value,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.value)
 			}
 		})
 	}
@@ -84,12 +72,12 @@ func TestServiceInfo_GetIconLinkTo(t *testing.T) {
 		value string
 	}{
 		{
-			name:  "Valid Icon URL",
-			value: "https://example.com/icon1.png",
+			name:  "URL",
+			value: "https://example.com/icon-link",
 		},
 		{
-			name:  "Another Valid Icon URL",
-			value: "https://example.com/icon2.png",
+			name:  "empty",
+			value: "",
 		},
 	}
 
@@ -97,22 +85,16 @@ func TestServiceInfo_GetIconLinkTo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a ServiceInfo struct with a mutex and an IconLinkTo value.
 			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
 				mu:         mu,
 				IconLinkTo: tc.value,
 			}
 
-			// WHEN: GetIconLinkTo is called.
 			result := serviceInfo.GetIconLinkTo()
 
-			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf(
-					"%s\nServiceInfo.GetIconLinkTo() mismatch\ngot:  %s\nwant: %s",
-					packageName, result, tc.value,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.value)
 			}
 		})
 	}
@@ -124,12 +106,12 @@ func TestServiceInfo_GetWebURL(t *testing.T) {
 		value string
 	}{
 		{
-			name:  "Valid Icon URL",
-			value: "https://example.com/icon1.png",
+			name:  "URL",
+			value: "https://example.com/web",
 		},
 		{
-			name:  "Another Valid Icon URL",
-			value: "https://example.com/icon2.png",
+			name:  "empty",
+			value: "",
 		},
 	}
 
@@ -137,29 +119,22 @@ func TestServiceInfo_GetWebURL(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN: a ServiceInfo struct with a mutex and an WebURL value.
 			mu := &sync.RWMutex{}
 			serviceInfo := &ServiceInfo{
 				mu:     mu,
 				WebURL: tc.value,
 			}
 
-			// WHEN: GetWebURL is called.
 			result := serviceInfo.GetWebURL()
 
-			// THEN: the returned value matches the Icon field.
 			if result != tc.value {
-				t.Errorf(
-					"%s\nServiceInfo.GetWebURL() mismatch\ngot:  %s\nwant: %s",
-					packageName, result, tc.value,
-				)
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", result, tc.value)
 			}
 		})
 	}
 }
 
 func TestSkippedVersion(t *testing.T) {
-	// GIVEN: a version string.
 	tests := []struct {
 		name    string
 		version string
@@ -173,7 +148,7 @@ func TestSkippedVersion(t *testing.T) {
 			version: "",
 		},
 		{
-			name:    "already prefixed",
+			name:    "already prefixed gets a second prefix",
 			version: SkipPrefix + "1.2.3",
 		},
 		{
@@ -190,16 +165,11 @@ func TestSkippedVersion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// WHEN: SkippedVersion is called with the version string.
 			result := SkippedVersion(tc.version)
 
-			// THEN: the returned string should be the SkipPrefix followed by the version string.
 			expected := SkipPrefix + tc.version
 			if result != expected {
-				t.Fatalf(
-					"%s\nSkippedVersion(%q) mismatch\nwant: %q\ngot:  %q",
-					packageName, tc.version, expected, result,
-				)
+				t.Fatalf("mismatch\ngot:  %q\nwant: %q", result, expected)
 			}
 		})
 	}
