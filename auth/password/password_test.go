@@ -261,13 +261,17 @@ func TestVerify(t *testing.T) {
 			name:     "malformed/bad salt base64",
 			password: plaintext,
 			encoded:  "$argon2id$v=19$m=19456,t=1,p=2$!!!$a2V5",
-			errRegex: `^malformed password hash\nillegal base64 data`,
+			errRegex: test.TrimYAML(`
+				^malformed password hash:
+					salt: illegal base64 data`),
 		},
 		{
 			name:     "malformed/bad key base64",
 			password: plaintext,
 			encoded:  "$argon2id$v=19$m=19456,t=1,p=2$c2FsdA$!!!",
-			errRegex: `^malformed password hash\nillegal base64 data`,
+			errRegex: test.TrimYAML(`
+				^malformed password hash:
+					key: illegal base64 data`),
 		},
 	}
 
@@ -402,7 +406,9 @@ func TestDecodeHash(t *testing.T) {
 			encoded: encodeParts(
 				argon2.Version, argonMemory, argonTime, argonThreads, "!!!", b64(key),
 			),
-			errRegex: `^malformed password hash\nillegal base64 data`,
+			errRegex: test.TrimYAML(`
+				^malformed password hash:
+					salt: illegal base64 data`),
 		},
 		{
 			name: "invalid/salt too short",
@@ -423,7 +429,9 @@ func TestDecodeHash(t *testing.T) {
 			encoded: encodeParts(
 				argon2.Version, argonMemory, argonTime, argonThreads, b64(salt), "!!!",
 			),
-			errRegex: `^malformed password hash\nillegal base64 data`,
+			errRegex: test.TrimYAML(`
+				^malformed password hash:
+					key: illegal base64 data`),
 		},
 		{
 			name: "invalid/key too short",

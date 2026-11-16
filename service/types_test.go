@@ -532,8 +532,7 @@ func TestService_UnmarshalLatestVersion(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^latest_version:
 					extract "latest_version":
-						jsontext: invalid character .*
-							[^\s]+ .*$`,
+						jsontext: invalid character .*$`,
 			),
 		},
 		{
@@ -692,8 +691,7 @@ func TestService_UnmarshalDeployedVersion(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^deployed_version:
 					extract "deployed_version":
-						jsontext: invalid character .*
-							[^\s]+ .*$`,
+						jsontext: invalid character .*$`,
 			),
 		},
 		{

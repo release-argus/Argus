@@ -19,7 +19,6 @@ package store
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/auth"
@@ -283,19 +282,25 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
-			name:     "invalid/unknown hide name",
-			prefs:    DashboardPreferences{Hide: []string{HideSkipped, "upToDate"}},
-			errRegex: `^hide: "upToDate" <invalid> \(.*$`,
+			name:  "invalid/unknown hide name",
+			prefs: DashboardPreferences{Hide: []string{HideSkipped, "upToDate"}},
+			errRegex: test.TrimYAML(`
+				^invalid preference value:
+				  hide: "upToDate" <invalid> \(.*$`),
 		},
 		{
-			name:     "invalid/unknown view",
-			prefs:    DashboardPreferences{View: "list"},
-			errRegex: `^view: "list" <invalid> \(.*$`,
+			name:  "invalid/unknown view",
+			prefs: DashboardPreferences{View: "list"},
+			errRegex: test.TrimYAML(`
+				^invalid preference value:
+				  view: "list" <invalid> \(.*$`),
 		},
 		{
-			name:     "invalid/unknown timestamp name",
-			prefs:    DashboardPreferences{Timestamps: []string{"last_queried"}},
-			errRegex: `^timestamps: "last_queried" <invalid> \(.*$`,
+			name:  "invalid/unknown timestamp name",
+			prefs: DashboardPreferences{Timestamps: []string{"last_queried"}},
+			errRegex: test.TrimYAML(`
+				^invalid preference value:
+				  timestamps: "last_queried" <invalid> \(.*$`),
 		},
 		{
 			name: "invalid/every field reported",
@@ -305,9 +310,10 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 				Timestamps: []string{"nope"},
 			},
 			errRegex: test.TrimYAML(`
-				^hide: "nope" <invalid> \(supported values = \['up_to_date', 'updatable', 'skipped', 'inactive'\]\)
-				timestamps: "nope" <invalid> \(supported values = \['deployed', 'found', 'queried'\]\)
-				view: "nope" <invalid> \(supported values = \['grid', 'table'\]\)`,
+				^invalid preference value:
+					hide: "nope" <invalid> \(supported values = \['up_to_date', 'updatable', 'skipped', 'inactive'\]\)
+					timestamps: "nope" <invalid> \(supported values = \['deployed', 'found', 'queried'\]\)
+					view: "nope" <invalid> \(supported values = \['grid', 'table'\]\)`,
 			),
 		},
 		{
@@ -317,7 +323,9 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 					"nope1", "nope2", HideSkipped, "nope3", "nope4", "nope5",
 				},
 			},
-			errRegex: `^hide: "nope1", "nope2", "nope3", "nope4", "nope5" <invalid> \(.*$`,
+			errRegex: test.TrimYAML(`
+				^invalid preference value:
+				  hide: "nope1", "nope2", "nope3", "nope4", "nope5" <invalid> \(.*$`),
 		},
 		{
 			name: "invalid/over the cap, the rest are counted",
@@ -330,8 +338,9 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 				},
 			},
 			errRegex: test.TrimYAML(`
-				^hide: "nope1", "nope2", "nope3", "nope4", "nope5", and 2 more <invalid> \(.*
-				timestamps: "nope1", "nope2", "nope3", "nope4", "nope5", and 1 more <invalid> \(.*$`,
+				^invalid preference value:
+					hide: "nope1", "nope2", "nope3", "nope4", "nope5", and 2 more <invalid> \(.*
+					timestamps: "nope1", "nope2", "nope3", "nope4", "nope5", and 1 more <invalid> \(.*$`,
 			),
 		},
 	}
@@ -345,7 +354,6 @@ func TestDashboardPreferences_CheckValues(t *testing.T) {
 				t.Fatalf("error type mismatch\ngot:  %v\nwant: %v", err, ErrInvalidPreference)
 			}
 			e := errfmt.FormatError(err)
-			e = strings.TrimPrefix(e, ErrInvalidPreference.Error()+"\n")
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
 			}
@@ -397,7 +405,7 @@ func TestStore_SetPreferences__rejectsUnknownValues(t *testing.T) {
 	}
 	_, err := store.SetPreferences(t.Context(), user.ID, prefs)
 	e := errfmt.FormatError(err)
-	errRegex := fmt.Sprintf(`^invalid preference value\nhide: %q <invalid> \(.*$`, invalidHide)
+	errRegex := fmt.Sprintf(`^invalid preference value:\n  hide: %q <invalid> \(.*$`, invalidHide)
 	if !util.RegexCheck(errRegex, e) {
 		t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, errRegex)
 	}

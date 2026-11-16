@@ -15,10 +15,7 @@
 // Package errfmt formats error chains for display to users.
 package errfmt
 
-import (
-	"errors"
-	"strings"
-)
+import "strings"
 
 // FormatError renders err and its wrapped errors as an indented multi-line string.
 func FormatError(err error) string {
@@ -37,35 +34,49 @@ func appendFormattedErrorLines(err error, lines []string, indents int) []string 
 		return lines
 	}
 
-	if errs, ok := err.(interface{ Unwrap() []error }); ok {
-		for _, child := range errs.Unwrap() {
+	msg := err.Error()
+	children := unwrapAll(err)
+	childMsgs := make([]string, len(children))
+	for i, child := range children {
+		childMsgs[i] = child.Error()
+	}
+
+	switch {
+	// errors.Join, or a bare %w, adds no text of its own.
+	case len(children) > 0 && msg == strings.Join(childMsgs, "\n"):
+		for _, child := range children {
 			lines = appendFormattedErrorLines(child, lines, indents)
 		}
 		return lines
+	case len(children) == 1 && strings.HasSuffix(msg, " "+childMsgs[0]):
+		lines = appendMessage(lines, strings.TrimSuffix(msg, " "+childMsgs[0]), indents)
+		return appendFormattedErrorLines(children[0], lines, indents+1)
+	// A leading wrapped error heads its own line, and the text after it goes underneath.
+	case len(children) == 2 && strings.HasPrefix(msg, childMsgs[0]+": "):
+		lines = appendMessage(lines, childMsgs[0]+":", indents)
+		return appendMessage(lines, strings.TrimPrefix(msg, childMsgs[0]+": "), indents+1)
 	}
 
-	child := errors.Unwrap(err)
-	msg := err.Error()
-	if child != nil {
-		childMsg := child.Error()
-		// A leading wrapped error is already in msg, so it is not repeated below it.
-		if strings.HasPrefix(msg, childMsg) {
-			child = nil
-		} else {
-			msg = strings.TrimSuffix(msg, " "+childMsg)
+	lines = appendMessage(lines, msg, indents)
+	return lines
+}
+
+// unwrapAll returns the errors that err wraps directly.
+func unwrapAll(err error) []error {
+	switch e := err.(type) { //nolint:errorlint // Only err's own Unwrap, not its chain.
+	case interface{ Unwrap() []error }:
+		return e.Unwrap()
+	case interface{ Unwrap() error }:
+		if child := e.Unwrap(); child != nil {
+			return []error{child}
 		}
 	}
+	return nil
+}
 
+// appendMessage appends msg to lines, indenting every line of it.
+func appendMessage(lines []string, msg string, indents int) []string {
 	indentation := strings.Repeat("  ", indents)
 	msg = strings.TrimSuffix(msg, "\n")
-	lines = append(
-		lines,
-		indentation+strings.ReplaceAll(msg, "\n", "\n"+indentation),
-	)
-
-	if child != nil {
-		lines = appendFormattedErrorLines(child, lines, indents+1)
-	}
-
-	return lines
+	return append(lines, indentation+strings.ReplaceAll(msg, "\n", "\n"+indentation))
 }

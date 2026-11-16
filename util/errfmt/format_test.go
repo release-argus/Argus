@@ -67,6 +67,16 @@ outer message
   inner`,
 		},
 		{
+			name: "single unwrap/trailing wrap whose text the parent also starts with",
+			err: fmt.Errorf(
+				"timeout waiting: %w",
+				errors.New("timeout"),
+			),
+			expected: `
+timeout waiting:
+  timeout`,
+		},
+		{
 			name: "single unwrap/wrapped error at beginning",
 			err: fmt.Errorf(
 				"%w: test:read @ global",
@@ -92,6 +102,50 @@ invalid grant test:read @ global`,
 			),
 			expected: `
 invalid grant: context`,
+		},
+		{
+			name: "single unwrap/bare wrap",
+			err:  fmt.Errorf("%w", fmt.Errorf("outer: %w", errors.New("inner"))),
+			expected: `
+outer:
+  inner`,
+		},
+		{
+			name: "single unwrap/wrapped error in the middle",
+			err:  fmt.Errorf("before %w after", errors.New("inner")),
+			expected: `
+before inner after`,
+		},
+		{
+			name: "single unwrap/wrapped text glued to parent text",
+			err:  fmt.Errorf("timeout%w", errors.New("timeout")),
+			expected: `
+timeouttimeout`,
+		},
+		{
+			name: "two wraps/category then cause",
+			err: fmt.Errorf(
+				"%w: salt: %w",
+				errors.New("malformed hash"), errors.New("illegal base64"),
+			),
+			expected: `
+malformed hash:
+  salt: illegal base64`,
+		},
+		{
+			name: "two wraps/category then joined causes",
+			err: fmt.Errorf(
+				"%w: %w",
+				errors.New("invalid preference"),
+				errors.Join(
+					errors.New("first"),
+					errors.New("second"),
+				),
+			),
+			expected: `
+invalid preference:
+  first
+  second`,
 		},
 		{
 			name: "two level unwrap chain/wrapped errors at end",
@@ -287,6 +341,8 @@ outer:
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := FormatError(tc.err)
 
 			tc.expected = strings.TrimPrefix(tc.expected, "\n")
