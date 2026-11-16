@@ -478,10 +478,10 @@ func (a *GHCRAuth) refreshQueryToken(detail ContainerDetail) (string, error) {
 
 // Inherit copies token data from another [GHCRAuth].
 //
-// - GHCR query tokens are repo-scoped, so we also require the same image.
+// - GHCR query tokens are repo-scoped, so they are only copied for the same image.
 func (a *GHCRAuth) Inherit(from RegistryAuth, srcDetail, dstDetail ContainerDetail) {
 	o, ok := from.(*GHCRAuth)
-	if !ok || srcDetail.Image != dstDetail.Image {
+	if !ok {
 		return
 	}
 	// New token. Don't copy existing token data.
@@ -492,6 +492,9 @@ func (a *GHCRAuth) Inherit(from RegistryAuth, srcDetail, dstDetail ContainerDeta
 	// Copy token data.
 	if a.Token == util.SecretValue {
 		a.Token = o.Token
+	}
+	if srcDetail.Image != dstDetail.Image {
+		return
 	}
 	a.queryToken = o.queryToken
 	a.validUntil = o.validUntil
