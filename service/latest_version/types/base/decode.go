@@ -85,6 +85,9 @@ func ApplyOverrides(
 			cfg,
 		)
 	}
+	if len(data) == 0 {
+		return target, nil
+	}
 
 	// Polymorphic fields.
 	reqRaw, err := polymorphic.Extract(format, data, "require")
