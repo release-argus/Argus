@@ -1759,7 +1759,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 			inherit:   true,
 		},
 		{
-			name: "do not inherit when Details do not match (Token is SecretValue)",
+			name: "restore SecretValue Token but not query token when Details do not match",
 			auth: &GHCRAuth{
 				Token: util.SecretValue,
 			},
@@ -1776,7 +1776,7 @@ func TestGHCRAuth_Inherit(t *testing.T) {
 				Image: "c",
 				Tag:   "d",
 			},
-			wantToken: util.SecretValue,
+			wantToken: "abc",
 		},
 		{
 			name: "do not inherit from GHCRAuth when src.Token is not SecretValue",
