@@ -161,12 +161,9 @@ func TestShoutrrrs_UnmarshalJSON(t *testing.T) {
 			),
 		},
 		{
-			name: "invalid JSON",
-			data: `[`,
-			errRegex: test.TrimYAML(`
-				^jsontext: unexpected EOF after offset 1
-					unexpected EOF$`,
-			),
+			name:     "invalid JSON",
+			data:     `[`,
+			errRegex: `^jsontext: unexpected EOF after offset 1$`,
 		},
 		{
 			name:     "wrong shape (object instead of array)",

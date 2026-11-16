@@ -1245,8 +1245,7 @@ func TestHTTP_TemplateParse(t *testing.T) {
 			wants: wants{
 				bodyRegex: `` +
 					`{"message":"invalid 'params' query parameter format -\\n` +
-					`  jsontext: invalid character '}'.*\\n` +
-					`    invalid character.*"}`,
+					`  jsontext: invalid character '}'(?:[^\\]|\\")*"}`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -3087,8 +3086,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				bodyRegex: test.TrimYAML(`
 					failed to unmarshal payload:
-						jsontext: invalid character.*
-				`),
+						jsontext: invalid character.*$`,
+				),
 			},
 		},
 		{
@@ -3134,8 +3133,8 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				statusCode: http.StatusBadRequest,
 				bodyRegex: test.TrimYAML(`
 					failed to unmarshal payload:
-						jsontext: invalid character.*
-				`),
+						jsontext: invalid character.*$`,
+				),
 			},
 		},
 		{

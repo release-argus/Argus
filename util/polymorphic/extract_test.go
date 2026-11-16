@@ -101,8 +101,7 @@ func TestExtract(t *testing.T) {
 			expected: nil,
 			errRegex: test.TrimYAML(`
 				^extract "key":
-					jsontext: .*
-						invalid character .*$`,
+					jsontext: invalid character .*$`,
 			),
 		},
 	}
