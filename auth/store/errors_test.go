@@ -784,7 +784,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
 						('corrupt', 'corrupt', 'x', '%s', 'not-a-time');`,
-					timeNow().Format(timeFormat)))
+					timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.Users(t.Context())
@@ -839,7 +839,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(id, name, created_at, updated_at)
 					VALUES
 						('corrupt', 'corrupt', '%s', 'not-a-time');`,
-					timeNow().Format(timeFormat),
+					timeNow().Format(TimeFormat),
 				))
 			},
 			invoke: func(t *testing.T, store *Store) error {
@@ -910,7 +910,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(token_hash, user_id, created_at, expires_at, last_seen_at)
 					VALUES
 						('corrupt', '%s', '%s', 'not-a-time', '%s');`,
-					user.ID, timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
+					user.ID, timeNow().Format(TimeFormat), timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.SessionByTokenHash(t.Context(), "corrupt")
@@ -930,7 +930,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(token_hash, user_id, created_at, expires_at, last_seen_at)
 					VALUES
 						('corrupt', '%s', '%s', '%s', 'not-a-time');`,
-					user.ID, timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
+					user.ID, timeNow().Format(TimeFormat), timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.SessionByTokenHash(t.Context(), "corrupt")
@@ -993,7 +993,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(id, name, created_at, updated_at)
 					VALUES
 						('gid', NULL, '%s', '%s');`,
-					timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
+					timeNow().Format(TimeFormat), timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.GroupByID(t.Context(), "gid")
@@ -1025,7 +1025,7 @@ func TestStore__corruptRows(t *testing.T) {
 						(id, username, password_hash, created_at, updated_at)
 					VALUES
 						('uid', NULL, 'x', '%s', '%s');`,
-					timeNow().Format(timeFormat), timeNow().Format(timeFormat)))
+					timeNow().Format(TimeFormat), timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.UserByID(t.Context(), "uid")

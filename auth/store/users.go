@@ -212,7 +212,7 @@ func (s *Store) CreateUser(
 	id := newID()
 
 	if err := s.inTx(ctx, func(tx *sql.Tx) error {
-		now := timeNow().Format(timeFormat)
+		now := timeNow().Format(TimeFormat)
 
 		if _, err := tx.ExecContext(ctx, `
 		INSERT INTO users (
@@ -382,7 +382,7 @@ func (s *Store) UpdatePasswordHash(ctx context.Context, userID, hash string) err
 	}
 	if _, err := s.db.ExecContext(ctx,
 		`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?;`,
-		hash, timeNow().Format(timeFormat), userID,
+		hash, timeNow().Format(TimeFormat), userID,
 	); err != nil {
 		return fmt.Errorf("update password hash: %w", err)
 	}
@@ -409,7 +409,7 @@ func (s *Store) CreateFirstAdmin(
 
 	id := newID()
 	if err := s.inTx(ctx, func(tx *sql.Tx) error {
-		now := timeNow().Format(timeFormat)
+		now := timeNow().Format(TimeFormat)
 		// First user only.
 		res, err := tx.ExecContext(ctx, `
 			INSERT INTO users (
@@ -471,7 +471,7 @@ func (s *Store) ResetUserPassword(ctx context.Context, username, password string
 
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?;`,
-			hash, timeNow().Format(timeFormat), id,
+			hash, timeNow().Format(TimeFormat), id,
 		); err != nil {
 			return fmt.Errorf("reset password: %w", err)
 		}

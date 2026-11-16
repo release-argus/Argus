@@ -25,10 +25,10 @@ import (
 	"modernc.org/sqlite"
 )
 
-// timeFormat is how timestamps are written (TEXT, UTC). Fixed-width fractional
+// TimeFormat is how timestamps are written (TEXT, UTC). Fixed-width fractional
 // seconds keep TEXT order chronological.
 // [time.RFC3339Nano] trims trailing zeros and so loses this ordering.
-const timeFormat = "2006-01-02T15:04:05.000000000Z07:00"
+const TimeFormat = "2006-01-02T15:04:05.000000000Z07:00"
 
 // timeParseFormat accepts any number of fractional digits, so timestamps
 // written with either layout load.
@@ -173,7 +173,7 @@ type rowUpdate struct {
 func newRowUpdate() *rowUpdate {
 	return &rowUpdate{
 		sets: []string{"updated_at = ?"},
-		args: []any{timeNow().Format(timeFormat)},
+		args: []any{timeNow().Format(TimeFormat)},
 	}
 }
 

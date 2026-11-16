@@ -40,9 +40,9 @@ func (s *Store) InsertSession(ctx context.Context, session Session) error {
 		INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at, ip, user_agent)
 		VALUES (?, ?, ?, ?, ?, ?, ?);`,
 		session.TokenHash, session.UserID,
-		session.CreatedAt.Format(timeFormat),
-		session.ExpiresAt.Format(timeFormat),
-		session.LastSeenAt.Format(timeFormat),
+		session.CreatedAt.Format(TimeFormat),
+		session.ExpiresAt.Format(TimeFormat),
+		session.LastSeenAt.Format(TimeFormat),
 		session.IP, session.UserAgent,
 	); err != nil {
 		return fmt.Errorf("insert session: %w", err)
@@ -82,7 +82,7 @@ func (s *Store) TouchSession(
 ) error {
 	if _, err := s.db.ExecContext(ctx,
 		`UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?;`,
-		lastSeenAt.Format(timeFormat), tokenHash,
+		lastSeenAt.Format(TimeFormat), tokenHash,
 	); err != nil {
 		return fmt.Errorf("touch session: %w", err)
 	}
@@ -113,7 +113,7 @@ func (s *Store) DeleteSessionsForUser(ctx context.Context, userID string) error 
 // DeleteExpiredSessions prunes sessions past their absolute expiry.
 func (s *Store) DeleteExpiredSessions(ctx context.Context, now time.Time) error {
 	if _, err := s.db.ExecContext(ctx,
-		`DELETE FROM sessions WHERE expires_at < ?;`, now.Format(timeFormat),
+		`DELETE FROM sessions WHERE expires_at < ?;`, now.Format(TimeFormat),
 	); err != nil {
 		return fmt.Errorf("delete expired sessions: %w", err)
 	}

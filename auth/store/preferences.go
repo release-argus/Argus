@@ -168,7 +168,7 @@ func (s *Store) SetPreferences(
 	hide := canonical(prefs.Hide, hideNames)
 	timestamps := canonical(prefs.Timestamps, timestampNames)
 
-	now := timeNow().Format(timeFormat)
+	now := timeNow().Format(TimeFormat)
 	if _, err := s.db.ExecContext(ctx, `
 		INSERT INTO user_preferences (
 			user_id,
