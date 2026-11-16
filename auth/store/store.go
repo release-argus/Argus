@@ -237,7 +237,7 @@ func (s *Store) applyMigration(ctx context.Context, m migration) error {
 			INSERT INTO schema_migrations (version, applied_at)
 			VALUES (?, ?);`,
 			m.version,
-			timeNow().Format(timeFormat),
+			timeNow().Format(TimeFormat),
 		)
 		return err //nolint:wrapcheck
 	})
@@ -278,7 +278,7 @@ func (s *Store) syncPermissions(ctx context.Context) error {
 
 		// Retire pairs absent from the catalogue, un-retire those that returned.
 		logFrom := logx.LogFrom{Primary: "auth", Secondary: "permissions"}
-		now := timeNow().Format(timeFormat)
+		now := timeNow().Format(TimeFormat)
 		for permission, id := range existing {
 			if valid[permission] {
 				if _, err := tx.ExecContext(ctx, `
@@ -385,7 +385,7 @@ func (s *Store) seedGroups(ctx context.Context, freshInstall bool) error {
 					continue
 				}
 				id = newID()
-				now := timeNow().Format(timeFormat)
+				now := timeNow().Format(TimeFormat)
 				if _, err := tx.ExecContext(ctx, `
 					INSERT INTO groups (
 						id,

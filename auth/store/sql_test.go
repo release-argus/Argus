@@ -69,14 +69,14 @@ func TestTimeFormat__textOrderIsChronological(t *testing.T) {
 				t.Fatal("Time.Before() mismatch\ngot:  false\nwant: true")
 			}
 
-			// [time.RFC3339Nano] trims trailing zeros, so its TEXT form would sort 'Z' above a digit.
-			gotEarlier := earlier.UTC().Format(timeFormat)
-			gotLater := later.UTC().Format(timeFormat)
+			// time.RFC3339Nano trims trailing zeros, so its TEXT form would sort 'Z' above a digit.
+			gotEarlier := earlier.UTC().Format(TimeFormat)
+			gotLater := later.UTC().Format(TimeFormat)
 
 			// ORDER BY and the expiry sweeps rely on TEXT order matching time order.
 			if gotEarlier >= gotLater {
 				t.Errorf(
-					"timeFormat text order mismatch\n"+
+					"TimeFormat text order mismatch\n"+
 						"got:  earlier=%q, later=%q\nwant: earlier < later",
 					gotEarlier, gotLater,
 				)
@@ -123,7 +123,7 @@ func TestTimeText_Scan(t *testing.T) {
 	}{
 		{
 			name:     "valid string",
-			src:      when.Format(timeFormat),
+			src:      when.Format(TimeFormat),
 			want:     when,
 			errRegex: `^$`,
 		},
@@ -182,7 +182,7 @@ func TestNullTimeText_Scan(t *testing.T) {
 		},
 		{
 			name:     "valid string",
-			src:      when.Format(timeFormat),
+			src:      when.Format(TimeFormat),
 			want:     &when,
 			errRegex: `^$`,
 		},

@@ -369,7 +369,7 @@ func TestStore_PreferencesForUser__canonicalisesOnRead(t *testing.T) {
 			(user_id, hide, view, timestamps, created_at, updated_at)
 		VALUES
 			('%s', '%s,retired_hide', 'compact', '%s,retired_timestamp', '%s', '%s');`,
-		user.ID, HideSkipped, TimestampFound, timeNow().Format(timeFormat), timeNow().Format(timeFormat),
+		user.ID, HideSkipped, TimestampFound, timeNow().Format(TimeFormat), timeNow().Format(TimeFormat),
 	))
 
 	got, err := store.PreferencesForUser(t.Context(), user.ID)

@@ -57,7 +57,7 @@ func (s *Store) CreateGroup(
 			return err
 		}
 
-		now := timeNow().Format(timeFormat)
+		now := timeNow().Format(TimeFormat)
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO groups (id, name, description, system, created_at, updated_at)
 			VALUES (?, ?, ?, 0, ?, ?);`,

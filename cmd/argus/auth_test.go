@@ -471,7 +471,7 @@ func presetExpiredRows(t *testing.T, db *sql.DB) {
 	if _, err := store.New(t.Context(), db); err != nil {
 		t.Fatalf("store.New() failed: %v", err)
 	}
-	expired := time.Now().UTC().Add(-time.Hour).Format("2006-01-02T15:04:05.000000000Z07:00")
+	expired := time.Now().UTC().Add(-time.Hour).Format(store.TimeFormat)
 	for i, statement := range []string{
 		`INSERT OR REPLACE INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at, ip, user_agent)
 			VALUES ('stale', 'nobody', ?, ?, ?, '', '');`,

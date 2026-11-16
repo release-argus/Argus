@@ -74,7 +74,7 @@ func (s *Store) CreateAPIToken(
 
 	var expires any
 	if expiresAt != nil {
-		expires = expiresAt.Format(timeFormat)
+		expires = expiresAt.Format(TimeFormat)
 	}
 	result, err := s.db.ExecContext(ctx, `
 			INSERT INTO api_tokens (
@@ -97,7 +97,7 @@ func (s *Store) CreateAPIToken(
 		token.Name,
 		auth.HashToken(plaintext),
 		token.Prefix,
-		token.CreatedAt.Format(timeFormat),
+		token.CreatedAt.Format(TimeFormat),
 		expires,
 		token.UserID,
 		maxAPITokensPerUser,
@@ -159,7 +159,7 @@ func (s *Store) APITokenByToken(ctx context.Context, plaintext string) (*APIToke
 func (s *Store) TouchAPIToken(ctx context.Context, id string, lastUsedAt time.Time) error {
 	if _, err := s.db.ExecContext(ctx,
 		`UPDATE api_tokens SET last_used_at = ? WHERE id = ?;`,
-		lastUsedAt.Format(timeFormat), id,
+		lastUsedAt.Format(TimeFormat), id,
 	); err != nil {
 		return fmt.Errorf("touch API token: %w", err)
 	}
@@ -192,7 +192,7 @@ func (s *Store) DeleteAPIToken(ctx context.Context, userID, id string) error {
 func (s *Store) DeleteExpiredAPITokens(ctx context.Context) error {
 	if _, err := s.db.ExecContext(ctx,
 		`DELETE FROM api_tokens WHERE expires_at IS NOT NULL AND expires_at < ?;`,
-		timeNow().Format(timeFormat),
+		timeNow().Format(TimeFormat),
 	); err != nil {
 		return fmt.Errorf("delete expired API tokens: %w", err)
 	}

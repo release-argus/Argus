@@ -393,7 +393,7 @@ func TestStore_APIToken__errors(t *testing.T) {
 				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at, expires_at)
 					VALUES ('x', '%s', 'x', 'hash', 'argus_', '%s', 'not-a-time');`,
-					user.ID, timeNow().Format(timeFormat)))
+					user.ID, timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.APITokensForUser(t.Context(), mustUserID(t, store, "argus"))
@@ -411,7 +411,7 @@ func TestStore_APIToken__errors(t *testing.T) {
 				test.ExecSQL(t, store.db, fmt.Sprintf(`
 					INSERT INTO api_tokens (id, user_id, name, token_hash, prefix, created_at, last_used_at)
 					VALUES ('x', '%s', 'x', 'hash', 'argus_', '%s', 'not-a-time');`,
-					user.ID, timeNow().Format(timeFormat)))
+					user.ID, timeNow().Format(TimeFormat)))
 			},
 			invoke: func(t *testing.T, store *Store) error {
 				_, err := store.APITokensForUser(t.Context(), mustUserID(t, store, "argus"))
