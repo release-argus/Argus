@@ -65,6 +65,9 @@ func ApplyOverrides(
 			cfg,
 		)
 	}
+	if len(data) == 0 {
+		return target, nil
+	}
 
 	// Static fields.
 	if err := decode.Unmarshal(format, data, target); err != nil {

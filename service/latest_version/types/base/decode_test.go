@@ -194,7 +194,6 @@ func TestApplyOverrides(t *testing.T) {
 		want                string
 		reqPointerChanged   bool
 		reqPointerUnchecked bool
-		skipPointerCheck    bool
 		errRegex            string
 	}{
 		{
@@ -284,10 +283,8 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			errRegex: test.TrimYAML(`
-				^jsontext:
-					unexpected EOF$`,
-			),
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/existing/empty object",
@@ -306,9 +303,8 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want:             "{}\n",
-			skipPointerCheck: true,
-			errRegex:         `^$`,
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/existing/fail to extract require",
@@ -879,7 +875,7 @@ func TestApplyOverrides(t *testing.T) {
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if err != nil || lookup == nil || tc.skipPointerCheck {
+			if err != nil || lookup == nil {
 				return
 			}
 

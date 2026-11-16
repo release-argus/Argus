@@ -166,11 +166,10 @@ func TestApplyOverrides(t *testing.T) {
 	}
 
 	tests := []struct {
-		name             string
-		args             Args
-		want             string
-		skipPointerCheck bool
-		errRegex         string
+		name     string
+		args     Args
+		want     string
+		errRegex string
 	}{
 		{
 			name: "JSON/no data",
@@ -179,10 +178,8 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			errRegex: test.TrimYAML(`
-					^jsontext:
-						unexpected EOF$`,
-			),
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/empty object",
@@ -201,9 +198,8 @@ func TestApplyOverrides(t *testing.T) {
 				data:   "",
 				target: &Lookup{},
 			},
-			want:             "{}\n",
-			skipPointerCheck: true,
-			errRegex:         `^$`,
+			want:     "{}\n",
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/new, filled, bare",
@@ -306,7 +302,7 @@ func TestApplyOverrides(t *testing.T) {
 			if testErr != nil {
 				t.Fatal(testErr)
 			}
-			if err != nil || lookup == nil || tc.skipPointerCheck {
+			if err != nil || lookup == nil {
 				return
 			}
 
