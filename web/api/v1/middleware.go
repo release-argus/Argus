@@ -79,11 +79,11 @@ func getIP(r *http.Request) string {
 // forwardedIP returns the real client IP claimed by proxy headers ("" if none).
 // Only call for requests from trusted proxies - the headers are spoofable.
 //
-// X-Forwarded-For is read right-to-left, returning the first address that is
-// not itself a trusted proxy. CF-Connecting-Ip / X-Real-Ip are used as a
-// fallback.
+// X-Forwarded-For is read right-to-left across all its header lines, returning
+// the first address that is not itself a trusted proxy. CF-Connecting-Ip /
+// X-Real-Ip are used as a fallback.
 func (api *API) forwardedIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+	if xff := strings.Join(r.Header.Values("X-Forwarded-For"), ","); xff != "" {
 		parts := strings.Split(xff, ",")
 		for _, part := range slices.Backward(parts) {
 			addr, err := netip.ParseAddr(strings.TrimSpace(part))
