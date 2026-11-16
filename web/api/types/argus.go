@@ -16,6 +16,7 @@
 package types
 
 import (
+	"slices"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -879,16 +880,13 @@ func (w *Webhook) Censor() {
 		return
 	}
 
-	// Secret.
 	if w.Secret != "" {
 		w.Secret = util.SecretValue
 	}
 
-	// Headers.
-	if w.Headers != nil {
-		for i := range w.Headers {
-			w.Headers[i].Value = util.SecretValue
-		}
+	w.Headers = slices.Clone(w.Headers)
+	for i := range w.Headers {
+		w.Headers[i].Value = util.SecretValue
 	}
 }
 

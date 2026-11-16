@@ -3291,8 +3291,6 @@ func TestWebhooks_Flatten(t *testing.T) {
 		name     string
 		webhooks *Webhooks
 		want     []*Webhook
-		// Flatten shares Headers with the map, so Censor writes through to it.
-		inputMutated bool
 	}{
 		{
 			name:     "nil",
@@ -3355,7 +3353,6 @@ func TestWebhooks_Flatten(t *testing.T) {
 					Headers: []Header{{Key: "X-Token", Value: util.SecretValue}},
 				},
 			},
-			inputMutated: true,
 		},
 	}
 
@@ -3383,9 +3380,6 @@ func TestWebhooks_Flatten(t *testing.T) {
 				t.Errorf("Webhooks.Flatten() mismatch\ngot:  %q\nwant: %q", gotStr, wantStr)
 			}
 
-			if tc.inputMutated {
-				return
-			}
 			inputAfter, err := decode.Marshal(format, tc.webhooks)
 			if err != nil {
 				t.Fatalf("after: decode.Marshal() failed: %v", err)
