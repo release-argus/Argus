@@ -36,14 +36,14 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 		name          string
 		trusted       []string
 		remoteAddr    string
-		xForwardedFor string
+		xForwardedFor []string
 		wantIP        string
 		wantWarn      bool
 	}{
 		{
 			name:          "no trusted proxies/forwarded header is ignored, and warns",
 			remoteAddr:    "1.1.1.1:1234",
-			xForwardedFor: "2.2.2.2",
+			xForwardedFor: []string{"2.2.2.2"},
 			wantIP:        "1.1.1.1",
 			wantWarn:      true,
 		},
@@ -56,15 +56,22 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 			name:          "trusted proxies/an unparseable peer is not trusted",
 			trusted:       []string{"10.0.0.0/8"},
 			remoteAddr:    "not-an-ip",
-			xForwardedFor: "2.2.2.2",
+			xForwardedFor: []string{"2.2.2.2"},
 			wantIP:        "",
 		},
 		{
 			name:          "trusted proxies/trusted peer resolves X-Forwarded-For IP",
 			trusted:       []string{"10.0.0.0/8"},
 			remoteAddr:    "10.1.2.3",
-			xForwardedFor: "3.3.3.3",
+			xForwardedFor: []string{"3.3.3.3"},
 			wantIP:        "3.3.3.3",
+		},
+		{
+			name:          "trusted proxies/proxy-appended X-Forwarded-For line beats a spoofed first line",
+			trusted:       []string{"10.0.0.0/8"},
+			remoteAddr:    "10.1.2.3",
+			xForwardedFor: []string{"6.6.6.6", "203.0.113.9"},
+			wantIP:        "203.0.113.9",
 		},
 	}
 
@@ -90,8 +97,8 @@ func TestAPI_ClientIPMiddleware(t *testing.T) {
 			for range 2 {
 				req := httptest.NewRequest(http.MethodGet, "/", nil)
 				req.RemoteAddr = tc.remoteAddr
-				if tc.xForwardedFor != "" {
-					req.Header.Set("X-Forwarded-For", tc.xForwardedFor)
+				for _, line := range tc.xForwardedFor {
+					req.Header.Add("X-Forwarded-For", line)
 				}
 				handler.ServeHTTP(httptest.NewRecorder(), req)
 			}
