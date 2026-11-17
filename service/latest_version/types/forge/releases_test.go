@@ -483,8 +483,9 @@ func TestFilterReleases(t *testing.T) {
 			},
 		},
 		{
-			name:           "semver pre-release tag is excluded even where its flag is unset",
-			usePreReleases: false,
+			name:               "semver pre-release tag is excluded even where its flag is unset",
+			semanticVersioning: true,
+			usePreReleases:     false,
 			releases: []forgetypes.Release{
 				{TagName: "v2.0.0-rc1"},
 				{TagName: "v1.9.0"},
@@ -701,6 +702,15 @@ func TestFilterReleases__PreReleaseFromTag(t *testing.T) {
 			},
 			noSemVer: true,
 			want:     []string{"1.2.3rc1", "nightly"},
+		},
+		{
+			name: "a tag that parses as a semver pre-release stays stable without semantic versioning",
+			releases: []forgetypes.Release{
+				{Name: "2026-11"},
+				{Name: "2026-09a"},
+			},
+			noSemVer: true,
+			want:     []string{"2026-11", "2026-09a"},
 		},
 		{
 			name: "TagName wins over Name",
