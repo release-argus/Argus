@@ -117,9 +117,9 @@ type FilterOptions struct {
 // FilterReleases filters releases based on the following:
 //   - opts.URLCommands.
 //   - Non-semantic versions (if opts.SemanticVersioning).
-//   - Pre-releases (if not opts.UsePreReleases), based on either the forge's
-//     pre-release flag or a semantic-version pre-release identifier in the
-//     transformed tag.
+//   - Pre-releases (if not opts.UsePreReleases), based on the forge's
+//     pre-release flag, or a semantic-version pre-release identifier in the
+//     transformed tag (if opts.SemanticVersioning).
 //
 // Returns the filtered list, sorted in descending semantic-version order
 // (if opts.SemanticVersioning).
@@ -142,20 +142,19 @@ func FilterReleases(
 		}
 
 		release.TagName = tagName[0]
-		if !release.PreRelease {
-			if semVer, err := semver.NewVersion(tagName[0]); err == nil && semVer.Prerelease() != "" {
-				release.PreRelease = true
-			}
-		}
-		if release.PreRelease && !opts.UsePreReleases {
-			continue
-		}
-
 		if opts.SemanticVersioning {
-			semVer, err := semver.NewVersion(tagName[0])
+			semVer, err := semver.NewVersion(release.TagName)
 			if err != nil {
 				continue
 			}
+
+			if semVer.Prerelease() != "" {
+				release.PreRelease = true
+				if !opts.UsePreReleases {
+					continue
+				}
+			}
+
 			release.SemanticVersion = semVer
 		}
 
