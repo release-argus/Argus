@@ -189,12 +189,11 @@ func TestApplyOverrides(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                string
-		args                Args
-		want                string
-		reqPointerChanged   bool
-		reqPointerUnchecked bool
-		errRegex            string
+		name              string
+		args              Args
+		want              string
+		reqPointerChanged bool
+		errRegex          string
 	}{
 		{
 			name: "JSON/new/no data",
@@ -557,8 +556,7 @@ func TestApplyOverrides(t *testing.T) {
 						- ls
 						- -lah
 			`),
-			reqPointerUnchecked: true,
-			errRegex:            `^$`,
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/existing/change Require.x and Require.Docker.x",
@@ -662,8 +660,7 @@ func TestApplyOverrides(t *testing.T) {
 						image: foo
 						tag: something-else
 			`),
-			reqPointerUnchecked: true,
-			errRegex:            `^$`,
+			errRegex: `^$`,
 		},
 		{
 			name: "JSON/existing/change Require.x/type error",
@@ -890,7 +887,7 @@ func TestApplyOverrides(t *testing.T) {
 			}
 
 			// An existing Require is patched in place, and replaced only by a null override.
-			if hadRequire != nil && !tc.reqPointerUnchecked {
+			if hadRequire != nil {
 				reqPointerChanged := lookup.Require != hadRequire
 				if reqPointerChanged != tc.reqPointerChanged {
 					t.Fatalf(

@@ -60,8 +60,8 @@ func Decode(
 	}
 
 	// Static fields.
-	if err := decode.Unmarshal(format, data, &field); err != nil {
-		return nil, err //nolint:wrapcheck
+	if err := field.unmarshalStatic(format, data); err != nil {
+		return nil, err
 	}
 
 	return &field, nil
@@ -108,11 +108,29 @@ func ApplyOverrides(
 	}
 
 	// Static fields.
-	if err := decode.Unmarshal(format, data, target); err != nil {
-		return nil, err //nolint:wrapcheck
+	if err := target.unmarshalStatic(format, data); err != nil {
+		return nil, err
 	}
 
 	return target, nil
+}
+
+// unmarshalStatic decodes static configuration fields, preserving dynamic fields.
+func (l *Lookup) unmarshalStatic(format string, data []byte) error {
+	aux := LookupDecode{
+		Type:        l.Type,
+		URL:         l.URL,
+		URLCommands: l.URLCommands,
+	}
+
+	if err := decode.Unmarshal(format, data, &aux); err != nil {
+		return err //nolint:wrapcheck
+	}
+	l.Type = aux.Type
+	l.URL = aux.URL
+	l.URLCommands = aux.URLCommands
+
+	return nil
 }
 
 type lookupWithRequire interface {
