@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.39.1](https://github.com/release-argus/Argus/compare/0.39.0...0.39.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **api:** read every X-Forwarded-For header line ([f71dc87](https://github.com/release-argus/Argus/commit/f71dc87a8769fbeff717a67165ad6dc6d60dd91d))
+* **errfmt:** stop repeating or dropping wrapped error text ([1a91983](https://github.com/release-argus/Argus/commit/1a91983b72f16629b1607a548cf62c8e796cc5b3))
+* ignore empty data in lookup ApplyOverrides ([f1e4eb5](https://github.com/release-argus/Argus/commit/f1e4eb5541b6bc8f749a179017ee23722f3e5ad3))
+* **lv-docker:** restore GHCR token when the image differs ([85c8b24](https://github.com/release-argus/Argus/commit/85c8b2414d6bb31787bb04f8c9a95001b49e9d52))
+* **lv-forge:** only parse pre-release tags from semver versions ([#1079](https://github.com/release-argus/Argus/issues/1079)) ([2431427](https://github.com/release-argus/Argus/commit/24314272d7de1c4610d83c96d5a1aeb89c718e82))
+* **url-commands:** don't skip versions after one expands ([4cc213a](https://github.com/release-argus/Argus/commit/4cc213ab094771bbb0bef9985746572b45124cb2))
+* **url-commands:** reject out-of-range negative indices ([aa8e703](https://github.com/release-argus/Argus/commit/aa8e7038e0abaee0d86e5e8df1ecea2aa6b4fa66))
+
 ## [0.39.0](https://github.com/release-argus/Argus/compare/0.38.0...0.39.0) (2026-10-02)
 
 
