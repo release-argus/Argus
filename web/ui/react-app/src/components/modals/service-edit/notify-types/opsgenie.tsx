@@ -130,7 +130,7 @@ const OPSGENIE = ({
 					label="Priority"
 					name={`${name}.params.priority`}
 					tooltip={{
-						content: 'Priority level of the alert. 1/2/3/4/5',
+						content: 'Priority level of the alert. P1/P2/P3/P4/P5',
 						type: 'string',
 					}}
 				/>

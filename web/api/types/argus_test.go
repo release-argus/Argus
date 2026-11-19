@@ -1692,8 +1692,22 @@ func TestNotify_Censor(t *testing.T) {
 			name: "unknown type/every value censored",
 			notify: &Notify{
 				URLFields: map[string]string{
-					"host":    "alpha",
-					"headers": `{"A":"bravo"}`,
+					"altid":          "alpha",
+					"apikey":         "bravo",
+					"authtoken":      "charlie",
+					"botkey":         "delta",
+					"channel":        "echo",
+					"clientkey":      "foxtrot",
+					"devicekey":      "mike",
+					"integrationkey": "golf",
+					"key":            "hotel",
+					"password":       "india",
+					"raw":            "november",
+					"token":          "juliett",
+					"tokena":         "kilo",
+					"tokenb":         "lima",
+					"user":           "oscar",
+					"webhookid":      "papa",
 				},
 				Params: map[string]string{
 					"title": "charlie",
@@ -1701,8 +1715,22 @@ func TestNotify_Censor(t *testing.T) {
 			},
 			want: &Notify{
 				URLFields: map[string]string{
-					"host":    util.SecretValue,
-					"headers": util.SecretValue,
+					"altid":          util.SecretValue,
+					"apikey":         util.SecretValue,
+					"authtoken":      util.SecretValue,
+					"botkey":         util.SecretValue,
+					"channel":        util.SecretValue,
+					"clientkey":      util.SecretValue,
+					"devicekey":      util.SecretValue,
+					"integrationkey": util.SecretValue,
+					"key":            util.SecretValue,
+					"password":       util.SecretValue,
+					"raw":            util.SecretValue,
+					"token":          util.SecretValue,
+					"tokena":         util.SecretValue,
+					"tokenb":         util.SecretValue,
+					"user":           util.SecretValue,
+					"webhookid":      util.SecretValue,
 				},
 				Params: map[string]string{
 					"title": util.SecretValue,
@@ -1780,9 +1808,9 @@ func TestNotify_Censor(t *testing.T) {
 			},
 			want: &Notify{
 				URLFields: map[string]string{
-					"headers":           `{"Authorization":"<secret>","X-Foo":"<secret>"}`,
-					"json_payload_vars": `{"apikey":"<secret>"}`,
-					"query_vars":        `{"token":"<secret>"}`,
+					"headers":           `{"Authorization":"` + util.SecretValue + `","X-Foo":"` + util.SecretValue + `"}`,
+					"json_payload_vars": `{"apikey":"` + util.SecretValue + `"}`,
+					"query_vars":        `{"token":"` + util.SecretValue + `"}`,
 					"host":              "example.com",
 				},
 			},
@@ -1868,7 +1896,7 @@ func TestNotify_Censor__EveryType(t *testing.T) {
 			}
 			for _, field := range safe.URLFieldMaps {
 				notify.URLFields[field] = `{"A":"alpha"}`
-				want.URLFields[field] = `{"A":"<secret>"}`
+				want.URLFields[field] = `{"A":"` + util.SecretValue + `"}`
 			}
 			for _, param := range safe.Params {
 				notify.Params[param] = "alpha"
@@ -1876,7 +1904,7 @@ func TestNotify_Censor__EveryType(t *testing.T) {
 			}
 			for _, param := range safe.ParamMaps {
 				notify.Params[param] = `{"A":"alpha"}`
-				want.Params[param] = `{"A":"<secret>"}`
+				want.Params[param] = `{"A":"` + util.SecretValue + `"}`
 			}
 
 			notify.Censor(sType)

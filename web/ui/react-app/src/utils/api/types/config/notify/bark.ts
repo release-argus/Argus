@@ -1,11 +1,3 @@
-export const BARK_SCHEME = {
-	HTTP: { label: 'HTTP', value: 'http' },
-	HTTPS: { label: 'HTTPS', value: 'https' },
-} as const;
-export type BarkScheme =
-	(typeof BARK_SCHEME)[keyof typeof BARK_SCHEME]['value'];
-export const barkSchemeOptions = Object.values(BARK_SCHEME);
-
 // biome-ignore assist/source/useSortedKeys: default on top.
 export const BARK_SOUND = {
 	DEFAULT: { label: '\u00A0', value: '' },

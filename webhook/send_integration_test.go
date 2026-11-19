@@ -184,7 +184,7 @@ func TestWebhook_Send(t *testing.T) {
 		{
 			name:        "does try notifiers on fail",
 			wouldFail:   true,
-			stdoutRegex: `Webhook gave 500.*invalid gotify token`,
+			stdoutRegex: `Webhook gave 500.*\(401\)`,
 			errRegex:    `failed 1 times to send the Webhook for .* to ".*"$`,
 			notifiers: shoutrrr.Shoutrrrs{
 				"fail": shoutrrrtest.Shoutrrr(true, false),
@@ -308,7 +308,7 @@ func TestNotifiers_Send(t *testing.T) {
 		},
 		{
 			name:     "failing",
-			errRegex: `invalid gotify token`,
+			errRegex: `\(401\)`,
 			shoutrrrNotifiers: &shoutrrr.Shoutrrrs{
 				"fail": shoutrrrtest.Shoutrrr(true, false),
 			},

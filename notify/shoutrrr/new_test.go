@@ -300,6 +300,18 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name: "new/fail/URL not located",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				Name:              typeWithDefaults,
+				URLFields: map[string]string{
+					"host":  "https://\texample.com",
+					"token": testToken,
+				},
+			},
+			errRegex: `failed to parse URL`,
+		},
+		{
 			name: "new/have Main, have Defaults/core",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",

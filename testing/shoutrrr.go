@@ -121,7 +121,11 @@ func findShoutrrr(
 			notify.Failed = &notify.ServiceStatus.Fails.Shoutrrr
 
 			// Check whether all values set.
-			if err, _ := notify.CheckValues(); err != nil {
+			err, _ := notify.CheckValues()
+			if err == nil {
+				err = notify.CheckURL()
+			}
+			if err != nil {
 				logx.Fatal(
 					&decode.ErrKeyField{
 						Key: "notify",

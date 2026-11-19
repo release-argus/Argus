@@ -17,6 +17,9 @@ import {
 	waitForAccordionAnimations,
 } from './fixtures/validation';
 
+const DURATION_INVALID = "Invalid duration. Use 'AhBmCs' duration format.";
+const XMPP_RECIPIENT_REQUIRED = 'To or Rooms required.';
+
 test.describe('Service creation modal - field validation', () => {
 	// These tests never submit, so they're safe to run fully parallel.
 	test.describe.configure({ mode: 'parallel' });
@@ -549,6 +552,24 @@ test.describe('Service creation modal - field validation', () => {
 			});
 		});
 
+		test.describe('Lark', () => {
+			test('token is required', async ({ page }, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/lark',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'Lark');
+
+				await runValidations(section, shot, [
+					required({ good: 'abc123token', input: 'Token', slug: 'token' }),
+				]);
+			});
+		});
+
 		test.describe('MatterMost', () => {
 			test('host and token are required; port must be a valid number', async ({
 				page,
@@ -593,6 +614,28 @@ test.describe('Service creation modal - field validation', () => {
 					required({ good: 'matrix.example.com', input: 'Host', slug: 'host' }),
 					required({ good: 's3cret', input: 'Password', slug: 'password' }),
 					numeric({ good: '8448', input: 'Port', slug: 'port' }),
+				]);
+			});
+		});
+
+		test.describe('MQTT', () => {
+			test('host and topic are required; port must be a valid number', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/mqtt',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'MQTT');
+
+				await runValidations(section, shot, [
+					required({ good: 'mqtt.example.com', input: 'Host', slug: 'host' }),
+					numeric({ good: '8883', input: 'Port', slug: 'port' }),
+					required({ good: 'argus/releases', input: 'Topic', slug: 'topic' }),
 				]);
 			});
 		});
@@ -929,6 +972,31 @@ test.describe('Service creation modal - field validation', () => {
 			});
 		});
 
+		test.describe('PagerDuty', () => {
+			test('integration key is required; port must be a valid number', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/pagerduty',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'PagerDuty');
+
+				await runValidations(section, shot, [
+					numeric({ good: '443', input: 'Port', slug: 'port' }),
+					required({
+						good: '0123456789abcdef0123456789abcdef',
+						input: 'Integration Key',
+						slug: 'integrationkey',
+					}),
+				]);
+			});
+		});
+
 		test.describe('PushBullet', () => {
 			test('access token and targets are required', async ({
 				page,
@@ -959,7 +1027,7 @@ test.describe('Service creation modal - field validation', () => {
 		});
 
 		test.describe('PushOver', () => {
-			test('API token/key and user key are required; priority must be a valid number and encryption key a 64-character hex string', async ({
+			test('API token/key and user key are required; priority and timestamp must be valid numbers, retry and expire durations, and encryption key a 64-character hex string', async ({
 				page,
 			}, testInfo) => {
 				const shot = screenshotsUnder(
@@ -985,6 +1053,27 @@ test.describe('Service creation modal - field validation', () => {
 					}),
 					numeric({ good: '1', input: 'Priority', slug: 'priority' }),
 					{
+						bad: '30',
+						badSlug: 'retry-invalid-duration',
+						error: DURATION_INVALID,
+						good: '30s',
+						goodSlug: 'retry-valid',
+						input: 'Retry',
+					},
+					{
+						bad: '1',
+						badSlug: 'expire-invalid-duration',
+						error: DURATION_INVALID,
+						good: '1h',
+						goodSlug: 'expire-valid',
+						input: 'Expire',
+					},
+					numeric({
+						good: '1700000000',
+						input: 'Timestamp',
+						slug: 'timestamp',
+					}),
+					{
 						bad: 'abc123',
 						badSlug: 'encryptionkey-invalid-hex',
 						error: 'Invalid key. Must be 64 characters, 0-9 and A-F.',
@@ -997,7 +1086,7 @@ test.describe('Service creation modal - field validation', () => {
 		});
 
 		test.describe('Rocket.Chat', () => {
-			test('channel, host, token A, and token B are required; port must be a valid number', async ({
+			test('host, token A, and token B are required; channel is optional; port must be a valid number', async ({
 				page,
 			}, testInfo) => {
 				const shot = screenshotsUnder(
@@ -1011,7 +1100,7 @@ test.describe('Service creation modal - field validation', () => {
 				await addNotify(section, dialog, 'Rocket.Chat');
 
 				await runValidations(section, shot, [
-					required({ good: 'general', input: 'Channel', slug: 'channel' }),
+					optional({ good: 'general', input: 'Channel', slug: 'channel' }),
 					required({
 						good: 'rocketchat.example.io',
 						input: 'Host',
@@ -1041,6 +1130,66 @@ test.describe('Service creation modal - field validation', () => {
 						good: 'slack://xoxb:token@channel',
 						input: 'Raw',
 						slug: 'raw',
+					}),
+				]);
+			});
+		});
+
+		test.describe('Signal', () => {
+			test('host, source, and recipients are required; port must be a valid number', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/signal',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'Signal');
+
+				await runValidations(section, shot, [
+					required({
+						good: 'signal.example.com',
+						input: 'Host',
+						slug: 'host',
+					}),
+					numeric({ good: '8080', input: 'Port', slug: 'port' }),
+					required({ good: '+15551234567', input: 'Source', slug: 'source' }),
+					required({
+						good: '+15557654321',
+						input: 'Recipients',
+						slug: 'recipients',
+					}),
+				]);
+			});
+		});
+
+		test.describe('Signalgrid', () => {
+			test('client key and channel are required', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/signalgrid',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'Signalgrid');
+
+				await runValidations(section, shot, [
+					required({
+						good: 'clientkey',
+						input: 'Client Key',
+						slug: 'clientkey',
+					}),
+					required({
+						good: 'channel',
+						input: 'Channel',
+						slug: 'channel',
 					}),
 				]);
 			});
@@ -1186,6 +1335,99 @@ test.describe('Service creation modal - field validation', () => {
 
 				await runValidations(section, shot, [
 					required({ good: '123456:ABC-DEF', input: 'Token', slug: 'token' }),
+				]);
+			});
+		});
+
+		test.describe('Twilio', () => {
+			test('account SID, auth token, from, and to are required', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/twilio',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'Twilio (SMS)');
+
+				await runValidations(section, shot, [
+					required({
+						// Split so secret scanners do not take it for a real account SID.
+						good: `AC${'0123456789abcdef'.repeat(2)}`,
+						input: 'Account SID',
+						slug: 'accountsid',
+					}),
+					required({
+						good: 'authtoken',
+						input: 'Auth Token',
+						slug: 'authtoken',
+					}),
+					required({ good: '+15551234567', input: 'From', slug: 'fromnumber' }),
+					required({ good: '+15557654321', input: 'To', slug: 'tonumbers' }),
+				]);
+			});
+		});
+
+		test.describe('WeCom', () => {
+			test('webhook key is required', async ({ page }, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/wecom',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'WeCom');
+
+				await runValidations(section, shot, [
+					required({ good: 'abc-123', input: 'Webhook Key', slug: 'key' }),
+				]);
+			});
+		});
+
+		test.describe('XMPP', () => {
+			test('host, username, password, and one of to/rooms are required; port must be a valid number', async ({
+				page,
+			}, testInfo) => {
+				const shot = screenshotsUnder(
+					page,
+					testInfo.project.name,
+					'service-creation-validation/notify/xmpp',
+				);
+				const dialog = await openCreateServiceModal(page);
+				const section = await openSection(dialog, 'Notify:');
+
+				await addNotify(section, dialog, 'XMPP');
+
+				await runValidations(section, shot, [
+					required({ good: 'xmpp.example.com', input: 'Host', slug: 'host' }),
+					numeric({ good: '5222', input: 'Port', slug: 'port' }),
+					required({ good: 'argus', input: 'User', slug: 'user' }),
+					required({ good: 'pass', input: 'Password', slug: 'password' }),
+					{
+						bad: undefined,
+						badSlug: 'rooms-empty',
+						error: XMPP_RECIPIENT_REQUIRED,
+						input: 'Rooms',
+					},
+					{
+						bad: undefined,
+						badSlug: 'to-empty',
+						error: XMPP_RECIPIENT_REQUIRED,
+						good: 'user@example.com',
+						goodSlug: 'to-valid',
+						input: 'To',
+					},
+					{
+						bad: undefined,
+						badSlug: 'rooms-empty-to-set',
+						error: null,
+						input: 'Rooms',
+					},
 				]);
 			});
 		});

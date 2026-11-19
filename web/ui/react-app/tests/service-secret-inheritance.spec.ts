@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import {
 	DASHBOARD_SHOW_ALL,
 	openDashboardInEditMode,
@@ -7,7 +7,10 @@ import {
 import {
 	createService,
 	LOOKUP_LATEST_VERSION_JSON,
+	openEditModal,
+	openEditModalFromBackend,
 	SECRET_VALUE,
+	saveEdit,
 	screenshot,
 	setBooleanWithDefault,
 	trackCreatedServices,
@@ -32,49 +35,6 @@ const FORGEJO_HOST_WITH_TOKEN = 'Project';
 const FORGEJO_HOST_UNMATCHED = 'https://valid.release-argus.io:443/forgejo';
 const FORGEJO_PRIVATE_REPO = 'argus/private-releases';
 const FORGEJO_PRIVATE_VERSION = '0.2.0';
-
-/**
- * Opens the edit modal for an existing service (edit mode must already be on).
- *
- * @param page - The dashboard page.
- * @param id - The ID of the service to edit.
- * @returns The open edit dialog.
- */
-const openEditModal = async (page: Page, id: string) => {
-	const card = serviceCard(page, id);
-	await expect(card).toBeVisible();
-	await card.getByRole('button', { name: /edit/i }).click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toBeVisible();
-	return dialog;
-};
-
-/**
- * Reloads, then opens the edit modal, so it loads the service from the backend,
- * where secrets come back masked, rather than from create-time state.
- *
- * @param page - The dashboard page.
- * @param id - The ID of the service to edit.
- * @returns The open edit dialog.
- */
-const openEditModalFromBackend = async (page: Page, id: string) => {
-	await page.reload();
-	return openEditModal(page, id);
-};
-
-/**
- * Submits the edit modal via "Confirm" and waits for it to close. The button
- * only enables once the form is dirty, so asserting it's enabled also confirms
- * the edit registered. The save re-verifies server-side.
- *
- * @param dialog - The open edit dialog.
- */
-const saveEdit = async (dialog: Locator) => {
-	const confirm = dialog.locator('#modal-action');
-	await expect(confirm).toBeEnabled();
-	await confirm.click();
-	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
-};
 
 /**
  * Picks a `latest_version.type`.
@@ -533,12 +493,14 @@ test.describe('Service secret inheritance', () => {
 		await createService(page, id, {
 			notifiers: [
 				{
-					host: NOTIFY_GOTIFY.host,
 					name: 'gotify-test',
-					path: NOTIFY_GOTIFY.path,
-					title: 'Original Title',
-					token: NOTIFY_GOTIFY.tokenPass,
-					type: 'gotify',
+					text: {
+						Host: NOTIFY_GOTIFY.host,
+						Path: NOTIFY_GOTIFY.path,
+						Title: 'Original Title',
+						Token: NOTIFY_GOTIFY.tokenPass,
+					},
+					typeLabel: 'Gotify',
 				},
 			],
 		});
@@ -767,12 +729,14 @@ test.describe('Service secret inheritance on rename', () => {
 		await createService(page, id, {
 			notifiers: [
 				{
-					host: NOTIFY_GOTIFY.host,
 					name: 'gotify-test',
-					path: NOTIFY_GOTIFY.path,
-					title: 'Original Title',
-					token: NOTIFY_GOTIFY.tokenPass,
-					type: 'gotify',
+					text: {
+						Host: NOTIFY_GOTIFY.host,
+						Path: NOTIFY_GOTIFY.path,
+						Title: 'Original Title',
+						Token: NOTIFY_GOTIFY.tokenPass,
+					},
+					typeLabel: 'Gotify',
 				},
 			],
 		});

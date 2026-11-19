@@ -102,6 +102,15 @@ const MATTERMOST = ({
 					label="Disable TLS"
 					name={`${name}.params.disabletls`}
 				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
+				/>
 			</FieldSet>
 		</FieldSet>
 	);

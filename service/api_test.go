@@ -631,7 +631,7 @@ func TestFromPayload(t *testing.T) {
 							gotify:
 								url_fields:
 									host: gotify.example.com
-									token: gotifyToken
+									token: AGotifyToken000
 							zulip:
 								url_fields:
 									botkey: zulipBotKey
@@ -682,7 +682,7 @@ func TestFromPayload(t *testing.T) {
 								type: gotify
 								url_fields:
 									host: gotify.example.com
-									token: gotifyToken
+									token: AGotifyToken000
 							zulip-initial:
 								type: zulip
 								url_fields:
@@ -963,7 +963,7 @@ func TestFromPayload(t *testing.T) {
 							gotify:
 								url_fields:
 									host: gotify.example.com
-									token: gotifyToken
+									token: AGotifyToken000
 							zulip:
 								url_fields:
 									botkey: zulipBotKey
@@ -1038,7 +1038,7 @@ func TestFromPayload(t *testing.T) {
 								type: gotify
 								url_fields:
 									host: gotify.example.com
-									token: gotifyToken
+									token: AGotifyToken000
 							zulip-initial:
 								type: zulip
 								url_fields:
@@ -1103,6 +1103,30 @@ func TestFromPayload(t *testing.T) {
 				webhook:
 					test:
 						secret: <required>.*$`,
+			),
+		},
+		{
+			name: "CheckURLs fail",
+			payload: test.TrimJSON(`{
+				"latest_version": {
+					"type": "url",
+					"url": "https://example.com"
+				},
+				"notify": [
+					{
+						"name": "pd",
+						"type": "pagerduty",
+						"url_fields": {
+							"integrationkey": "KEY"
+						}
+					}
+				]
+			}`),
+			errRegex: test.TrimYAML(`
+				^notify:
+					pd:
+						pagerduty:
+							invalid integration key format.*$`,
 			),
 		},
 		{

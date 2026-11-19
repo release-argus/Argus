@@ -55,7 +55,7 @@ func TestShoutrrr(t *testing.T) {
 
 			wantToken := test.NotifyGotify.TokenPass
 			if tc.failing {
-				wantToken = test.NotifyGotify.TokenMalformed
+				wantToken = test.NotifyGotify.TokenRejected
 			}
 			wantHost := test.NotifyGotify.HostValid
 			if tc.selfSignedCert {

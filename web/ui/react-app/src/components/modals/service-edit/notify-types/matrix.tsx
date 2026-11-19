@@ -56,9 +56,9 @@ const MATRIX = ({
 				/>
 				<FieldText
 					colSize={{ lg: 4 }}
-					defaultVal={defaults?.url_fields?.username}
-					label="Username"
-					name={`${name}.url_fields.username`}
+					defaultVal={defaults?.url_fields?.user}
+					label="User"
+					name={`${name}.url_fields.user`}
 					tooltip={{
 						content: 'e.g. something@example.com',
 						type: 'string',
@@ -94,6 +94,15 @@ const MATRIX = ({
 					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"
 					name={`${name}.params.disabletls`}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
 				/>
 			</FieldSet>
 		</FieldSet>

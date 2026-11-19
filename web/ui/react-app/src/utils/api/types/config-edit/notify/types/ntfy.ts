@@ -6,7 +6,6 @@ import {
 	ntfyActionHTTPMethodOptions,
 	ntfyActionTypeOptions,
 	ntfyPriorityOptions,
-	ntfySchemeOptions,
 } from '@/utils/api/types/config/notify/ntfy';
 import {
 	flattenHeaderArray,
@@ -21,8 +20,6 @@ import {
 import { REQUIRED_MESSAGE } from '@/utils/api/types/config-edit/validators.ts';
 
 export const NtfyPriorityZodEnum = z.enum(toZodEnumTuple(ntfyPriorityOptions));
-
-export const NtfySchemeZodEnum = z.enum(toZodEnumTuple(ntfySchemeOptions));
 
 /* Action */
 export const ntfyActionBase = z.object({

@@ -2529,7 +2529,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 								type: gotify
 								url_fields:
 									host: https://example.com
-									token: abc
+									token: AAAAAAAAAAAAAAA
 					`)),
 					"notify",
 					svcCfg,
@@ -2568,7 +2568,7 @@ func TestHTTP_ServiceEdit__edit__secrets(t *testing.T) {
 							type: gotify
 							url_fields:
 								host: example.com
-								token: abc
+								token: AAAAAAAAAAAAAAA
 				`),
 			},
 		},
@@ -3272,12 +3272,12 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "invalid"
+					"token": "AAAAAAAAAAAAAAA"
 				}
 			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				bodyRegex:  "invalid .* token",
+				bodyRegex:  `failed to send .*Unauthorized \(401\)`,
 			},
 		},
 		{
@@ -3291,12 +3291,12 @@ func TestHTTP_NotifyTest(t *testing.T) {
 				"url_fields": {
 					"host": "` + validNotify.URLFields["host"] + `",
 					"path": "` + validNotify.URLFields["path"] + `",
-					"token": "invalid"
+					"token": "AAAAAAAAAAAAAAA"
 				}
 			}`,
 			wants: wants{
 				statusCode: http.StatusBadRequest,
-				bodyRegex:  "invalid .* token",
+				bodyRegex:  `failed to send .*Unauthorized \(401\)`,
 			},
 		},
 		{
