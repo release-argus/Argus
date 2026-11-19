@@ -135,6 +135,12 @@ func FromPayload(
 	if err, _ := field.CheckValues(); err != nil {
 		return nil, err
 	}
+	if err := field.Notify.CheckURLs(); err != nil {
+		return nil, &decode.ErrKeyField{
+			Key: "notify",
+			Err: err,
+		}
+	}
 	return field, nil
 }
 

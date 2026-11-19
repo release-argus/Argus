@@ -182,6 +182,57 @@ const SMTP = ({ name, main }: { name: string; main?: NotifySMTPSchema }) => {
 						type: 'string',
 					}}
 				/>
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.clientid}
+					label="OAuth2 Client ID"
+					name={`${name}.params.clientid`}
+					tooltip={{
+						content: 'OAuth2 client ID, for getting the access token',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.clientsecret}
+					label="OAuth2 Client Secret"
+					name={`${name}.params.clientsecret`}
+					tooltip={{
+						content: 'OAuth2 client secret, for getting the access token',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.tokenurl}
+					label="OAuth2 Token URL"
+					name={`${name}.params.tokenurl`}
+					tooltip={{
+						content: 'OAuth2 token endpoint, for getting the access token',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.scopes}
+					label="OAuth2 Scopes"
+					name={`${name}.params.scopes`}
+					tooltip={{
+						content:
+							'Comma-separated OAuth2 scopes, for the client credentials grant',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.refreshtoken}
+					label="OAuth2 Refresh Token"
+					name={`${name}.params.refreshtoken`}
+					tooltip={{
+						content: 'OAuth2 refresh token, for refreshing the access token',
+						type: 'string',
+					}}
+				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.usehtml}
 					label="Use HTML"

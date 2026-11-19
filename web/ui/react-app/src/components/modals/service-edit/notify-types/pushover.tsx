@@ -82,7 +82,40 @@ const PUSHOVER = ({
 					name={`${name}.params.priority`}
 					tooltip={{
 						content:
-							'Only supply priority values between -1 and 1, since 2 requires additional parameters that are not supported yet',
+							'-2 (lowest) to 2 (emergency). Emergency repeats every Retry until acknowledged or Expire passes',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 4 }}
+					defaultVal={defaults?.params?.retry}
+					label="Retry"
+					name={`${name}.params.retry`}
+					tooltip={{
+						content:
+							'Time between repeats of an emergency notification, at least 30s (default 15m)',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 4 }}
+					defaultVal={defaults?.params?.expire}
+					label="Expire"
+					name={`${name}.params.expire`}
+					tooltip={{
+						content:
+							'How long an emergency notification repeats, at most 3h (default 1h)',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 4 }}
+					defaultVal={defaults?.params?.timestamp}
+					label="Timestamp"
+					name={`${name}.params.timestamp`}
+					tooltip={{
+						content:
+							'Unix time in seconds to show instead of when Pushover received the message',
 						type: 'string',
 					}}
 				/>

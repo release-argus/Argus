@@ -131,6 +131,15 @@ const ZULIP_CHAT = ({
 					label="Mark Read by Sender"
 					name={`${name}.params.read_by_sender`}
 				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
+				/>
 			</FieldSet>
 		</FieldSet>
 	);

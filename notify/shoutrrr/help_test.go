@@ -61,7 +61,7 @@ func testDefaults(failing bool, selfSignedCert bool) *Defaults {
 		map[string]string{},
 	)
 	if failing {
-		shoutrrr.URLFields["token"] = test.NotifyGotify.TokenMalformed
+		shoutrrr.URLFields["token"] = test.NotifyGotify.TokenRejected
 	}
 	return shoutrrr
 }
@@ -116,7 +116,7 @@ func testShoutrrr(failing bool, selfSignedCert bool) *Shoutrrr {
 	shoutrrr.Failed = &shoutrrr.ServiceStatus.Fails.Shoutrrr
 
 	if failing {
-		shoutrrr.URLFields["token"] = test.NotifyGotify.TokenMalformed
+		shoutrrr.URLFields["token"] = test.NotifyGotify.TokenRejected
 	}
 	return shoutrrr
 }

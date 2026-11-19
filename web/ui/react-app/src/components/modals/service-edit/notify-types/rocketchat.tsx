@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { BooleanWithDefault } from '@/components/generic';
 import { FieldText } from '@/components/generic/field';
 import {
 	Heading,
@@ -55,7 +56,10 @@ const ROCKET_CHAT = ({
 					defaultVal={defaults?.url_fields?.channel}
 					label="Channel"
 					name={`${name}.url_fields.channel`}
-					required
+					tooltip={{
+						content: "Defaults to the webhook's channel",
+						type: 'string',
+					}}
 				/>
 				<FieldText
 					colSize={{ sm: 6 }}
@@ -74,6 +78,27 @@ const ROCKET_CHAT = ({
 					label="Token B"
 					name={`${name}.url_fields.tokenb`}
 					required
+				/>
+			</FieldSet>
+			<FieldSet className="col-span-full grid grid-cols-subgrid">
+				<Heading title="Params" />
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.disabletls}
+					label="Disable TLS"
+					name={`${name}.params.disabletls`}
+					tooltip={{
+						content: 'Send over HTTP instead of HTTPS',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
 				/>
 			</FieldSet>
 		</FieldSet>

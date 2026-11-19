@@ -74,6 +74,10 @@ var SafeFieldsByType = map[string]SafeFields{
 	"join": {
 		Params: []string{"icon", "title"},
 	},
+	"lark": {
+		URLFields: []string{"host"},
+		Params:    []string{"link", "title"},
+	},
 	"matrix": {
 		URLFields: []string{"host", "port", "user"},
 		Params:    []string{"disabletls", "room", "rooms", "skiptlsverify", "title"},
@@ -83,6 +87,13 @@ var SafeFieldsByType = map[string]SafeFields{
 		Params: []string{
 			"channel", "disabletls", "icon", "icon_emoji", "icon_url", "skiptlsverify", "title",
 			"username",
+		},
+	},
+	"mqtt": {
+		URLFields: []string{"host", "port", "topic", "username"},
+		Params: []string{
+			"cleansession", "clientid", "disabletls", "disabletlsverification", "qos", "retained",
+			"skiptlsverify",
 		},
 	},
 	"notifiarr": {
@@ -107,6 +118,13 @@ var SafeFieldsByType = map[string]SafeFields{
 		},
 		ParamMaps: []string{"details"},
 	},
+	"pagerduty": {
+		URLFields: []string{"host", "port"},
+		Params: []string{
+			"action", "client", "client_url", "contexts", "dedup_key", "severity", "source",
+			"title",
+		},
+	},
 	"pushbullet": {
 		URLFields: []string{"targets"},
 		Params:    []string{"title"},
@@ -119,6 +137,16 @@ var SafeFieldsByType = map[string]SafeFields{
 		Params:    []string{"channel", "disabletls", "skiptlsverify", "username"},
 	},
 	"shoutrrr": {},
+	"signal": {
+		URLFields: []string{"host", "port", "recipients", "source", "user"},
+		Params: []string{
+			"attachments", "disabletls", "host", "notifyself", "port", "recipients",
+			"skiptlsverify", "source", "text_mode", "textmode", "title", "to", "user",
+		},
+	},
+	"signalgrid": {
+		Params: []string{"critical", "title", "type"},
+	},
 	"slack": {
 		URLFields: []string{"channel"},
 		Params: []string{
@@ -142,6 +170,17 @@ var SafeFieldsByType = map[string]SafeFields{
 			"apiurl", "channels", "chats", "notification", "parsemode", "preview", "skiptlsverify",
 			"title",
 		},
+	},
+	"twilio": {
+		URLFields: []string{"accountsid", "fromnumber", "tonumbers"},
+		Params:    []string{"title"},
+	},
+	"wecom": {
+		Params: []string{"mentioned_list", "mentioned_mobile_list"},
+	},
+	"xmpp": {
+		URLFields: []string{"host", "port", "user"},
+		Params:    []string{"disabletls", "nick", "rooms", "skiptlsverify", "title", "to"},
 	},
 	"zulip": {
 		URLFields: []string{"botmail", "host", "port"},

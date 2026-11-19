@@ -57,7 +57,7 @@ func TestShoutrrrs_Send(t *testing.T) {
 			shoutrrrs: &Shoutrrrs{
 				"single": testShoutrrr(true, false),
 			},
-			errRegex: `^.*invalid gotify token.* x 1$`,
+			errRegex: `^gotify: .*\(401\).* x 1$`,
 		},
 		{
 			name: "multiple shoutrrr/mixed results/2",
@@ -65,7 +65,7 @@ func TestShoutrrrs_Send(t *testing.T) {
 				"passing": testShoutrrr(false, false),
 				"failing": testShoutrrr(true, false),
 			},
-			errRegex: `^.*invalid gotify token.* x 1$`,
+			errRegex: `^gotify: .*\(401\).* x 1$`,
 		},
 		{
 			name: "multiple shoutrrr/mixed results/3",
@@ -74,7 +74,7 @@ func TestShoutrrrs_Send(t *testing.T) {
 				"failing":      testShoutrrr(true, false),
 				"also_failing": testShoutrrr(true, false),
 			},
-			errRegex: `^(gotify: failed to build request: invalid gotify token.* x 1\s?){2}$`,
+			errRegex: `^(gotify: .*\(401\).* x 1\s?){2}$`,
 		},
 	}
 
@@ -147,7 +147,7 @@ func TestShoutrrr_Send(t *testing.T) {
 			shoutrrr:  testShoutrrr(true, true),
 			message:   "__name__",
 			retries:   1,
-			errRegex:  `invalid gotify token.* x 2`,
+			errRegex:  `x509.* x 2`,
 			wantFails: 2,
 		},
 		{

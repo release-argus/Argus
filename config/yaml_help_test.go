@@ -71,7 +71,7 @@ func testYAML_config_test(t *testing.T, path string) {
 				gotify:
 					url_fields:
 						host: foo.bar
-						token: anonymous
+						token: AAAAAAAAAAAAAAA
 				slack:
 					params:
 						host: defaultHost
@@ -398,7 +398,7 @@ func testYAML_config_indent4(t *testing.T, path string) {
 						type: gotify
 						url_fields:
 								host: example.com
-								token: super-secret
+								token: ASuperSecret000
 		service:
 				awesome:
 						options:
@@ -499,7 +499,7 @@ func testYAML_Ordering_1_no_services(t *testing.T, path string) {
 				gotify:
 					url_fields:
 						host: foo.bar
-						token: anonymous
+						token: AAAAAAAAAAAAAAA
 				slack:
 					params:
 						host: defaultHost

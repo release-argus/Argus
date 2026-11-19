@@ -40,7 +40,7 @@ func testYAML_NoServices(t *testing.T, path string) {
 				gotify:
 					url_fields:
 						host: foo.bar
-						token: anonymous
+						token: AAAAAAAAAAAAAAA
 				slack:
 					params:
 						host: defaultHost

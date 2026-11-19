@@ -108,7 +108,7 @@ func TestNotifyTest(t *testing.T) {
 			name:        "invalid Gotify token format",
 			flag:        "bar",
 			ok:          false,
-			stdoutRegex: `invalid gotify token: "abc"`,
+			stdoutRegex: `failed to set URL: invalid gotify token`,
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(
 					"yaml", []byte(test.TrimYAML(`

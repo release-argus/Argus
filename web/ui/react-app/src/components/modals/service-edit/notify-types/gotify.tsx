@@ -95,17 +95,6 @@ const GOTIFY = ({
 					label="Title"
 					name={`${name}.params.title`}
 				/>
-				<FieldText
-					colSize={{ sm: 12 }}
-					defaultVal={defaults?.params?.date}
-					label="Date"
-					name={`${name}.params.date`}
-					tooltip={{
-						content:
-							'Custom timestamp in ISO 8601 format (e.g. 2006-01-02T15:04:05Z)',
-						type: 'string',
-					}}
-				/>
 				<GotifyExtras
 					defaults={defaults?.params?.extras}
 					label="Extras"
@@ -122,9 +111,9 @@ const GOTIFY = ({
 					name={`${name}.params.disabletls`}
 				/>
 				<BooleanWithDefault
-					defaultValue={defaults?.params?.disabletls}
-					label="Insecure Skip Verify"
-					name={`${name}.params.insecureskipverify`}
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
 				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.useheader}

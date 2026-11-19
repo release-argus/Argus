@@ -13,10 +13,7 @@ import {
 import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
-import {
-	ntfyPriorityOptions,
-	ntfySchemeOptions,
-} from '@/utils/api/types/config/notify/ntfy';
+import { ntfyPriorityOptions } from '@/utils/api/types/config/notify/ntfy';
 import type { NotifyNtfySchema } from '@/utils/api/types/config-edit/notify/schemas';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 
@@ -36,11 +33,6 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 	const ntfyPriorityOptionsNormalised = useMemo(
 		() => withDefaultOption(ntfyPriorityOptions, defaults?.params?.priority),
 		[defaults?.params?.priority],
-	);
-
-	const ntfySchemeOptionsNormalised = useMemo(
-		() => withDefaultOption(ntfySchemeOptions, defaults?.params?.scheme),
-		[defaults?.params?.scheme],
 	);
 
 	return (
@@ -81,6 +73,17 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 				/>
 				<FieldText
 					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.token}
+					label="Access Token"
+					name={`${name}.params.token`}
+					tooltip={{
+						content:
+							'Access token for Bearer auth, takes precedence over username and password',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					colSize={{ sm: 12 }}
 					defaultVal={defaults?.url_fields?.topic}
 					label="Topic"
 					name={`${name}.url_fields.topic`}
@@ -94,23 +97,13 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="Params" />
 				<FieldSelect
-					colSize={{ lg: 3, sm: 6 }}
-					label="Scheme"
-					name={`${name}.params.scheme`}
-					options={ntfySchemeOptionsNormalised}
-					tooltip={{
-						content: 'Server protocol',
-						type: 'string',
-					}}
-				/>
-				<FieldSelect
-					colSize={{ lg: 3, sm: 6 }}
+					colSize={{ sm: 4 }}
 					label="Priority"
 					name={`${name}.params.priority`}
 					options={ntfyPriorityOptionsNormalised}
 				/>
 				<FieldText
-					colSize={{ lg: 6, sm: 12 }}
+					colSize={{ sm: 8 }}
 					defaultVal={defaults?.params?.tags}
 					label="Tags"
 					name={`${name}.params.tags`}
@@ -193,9 +186,22 @@ const NTFY = ({ name, main }: { name: string; main?: NotifyNtfySchema }) => {
 					}}
 				/>
 				<BooleanWithDefault
-					defaultValue={defaults?.params?.disabletlsverification}
-					label="Disable TLS Verification"
-					name={`${name}.params.disabletlsverification`}
+					defaultValue={defaults?.params?.disabletls_}
+					label="Disable TLS"
+					name={`${name}.params.disabletls_`}
+					tooltip={{
+						content: 'Send over HTTP instead of HTTPS',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
 				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.firebase}
