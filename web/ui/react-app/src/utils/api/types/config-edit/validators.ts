@@ -361,7 +361,7 @@ export const stringWithFallback = (
 /* URL prefix validator. */
 export const urlPrefixValidator: RegexValidation = {
 	message: INVALID_URL_MESSAGE,
-	regex: /^https?:\/\//,
+	regex: /^(https?:\/\/|file:\/\/)/,
 };
 
 type IsUsingDefaultsParams<T> = {

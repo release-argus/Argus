@@ -317,7 +317,7 @@ test.describe('Service creation modal - field validation', () => {
 			await shot('08-forgejo-host-defaults-absent', section);
 		});
 
-		test('type=url - URL is required and must start with http(s)://', async ({
+		test('type=url - URL is required and must be a valid HTTP(S) or file URL', async ({
 			page,
 		}, testInfo) => {
 			const shot = screenshotsUnder(
@@ -337,14 +337,21 @@ test.describe('Service creation modal - field validation', () => {
 
 			await expectError(urlInput, undefined, 'Required.', shot, '01-url-empty');
 
-			await expectValid(urlInput, 'https://example.com', shot, '02-url-valid');
+			await expectValid(urlInput, 'https://example.com', shot, '02-url-http-valid');
+
+			await expectValid(
+				urlInput,
+				new URL('../package.json', import.meta.url).href,
+				shot,
+				'03-url-file-valid',
+			);
 
 			await expectError(
 				urlInput,
 				'example.com',
 				"Invalid URL (Must start with 'http://' or 'https://', or 'file://').",
 				shot,
-				'03-url-invalid',
+				'04-url-invalid',
 			);
 		});
 

@@ -14,7 +14,7 @@ test.describe('Service creation modal - field validation', () => {
 	test.describe.configure({ mode: 'parallel' });
 
 	test.describe('Deployed Version', () => {
-		test('type=url - URL is optional but must be valid http(s):// if set', async ({
+		test('type=url - URL is optional but must be a valid HTTP(S) or file URL if set', async ({
 			page,
 		}, testInfo) => {
 			const shot = screenshotsUnder(
@@ -43,6 +43,12 @@ test.describe('Service creation modal - field validation', () => {
 			);
 
 			await expectValid(urlInput, 'https://example.com', shot, '03-url-valid');
+			await expectValid(
+				urlInput,
+				new URL('../package.json', import.meta.url).href,
+				shot,
+				'04-url-file-valid',
+			);
 		});
 
 		test('type=url - regex becomes required when the template toggle is enabled', async ({
