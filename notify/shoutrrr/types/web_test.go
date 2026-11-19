@@ -94,7 +94,7 @@ func TestSafeFields_Censor(t *testing.T) {
 			wantParams:    map[string]string{},
 		},
 		{
-			name:          "safe kept/unlisted censored/empty kept",
+			name:          "safe fields/unlisted censored and empty kept",
 			safe:          safe,
 			urlFields:     map[string]string{"host": "example.com", "token": "TOKEN", "port": ""},
 			params:        map[string]string{"title": "TITLE", "key": "KEY"},
@@ -102,12 +102,12 @@ func TestSafeFields_Censor(t *testing.T) {
 			wantParams:    map[string]string{"title": "TITLE", "key": util.SecretValue},
 		},
 		{
-			name:          "map censored by value only where listed",
+			name:          "safe fields/map censored by value only where listed",
 			safe:          safe,
 			urlFields:     map[string]string{"headers": `{"A":"b"}`, "query_vars": `{"c":"d"}`},
 			params:        map[string]string{"details": `{"A":"b"}`, "headers": `{"A":"b"}`},
-			wantURLFields: map[string]string{"headers": `{"A":"<secret>"}`, "query_vars": util.SecretValue},
-			wantParams:    map[string]string{"details": `{"A":"<secret>"}`, "headers": util.SecretValue},
+			wantURLFields: map[string]string{"headers": `{"A":"` + util.SecretValue + `"}`, "query_vars": util.SecretValue},
+			wantParams:    map[string]string{"details": `{"A":"` + util.SecretValue + `"}`, "headers": util.SecretValue},
 		},
 		{
 			name:          "no safe fields/every value censored",
@@ -159,17 +159,17 @@ func TestCensorMapValues(t *testing.T) {
 		{
 			name:  "single key",
 			input: `{"Authorization":"Bearer x"}`,
-			want:  `{"Authorization":"<secret>"}`,
+			want:  `{"Authorization":"` + util.SecretValue + `"}`,
 		},
 		{
 			name:  "multiple keys/sorted",
 			input: `{"X-Foo":"y","Authorization":"Bearer x"}`,
-			want:  `{"Authorization":"<secret>","X-Foo":"<secret>"}`,
+			want:  `{"Authorization":"` + util.SecretValue + `","X-Foo":"` + util.SecretValue + `"}`,
 		},
 		{
 			name:  "empty value is masked",
 			input: `{"X-Foo":""}`,
-			want:  `{"X-Foo":"<secret>"}`,
+			want:  `{"X-Foo":"` + util.SecretValue + `"}`,
 		},
 		{
 			name:  "invalid/not JSON",
@@ -218,8 +218,8 @@ func TestRestoreMapValues(t *testing.T) {
 		{
 			name:     "no original",
 			original: "",
-			value:    `{"X-Foo":"<secret>"}`,
-			want:     `{"X-Foo":"<secret>"}`,
+			value:    `{"X-Foo":"` + util.SecretValue + `"}`,
+			want:     `{"X-Foo":"` + util.SecretValue + `"}`,
 		},
 		{
 			name:     "whole value masked/restored",
@@ -230,13 +230,13 @@ func TestRestoreMapValues(t *testing.T) {
 		{
 			name:     "masked values restored by key",
 			original: `{"Authorization":"Bearer x","X-Foo":"y"}`,
-			value:    `{"Authorization":"<secret>","X-Foo":"<secret>"}`,
+			value:    `{"Authorization":"` + util.SecretValue + `","X-Foo":"` + util.SecretValue + `"}`,
 			want:     `{"Authorization":"Bearer x","X-Foo":"y"}`,
 		},
 		{
 			name:     "new value kept",
 			original: `{"Authorization":"Bearer x"}`,
-			value:    `{"Authorization":"<secret>","X-Foo":"new"}`,
+			value:    `{"Authorization":"` + util.SecretValue + `","X-Foo":"new"}`,
 			want:     `{"Authorization":"Bearer x","X-Foo":"new"}`,
 		},
 		{
@@ -248,20 +248,20 @@ func TestRestoreMapValues(t *testing.T) {
 		{
 			name:     "removed key stays removed",
 			original: `{"Authorization":"Bearer x","X-Foo":"y"}`,
-			value:    `{"Authorization":"<secret>"}`,
+			value:    `{"Authorization":"` + util.SecretValue + `"}`,
 			want:     `{"Authorization":"Bearer x"}`,
 		},
 		{
 			name:     "renamed key does not take the old value",
 			original: `{"X-Foo":"y"}`,
-			value:    `{"X-Bar":"<secret>"}`,
-			want:     `{"X-Bar":"<secret>"}`,
+			value:    `{"X-Bar":"` + util.SecretValue + `"}`,
+			want:     `{"X-Bar":"` + util.SecretValue + `"}`,
 		},
 		{
 			name:     "masked key absent from original stays masked",
 			original: `{"X-Foo":"y"}`,
-			value:    `{"X-Foo":"<secret>","X-Bar":"<secret>"}`,
-			want:     `{"X-Bar":"<secret>","X-Foo":"y"}`,
+			value:    `{"X-Foo":"` + util.SecretValue + `","X-Bar":"` + util.SecretValue + `"}`,
+			want:     `{"X-Bar":"` + util.SecretValue + `","X-Foo":"y"}`,
 		},
 		{
 			name:     "nothing masked/unchanged",
@@ -278,8 +278,8 @@ func TestRestoreMapValues(t *testing.T) {
 		{
 			name:     "invalid/original not JSON",
 			original: `not json`,
-			value:    `{"X-Foo":"<secret>"}`,
-			want:     `{"X-Foo":"<secret>"}`,
+			value:    `{"X-Foo":"` + util.SecretValue + `"}`,
+			want:     `{"X-Foo":"` + util.SecretValue + `"}`,
 		},
 	}
 
@@ -325,7 +325,7 @@ func TestRestoreSecrets(t *testing.T) {
 		{
 			name:     "map values restored by key",
 			original: map[string]string{"headers": `{"A":"b","C":"d"}`},
-			target:   map[string]string{"headers": `{"A":"<secret>","E":"f"}`},
+			target:   map[string]string{"headers": `{"A":"` + util.SecretValue + `","E":"f"}`},
 			want:     map[string]string{"headers": `{"A":"b","E":"f"}`},
 		},
 		{

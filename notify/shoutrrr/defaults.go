@@ -70,11 +70,11 @@ func (s *ShoutrrrsDefaults) Default() {
 			"port": "443",
 		},
 		map[string]string{
-			"disabletls":         "no",
-			"insecureskipverify": "no",
-			"priority":           "0",
-			"title":              "Argus",
-			"useheader":          "no",
+			"disabletls":    "no",
+			"skiptlsverify": "no",
+			"priority":      "0",
+			"title":         "Argus",
+			"useheader":     "yes",
 		},
 	)
 	defaults["homeassistant"] = NewDefaults(
@@ -100,6 +100,14 @@ func (s *ShoutrrrsDefaults) Default() {
 		"",
 		notifyDefaultOptions(),
 		nil,
+		nil,
+	)
+	defaults["lark"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		map[string]string{
+			"host": "open.larksuite.com",
+		},
 		nil,
 	)
 	defaults["mattermost"] = NewDefaults(
@@ -129,6 +137,15 @@ func (s *ShoutrrrsDefaults) Default() {
 			"disabletls": "no",
 		},
 	)
+	defaults["mqtt"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		map[string]string{
+			"cleansession": "yes",
+			"disabletls":   "no",
+		},
+	)
 	defaults["notifiarr"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -142,11 +159,19 @@ func (s *ShoutrrrsDefaults) Default() {
 			"host": "ntfy.sh",
 		},
 		map[string]string{
-			"disabletlsverification": "no",
-			"title":                  "Argus",
+			"cache":         "yes",
+			"firebase":      "yes",
+			"skiptlsverify": "no",
+			"title":         "Argus",
 		},
 	)
 	defaults["opsgenie"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
+	)
+	defaults["pagerduty"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
 		nil,
@@ -174,6 +199,20 @@ func (s *ShoutrrrsDefaults) Default() {
 		},
 		nil,
 	)
+	defaults["signal"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		map[string]string{
+			"notifyself": "yes",
+		},
+	)
+	defaults["signalgrid"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
+	)
 	defaults["slack"] = NewDefaults(
 		"",
 		notifyDefaultOptions(),
@@ -196,6 +235,24 @@ func (s *ShoutrrrsDefaults) Default() {
 			"notification": "yes",
 			"preview":      "yes",
 		},
+	)
+	defaults["twilio"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
+	)
+	defaults["wecom"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
+	)
+	defaults["xmpp"] = NewDefaults(
+		"",
+		notifyDefaultOptions(),
+		nil,
+		nil,
 	)
 	defaults["zulip"] = NewDefaults(
 		"",

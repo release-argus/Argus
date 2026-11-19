@@ -436,7 +436,7 @@ func TestConvertAndCensorService(t *testing.T) {
 							gotify:
 								url_fields:
 									host: https://gotify.example.com
-									token: foo
+									token: AAAAAAAAAAAAAAA
 						command:
 							- ["echo", "foo"]
 						webhook:
@@ -2202,13 +2202,13 @@ func TestConvertAndCensorNotifiers__EveryType(t *testing.T) {
 				wantURLFields[field] = urlFields[field]
 			}
 			for _, field := range safe.URLFieldMaps {
-				wantURLFields[field] = `{"A":"<secret>"}`
+				wantURLFields[field] = `{"A":"` + util.SecretValue + `"}`
 			}
 			for _, param := range safe.Params {
 				wantParams[param] = params[param]
 			}
 			for _, param := range safe.ParamMaps {
-				wantParams[param] = `{"A":"<secret>"}`
+				wantParams[param] = `{"A":"` + util.SecretValue + `"}`
 			}
 			input := shoutrrr.Shoutrrrs{
 				"test": shoutrrr.New(nil, "", sType, nil, urlFields, params, nil, nil, nil),
@@ -2823,10 +2823,10 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 			},
 			"params": {
 				"disabletls": "no",
-				"insecureskipverify": "no",
 				"priority": "0",
+				"skiptlsverify": "no",
 				"title": "Argus",
-				"useheader": "no"
+				"useheader": "yes"
 			}
 		},
 		"homeassistant": {
@@ -2862,6 +2862,17 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 				"message": "{{ service_name | default:service_id }} - {{ version }} released"
 			}
 		},
+		"lark": {
+			"type": "lark",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"url_fields": {
+				"host": "open.larksuite.com"
+			}
+		},
 		"matrix": {
 			"type": "matrix",
 			"options": {
@@ -2891,6 +2902,18 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 				"disabletls": "no"
 			}
 		},
+		"mqtt": {
+			"type": "mqtt",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"cleansession": "yes",
+				"disabletls": "no"
+			}
+		},
 		"notifiarr": {
 			"type": "notifiarr",
 			"options": {
@@ -2910,12 +2933,22 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 				"host": "ntfy.sh"
 			},
 			"params": {
-				"disabletlsverification": "no",
+				"cache": "yes",
+				"firebase": "yes",
+				"skiptlsverify": "no",
 				"title": "Argus"
 			}
 		},
 		"opsgenie": {
 			"type": "opsgenie",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"pagerduty": {
+			"type": "pagerduty",
 			"options": {
 				"delay": "0s",
 				"max_tries": "3",
@@ -2954,6 +2987,25 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 		},
 		"shoutrrr": {
 			"type": "shoutrrr",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"signal": {
+			"type": "signal",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			},
+			"params": {
+				"notifyself": "yes"
+			}
+		},
+		"signalgrid": {
+			"type": "signalgrid",
 			"options": {
 				"delay": "0s",
 				"max_tries": "3",
@@ -3003,6 +3055,30 @@ var stringifiedConvertedDefaults = test.TrimJSON(`{
 			"params": {
 				"notification": "yes",
 				"preview": "yes"
+			}
+		},
+		"twilio": {
+			"type": "twilio",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"wecom": {
+			"type": "wecom",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
+			}
+		},
+		"xmpp": {
+			"type": "xmpp",
+			"options": {
+				"delay": "0s",
+				"max_tries": "3",
+				"message": "{{ service_name | default:service_id }} - {{ version }} released"
 			}
 		},
 		"zulip": {

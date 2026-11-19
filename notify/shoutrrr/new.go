@@ -98,6 +98,9 @@ func FromPayload(
 	if errs != nil {
 		return nil, errs
 	}
+	if err := s.CheckURL(); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 

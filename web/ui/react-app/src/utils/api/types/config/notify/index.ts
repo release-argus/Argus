@@ -2,23 +2,24 @@ import type {
 	NOTIFY_TYPE_MAP,
 	NotifyType,
 } from '@/utils/api/types/config/notify/all-types';
-import type {
-	BarkScheme,
-	BarkSound,
-} from '@/utils/api/types/config/notify/bark';
+import type { BarkSound } from '@/utils/api/types/config/notify/bark';
 import type { GenericRequestMethod } from '@/utils/api/types/config/notify/generic';
 import type {
 	IFTTTMessageValue,
 	IFTTTTitleValue,
 } from '@/utils/api/types/config/notify/ifttt';
-import type {
-	NTFYPriority,
-	NTFYScheme,
-} from '@/utils/api/types/config/notify/ntfy';
+import type { MQTTQoS } from '@/utils/api/types/config/notify/mqtt';
+import type { NTFYPriority } from '@/utils/api/types/config/notify/ntfy';
 import type {
 	OpsGenieAction,
 	OpsGenieTargets,
 } from '@/utils/api/types/config/notify/opsgenie';
+import type {
+	PagerDutyAction,
+	PagerDutySeverity,
+} from '@/utils/api/types/config/notify/pagerduty';
+import type { SignalTextMode } from '@/utils/api/types/config/notify/signal';
+import type { SignalgridType } from '@/utils/api/types/config/notify/signalgrid';
 import type {
 	smtpAuthOptions,
 	smtpEncryptionOptions,
@@ -35,18 +36,26 @@ export type NotifyTypesMap = {
 	homeassistant: NotifyHomeAssistant;
 	ifttt: NotifyIFTTT;
 	join: NotifyJoin;
+	lark: NotifyLark;
 	matrix: NotifyMatrix;
 	mattermost: NotifyMatterMost;
+	mqtt: NotifyMQTT;
 	notifiarr: NotifyNotifiarr;
 	ntfy: NotifyNtfy;
 	opsgenie: NotifyOpsGenie;
+	pagerduty: NotifyPagerDuty;
 	pushbullet: NotifyPushbullet;
 	pushover: NotifyPushover;
 	rocketchat: NotifyRocketChat;
+	signal: NotifySignal;
+	signalgrid: NotifySignalgrid;
 	slack: NotifySlack;
 	smtp: NotifySMTP;
 	teams: NotifyTeams;
 	telegram: NotifyTelegram;
+	twilio: NotifyTwilio;
+	wecom: NotifyWeCom;
+	xmpp: NotifyXMPP;
 	zulip: NotifyZulip;
 	generic: NotifyGeneric;
 	shoutrrr: NotifyShoutrrr;
@@ -85,9 +94,10 @@ export type NotifyBark = NotifyBase & {
 	params?: {
 		badge?: number;
 		copy?: string;
+		disabletls?: string;
 		group?: string;
 		icon?: string;
-		scheme?: BarkScheme;
+		skiptlsverify?: string;
 		sound?: BarkSound;
 		title?: string;
 		url?: string;
@@ -104,8 +114,15 @@ export type NotifyDiscord = NotifyBase & {
 	params?: {
 		avatar?: string;
 		color?: string;
+		colordebug?: string;
+		colorerror?: string;
+		colorinfo?: string;
+		colorwarn?: string;
+		json?: string;
+		mentions?: string;
 		splitlines?: string;
 		thread_id?: string;
+		thread_name?: string;
 		title?: string;
 		username?: string;
 	};
@@ -127,6 +144,7 @@ export type NotifyGeneric = NotifyBase & {
 		disabletls?: string;
 		messagekey?: string;
 		method?: GenericRequestMethod;
+		skiptlsverify?: string;
 		template?: string;
 		title?: string;
 		titlekey?: string;
@@ -151,11 +169,10 @@ export type NotifyGotify = NotifyBase & {
 		token?: string;
 	};
 	params?: {
-		date?: string;
 		disabletls?: string;
 		extras?: string;
-		insecureskipverify?: string;
 		priority?: string;
+		skiptlsverify?: string;
 		title?: string;
 		useheader?: string;
 	};
@@ -210,6 +227,20 @@ export type NotifyJoin = NotifyBase & {
 	};
 };
 
+/* Lark */
+export type NotifyLark = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.LARK.value;
+	url_fields?: {
+		host?: string;
+		token?: string;
+	};
+	params?: {
+		link?: string;
+		secret?: string;
+		title?: string;
+	};
+};
+
 /* Matrix */
 export type NotifyMatrix = NotifyBase & {
 	type: typeof NOTIFY_TYPE_MAP.MATRIX.value;
@@ -217,11 +248,12 @@ export type NotifyMatrix = NotifyBase & {
 		host?: string;
 		password?: string;
 		port?: string;
-		username?: string;
+		user?: string;
 	};
 	params?: {
 		disabletls?: string;
 		rooms?: string;
+		skiptlsverify?: string;
 		title?: string;
 	};
 };
@@ -241,7 +273,28 @@ export type NotifyMatterMost = NotifyBase & {
 	params?: {
 		disabletls?: string;
 		icon?: string;
+		skiptlsverify?: string;
 		title?: string;
+	};
+};
+
+/* MQTT */
+export type NotifyMQTT = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.MQTT.value;
+	url_fields?: {
+		host?: string;
+		password?: string;
+		port?: string;
+		topic?: string;
+		username?: string;
+	};
+	params?: {
+		cleansession?: string;
+		clientid?: string;
+		disabletls?: string;
+		qos?: MQTTQoS;
+		retained?: string;
+		skiptlsverify?: string;
 	};
 };
 
@@ -276,16 +329,17 @@ export type NotifyNtfy = NotifyBase & {
 		cache?: string;
 		click?: string;
 		delay?: string;
-		disabletlsverification?: string;
+		disabletls_?: string;
 		email?: string;
 		filename?: string;
 		firebase?: string;
 		icon?: string;
 		markdown?: string;
 		priority?: NTFYPriority;
-		scheme?: NTFYScheme;
+		skiptlsverify?: string;
 		tags?: string;
 		title?: string;
+		token?: string;
 	};
 };
 
@@ -314,6 +368,27 @@ export type NotifyOpsGenie = NotifyBase & {
 	};
 };
 
+/* PagerDuty */
+export type NotifyPagerDuty = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.PAGERDUTY.value;
+	url_fields?: {
+		host?: string;
+		integrationkey?: string;
+		port?: string;
+	};
+	params?: {
+		action?: PagerDutyAction;
+		client?: string;
+		client_url?: string;
+		contexts?: string;
+		dedup_key?: string;
+		details?: string;
+		severity?: PagerDutySeverity;
+		source?: string;
+		title?: string;
+	};
+};
+
 /* Pushbullet */
 export type NotifyPushbullet = NotifyBase & {
 	type: typeof NOTIFY_TYPE_MAP.PUSHBULLET.value;
@@ -336,7 +411,10 @@ export type NotifyPushover = NotifyBase & {
 	params?: {
 		devices?: string;
 		encryptionkey?: string;
+		expire?: string;
 		priority?: string;
+		retry?: string;
+		timestamp?: string;
 		title?: string;
 	};
 };
@@ -352,6 +430,46 @@ export type NotifyRocketChat = NotifyBase & {
 		tokena?: string;
 		tokenb?: string;
 		username?: string;
+	};
+	params?: {
+		disabletls?: string;
+		skiptlsverify?: string;
+	};
+};
+
+/* Signal */
+export type NotifySignal = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.SIGNAL.value;
+	url_fields?: {
+		host?: string;
+		password?: string;
+		port?: string;
+		recipients?: string;
+		source?: string;
+		user?: string;
+	};
+	params?: {
+		attachments?: string;
+		disabletls?: string;
+		notifyself?: string;
+		skiptlsverify?: string;
+		textmode?: SignalTextMode;
+		title?: string;
+		token?: string;
+	};
+};
+
+/* Signalgrid */
+export type NotifySignalgrid = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.SIGNALGRID.value;
+	url_fields?: {
+		channel?: string;
+		clientkey?: string;
+	};
+	params?: {
+		critical?: string;
+		title?: string;
+		type?: SignalgridType;
 	};
 };
 
@@ -383,14 +501,19 @@ export type NotifySMTP = NotifyBase & {
 	params?: {
 		auth?: (typeof smtpAuthOptions)[number]['value'];
 		clienthost?: string;
+		clientid?: string;
+		clientsecret?: string;
 		encryption?: (typeof smtpEncryptionOptions)[number]['value'];
 		fromaddress?: string;
 		fromname?: string;
+		refreshtoken?: string;
 		requirestarttls?: string;
+		scopes?: string;
 		skiptlsverify?: string;
 		subject?: string;
 		timeout?: string;
 		toaddresses?: string;
+		tokenurl?: string;
 		usehtml?: string;
 		usestarttls?: string;
 	};
@@ -419,11 +542,60 @@ export type NotifyTelegram = NotifyBase & {
 		token?: string;
 	};
 	params?: {
+		apiurl?: string;
 		chats?: string;
 		notification?: string;
 		parsemode?: TelegramParsemode;
 		preview?: string;
+		skiptlsverify?: string;
 		title?: string;
+	};
+};
+
+/* Twilio */
+export type NotifyTwilio = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.TWILIO.value;
+	url_fields?: {
+		accountsid?: string;
+		authtoken?: string;
+		fromnumber?: string;
+		tonumbers?: string;
+	};
+	params?: {
+		apikey?: string;
+		title?: string;
+	};
+};
+
+/* WeCom */
+export type NotifyWeCom = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.WECOM.value;
+	url_fields?: {
+		key?: string;
+	};
+	params?: {
+		mentioned_list?: string;
+		mentioned_mobile_list?: string;
+	};
+};
+
+/* XMPP */
+export type NotifyXMPP = NotifyBase & {
+	type: typeof NOTIFY_TYPE_MAP.XMPP.value;
+	url_fields?: {
+		host?: string;
+		password?: string;
+		port?: string;
+		user?: string;
+	};
+	params?: {
+		disabletls?: string;
+		nick?: string;
+		roompassword?: string;
+		rooms?: string;
+		skiptlsverify?: string;
+		title?: string;
+		to?: string;
 	};
 };
 
@@ -438,6 +610,7 @@ export type NotifyZulip = NotifyBase & {
 	};
 	params?: {
 		read_by_sender?: string;
+		skiptlsverify?: string;
 		stream?: string;
 		title?: string;
 		to?: string;

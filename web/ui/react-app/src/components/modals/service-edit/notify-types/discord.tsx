@@ -99,12 +99,62 @@ const DISCORD = ({
 						type: 'string',
 					}}
 				/>
+				<FieldColour
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.colordebug}
+					label="Color (Debug)"
+					name={`${name}.params.colordebug`}
+					tooltip={{
+						content: 'Border color for debug-level messages',
+						type: 'string',
+					}}
+				/>
+				<FieldColour
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.colorinfo}
+					label="Color (Info)"
+					name={`${name}.params.colorinfo`}
+					tooltip={{
+						content: 'Border color for info-level messages',
+						type: 'string',
+					}}
+				/>
+				<FieldColour
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.colorwarn}
+					label="Color (Warn)"
+					name={`${name}.params.colorwarn`}
+					tooltip={{
+						content: 'Border color for warning-level messages',
+						type: 'string',
+					}}
+				/>
+				<FieldColour
+					colSize={{ sm: 6 }}
+					defaultVal={defaults?.params?.colorerror}
+					label="Color (Error)"
+					name={`${name}.params.colorerror`}
+					tooltip={{
+						content: 'Border color for error-level messages',
+						type: 'string',
+					}}
+				/>
 				<FieldText
 					defaultVal={defaults?.params?.thread_id}
 					label="Thread ID"
 					name={`${name}.params.thread_id`}
 					tooltip={{
 						content: 'The Thread ID to send the message to',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					defaultVal={defaults?.params?.thread_name}
+					label="Thread Name"
+					name={`${name}.params.thread_name`}
+					tooltip={{
+						content:
+							'Name of a thread to create for each message in a forum or media channel',
 						type: 'string',
 					}}
 				/>
@@ -122,12 +172,32 @@ const DISCORD = ({
 					label="Title"
 					name={`${name}.params.title`}
 				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.mentions}
+					label="Mentions"
+					name={`${name}.params.mentions`}
+					tooltip={{
+						content:
+							'Comma-separated mentions that ping: everyone, here, user:ID or role:ID',
+						type: 'string',
+					}}
+				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.splitlines}
 					label="Split Lines"
 					name={`${name}.params.splitlines`}
 					tooltip={{
 						content: 'Whether to send each line as a separate embedded item',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.json}
+					label="JSON"
+					name={`${name}.params.json`}
+					tooltip={{
+						content: 'Send the message as a raw JSON payload',
 						type: 'string',
 					}}
 				/>

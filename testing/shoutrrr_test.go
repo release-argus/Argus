@@ -182,7 +182,7 @@ func TestFindShoutrrr(t *testing.T) {
 						nil,
 						map[string]string{
 							"host":  "example.com",
-							"token": "example",
+							"token": "AAAAAAAAAAAAAAA",
 						},
 						nil,
 					),
@@ -242,7 +242,7 @@ func TestFindShoutrrr(t *testing.T) {
 						nil,
 						map[string]string{
 							"host":  "example.com",
-							"token": "example",
+							"token": "AAAAAAAAAAAAAAA",
 						},
 						nil,
 					),
@@ -415,6 +415,38 @@ func TestFindShoutrrr(t *testing.T) {
 						map[string]string{
 							"fromaddress": "test@release-argus.io",
 						}),
+				},
+			},
+		},
+		{
+			name: "matching search of Root notifier with unlocatable URL",
+			flag: "bosh",
+			ok:   false,
+			stdoutRegex: test.TrimYAML(`
+				^FATAL: notify:
+					bosh:
+						pagerduty:
+							invalid integration key format.*`,
+			),
+			cfg: &config.Config{
+				Service: test.Must(t, func() (service.Services, error) {
+					return service.DecodeServices(
+						"yaml", []byte(test.TrimYAML(`
+							argus:
+								notify:
+									foo: {}
+						`)),
+						svcCfg, notifyCfg, whCfg,
+					)
+				}),
+				Notify: shoutrrr.ShoutrrrsDefaults{
+					"bosh": shoutrrr.NewDefaults(
+						"pagerduty",
+						nil,
+						map[string]string{
+							"integrationkey": "KEY",
+						},
+						nil),
 				},
 			},
 		},

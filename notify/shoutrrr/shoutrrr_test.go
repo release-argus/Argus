@@ -19,7 +19,12 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
+
+	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr/pkg/router"
+	"github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -317,7 +322,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 		{
 			name:  "matrix/base + user + port + disabletls",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/?disableTLS=yes",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?disabletls=yes",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
@@ -331,7 +336,7 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 		{
 			name:  "matrix/base + user + port + rooms + disabletls",
 			sType: "matrix",
-			want:  "matrix://USER:PASSWORD@HOST:8443/?disableTLS=yes&rooms=ROOMS",
+			want:  "matrix://USER:PASSWORD@HOST:8443/?disabletls=yes&rooms=ROOMS",
 			urlFields: map[string]string{
 				"host":     "HOST",
 				"password": "PASSWORD",
@@ -482,6 +487,16 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"tokenb":  "TOKENB",
 				"channel": "CHANNEL",
 				"port":    "8443",
+			},
+		},
+		{
+			name:  "rocketchat/base without channel",
+			sType: "rocketchat",
+			want:  "rocketchat://HOST/TOKENA/TOKENB",
+			urlFields: map[string]string{
+				"host":   "HOST",
+				"tokena": "TOKENA",
+				"tokenb": "TOKENB",
 			},
 		},
 		{
@@ -685,6 +700,192 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 				"raw": "RAW",
 			},
 		},
+		{
+			name:  "lark/base",
+			sType: "lark",
+			want:  "lark://HOST/TOKEN",
+			urlFields: map[string]string{
+				"host":  "HOST",
+				"token": "TOKEN",
+			},
+		},
+		{
+			name:  "mqtt/base",
+			sType: "mqtt",
+			want:  "mqtt://HOST/TOPIC",
+			urlFields: map[string]string{
+				"host":  "HOST",
+				"topic": "TOPIC",
+			},
+		},
+		{
+			name:  "mqtt/username only",
+			sType: "mqtt",
+			want:  "mqtt://USER@HOST/TOPIC",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"topic":    "TOPIC",
+				"username": "USER",
+			},
+		},
+		{
+			name:  "mqtt/base + login + port + disabletls",
+			sType: "mqtt",
+			want:  "mqtt://USER:PASS@HOST:8883/TOPIC?disabletls=no",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"port":     "8883",
+				"username": "USER",
+				"password": "PASS",
+				"topic":    "TOPIC",
+			},
+			params: map[string]string{
+				"disabletls": "no",
+			},
+		},
+		{
+			name:  "mqtt/login escaped",
+			sType: "mqtt",
+			want:  "mqtt://us%40er:p%40ss%2Fword%231@HOST/TOPIC",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "us@er",
+				"password": "p@ss/word#1",
+				"topic":    "TOPIC",
+			},
+		},
+		{
+			name:  "pagerduty/base",
+			sType: "pagerduty",
+			want:  "pagerduty:///KEY",
+			urlFields: map[string]string{
+				"integrationkey": "KEY",
+			},
+		},
+		{
+			name:  "pagerduty/base + host + port",
+			sType: "pagerduty",
+			want:  "pagerduty://HOST:8443/KEY",
+			urlFields: map[string]string{
+				"host":           "HOST",
+				"port":           "8443",
+				"integrationkey": "KEY",
+			},
+		},
+		{
+			name:  "signal/base",
+			sType: "signal",
+			want:  "signal://HOST/SOURCE/RECIPIENT",
+			urlFields: map[string]string{
+				"host":       "HOST",
+				"source":     "SOURCE",
+				"recipients": "RECIPIENT",
+			},
+		},
+		{
+			name:  "signal/base + login + port + recipients",
+			sType: "signal",
+			want:  "signal://USER:PASS@HOST:8080/SOURCE/RECIPIENT1/RECIPIENT2",
+			urlFields: map[string]string{
+				"host":       "HOST",
+				"port":       "8080",
+				"user":       "USER",
+				"password":   "PASS",
+				"source":     "SOURCE",
+				"recipients": "RECIPIENT1,RECIPIENT2",
+			},
+		},
+		{
+			name:  "signal/password only, escaped",
+			sType: "signal",
+			want:  "signal://:p%40ss%3Aw%3Frd@HOST/SOURCE/RECIPIENT",
+			urlFields: map[string]string{
+				"host":       "HOST",
+				"password":   "p@ss:w?rd",
+				"source":     "SOURCE",
+				"recipients": "RECIPIENT",
+			},
+		},
+		{
+			name:  "signalgrid/base",
+			sType: "signalgrid",
+			want:  "signalgrid://CLIENTKEY@CHANNEL",
+			urlFields: map[string]string{
+				"clientkey": "CLIENTKEY",
+				"channel":   "CHANNEL",
+			},
+		},
+		{
+			name:  "twilio/base + tonumbers",
+			sType: "twilio",
+			want:  "twilio://SID:TOKEN@FROM/TO1/TO2",
+			urlFields: map[string]string{
+				"accountsid": "SID",
+				"authtoken":  "TOKEN",
+				"fromnumber": "FROM",
+				"tonumbers":  "TO1,TO2",
+			},
+		},
+		{
+			name:  "twilio/authtoken escaped",
+			sType: "twilio",
+			want:  "twilio://SID:p%40ss%2Fword%231@FROM/TO",
+			urlFields: map[string]string{
+				"accountsid": "SID",
+				"authtoken":  "p@ss/word#1",
+				"fromnumber": "FROM",
+				"tonumbers":  "TO",
+			},
+		},
+		{
+			name:  "wecom/base",
+			sType: "wecom",
+			want:  "wecom://KEY",
+			urlFields: map[string]string{
+				"key": "KEY",
+			},
+		},
+		{
+			name:  "xmpp/base + to",
+			sType: "xmpp",
+			want:  "xmpp://USER:PASS@HOST/?to=user%40example.com",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"user":     "USER",
+				"password": "PASS",
+			},
+			params: map[string]string{
+				"to": "user@example.com",
+			},
+		},
+		{
+			name:  "xmpp/base + port + rooms + to",
+			sType: "xmpp",
+			want:  "xmpp://USER:PASS@HOST:5222/?rooms=room%40conf.example.com&to=user%40example.com",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"port":     "5222",
+				"user":     "USER",
+				"password": "PASS",
+			},
+			params: map[string]string{
+				"rooms": "room@conf.example.com",
+				"to":    "user@example.com",
+			},
+		},
+		{
+			name:  "xmpp/full JID + password escaped",
+			sType: "xmpp",
+			want:  "xmpp://argus%40example.com:p%40ss%2Fw%25rd@HOST/?to=user%40example.com",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"user":     "argus@example.com",
+				"password": "p@ss/w%rd",
+			},
+			params: map[string]string{
+				"to": "user@example.com",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -882,6 +1083,62 @@ func TestShoutrrr_BuildParams__SMTPAuth(t *testing.T) {
 	}
 }
 
+func TestShoutrrr_BuildParams__NtfyDisableTLS(t *testing.T) {
+	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
+	tests := []struct {
+		name                     string
+		Type                     string
+		disableTLS               string
+		wantDisableTLS           string
+		wantDisableTLSUnderscore bool
+	}{
+		{
+			name:           "ntfy/disabletls/yes",
+			Type:           "ntfy",
+			disableTLS:     "yes",
+			wantDisableTLS: "yes",
+		},
+		{
+			name:           "ntfy/disabletls/no",
+			Type:           "ntfy",
+			disableTLS:     "no",
+			wantDisableTLS: "no",
+		},
+		{
+			name:                     "non-ntfy/left alone",
+			Type:                     "bark",
+			disableTLS:               "yes",
+			wantDisableTLSUnderscore: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			shoutrrr := testShoutrrr(false, false)
+			shoutrrr.Type = tc.Type
+			shoutrrr.Main.Type = tc.Type
+			shoutrrr.Params["disabletls_"] = tc.disableTLS
+
+			params := *shoutrrr.BuildParams(svcInfo)
+
+			if _, kept := params["disabletls_"]; kept != tc.wantDisableTLSUnderscore {
+				t.Errorf(
+					"params[\"disabletls_\"] mismatch\ngot:  %s\nwant: %s",
+					test.Presence(kept), test.Presence(tc.wantDisableTLSUnderscore),
+				)
+			}
+			if got := params["disabletls"]; got != tc.wantDisableTLS {
+				t.Errorf(
+					"params[\"disabletls\"] mismatch\ngot:  %q\nwant: %q",
+					got, tc.wantDisableTLS,
+				)
+			}
+		})
+	}
+}
+
 func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
 	svcInfo := serviceinfo.ServiceInfo{ID: "service_id"}
 	tests := []struct {
@@ -919,10 +1176,17 @@ func TestShoutrrr_BuildParams__DeprecatedRenames(t *testing.T) {
 			value:  "1",
 		},
 		{
-			name:   "ntfy/disabletls",
+			name:   "gotify/insecureskipverify",
+			Type:   "gotify",
+			oldKey: "insecureskipverify",
+			newKey: "skiptlsverify",
+			value:  "yes",
+		},
+		{
+			name:   "ntfy/disabletlsverification",
 			Type:   "ntfy",
-			oldKey: "disabletls",
-			newKey: "disabletlsverification",
+			oldKey: "disabletlsverification",
+			newKey: "skiptlsverify",
 			value:  "yes",
 		},
 		{
@@ -1003,7 +1267,7 @@ func TestShoutrrr_GetSender(t *testing.T) {
 				type: gotify
 				url_fields:
 					host: HOST
-					token: TOKEN
+					token: AAAAAAAAAAAAAAA
 				params:
 					root: "root"
 			`),
@@ -1012,7 +1276,7 @@ func TestShoutrrr_GetSender(t *testing.T) {
 					root: "main"
 					main: "main"
 			`),
-			url: "gotify://HOST:443/TOKEN",
+			url: "gotify://HOST:443/AAAAAAAAAAAAAAA",
 			wants: wants{
 				errRegex: `^$`,
 				title:    "Test Title",
@@ -1021,12 +1285,12 @@ func TestShoutrrr_GetSender(t *testing.T) {
 		},
 		{
 			name: "valid sender without title or message",
-			url:  "gotify://HOST:443/TOKEN",
+			url:  "gotify://HOST:443/AAAAAAAAAAAAAAA",
 			shoutrrrYAML: test.TrimYAML(`
 				type: gotify
 				url_fields:
 					host: HOST
-					token: TOKEN
+					token: AAAAAAAAAAAAAAA
 			`),
 			wants: wants{
 				errRegex: `^$`,
@@ -1082,6 +1346,103 @@ func TestShoutrrr_GetSender(t *testing.T) {
 				if got := (*params)["title"]; got != tc.wants.title {
 					t.Errorf("params[\"title\"] mismatch\ngot:  %q\nwant: %q", got, tc.wants.title)
 				}
+			}
+		})
+	}
+}
+
+func TestUnknownParams(t *testing.T) {
+	tests := []struct {
+		name   string
+		url    string
+		params types.Params
+		want   []string
+	}{
+		{
+			name: "all known",
+			url:  "gotify://example.com/AAAAAAAAAAAAAAA",
+			params: types.Params{
+				"priority": "1",
+				"title":    "TITLE",
+			},
+			want: nil,
+		},
+		{
+			name: "unknown dropped - sorted",
+			url:  "gotify://example.com/AAAAAAAAAAAAAAA",
+			params: types.Params{
+				"priority": "1",
+				"zzz":      "Z",
+				"aaa":      "A",
+			},
+			want: []string{"aaa", "zzz"},
+		},
+		{
+			name: "payload param kept",
+			url:  "gotify://example.com/AAAAAAAAAAAAAAA",
+			params: types.Params{
+				"extras": `{"foo":"bar"}`,
+			},
+			want: nil,
+		},
+		{
+			name: "deprecated key kept",
+			url:  "gotify://example.com/AAAAAAAAAAAAAAA",
+			params: types.Params{
+				"insecureskipverify": "yes",
+			},
+			want: nil,
+		},
+		{
+			name: "payload param of another service dropped",
+			url:  "gotify://example.com/AAAAAAAAAAAAAAA",
+			params: types.Params{
+				"channel": "CHANNEL",
+			},
+			want: []string{"channel"},
+		},
+		{
+			name: "unlocatable URL",
+			url:  "unknown://example.com",
+			params: types.Params{
+				"foo": "bar",
+			},
+			want: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			sender, err := goshoutrrr.CreateSenderWithOptions(types.SenderOptions{})
+			if err != nil {
+				t.Fatalf("shoutrrr.CreateSenderWithOptions() failed: %v", err)
+			}
+
+			got := unknownParams(sender, tc.url, tc.params)
+
+			if testErr := test.AssertSlicesEqual(t, got, tc.want, ""); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestUnknownParams__EveryServiceHasConfig(t *testing.T) {
+	var serviceRouter router.ServiceRouter
+	// A raw shoutrrr URL reaches any service, and format.GetServiceConfig panics without a Config.
+	for _, scheme := range serviceRouter.ListServices() {
+		t.Run(scheme, func(t *testing.T) {
+			t.Parallel()
+
+			service, err := serviceRouter.NewService(scheme)
+			if err != nil {
+				t.Fatalf("ServiceRouter.NewService() failed: %v", err)
+			}
+
+			if _, ok := reflect.Indirect(reflect.ValueOf(service)).Type().FieldByName("Config"); !ok {
+				t.Error("Service.Config mismatch\ngot:  absent\nwant: present")
 			}
 		})
 	}
