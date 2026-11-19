@@ -16,7 +16,12 @@
 package types
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"errors"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/util"
@@ -29,6 +34,9 @@ type SafeFields struct {
 	URLFieldMaps []string // JSON objects, shown with each value censored.
 	Params       []string // Shown as configured.
 	ParamMaps    []string // JSON objects, shown with each value censored.
+	// JSON values, shown with each string and number censored bar those at the listed paths.
+	// A path joins object keys with "." and marks an array element with "[]", e.g. "[].label".
+	ParamJSON map[string][]string
 }
 
 // SafeFieldsByType are the [SafeFields] of each notifier type.
@@ -58,9 +66,10 @@ var SafeFieldsByType = map[string]SafeFields{
 	"gotify": {
 		URLFields: []string{"host", "path", "port"},
 		Params: []string{
-			"date", "disabletls", "extras", "insecureskipverify", "priority", "skiptlsverify",
-			"title", "useheader",
+			"date", "disabletls", "insecureskipverify", "priority", "skiptlsverify", "title",
+			"useheader",
 		},
+		ParamJSON: map[string][]string{"extras": {"client::display.contentType"}},
 	},
 	"homeassistant": {
 		URLFields: []string{"host", "path", "port"},
@@ -105,9 +114,12 @@ var SafeFieldsByType = map[string]SafeFields{
 	"ntfy": {
 		URLFields: []string{"host", "port", "topic", "username"},
 		Params: []string{
-			"actions", "at", "cache", "delay", "disabletls", "disabletls_",
-			"disabletlsverification", "email", "filename", "firebase", "icon", "in", "markdown",
-			"priority", "scheme", "skiptlsverify", "tags", "title",
+			"at", "cache", "delay", "disabletls", "disabletls_", "disabletlsverification", "email",
+			"filename", "firebase", "icon", "in", "markdown", "priority", "scheme", "skiptlsverify",
+			"tags", "title",
+		},
+		ParamJSON: map[string][]string{
+			"actions": {"[].action", "[].intent", "[].label", "[].method"},
 		},
 	},
 	"opsgenie": {
@@ -197,23 +209,31 @@ func SafeFieldsOf(sType string) SafeFields {
 
 // CensorURLFields returns a copy of urlFields with each value the receiver does not show censored.
 func (f SafeFields) CensorURLFields(urlFields map[string]string) map[string]string {
-	return censor(urlFields, f.URLFields, f.URLFieldMaps)
+	return censor(urlFields, f.URLFields, f.URLFieldMaps, nil)
 }
 
 // CensorParams returns a copy of params with each value the receiver does not show censored.
 func (f SafeFields) CensorParams(params map[string]string) map[string]string {
-	return censor(params, f.Params, f.ParamMaps)
+	return censor(params, f.Params, f.ParamMaps, f.ParamJSON)
 }
 
-// censor keeps empty and safe values, censors JSON objects under maps by value and the rest whole.
-func censor(values map[string]string, safe, maps []string) map[string]string {
+// censor keeps empty and safe values, censors JSON objects under maps by value,
+// JSON values under jsonPaths by string and number, and the rest whole.
+func censor(
+	values map[string]string,
+	safe, maps []string,
+	jsonPaths map[string][]string,
+) map[string]string {
 	out := make(map[string]string, len(values))
 	for key, value := range values {
+		safePaths, isJSON := jsonPaths[key]
 		switch {
 		case value == "" || slices.Contains(safe, key):
 			out[key] = value
 		case slices.Contains(maps, key):
 			out[key] = CensorMapValues(value)
+		case isJSON:
+			out[key] = CensorJSON(value, safePaths)
 		default:
 			out[key] = util.SecretValue
 		}
@@ -242,45 +262,127 @@ func CensorMapValues(value string) string {
 	return string(out)
 }
 
-// RestoreMapValues restores the [util.SecretValue] values in the JSON object from original.
-// A whole-value [util.SecretValue] is replaced with original.
-func RestoreMapValues(original, value string) string {
-	if original == "" {
-		return value
-	}
-	if value == util.SecretValue {
-		return original
+// CensorJSON replaces each string and number in the JSON value with [util.SecretValue],
+// bar those at safePaths. A value that is not JSON is replaced whole.
+func CensorJSON(value string, safePaths []string) string {
+	if value == "" {
+		return ""
 	}
 
-	var target, orig map[string]string
-	if err := decode.Unmarshal("json", []byte(value), &target); err != nil {
-		return value
-	}
-	if err := decode.Unmarshal("json", []byte(original), &orig); err != nil {
-		return value
-	}
-
-	changed := false
-	for k, v := range target {
-		if o := orig[k]; v == util.SecretValue && o != "" {
-			target[k] = o
-			changed = true
-		}
-	}
-	if !changed {
-		return value
-	}
-	out, err := decode.Marshal("json", target)
+	node, err := unmarshalJSON(value)
 	if err != nil {
-		return value
+		return util.SecretValue
 	}
+	// Re-encoding decoded JSON cannot fail.
+	out, _ := decode.Marshal("json", censorNode(node, "", safePaths))
 
 	return string(out)
 }
 
-// RestoreSecrets restores target's censored values from original, including inside JSON objects.
+// censorNode censors the strings and numbers under node, which sits at path, bar those at safePaths.
+func censorNode(node any, path string, safePaths []string) any {
+	switch n := node.(type) {
+	case map[string]any:
+		for key, value := range n {
+			keyPath := key
+			if path != "" {
+				keyPath = path + "." + key
+			}
+			if !slices.Contains(safePaths, keyPath) {
+				n[key] = censorNode(value, keyPath, safePaths)
+			}
+		}
+	case []any:
+		for i, value := range n {
+			n[i] = censorNode(value, path+"[]", safePaths)
+		}
+	case string, jsontext.Value:
+		return util.SecretValue
+	}
+	return node
+}
+
+// oldIndexKey is the key of a JSON array element that holds its index in the original array.
+const oldIndexKey = "old_index"
+
+// RestoreJSONValues restores the [util.SecretValue] values in value from original.
+// Object values are matched by key, and array elements by their oldIndexKey, which is dropped.
+// A whole-value [util.SecretValue] is replaced with original.
+func RestoreJSONValues(original, value string) string {
+	if value == util.SecretValue && original != "" {
+		return original
+	}
+	nothingToRestore := original == "" || !strings.Contains(value, util.SecretValue)
+	if nothingToRestore && !strings.Contains(value, oldIndexKey) {
+		return value
+	}
+
+	node, err := unmarshalJSON(value)
+	if err != nil {
+		return value
+	}
+	orig, err := unmarshalJSON(original)
+	if err != nil {
+		orig = nil
+	}
+	// Re-encoding decoded JSON cannot fail.
+	out, _ := decode.Marshal("json", restoreNode(orig, node))
+
+	return string(out)
+}
+
+// restoreNode restores the [util.SecretValue] values under node from original.
+func restoreNode(original, node any) any {
+	switch n := node.(type) {
+	case map[string]any:
+		orig, _ := original.(map[string]any)
+		for key, value := range n {
+			n[key] = restoreNode(orig[key], value)
+		}
+	case []any:
+		orig, _ := original.([]any)
+		for i, value := range n {
+			// Restore only from the element's own old index, so no other element's secret reaches it.
+			var origElem any
+			if elem, ok := value.(map[string]any); ok {
+				raw, _ := elem[oldIndexKey].(jsontext.Value)
+				if index, err := strconv.Atoi(string(raw)); err == nil && index >= 0 && index < len(orig) {
+					origElem = orig[index]
+				}
+				delete(elem, oldIndexKey)
+			}
+			n[i] = restoreNode(origElem, value)
+		}
+	case string:
+		if n == util.SecretValue && original != nil {
+			return original
+		}
+	}
+	return node
+}
+
+// unmarshalJSON decodes value, keeping each number as written rather than rounding it to a float64.
+func unmarshalJSON(value string) (any, error) {
+	var node any
+	err := json.Unmarshal([]byte(value), &node, json.WithUnmarshalers(json.UnmarshalFromFunc(
+		func(dec *jsontext.Decoder, v *any) error {
+			if dec.PeekKind() != '0' {
+				return errors.ErrUnsupported
+			}
+			raw, err := dec.ReadValue()
+			if err != nil {
+				return err //nolint:wrapcheck
+			}
+			*v = raw.Clone()
+			return nil
+		},
+	)))
+	return node, err //nolint:wrapcheck
+}
+
+// RestoreSecrets restores target's censored values from original, including inside JSON values.
 func RestoreSecrets(original, target map[string]string) {
 	for key, value := range target {
-		target[key] = RestoreMapValues(original[key], value)
+		target[key] = RestoreJSONValues(original[key], value)
 	}
 }

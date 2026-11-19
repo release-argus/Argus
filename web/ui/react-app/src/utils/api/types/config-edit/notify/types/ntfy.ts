@@ -25,6 +25,7 @@ export const NtfyPriorityZodEnum = z.enum(toZodEnumTuple(ntfyPriorityOptions));
 export const ntfyActionBase = z.object({
 	clear: z.boolean().default(false),
 	label: stringDefault,
+	old_index: z.number().nullable().default(null),
 });
 export const ntfyActionBroadcast = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.BROADCAST.value),
@@ -69,7 +70,8 @@ export const ntfyActionSchemaWithValidation = z.discriminatedUnion('action', [
 const normaliseNtfyActionsSchema = (
 	actions: NtfyActionSchema[],
 ): NtfyActionSchema[] => {
-	return actions.map((action) => {
+	return actions.map((action, i) => {
+		action.old_index = i;
 		const actionNormalised = normaliseForSelect(
 			ntfyActionTypeOptions,
 			action.action,

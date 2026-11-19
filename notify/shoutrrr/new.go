@@ -73,13 +73,16 @@ func FromPayload(
 	payload.Options = util.EnsureMap(payload.Options)
 	payload.URLFields = util.EnsureMap(payload.URLFields)
 	payload.Params = util.EnsureMap(payload.Params)
+	var originalURLFields, originalParams map[string]string
 	if original != nil {
 		payload.Options = util.MergeMaps(original.Options, payload.Options)
 		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields)
-		types.RestoreSecrets(original.URLFields, payload.URLFields)
 		payload.Params = util.MergeMaps(original.Params, payload.Params)
-		types.RestoreSecrets(original.Params, payload.Params)
+		originalURLFields, originalParams = original.URLFields, original.Params
 	}
+	// Restore without an original too, so each JSON array element drops its old index.
+	types.RestoreSecrets(originalURLFields, payload.URLFields)
+	types.RestoreSecrets(originalParams, payload.Params)
 
 	// Create the Notify.
 	s := New(

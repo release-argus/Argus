@@ -1837,6 +1837,35 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
+			name: "no oldService (CREATE)/JSON old indices dropped",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						latest_version:
+							type: github
+							url: `+test.ArgusGitHubRepo+`
+						notify:
+							foo:
+								params:
+									actions: '[{"label":"A","old_index":0,"url":"https://a"}]'
+					`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			oldService: nil,
+			secretRefs: secretRefs{},
+			want: test.TrimYAML(`
+				latest_version:
+					type: github
+					url: ` + test.ArgusGitHubRepo + `
+				notify:
+					foo:
+						params:
+							actions: '[{"label":"A","url":"https://a"}]'
+			`),
+		},
+		{
 			name: "no oldService (CREATE)",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(
@@ -5047,6 +5076,78 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 						"query_vars": `{"token":"abc"}`,
 					},
 					nil,
+					nil, nil, nil,
+				),
+			},
+		},
+		{
+			name: "secretRefs/JSON array elements restored by old index",
+			notify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					nil,
+					map[string]string{
+						// A was deleted, so B moved from index 1 to 0.
+						"actions": `[{"label":"B","old_index":1,"url":"<secret>"},{"label":"C","url":"<secret>"}]`,
+					},
+					nil, nil, nil,
+				),
+			},
+			otherNotify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					nil,
+					map[string]string{
+						"actions": `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+					},
+					nil, nil, nil,
+				),
+			},
+			secretRefs: map[string]shared.OldStringIndex{
+				"foo": {OldIndex: "foo"},
+			},
+			want: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					nil,
+					map[string]string{
+						"actions": `[{"label":"B","url":"https://b"},{"label":"C","url":"<secret>"}]`,
+					},
+					nil, nil, nil,
+				),
+			},
+		},
+		{
+			name: "no secretRefs/JSON old indices dropped",
+			notify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					nil,
+					map[string]string{
+						"actions": `[{"label":"A","old_index":0,"url":"https://a"}]`,
+					},
+					nil, nil, nil,
+				),
+			},
+			otherNotify: nil,
+			secretRefs:  map[string]shared.OldStringIndex{},
+			want: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					nil,
+					map[string]string{
+						"actions": `[{"label":"A","url":"https://a"}]`,
+					},
 					nil, nil, nil,
 				),
 			},

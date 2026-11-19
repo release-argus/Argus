@@ -1910,6 +1910,10 @@ func TestNotify_Censor__EveryType(t *testing.T) {
 				notify.Params[param] = `{"A":"alpha"}`
 				want.Params[param] = `{"A":"` + util.SecretValue + `"}`
 			}
+			for param := range safe.ParamJSON {
+				notify.Params[param] = `{"A":"alpha"}`
+				want.Params[param] = `{"A":"` + util.SecretValue + `"}`
+			}
 
 			notify.Censor(sType)
 
