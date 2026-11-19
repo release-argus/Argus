@@ -1214,7 +1214,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "generic":
-		// generic://host[:port][/path]
+		// generic://[username[:password]@]host[:port][/path]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,

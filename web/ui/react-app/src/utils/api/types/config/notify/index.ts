@@ -135,6 +135,8 @@ export type NotifyGeneric = NotifyBase & {
 		host?: string;
 		port?: string;
 		path?: string;
+		username?: string;
+		password?: string;
 		headers?: string;
 		json_payload_vars?: string;
 		query_vars?: string;

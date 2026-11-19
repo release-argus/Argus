@@ -203,17 +203,21 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 			headers: headersSchema,
 			host: stringDefault, // Required.
 			json_payload_vars: headersSchema,
+			password: stringDefault,
 			path: stringDefault,
 			port: stringDefault,
 			query_vars: headersSchema,
+			username: stringDefault,
 		})
 		.default({
 			headers: [],
 			host: '',
 			json_payload_vars: [],
+			password: '',
 			path: '',
 			port: '',
 			query_vars: [],
+			username: '',
 		}),
 });
 export type NotifyGenericSchema = z.infer<typeof notifyGenericSchema>;

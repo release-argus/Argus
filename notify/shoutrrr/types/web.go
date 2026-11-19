@@ -47,7 +47,7 @@ var SafeFieldsByType = map[string]SafeFields{
 		},
 	},
 	"generic": {
-		URLFields:    []string{"host", "port"},
+		URLFields:    []string{"host", "port", "username"},
 		URLFieldMaps: []string{"headers", "json_payload_vars", "query_vars"},
 		Params: []string{
 			"contenttype", "disabletls", "messagekey", "method", "skiptlsverify", "template",
