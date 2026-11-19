@@ -32,7 +32,7 @@ const PermissionsCell = ({ grants }: { grants: Grant[] }) => {
 						// biome-ignore lint/suspicious/noArrayIndexKey: stable order with no duplicates.
 						<li key={index}>
 							<span className="font-mono">{grantLabel(grant)}</span>
-							<span className="block text-muted-foreground">
+							<span className="text-muted-foreground block">
 								{describePermission(grant.resource, grant.action)}
 							</span>
 						</li>
@@ -102,7 +102,7 @@ export const Groups = (): ReactElement => {
 						<TableCell>
 							{group.name}
 							{group.system && (
-								<span className="ml-2 text-muted-foreground text-xs">
+								<span className="text-muted-foreground ml-2 text-xs">
 									system
 								</span>
 							)}

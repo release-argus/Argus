@@ -40,7 +40,7 @@ const ServiceImage: FC<ServiceImageProps> = ({ service, className }) => {
 			return (
 				<div className="inline">
 					{delayedRender(() => (
-						<LoaderCircle className="size-full animate-spin text-muted-foreground" />
+						<LoaderCircle className="text-muted-foreground size-full animate-spin" />
 					))}
 				</div>
 			);

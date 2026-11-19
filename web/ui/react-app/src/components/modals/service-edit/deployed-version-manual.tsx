@@ -147,7 +147,7 @@ const DeployedVersionManual = () => {
 				/>
 			</FieldGroup>
 			{mutationError && (
-				<span className="col-span-full mb-2 w-full break-all pt-1">
+				<span className="col-span-full mb-2 w-full pt-1 break-all">
 					<Alert variant="destructive">
 						<AlertTitle>Failed to save version:</AlertTitle>
 						<AlertDescription>

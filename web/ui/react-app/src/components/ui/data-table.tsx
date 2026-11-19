@@ -118,7 +118,7 @@ const SortableRow = <TData extends RowData>({
 		<TableRow
 			className={cn(
 				'odd:bg-muted/30',
-				isDragging && 'z-100 bg-secondary!',
+				isDragging && 'bg-secondary! z-100',
 				getRowClassName?.(row),
 			)}
 			data-service-id={id}
@@ -130,7 +130,7 @@ const SortableRow = <TData extends RowData>({
 					{...listeners}
 					{...attributes}
 					aria-label="Drag handle"
-					className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
+					className="text-muted-foreground cursor-grab touch-none px-0! py-2"
 					size="sm"
 					variant="ghost"
 				>

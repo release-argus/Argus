@@ -35,7 +35,7 @@ export const Status = (): ReactElement => {
 	return (
 		<div className="flex flex-col gap-8">
 			<div>
-				<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 font-semibold text-3xl tracking-tight">
+				<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 text-3xl font-semibold tracking-tight">
 					Runtime Information
 					{!runtimeData &&
 						delayedRender(() => (
@@ -67,7 +67,7 @@ export const Status = (): ReactElement => {
 									);
 								})
 							: Array.from(new Array(4).keys()).map((num) => (
-									<TableRow className="h-7 odd:bg-muted/30" key={num}>
+									<TableRow className="odd:bg-muted/30 h-7" key={num}>
 										<TableCell className="w-1/3 border-r px-4 py-2">
 											{delayedRender(() => (
 												<Skeleton className="h-5 w-full" />
@@ -84,7 +84,7 @@ export const Status = (): ReactElement => {
 				</Table>
 			</div>
 			<div>
-				<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 font-semibold text-3xl tracking-tight">
+				<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 text-3xl font-semibold tracking-tight">
 					Build Information
 					{!buildData &&
 						delayedRender(() => (
@@ -116,7 +116,7 @@ export const Status = (): ReactElement => {
 									);
 								})
 							: Array.from(new Array(3).keys()).map((num) => (
-									<TableRow className="h-7 odd:bg-muted/30" key={num}>
+									<TableRow className="odd:bg-muted/30 h-7" key={num}>
 										<TableCell className="w-1/3 border-r px-4 py-2">
 											{delayedRender(() => (
 												<Skeleton className="h-5 w-full" />

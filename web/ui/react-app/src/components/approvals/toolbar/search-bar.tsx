@@ -80,7 +80,7 @@ const SearchBar: FC = () => {
 				<InputGroupAddon align="inline-end" className="gap-0 py-0! pr-1.5!">
 					<InputGroupButton
 						aria-label="Clear search"
-						className="order-last rounded-l-none border-l text-muted-foreground hover:text-foreground focus-visible:text-foreground"
+						className="text-muted-foreground hover:text-foreground focus-visible:text-foreground order-last rounded-l-none border-l"
 						onClick={() => setSearch('')}
 						size="icon-md"
 						variant="ghost"

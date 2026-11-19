@@ -25,7 +25,7 @@ const linkStyle = (isActive: boolean) =>
 	cn(
 		'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
 		isActive
-			? 'bg-muted font-medium text-foreground'
+			? 'bg-muted text-foreground font-medium'
 			: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
 	);
 
@@ -41,7 +41,7 @@ export const SettingsLayout = (): ReactElement => {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<h2 className="scroll-m-20 font-semibold text-3xl tracking-tight">
+			<h2 className="scroll-m-20 text-3xl font-semibold tracking-tight">
 				Settings
 			</h2>
 			<div className="flex flex-col gap-6 lg:flex-row lg:gap-10">

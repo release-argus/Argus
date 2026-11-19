@@ -57,7 +57,7 @@ export const DropdownMenuCheckboxItemSortable: FC<
 				{...listeners}
 				{...attributes}
 				aria-label="Drag handle"
-				className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
+				className="text-muted-foreground cursor-grab touch-none px-0! py-2"
 				size="sm"
 				variant="ghost"
 			>

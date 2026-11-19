@@ -5,7 +5,7 @@ import type { TooltipWithAriaProps } from '@/components/generic/tooltip';
 import { FieldLabel } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
-const fieldLabelVariants = cva('gap-0 col-span-full', {
+const fieldLabelVariants = cva('col-span-full gap-0', {
 	defaultVariants: {
 		size: 'default',
 	},
