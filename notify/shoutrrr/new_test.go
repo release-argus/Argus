@@ -41,6 +41,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		"topic": "foo",
 	}
 	typeOther := "slack"
+	typeWithMapSecrets := "generic"
 
 	serviceNotifiers := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
@@ -56,6 +57,17 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"main_with_type_and_no_defaults": &Shoutrrr{
 			Type: typeWithNoDefaults,
+		},
+		"no_main_with_map_secrets": &Shoutrrr{
+			Type: typeWithMapSecrets,
+			URLFields: map[string]string{
+				"host":       "example.com",
+				"headers":    `{"Authorization":"Bearer x","X-Old":"old"}`,
+				"query_vars": `{"token":"abc"}`,
+			},
+			Params: map[string]string{
+				"unlisted": "VALUE",
+			},
 		},
 	}
 	mains := ShoutrrrsDefaults{
@@ -82,6 +94,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		typeWithDefaults:   &Defaults{},
 		typeWithNoDefaults: &Defaults{},
 		typeOther:          &Defaults{},
+		typeWithMapSecrets: &Defaults{},
 	}
 
 	tests := []struct {
@@ -162,6 +175,32 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			want: &Shoutrrr{
 				Type:      typeWithNoDefaults,
 				URLFields: typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "edit/no Main/no Defaults/had type/masked values restored",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_map_secrets",
+				URLFields: map[string]string{
+					"headers":    `{"Authorization":"<secret>","X-New":"new"}`,
+					"query_vars": `{"token":"<secret>"}`,
+				},
+				Params: map[string]string{
+					"unlisted": util.SecretValue,
+				},
+			},
+			want: &Shoutrrr{
+				Type: typeWithMapSecrets,
+				URLFields: map[string]string{
+					"host":       "example.com",
+					"headers":    `{"Authorization":"Bearer x","X-New":"new"}`,
+					"query_vars": `{"token":"abc"}`,
+				},
+				Params: map[string]string{
+					"unlisted": "VALUE",
+				},
 			},
 			errRegex: `^$`,
 		},

@@ -2087,7 +2087,7 @@ func TestService_GiveSecrets(t *testing.T) {
 					"bar": {OldIndex: "bar"},
 				},
 			},
-			// avatar is not censorable and the username is not a secret, so both stay masked.
+			// The username is not a secret, so it stays masked.
 			want: test.TrimYAML(`
 				latest_version:
 					type: github
@@ -2107,7 +2107,7 @@ func TestService_GiveSecrets(t *testing.T) {
 				notify:
 					bar:
 						url_fields:
-							avatar: ` + util.SecretValue + `
+							avatar: https://example.com/logo.png
 					foo:
 						url_fields:
 							apikey: sweet
@@ -4733,7 +4733,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs/url_fields.host ignored as SecretValue",
+			name: "secretRefs/url_fields.host",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4777,7 +4777,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					"", "",
 					nil,
 					map[string]string{
-						"host": util.SecretValue,
+						"host": "https://example.com/foo",
 					},
 					nil,
 					nil, nil, nil,
@@ -4855,7 +4855,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
-			name: "secretRefs/params.avatar ignored as SecretValue",
+			name: "secretRefs/params.avatar",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
@@ -4900,7 +4900,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					nil,
 					nil,
 					map[string]string{
-						"avatar": util.SecretValue,
+						"avatar": "https://example.com/fooo",
 					},
 					nil, nil, nil,
 				),
@@ -4978,6 +4978,51 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 					map[string]string{
 						"devices": "id1,id2",
 					},
+					nil, nil, nil,
+				),
+			},
+		},
+		{
+			name: "secretRefs/generic map values restored by key",
+			notify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					map[string]string{
+						"headers":    `{"Authorization":"<secret>","X-New":"new"}`,
+						"query_vars": util.SecretValue,
+					},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			otherNotify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					map[string]string{
+						"headers":    `{"Authorization":"Bearer x","X-Old":"old"}`,
+						"query_vars": `{"token":"abc"}`,
+					},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			secretRefs: map[string]shared.OldStringIndex{
+				"foo": {OldIndex: "foo"},
+			},
+			want: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "",
+					nil,
+					map[string]string{
+						"headers":    `{"Authorization":"Bearer x","X-New":"new"}`,
+						"query_vars": `{"token":"abc"}`,
+					},
+					nil,
 					nil, nil, nil,
 				),
 			},

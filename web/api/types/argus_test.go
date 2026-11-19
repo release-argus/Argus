@@ -24,6 +24,7 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/test"
+	shoutrrr_types "github.com/release-argus/Argus/notify/shoutrrr/types"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -1587,7 +1588,7 @@ func TestNotifiers_Flatten(t *testing.T) {
 			},
 		},
 		{
-			name: "ordered and censored",
+			name: "ordered/values kept",
 			notify: &Notifiers{
 				"hotel": &Notify{
 					URLFields: map[string]string{
@@ -1614,7 +1615,7 @@ func TestNotifiers_Flatten(t *testing.T) {
 					ID: "golf",
 					URLFields: map[string]string{
 						"path":   "charlie",
-						"botkey": util.SecretValue,
+						"botkey": "india",
 					},
 					Params: map[string]string{
 						"rooms": "delta",
@@ -1624,11 +1625,11 @@ func TestNotifiers_Flatten(t *testing.T) {
 					ID: "hotel",
 					URLFields: map[string]string{
 						"port":  "alpha",
-						"altid": util.SecretValue,
+						"altid": "echo",
 					},
 					Params: map[string]string{
 						"hosts":   "bravo",
-						"devices": util.SecretValue,
+						"devices": "foxtrot",
 					},
 				},
 			},
@@ -1679,6 +1680,7 @@ func TestNotifiers_Flatten(t *testing.T) {
 func TestNotify_Censor(t *testing.T) {
 	tests := []struct {
 		name         string
+		sType        string
 		notify, want *Notify
 	}{
 		{
@@ -1687,116 +1689,129 @@ func TestNotify_Censor(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name: "url_fields",
+			name: "unknown type/every value censored",
 			notify: &Notify{
 				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf",
+					"host":    "alpha",
+					"headers": `{"A":"bravo"}`,
+				},
+				Params: map[string]string{
+					"title": "charlie",
 				},
 			},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue,
+					"host":    util.SecretValue,
+					"headers": util.SecretValue,
+				},
+				Params: map[string]string{
+					"title": util.SecretValue,
 				},
 			},
 		},
 		{
-			name: "params",
+			name:  "known type/safe kept/rest censored",
+			sType: "matrix",
 			notify: &Notify{
+				URLFields: map[string]string{
+					"host":     "alpha",
+					"user":     "bravo",
+					"password": "charlie",
+					"made_up":  "delta",
+				},
 				Params: map[string]string{
-					"devices":       "foo",
-					"encryptionkey": "bar",
+					"rooms":   "echo",
+					"made_up": "foxtrot",
 				},
 			},
 			want: &Notify{
+				URLFields: map[string]string{
+					"host":     "alpha",
+					"user":     "bravo",
+					"password": util.SecretValue,
+					"made_up":  util.SecretValue,
+				},
 				Params: map[string]string{
-					"devices":       util.SecretValue,
-					"encryptionkey": util.SecretValue,
+					"rooms":   "echo",
+					"made_up": util.SecretValue,
 				},
 			},
 		},
 		{
-			name: "all censorable/only",
+			name:  "known type/another type's safe key censored",
+			sType: "slack",
 			notify: &Notify{
 				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf",
-				},
-				Params: map[string]string{
-					"devices":       "hotel",
-					"encryptionkey": "india",
+					"channel": "alpha",
+					"user":    "bravo", // Safe for matrix.
 				},
 			},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue,
-				},
-				Params: map[string]string{
-					"devices":       util.SecretValue,
-					"encryptionkey": util.SecretValue,
+					"channel": "alpha",
+					"user":    util.SecretValue,
 				},
 			},
 		},
 		{
-			name: "all censorable/plus non-censored",
+			name:  "known type/empty value kept",
+			sType: "slack",
 			notify: &Notify{
 				URLFields: map[string]string{
-					"altid":    "alpha",
-					"apikey":   "bravo",
-					"botkey":   "charlie",
-					"password": "delta",
-					"token":    "echo",
-					"tokena":   "foxtrot",
-					"tokenb":   "golf",
-					"port":     "hotel",
-					"username": "india",
-				},
-				Params: map[string]string{
-					"devices":       "juliette",
-					"encryptionkey": "kilo",
-					"rooms":         "lima",
-					"events":        "mike",
+					"token": "",
 				},
 			},
 			want: &Notify{
 				URLFields: map[string]string{
-					"altid":    util.SecretValue,
-					"apikey":   util.SecretValue,
-					"botkey":   util.SecretValue,
-					"password": util.SecretValue,
-					"token":    util.SecretValue,
-					"tokena":   util.SecretValue,
-					"tokenb":   util.SecretValue,
-					"port":     "hotel",
-					"username": "india",
+					"token": "",
 				},
-				Params: map[string]string{
-					"devices":       util.SecretValue,
-					"encryptionkey": util.SecretValue,
-					"rooms":         "lima",
-					"events":        "mike",
+			},
+		},
+		{
+			name:  "generic/url_fields map values",
+			sType: "generic",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"headers":           `{"Authorization":"Bearer x","X-Foo":"y"}`,
+					"json_payload_vars": `{"apikey":"abc"}`,
+					"query_vars":        `{"token":"abc"}`,
+					"host":              "example.com",
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"headers":           `{"Authorization":"<secret>","X-Foo":"<secret>"}`,
+					"json_payload_vars": `{"apikey":"<secret>"}`,
+					"query_vars":        `{"token":"<secret>"}`,
+					"host":              "example.com",
+				},
+			},
+		},
+		{
+			name:  "generic/url_fields map values/invalid JSON masked whole",
+			sType: "generic",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"headers": "Bearer x",
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"headers": util.SecretValue,
+				},
+			},
+		},
+		{
+			name:  "known type/url_fields map values/masked whole for a type without them",
+			sType: "gotify",
+			notify: &Notify{
+				URLFields: map[string]string{
+					"headers": `{"Authorization":"Bearer x"}`,
+				},
+			},
+			want: &Notify{
+				URLFields: map[string]string{
+					"headers": util.SecretValue,
 				},
 			},
 		},
@@ -1806,7 +1821,7 @@ func TestNotify_Censor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			tc.notify.Censor()
+			tc.notify.Censor(tc.sType)
 
 			// A nil Notify has nothing to censor.
 			if tc.notify == nil {
@@ -1825,6 +1840,59 @@ func TestNotify_Censor(t *testing.T) {
 				t,
 				tc.notify.Params,
 				tc.want.Params,
+				"Notify.Params",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestNotify_Censor__EveryType(t *testing.T) {
+	for _, sType := range util.SortedKeys(shoutrrr_types.SafeFieldsByType) {
+		safe := shoutrrr_types.SafeFieldsByType[sType]
+		t.Run(sType, func(t *testing.T) {
+			t.Parallel()
+
+			notify := &Notify{
+				URLFields: map[string]string{"unlisted": "alpha"},
+				Params:    map[string]string{"unlisted": "alpha"},
+			}
+			want := &Notify{
+				URLFields: map[string]string{"unlisted": util.SecretValue},
+				Params:    map[string]string{"unlisted": util.SecretValue},
+			}
+			for _, field := range safe.URLFields {
+				notify.URLFields[field] = "alpha"
+				want.URLFields[field] = "alpha"
+			}
+			for _, field := range safe.URLFieldMaps {
+				notify.URLFields[field] = `{"A":"alpha"}`
+				want.URLFields[field] = `{"A":"<secret>"}`
+			}
+			for _, param := range safe.Params {
+				notify.Params[param] = "alpha"
+				want.Params[param] = "alpha"
+			}
+			for _, param := range safe.ParamMaps {
+				notify.Params[param] = `{"A":"alpha"}`
+				want.Params[param] = `{"A":"<secret>"}`
+			}
+
+			notify.Censor(sType)
+
+			if testErr := test.AssertMapEqual(
+				t,
+				notify.URLFields,
+				want.URLFields,
+				"Notify.URLFields",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				notify.Params,
+				want.Params,
 				"Notify.Params",
 			); testErr != nil {
 				t.Error(testErr)
