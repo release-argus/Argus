@@ -334,7 +334,7 @@ func (n *Notifiers) String() string {
 	return decode.ToJSONString(n)
 }
 
-// Flatten returns the Notifiers as an ordered flat list.
+// Flatten returns the already-censored Notifiers as an ordered flat list.
 func (n *Notifiers) Flatten() []Notify {
 	if n == nil {
 		return nil
@@ -353,7 +353,6 @@ func (n *Notifiers) Flatten() []Notify {
 			URLFields: element.URLFields,
 			Params:    element.Params,
 		}
-		list[index].Censor()
 	}
 
 	return list
@@ -368,27 +367,15 @@ type Notify struct {
 	Params    map[string]string `json:"params,omitempty" yaml:"params,omitempty"`         // Param props.
 }
 
-// Censor redacts secret url_fields and params with [util.SecretValue].
-func (n *Notify) Censor() {
+// Censor censors each value a notifier of sType does not show. An unknown sType shows none.
+func (n *Notify) Censor(sType string) {
 	if n == nil {
 		return
 	}
 
-	// url_fields.
-	n.URLFields = util.CopyMap(n.URLFields)
-	for _, field := range shoutrrr_types.CensorableURLFields {
-		if n.URLFields[field] != "" {
-			n.URLFields[field] = util.SecretValue
-		}
-	}
-
-	// params.
-	n.Params = util.CopyMap(n.Params)
-	for _, param := range shoutrrr_types.CensorableParams {
-		if n.Params[param] != "" {
-			n.Params[param] = util.SecretValue
-		}
-	}
+	safe := shoutrrr_types.SafeFieldsOf(sType)
+	n.URLFields = safe.CensorURLFields(n.URLFields)
+	n.Params = safe.CensorParams(n.Params)
 }
 
 // NotifyParams is a map of Notify parameters.

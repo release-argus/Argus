@@ -257,10 +257,8 @@ func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs 
 			continue
 		}
 
-		// url_fields
-		util.RestoreMaskedValues(oldNotify.URLFields, notify.URLFields, shoutrrr_types.CensorableURLFields)
-		// params
-		util.RestoreMaskedValues(oldNotify.Params, notify.Params, shoutrrr_types.CensorableParams)
+		shoutrrr_types.RestoreSecrets(oldNotify.URLFields, notify.URLFields)
+		shoutrrr_types.RestoreSecrets(oldNotify.Params, notify.Params)
 	}
 }
 

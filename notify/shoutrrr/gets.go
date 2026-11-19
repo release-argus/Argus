@@ -25,10 +25,14 @@ import (
 
 // GetType resolves the notification type from instance, Main, or ID.
 func (s *Shoutrrr) GetType() string {
+	var mainType string
+	if s.Main != nil {
+		mainType = s.Main.Type
+	}
 	// s.ID if the name is the same as the type.
 	return util.FirstNonDefault(
 		s.Type,
-		s.Main.Type,
+		mainType,
 		s.ID,
 	)
 }

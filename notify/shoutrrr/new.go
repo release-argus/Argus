@@ -76,9 +76,9 @@ func FromPayload(
 	if original != nil {
 		payload.Options = util.MergeMaps(original.Options, payload.Options)
 		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields)
-		payload.URLFields = util.RestoreMaskedValues(original.URLFields, payload.URLFields, types.CensorableURLFields)
+		types.RestoreSecrets(original.URLFields, payload.URLFields)
 		payload.Params = util.MergeMaps(original.Params, payload.Params)
-		payload.Params = util.RestoreMaskedValues(original.Params, payload.Params, types.CensorableParams)
+		types.RestoreSecrets(original.Params, payload.Params)
 	}
 
 	// Create the Notify.
