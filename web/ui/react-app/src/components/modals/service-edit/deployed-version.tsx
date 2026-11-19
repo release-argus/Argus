@@ -1,5 +1,6 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 import { FieldSelect } from '@/components/generic/field';
+import DeployedVersionFile from '@/components/modals/service-edit/deployed-version-file';
 import DeployedVersionManual from '@/components/modals/service-edit/deployed-version-manual';
 import DeployedVersionURL from '@/components/modals/service-edit/deployed-version-url';
 import {
@@ -50,8 +51,9 @@ const EditServiceDeployedVersion = () => {
 					}}
 					options={deployedVersionLookupTypeOptions}
 				/>
-				{(selectedType ?? DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value) ===
-				DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value ? (
+				{selectedType === DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value ? (
+					<DeployedVersionFile />
+				) : selectedType === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value ? (
 					<DeployedVersionManual />
 				) : (
 					<DeployedVersionURL />

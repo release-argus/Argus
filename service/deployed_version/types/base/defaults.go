@@ -39,7 +39,7 @@ type DefaultsConfig struct {
 
 // Defaults are the default values for a Lookup.
 type Defaults struct {
-	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "manual" | "url".
+	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "file" | "manual" | "url".
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // False = Disallows invalid HTTPS certificates.
 	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
 

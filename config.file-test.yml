@@ -1,0 +1,14 @@
+settings:
+  data:
+    readonly: true
+    file_read_roots:
+      - /app/file-fixtures
+
+service:
+  synology-file-test:
+    options:
+      semantic_versioning: true
+    deployed_version:
+      type: file
+      path: /app/file-fixtures/Synology/VERSION
+      regex: 'productversion="([^"]+)"'

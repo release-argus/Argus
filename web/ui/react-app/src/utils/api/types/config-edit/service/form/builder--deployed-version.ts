@@ -8,6 +8,7 @@ import {
 import {
 	type deployedVersionLookupSchema,
 	deployedVersionLookupSchemaDefault,
+	deployedVersionFileSchema,
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
 	isDeployedVersionType,
@@ -19,6 +20,7 @@ import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import {
 	CUSTOM_ISSUE_CODE,
 	REQUIRED_MESSAGE,
+	regexStringWithFallback,
 	stringWithFallback,
 	urlPrefixValidator,
 } from '@/utils/api/types/config-edit/validators';
@@ -46,6 +48,9 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	const defaultType = isDeployedVersionType(combinedDefaults.type)
 		? combinedDefaults.type
 		: undefined;
+	const schemaDataDefaultsType = isDeployedVersionType(combinedDefaults.type)
+		? combinedDefaults.type
+		: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value;
 
 	// Manual schema.
 	const dvManualSchema = deployedVersionManualSchema;
@@ -78,9 +83,27 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 				});
 			}
 		});
+	const dvFileSchema = deployedVersionFileSchema.extend({
+		path: stringWithFallback(
+			{
+				message: 'Must be an absolute path.',
+				regex: /^(?:\/|[A-Za-z]:[\\/]|\\\\)/,
+			},
+			true,
+		),
+		regex: regexStringWithFallback(true).superRefine((pattern, ctx) => {
+			if (pattern && !hasCaptureGroup(pattern)) {
+				ctx.addIssue({
+					code: CUSTOM_ISSUE_CODE,
+					message: 'Must include a capture group containing the version.',
+				});
+			}
+		}),
+	});
 
 	// Deployed version schema.
 	const schemaRaw = z.discriminatedUnion('type', [
+		deployedVersionFileSchema,
 		deployedVersionManualSchema,
 		deployedVersionURLSchema.transform((data) => ({
 			...data,
@@ -88,7 +111,11 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 			template_toggle: data.template_toggle || !!data.regex_template,
 		})),
 	]);
-	const schema = z.discriminatedUnion('type', [dvManualSchema, dvURLSchema]);
+	const schema = z.discriminatedUnion('type', [
+		dvManualSchema,
+		dvURLSchema,
+		dvFileSchema,
+	]);
 
 	// Initial type.
 	const schemaDataType = isDeployedVersionType(data?.type)
@@ -119,12 +146,12 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		data: {
 			...combinedDefaults,
 			headers: headersSchemaDataDefaults,
-			type: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value,
+			type: schemaDataDefaultsType,
 		},
 		fallback: {
 			headers: headersSchemaDataDefaults,
 			method: null,
-			type: fallbackData.type as DeployedVersionLookupType,
+			type: schemaDataDefaultsType as DeployedVersionLookupType,
 		},
 		path: `${path} (defaults)`,
 		schema: deployedVersionLookupSchemaDefault,
@@ -135,4 +162,37 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		schemaData: schemaData,
 		schemaDataDefaults: schemaDataDefaults,
 	};
+};
+
+const hasCaptureGroup = (pattern: string) => {
+	try {
+		new RegExp(pattern);
+	} catch {
+		return true;
+	}
+
+	let escaped = false;
+	let inCharacterClass = false;
+	for (let i = 0; i < pattern.length; i++) {
+		const char = pattern[i];
+		if (escaped) {
+			escaped = false;
+		} else if (char === '\\') {
+			escaped = true;
+		} else if (char === '[') {
+			inCharacterClass = true;
+		} else if (char === ']') {
+			inCharacterClass = false;
+		} else if (char === '(' && !inCharacterClass) {
+			if (pattern[i + 1] !== '?') return true;
+			if (
+				pattern[i + 2] === '<' &&
+				pattern[i + 3] !== '=' &&
+				pattern[i + 3] !== '!'
+			) {
+				return true;
+			}
+		}
+	}
+	return false;
 };

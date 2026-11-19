@@ -32,6 +32,7 @@ export const mapServiceToAPIRequest = (
 	let deployedVersion = null;
 	// Have a deployed version lookup.
 	if (
+		(dv.type === DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value && dv.path) ||
 		(dv.type === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value && dv.version) ||
 		(dv.type === DEPLOYED_VERSION_LOOKUP_TYPE.URL.value && dv.url)
 	) {

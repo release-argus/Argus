@@ -295,13 +295,15 @@ func (a AuthLocalSettings) IsZero() bool {
 
 // DataSettings holds data-related settings for the binary.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitzero" yaml:"database_file,omitzero"` // Database path.
-	Readonly     *bool  `json:"readonly,omitzero" yaml:"readonly,omitzero"`           // Disable saving config changes to disk.
+	DatabaseFile  string   `json:"database_file,omitzero" yaml:"database_file,omitzero"`       // Database path.
+	FileReadRoots []string `json:"file_read_roots,omitempty" yaml:"file_read_roots,omitempty"` // Directories local-file lookups may read.
+	Readonly      *bool    `json:"readonly,omitzero" yaml:"readonly,omitzero"`                 // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s DataSettings) IsZero() bool {
 	return s.DatabaseFile == "" &&
+		len(s.FileReadRoots) == 0 &&
 		s.Readonly == nil
 }
 

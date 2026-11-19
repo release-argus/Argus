@@ -32,6 +32,7 @@ import (
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
 	dvtest "github.com/release-argus/Argus/service/deployed_version/test"
 	dvbase "github.com/release-argus/Argus/service/deployed_version/types/base"
+	dvfile "github.com/release-argus/Argus/service/deployed_version/types/file"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	latestver "github.com/release-argus/Argus/service/latest_version"
 	"github.com/release-argus/Argus/service/latest_version/filter"
@@ -1695,6 +1696,18 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 			input: &dvweb.Lookup{},
 			want: &apitype.DeployedVersionLookup{
 				Type: "url",
+			},
+		},
+		{
+			name: "file/lookup",
+			input: &dvfile.Lookup{
+				Path:  "/path/to/allowed/files/VERSION",
+				Regex: `productversion="([^"]+)"`,
+			},
+			want: &apitype.DeployedVersionLookup{
+				Type:  "file",
+				Path:  "/path/to/allowed/files/VERSION",
+				Regex: `productversion="([^"]+)"`,
 			},
 		},
 		{
