@@ -106,6 +106,24 @@ const GENERIC = ({
 						type: 'element',
 					}}
 				/>
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
+					label="Username"
+					name={`${name}.url_fields.username`}
+					tooltip={{
+						content: 'Basic auth username',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					defaultVal={defaults?.url_fields?.password}
+					label="Password"
+					name={`${name}.url_fields.password`}
+					tooltip={{
+						content: 'Basic auth password',
+						type: 'string',
+					}}
+				/>
 				<FieldKeyValMap
 					defaults={defaults?.url_fields?.headers}
 					name={`${name}.url_fields.headers`}
