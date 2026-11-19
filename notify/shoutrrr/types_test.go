@@ -75,7 +75,9 @@ func TestSafeFieldsByType_ShoutrrrParams(t *testing.T) {
 			}
 			resolver := format.NewPropKeyResolver(format.GetServiceConfig(service))
 			safeFields := shoutrrr_types.SafeFieldsOf(sType)
-			safe := slices.Concat(safeFields.Params, safeFields.ParamMaps)
+			safe := slices.Concat(
+				safeFields.Params, safeFields.ParamMaps, util.SortedKeys(safeFields.ParamJSON),
+			)
 
 			queryFields := resolver.QueryFields()
 			// Each param a Shoutrrr bump adds must be classified before its value is shown.
