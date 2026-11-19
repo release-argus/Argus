@@ -30,6 +30,7 @@ func TestShoutrrr_GetType(t *testing.T) {
 	tests := []struct {
 		name                                                 string
 		rootValue, mainValue, defaultValue, hardDefaultValue string
+		nilMain                                              bool
 		want                                                 string
 	}{
 		{
@@ -57,6 +58,11 @@ func TestShoutrrr_GetType(t *testing.T) {
 			want:             "test", // GetType falls back to the ID.
 			hardDefaultValue: "smtp",
 		},
+		{
+			name:    "nil Main",
+			want:    "test", // GetType falls back to the ID.
+			nilMain: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -68,6 +74,9 @@ func TestShoutrrr_GetType(t *testing.T) {
 			shoutrrr.Main.Type = tc.mainValue
 			shoutrrr.Defaults.Type = tc.defaultValue
 			shoutrrr.HardDefaults.Type = tc.hardDefaultValue
+			if tc.nilMain {
+				shoutrrr.Main = nil
+			}
 
 			got := shoutrrr.GetType()
 

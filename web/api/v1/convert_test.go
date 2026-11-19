@@ -27,6 +27,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
 	shoutrrrtest "github.com/release-argus/Argus/notify/shoutrrr/test"
+	shoutrrrtypes "github.com/release-argus/Argus/notify/shoutrrr/types"
 	"github.com/release-argus/Argus/service"
 	"github.com/release-argus/Argus/service/dashboard"
 	deployedver "github.com/release-argus/Argus/service/deployed_version"
@@ -171,7 +172,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			input: &config.Defaults{
 				Notify: shoutrrr.ShoutrrrsDefaults{
 					"other": shoutrrr.NewDefaults(
-						"discord",
+						"join",
 						map[string]string{
 							"message": "release {{ version }} is available",
 						},
@@ -180,7 +181,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 						},
 						map[string]string{
 							"devices": "censor this too",
-							"avatar":  "https://example.com",
+							"icon":    "https://example.com",
 						},
 					),
 				},
@@ -188,7 +189,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 			want: apitype.Defaults{
 				Notify: apitype.Notifiers{
 					"other": {
-						Type: "discord",
+						Type: "join",
 						Options: map[string]string{
 							"message": "release {{ version }} is available",
 						},
@@ -197,7 +198,7 @@ func TestConvertAndCensorDefaults(t *testing.T) {
 						},
 						Params: map[string]string{
 							"devices": util.SecretValue,
-							"avatar":  "https://example.com",
+							"icon":    "https://example.com",
 						},
 					},
 				},
@@ -1932,10 +1933,10 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 						"test": "1",
 					},
 					URLFields: map[string]string{
-						"test": "2",
+						"test": util.SecretValue,
 					},
 					Params: map[string]string{
-						"test": "3",
+						"test": util.SecretValue,
 					},
 				},
 			},
@@ -1956,7 +1957,7 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 					},
 				),
 				"other": shoutrrr.NewDefaults(
-					"discord",
+					"join",
 					map[string]string{
 						"message": "release {{ version }} is available",
 					},
@@ -1965,7 +1966,7 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 					},
 					map[string]string{
 						"devices": "censor this too",
-						"avatar":  "https://example.com",
+						"icon":    "https://example.com",
 					},
 				),
 			},
@@ -1976,14 +1977,14 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 						"test": "1",
 					},
 					URLFields: map[string]string{
-						"test": "2",
+						"test": util.SecretValue,
 					},
 					Params: map[string]string{
-						"test": "3",
+						"test": util.SecretValue,
 					},
 				},
 				"other": {
-					Type: "discord",
+					Type: "join",
 					Options: map[string]string{
 						"message": "release {{ version }} is available",
 					},
@@ -1992,7 +1993,7 @@ func TestConvertAndCensorNotifierDefaults(t *testing.T) {
 					},
 					Params: map[string]string{
 						"devices": util.SecretValue,
-						"avatar":  "https://example.com",
+						"icon":    "https://example.com",
 					},
 				},
 			},
@@ -2104,7 +2105,7 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 				),
 				"other": shoutrrr.New(
 					nil,
-					"", "discord",
+					"", "join",
 					map[string]string{
 						"message": "release {{ version }} is available",
 					},
@@ -2113,7 +2114,7 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 					},
 					map[string]string{
 						"devices": "censor this too",
-						"avatar":  "https://example.com",
+						"icon":    "https://example.com",
 					},
 					nil, nil, nil,
 				),
@@ -2138,7 +2139,7 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 					},
 				},
 				"other": {
-					Type: "discord",
+					Type: "join",
 					Options: map[string]string{
 						"message": "release {{ version }} is available",
 					},
@@ -2147,7 +2148,7 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 					},
 					Params: map[string]string{
 						"devices": util.SecretValue,
-						"avatar":  "https://example.com",
+						"icon":    "https://example.com",
 					},
 				},
 			},
@@ -2168,6 +2169,68 @@ func TestConvertAndCensorNotifiers(t *testing.T) {
 
 			if got := tc.input.String(""); got != had {
 				t.Errorf("input: Shoutrrrs.String() mismatch\ngot:  %q\nwant: %q", got, had)
+			}
+		})
+	}
+}
+
+func TestConvertAndCensorNotifiers__EveryType(t *testing.T) {
+	// Every type's safe keys are set, so a key safe only for another type is censored.
+	var allURLFields, allParams []string
+	for _, safe := range shoutrrrtypes.SafeFieldsByType {
+		allURLFields = append(allURLFields, safe.URLFields...)
+		allURLFields = append(allURLFields, safe.URLFieldMaps...)
+		allParams = append(allParams, safe.Params...)
+		allParams = append(allParams, safe.ParamMaps...)
+	}
+	for _, sType := range util.SortedKeys(shoutrrrtypes.SafeFieldsByType) {
+		safe := shoutrrrtypes.SafeFieldsByType[sType]
+		t.Run(sType, func(t *testing.T) {
+			t.Parallel()
+
+			urlFields, params := map[string]string{}, map[string]string{}
+			wantURLFields, wantParams := map[string]string{}, map[string]string{}
+			for _, field := range allURLFields {
+				urlFields[field] = `{"A":"alpha"}`
+				wantURLFields[field] = util.SecretValue
+			}
+			for _, param := range allParams {
+				params[param] = `{"A":"alpha"}`
+				wantParams[param] = util.SecretValue
+			}
+			for _, field := range safe.URLFields {
+				wantURLFields[field] = urlFields[field]
+			}
+			for _, field := range safe.URLFieldMaps {
+				wantURLFields[field] = `{"A":"<secret>"}`
+			}
+			for _, param := range safe.Params {
+				wantParams[param] = params[param]
+			}
+			for _, param := range safe.ParamMaps {
+				wantParams[param] = `{"A":"<secret>"}`
+			}
+			input := shoutrrr.Shoutrrrs{
+				"test": shoutrrr.New(nil, "", sType, nil, urlFields, params, nil, nil, nil),
+			}
+
+			got := convertAndCensorNotifiers(input)["test"]
+
+			if testErr := test.AssertMapEqual(
+				t,
+				got.URLFields,
+				wantURLFields,
+				"Notify.URLFields",
+			); testErr != nil {
+				t.Error(testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				got.Params,
+				wantParams,
+				"Notify.Params",
+			); testErr != nil {
+				t.Error(testErr)
 			}
 		})
 	}
