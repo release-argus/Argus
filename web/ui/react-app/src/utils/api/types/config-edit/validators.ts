@@ -20,7 +20,7 @@ export const NUMBER_REQUIRED_MESSAGE = 'Number required.';
 export const INVALID_REPOSITORY_MESSAGE = 'Invalid repository.';
 export const INVALID_HOST_MESSAGE = 'Invalid host.';
 export const INVALID_URL_MESSAGE =
-	"Invalid URL (Must start with 'http://' or 'https://', or 'file://').";
+	"Invalid URL (Must start with 'http://', 'https://' or 'file://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
 
 const REPO_PATH_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
