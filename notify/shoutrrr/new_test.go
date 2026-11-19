@@ -66,6 +66,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				"query_vars": `{"token":"abc"}`,
 			},
 			Params: map[string]string{
+				"actions":  `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
 				"unlisted": "VALUE",
 			},
 		},
@@ -188,6 +189,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 					"query_vars": `{"token":"<secret>"}`,
 				},
 				Params: map[string]string{
+					"actions":  `[{"label":"B","old_index":1,"url":"<secret>"}]`,
 					"unlisted": util.SecretValue,
 				},
 			},
@@ -199,6 +201,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 					"query_vars": `{"token":"abc"}`,
 				},
 				Params: map[string]string{
+					"actions":  `[{"label":"B","url":"https://b"}]`,
 					"unlisted": "VALUE",
 				},
 			},
@@ -296,6 +299,25 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			want: &Shoutrrr{
 				Type:      typeWithNoDefaults,
 				URLFields: typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "new/JSON old indices dropped",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				Name:              typeWithNoDefaults,
+				URLFields:         typeWithNoDefaultsURLFields,
+				Params: map[string]string{
+					"actions": `[{"action":"view","label":"A","old_index":null,"url":"https://a"}]`,
+				},
+			},
+			want: &Shoutrrr{
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields,
+				Params: map[string]string{
+					"actions": `[{"action":"view","label":"A","url":"https://a"}]`,
+				},
 			},
 			errRegex: `^$`,
 		},

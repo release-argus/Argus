@@ -2182,6 +2182,7 @@ func TestConvertAndCensorNotifiers__EveryType(t *testing.T) {
 		allURLFields = append(allURLFields, safe.URLFieldMaps...)
 		allParams = append(allParams, safe.Params...)
 		allParams = append(allParams, safe.ParamMaps...)
+		allParams = append(allParams, util.SortedKeys(safe.ParamJSON)...)
 	}
 	for _, sType := range util.SortedKeys(shoutrrrtypes.SafeFieldsByType) {
 		safe := shoutrrrtypes.SafeFieldsByType[sType]
@@ -2208,6 +2209,9 @@ func TestConvertAndCensorNotifiers__EveryType(t *testing.T) {
 				wantParams[param] = params[param]
 			}
 			for _, param := range safe.ParamMaps {
+				wantParams[param] = `{"A":"` + util.SecretValue + `"}`
+			}
+			for param := range safe.ParamJSON {
 				wantParams[param] = `{"A":"` + util.SecretValue + `"}`
 			}
 			input := shoutrrr.Shoutrrrs{

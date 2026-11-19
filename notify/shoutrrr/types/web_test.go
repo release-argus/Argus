@@ -17,6 +17,7 @@
 package types
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -39,6 +40,18 @@ func TestSafeFieldsOf(t *testing.T) {
 			sType: "pushover",
 			want: SafeFields{
 				Params: []string{"expire", "priority", "retry", "timestamp", "title"},
+			},
+		},
+		{
+			name:  "known type/JSON paths",
+			sType: "gotify",
+			want: SafeFields{
+				URLFields: []string{"host", "path", "port"},
+				Params: []string{
+					"date", "disabletls", "insecureskipverify", "priority", "skiptlsverify", "title",
+					"useheader",
+				},
+				ParamJSON: map[string][]string{"extras": {"client::display.contentType"}},
 			},
 		},
 	}
@@ -69,6 +82,11 @@ func TestSafeFieldsOf(t *testing.T) {
 			); testErr != nil {
 				t.Error(testErr)
 			}
+			if testErr := test.AssertMapEqualFunc(
+				t, got.ParamJSON, tc.want.ParamJSON, slices.Equal, "SafeFields.ParamJSON",
+			); testErr != nil {
+				t.Error(testErr)
+			}
 		})
 	}
 }
@@ -79,6 +97,7 @@ func TestSafeFields_Censor(t *testing.T) {
 		URLFieldMaps: []string{"headers"},
 		Params:       []string{"title"},
 		ParamMaps:    []string{"details"},
+		ParamJSON:    map[string][]string{"actions": {"[].label"}},
 	}
 
 	tests := []struct {
@@ -108,6 +127,13 @@ func TestSafeFields_Censor(t *testing.T) {
 			params:        map[string]string{"details": `{"A":"b"}`, "headers": `{"A":"b"}`},
 			wantURLFields: map[string]string{"headers": `{"A":"` + util.SecretValue + `"}`, "query_vars": util.SecretValue},
 			wantParams:    map[string]string{"details": `{"A":"` + util.SecretValue + `"}`, "headers": util.SecretValue},
+		},
+		{
+			name:          "safe fields/JSON censored bar safe paths",
+			safe:          safe,
+			params:        map[string]string{"actions": `[{"label":"A","url":"https://a"}]`},
+			wantURLFields: map[string]string{},
+			wantParams:    map[string]string{"actions": `[{"label":"A","url":"<secret>"}]`},
 		},
 		{
 			name:          "no safe fields/every value censored",
@@ -209,7 +235,67 @@ func TestCensorMapValues(t *testing.T) {
 	}
 }
 
-func TestRestoreMapValues(t *testing.T) {
+func TestCensorJSON(t *testing.T) {
+	ntfyPaths := []string{"[].action", "[].label"}
+
+	tests := []struct {
+		name      string
+		value     string
+		safePaths []string
+		want      string
+	}{
+		{
+			name:  "empty",
+			value: "",
+			want:  "",
+		},
+		{
+			name:  "invalid/not JSON",
+			value: "view, Open, https://a",
+			want:  util.SecretValue,
+		},
+		{
+			name:      "array/safe paths shown, rest censored",
+			value:     `[{"action":"http","clear":true,"headers":{"Authorization":"Bearer x"},"label":"A","url":"https://a"}]`,
+			safePaths: ntfyPaths,
+			want:      `[{"action":"http","clear":true,"headers":{"Authorization":"<secret>"},"label":"A","url":"<secret>"}]`,
+		},
+		{
+			name:      "array/safe key name deeper than its path censored",
+			value:     `[{"headers":{"label":"x"}}]`,
+			safePaths: ntfyPaths,
+			want:      `[{"headers":{"label":"<secret>"}}]`,
+		},
+		{
+			name:      "object/nested safe path shown",
+			value:     `{"client::display":{"contentType":"text/plain"},"client::notification":{"click":{"url":"https://a"}}}`,
+			safePaths: []string{"client::display.contentType"},
+			want:      `{"client::display":{"contentType":"text/plain"},"client::notification":{"click":{"url":"<secret>"}}}`,
+		},
+		{
+			name:  "scalars/strings and numbers censored, bools and null kept",
+			value: `{"a":"x","b":1,"c":false,"d":null}`,
+			want:  `{"a":"<secret>","b":"<secret>","c":false,"d":null}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := CensorJSON(tc.value, tc.safePaths)
+
+			if got != tc.want {
+				t.Errorf(
+					"CensorJSON(value=%q) mismatch\ngot:  %q\nwant: %q",
+					tc.value, got, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestRestoreJSONValues(t *testing.T) {
 	tests := []struct {
 		name            string
 		original, value string
@@ -220,6 +306,12 @@ func TestRestoreMapValues(t *testing.T) {
 			original: "",
 			value:    `{"X-Foo":"` + util.SecretValue + `"}`,
 			want:     `{"X-Foo":"` + util.SecretValue + `"}`,
+		},
+		{
+			name:     "no original/value left as written",
+			original: "",
+			value:    `{ "X-Foo": "` + util.SecretValue + `" }`,
+			want:     `{ "X-Foo": "` + util.SecretValue + `" }`,
 		},
 		{
 			name:     "whole value masked/restored",
@@ -270,10 +362,76 @@ func TestRestoreMapValues(t *testing.T) {
 			want:     `{ "X-Foo": "z" }`,
 		},
 		{
+			name:     "nested object/restored by key path",
+			original: `{"client::notification":{"click":{"url":"https://a"}}}`,
+			value:    `{"client::notification":{"click":{"url":"<secret>"}}}`,
+			want:     `{"client::notification":{"click":{"url":"https://a"}}}`,
+		},
+		{
+			name:     "array/restored by old index, which is dropped",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"label":"A","old_index":0,"url":"<secret>"},{"label":"B","old_index":1,"url":"<secret>"}]`,
+			want:     `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+		},
+		{
+			name:     "array/earlier element deleted",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"label":"B","old_index":1,"url":"<secret>"}]`,
+			want:     `[{"label":"B","url":"https://b"}]`,
+		},
+		{
+			name:     "array/reordered",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"label":"B","old_index":1,"url":"<secret>"},{"label":"A","old_index":0,"url":"<secret>"}]`,
+			want:     `[{"label":"B","url":"https://b"},{"label":"A","url":"https://a"}]`,
+		},
+		{
+			name:     "array/label changed, secret still restored",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"label":"Z","old_index":0,"url":"<secret>"}]`,
+			want:     `[{"label":"Z","url":"https://a"}]`,
+		},
+		{
+			name:     "array/no old index stays masked",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"label":"A","url":"<secret>"}]`,
+			want:     `[{"label":"A","url":"<secret>"}]`,
+		},
+		{
+			name:     "array/invalid old index stays masked",
+			original: `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+			value:    `[{"old_index":2,"url":"<secret>"},{"old_index":-1,"url":"<secret>"},{"old_index":0.5,"url":"<secret>"},{"old_index":"0","url":"<secret>"}]`,
+			want:     `[{"url":"<secret>"},{"url":"<secret>"},{"url":"<secret>"},{"url":"<secret>"}]`,
+		},
+		{
+			name:     "array/old index dropped without original",
+			original: "",
+			value:    `[{"label":"A","old_index":null}]`,
+			want:     `[{"label":"A"}]`,
+		},
+		{
+			name:     "numbers/restored as written",
+			original: `{"a":1.50,"b":12345678901234567890}`,
+			value:    `{"a":"<secret>","b":"<secret>"}`,
+			want:     `{"a":1.50,"b":12345678901234567890}`,
+		},
+		{
+			name:     "numbers/shown kept as written",
+			original: `{"a":"x"}`,
+			value:    `{"a":"<secret>","b":12345678901234567890}`,
+			want:     `{"a":"x","b":12345678901234567890}`,
+		},
+		{
 			name:     "invalid/value not JSON",
 			original: `{"X-Foo":"y"}`,
 			value:    `not json`,
 			want:     `not json`,
+		},
+		{
+			name:     "invalid/value with a masked value not JSON",
+			original: `{"a":"x"}`,
+			value:    `{"a":"<secret>","b":-}`,
+			want:     `{"a":"<secret>","b":-}`,
 		},
 		{
 			name:     "invalid/original not JSON",
@@ -287,11 +445,11 @@ func TestRestoreMapValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := RestoreMapValues(tc.original, tc.value)
+			got := RestoreJSONValues(tc.original, tc.value)
 
 			if got != tc.want {
 				t.Errorf(
-					"RestoreMapValues(original=%q, value=%q) mismatch\ngot:  %q\nwant: %q",
+					"RestoreJSONValues(original=%q, value=%q) mismatch\ngot:  %q\nwant: %q",
 					tc.original, tc.value, got, tc.want,
 				)
 			}

@@ -197,6 +197,8 @@ func (s *Service) CheckFetches() error {
 // using secretRefs to locate secrets in maps/lists.
 func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	if oldService == nil {
+		// A new Service has no secrets to give, but its Notify JSON values may hold old indices.
+		s.giveSecretsNotify(nil, nil)
 		return
 	}
 
@@ -244,27 +246,16 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Look
 
 // giveSecretsNotify copies secrets from oldNotifiers into the receiver's Notify.
 func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
-	if len(s.Notify) == 0 || len(oldNotifiers) == 0 ||
-		len(secretRefs) == 0 {
-		return
-	}
-
 	for i, notify := range s.Notify {
 		// {OldIndex: "disc", Type: "discord", ...} - SecretValue maps to values in the 'disc' Notify.
-		// Map SecretValue in `i` to this index.
-		oldIndex := secretRefs[i].OldIndex
-		// Not a reference to an old Notify?
-		if oldIndex == "" {
-			continue
-		}
-		oldNotify := oldNotifiers[oldIndex]
-		// Reference doesn't exist?
-		if oldNotify == nil {
-			continue
+		var oldURLFields, oldParams map[string]string
+		if oldIndex := secretRefs[i].OldIndex; oldIndex != "" && oldNotifiers[oldIndex] != nil {
+			oldURLFields, oldParams = oldNotifiers[oldIndex].URLFields, oldNotifiers[oldIndex].Params
 		}
 
-		shoutrrr_types.RestoreSecrets(oldNotify.URLFields, notify.URLFields)
-		shoutrrr_types.RestoreSecrets(oldNotify.Params, notify.Params)
+		// Restore without an old Notify too, so each JSON array element drops its old index.
+		shoutrrr_types.RestoreSecrets(oldURLFields, notify.URLFields)
+		shoutrrr_types.RestoreSecrets(oldParams, notify.Params)
 	}
 }
 
