@@ -342,7 +342,7 @@ test.describe('Service creation modal - field validation', () => {
 			await expectError(
 				urlInput,
 				'example.com',
-				"Invalid URL (Must start with 'http://' or 'https://').",
+				"Invalid URL (Must start with 'http://' or 'https://', or 'file://').",
 				shot,
 				'03-url-invalid',
 			);

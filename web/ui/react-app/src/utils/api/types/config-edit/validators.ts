@@ -20,7 +20,7 @@ export const NUMBER_REQUIRED_MESSAGE = 'Number required.';
 export const INVALID_REPOSITORY_MESSAGE = 'Invalid repository.';
 export const INVALID_HOST_MESSAGE = 'Invalid host.';
 export const INVALID_URL_MESSAGE =
-	"Invalid URL (Must start with 'http://' or 'https://').";
+	"Invalid URL (Must start with 'http://' or 'https://', or 'file://').";
 export const UNIQUE_MESSAGE = 'Must be unique.';
 
 const REPO_PATH_REGEX = /^[a-zA-Z0-9-_.]+\/[a-zA-Z0-9-_.]+$/;
@@ -41,7 +41,7 @@ export const validateRepoPath = ({ arg, ctx, path }: FieldValidatorProps) => {
 	}
 };
 
-export const SUPPORTED_URL_PROTOCOLS = ['http:', 'https:'] as const;
+export const SUPPORTED_URL_PROTOCOLS = ['http:', 'https:', 'file:'] as const;
 type SupportedURLProtocol = (typeof SUPPORTED_URL_PROTOCOLS)[number];
 
 /**
@@ -53,8 +53,8 @@ type SupportedURLProtocol = (typeof SUPPORTED_URL_PROTOCOLS)[number];
 export const isValidURL = (arg: unknown) => {
 	if (typeof arg !== 'string') return false;
 
-	// Must start with 'http(s)://'.
-	if (!/^https?:\/\//.test(arg)) return false;
+	// Must start with 'http(s)://' or 'file://'.
+	if (!/^(https?:|file:)/.test(arg)) return false;
 
 	try {
 		const url = new URL(arg);
