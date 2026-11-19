@@ -131,6 +131,35 @@ func TestShoutrrr_BuildURL(t *testing.T) {
 			},
 		},
 		{
+			name:  "generic/base + login",
+			sType: "generic",
+			want:  "generic://USER:PASS@HOST",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "USER",
+				"password": "PASS",
+			},
+		},
+		{
+			name:  "generic/password only",
+			sType: "generic",
+			want:  "generic://:PASS@HOST",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"password": "PASS",
+			},
+		},
+		{
+			name:  "generic/login escaped",
+			sType: "generic",
+			want:  "generic://us%40er:p%40ss%2Fw0rd@HOST",
+			urlFields: map[string]string{
+				"host":     "HOST",
+				"username": "us@er",
+				"password": "p@ss/w0rd",
+			},
+		},
+		{
 			name:  "gotify/base",
 			sType: "gotify",
 			want:  "gotify://HOST/TOKEN",

@@ -1804,6 +1804,8 @@ func TestNotify_Censor(t *testing.T) {
 					"json_payload_vars": `{"apikey":"abc"}`,
 					"query_vars":        `{"token":"abc"}`,
 					"host":              "example.com",
+					"username":          "user",
+					"password":          "pass",
 				},
 			},
 			want: &Notify{
@@ -1812,6 +1814,8 @@ func TestNotify_Censor(t *testing.T) {
 					"json_payload_vars": `{"apikey":"` + util.SecretValue + `"}`,
 					"query_vars":        `{"token":"` + util.SecretValue + `"}`,
 					"host":              "example.com",
+					"username":          "user",
+					"password":          util.SecretValue,
 				},
 			},
 		},

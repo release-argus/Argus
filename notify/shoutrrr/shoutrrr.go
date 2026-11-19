@@ -382,7 +382,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			query,
 		)
 	case "generic":
-		// generic://example.com[:port][/path]
+		// generic://[username[:password]@]example.com[:port][/path]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 
@@ -398,7 +398,8 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		urlParams := buildQuery(parts...)
 
 		url = fmt.Sprintf(
-			"generic://%s%s%s%s",
+			"generic://%s%s%s%s%s",
+			userInfo(s.GetURLField("username"), s.GetURLField("password")),
 			s.GetURLField("host"),
 			util.ValueUnlessZero(port, ":"+port),
 			util.ValueUnlessZero(path, "/"+path),
