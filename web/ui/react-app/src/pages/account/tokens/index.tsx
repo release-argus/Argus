@@ -45,7 +45,7 @@ export const Tokens = (): ReactElement => {
 					</>
 				}
 				description={
-					<p className="pb-4 text-muted-foreground text-sm">
+					<p className="text-muted-foreground pb-4 text-sm">
 						Tokens authenticate headless clients with
 						<code className="mx-1">Authorization: Bearer &lt;token&gt;</code>
 						and carry your permissions. Revoking a token takes effect

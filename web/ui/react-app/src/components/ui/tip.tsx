@@ -162,7 +162,7 @@ const Tip = ({
 					)}
 				</TooltipTrigger>
 				<TooltipContent
-					className={cn(!content && 'hidden', 'max-w-[60vw] text-wrap p-2')}
+					className={cn(!content && 'hidden', 'max-w-[60vw] p-2 text-wrap')}
 					onMouseEnter={() => {
 						if (timeoutRef.current) clearTimeout(timeoutRef.current);
 						openTooltip();

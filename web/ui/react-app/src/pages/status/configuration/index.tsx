@@ -20,7 +20,7 @@ export const Config = (): ReactElement => {
 
 	return (
 		<>
-			<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 font-semibold text-3xl tracking-tight">
+			<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 text-3xl font-semibold tracking-tight">
 				Configuration
 				{isFetching &&
 					delayedRender(() => (
@@ -30,7 +30,7 @@ export const Config = (): ReactElement => {
 					))}
 			</h2>
 			{data && (
-				<pre className="whitespace-pre-wrap bg-secondary p-4 font-mono text-sm">
+				<pre className="bg-secondary p-4 font-mono text-sm whitespace-pre-wrap">
 					{data}
 				</pre>
 			)}

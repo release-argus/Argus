@@ -20,7 +20,7 @@ export const AuthCard = ({
 	children,
 }: AuthCardProps) => (
 	<div className="flex min-h-svh w-full flex-col items-center justify-center gap-4 p-4 sm:gap-6 sm:p-5">
-		<div className="flex select-none items-center gap-3">
+		<div className="flex items-center gap-3 select-none">
 			<img
 				alt="Argus"
 				className="size-10 sm:size-14"
@@ -28,7 +28,7 @@ export const AuthCard = ({
 			/>
 			<span
 				aria-hidden
-				className="font-semibold text-3xl text-brand sm:text-4xl"
+				className="text-brand text-3xl font-semibold sm:text-4xl"
 			>
 				Argus
 			</span>

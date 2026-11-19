@@ -13,7 +13,7 @@ export const GroupHeading = ({
 	id,
 }: GroupHeadingProps): ReactElement => (
 	<div className="grid gap-1">
-		<h3 className="font-semibold text-base" id={id}>
+		<h3 className="text-base font-semibold" id={id}>
 			{title}
 		</h3>
 		<p className="text-muted-foreground text-sm">{description}</p>

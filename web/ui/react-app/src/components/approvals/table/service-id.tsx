@@ -24,7 +24,7 @@ export const ServiceID: FC<ServiceIDProps> = ({ row }) => {
 	if (!url) return id;
 
 	return (
-		<Button asChild className="p-0 text-foreground" size="fit" variant="link">
+		<Button asChild className="text-foreground p-0" size="fit" variant="link">
 			<Link rel="noreferrer noopener" target="_blank" to={url}>
 				{id}
 			</Link>

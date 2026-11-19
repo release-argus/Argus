@@ -100,7 +100,7 @@ export const GrantEditor = ({ catalogue, diff }: GrantEditorProps) => {
 
 	return (
 		<fieldset className="grid min-w-0 gap-2">
-			<legend className="flex items-center pb-1 font-medium text-sm">
+			<legend className="flex items-center pb-1 text-sm font-medium">
 				Permissions
 				<HelpTooltip
 					ariaLabel="What each permission allows"
@@ -124,7 +124,7 @@ export const GrantEditor = ({ catalogue, diff }: GrantEditorProps) => {
 			{fields.length > 0 && (
 				<div
 					className={cn(
-						'hidden gap-2 text-muted-foreground text-xs sm:grid sm:items-center',
+						'text-muted-foreground hidden gap-2 text-xs sm:grid sm:items-center',
 						layout.row,
 					)}
 				>

@@ -30,7 +30,7 @@ export const Flags = (): ReactElement => {
 
 	return (
 		<>
-			<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 font-semibold text-3xl tracking-tight">
+			<h2 className="flex scroll-m-20 flex-row gap-2 pb-2 text-3xl font-semibold tracking-tight">
 				Command-Line Flags
 				{!isSuccess &&
 					delayedRender(() => (

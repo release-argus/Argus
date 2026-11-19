@@ -100,7 +100,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 		<Card
 			className={cn(
 				'gap-0 shadow',
-				isDragging && 'z-100 border-primary/50 bg-secondary',
+				isDragging && 'border-primary/50 bg-secondary z-100',
 				updateStatus.not_found
 					? delayedRender(() => updateStatus.className, 'default')
 					: updateStatus.className,
@@ -112,28 +112,28 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 			style={dragStyle}
 		>
 			<CardHeader
-				className="relative flex h-full flex-col items-center text-balance text-center"
+				className="relative flex h-full flex-col items-center text-center text-balance"
 				key={`${data?.id}-title`}
 			>
 				{data?.url ? (
 					<Button
 						asChild
-						className="m-auto h-min w-fit items-start justify-start p-0 text-foreground"
+						className="text-foreground m-auto h-min w-fit items-start justify-start p-0"
 						variant="link"
 					>
 						<Link rel="noreferrer noopener" target="_blank" to={data?.url}>
-							<h4 className="whitespace-normal font-semibold text-xl tracking-tight">
+							<h4 className="text-xl font-semibold tracking-tight whitespace-normal">
 								{data?.name ?? data?.id}
 							</h4>
 						</Link>
 					</Button>
 				) : (
-					<h4 className="my-auto cursor-default text-center font-semibold text-xl tracking-tight">
+					<h4 className="my-auto cursor-default text-center text-xl font-semibold tracking-tight">
 						{data?.name ?? data?.id}
 					</h4>
 				)}
 				{(canEdit || canOrder) && (
-					<div className="-top-2.5 absolute right-0.5 z-1 flex flex-col">
+					<div className="absolute -top-2.5 right-0.5 z-1 flex flex-col">
 						{canEdit && (
 							<Button
 								aria-label="Edit service"
@@ -150,7 +150,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 								{...listeners}
 								{...attributes}
 								aria-label="Drag handle"
-								className="cursor-grab touch-none px-0! py-2 text-muted-foreground"
+								className="text-muted-foreground cursor-grab touch-none px-0! py-2"
 								size="sm"
 								variant="ghost"
 							>
@@ -166,7 +166,7 @@ const Service: FC<ServiceProps> = ({ id, editable = false }) => {
 					className={cn(
 						'flex gap-4 border-0 p-2',
 						data?.active === false &&
-							'border-2 border-muted-foreground bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_20px,var(--muted-foreground)_20px,var(--muted-foreground)_40px)] p-0.5',
+							'border-muted-foreground border-2 bg-[repeating-linear-gradient(45deg,var(--muted)_0px,var(--muted)_20px,var(--muted-foreground)_20px,var(--muted-foreground)_40px)] p-0.5',
 					)}
 				>
 					<ServiceImage service={data} />

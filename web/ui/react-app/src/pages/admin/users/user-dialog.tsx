@@ -252,7 +252,7 @@ export const UserDialog = ({
 						name="groups"
 						render={({ field }) => (
 							<fieldset className="grid gap-2">
-								<legend className="pb-1 font-medium text-sm">Groups</legend>
+								<legend className="pb-1 text-sm font-medium">Groups</legend>
 								{groups.map((group) => {
 									const checked = field.value.includes(group.name);
 									// Self cannot drop out of the admin group.

@@ -130,7 +130,7 @@ export const GrantRow = ({
 				'grid items-start gap-2 rounded-md border p-2 sm:items-center sm:border-0 sm:p-0',
 				layout.row,
 				duplicate
-					? 'border-destructive bg-destructive/10 sm:border sm:border-destructive'
+					? 'border-destructive bg-destructive/10 sm:border-destructive sm:border'
 					: modified && 'bg-primary/5 sm:rounded-sm',
 			)}
 		>

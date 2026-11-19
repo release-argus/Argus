@@ -31,7 +31,7 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 
 	return (
 		<div className="flex size-full min-h-22 flex-col gap-y-2">
-			<ul className="wrap-anywhere mb-auto flex w-full flex-col gap-1">
+			<ul className="mb-auto flex w-full flex-col gap-1 wrap-anywhere">
 				<ServiceInfoDeployedVersion
 					hasDeployedVersion={!!service?.deployed_version_type}
 					status={service?.status}
@@ -51,7 +51,7 @@ const ServiceInfo: FC<ServiceInfoProps> = ({
 					updateSkipped={updateSkipped}
 				/>
 			)}
-			<small className="flex w-full flex-col gap-1 font-medium text-muted-foreground text-xs leading-none">
+			<small className="text-muted-foreground flex w-full flex-col gap-1 text-xs leading-none font-medium">
 				{cardTimestamps.includes(CardTimestamp.Deployed) &&
 					status?.deployed_version_timestamp && (
 						<span data-timestamp={CardTimestamp.Deployed}>

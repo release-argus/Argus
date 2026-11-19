@@ -84,7 +84,7 @@ const EditServiceRoot: FC<EditServiceRootProps> = ({ loading }) => {
 		? {
 				ariaLabel: 'Format: services.ID.NAME=service_name',
 				content: (
-					<pre className="m-0 whitespace-pre-wrap text-left font-mono text-xs">
+					<pre className="m-0 text-left font-mono text-xs whitespace-pre-wrap">
 						{'services:\n  '}
 						<span className="font-semibold underline">ID</span>
 						{':\n    '}
