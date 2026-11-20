@@ -22,6 +22,7 @@ import {
 	type NotifySchemaKeys,
 	type NotifySchemaValues,
 } from '@/utils/api/types/config-edit/notify/schemas';
+import { SECRET_VALUE } from '@/utils/api/types/config-edit/validators';
 
 type NotifyProps = {
 	/* The name of the field in the form. */
@@ -53,7 +54,7 @@ const Notify: FC<NotifyProps> = ({
 	mains,
 }) => {
 	const { schemaData, typeDataDefaults } = useSchemaContext();
-	const { clearErrors, setValue, trigger } = useFormContext();
+	const { clearErrors, getValues, setValue, trigger } = useFormContext();
 
 	// Original values.
 	const originals = schemaData?.notify;
@@ -130,9 +131,19 @@ const Notify: FC<NotifyProps> = ({
 			if (original && newType === original?.type) {
 				setValue(`${name}.url_fields`, original.url_fields);
 				setValue(`${name}.params`, original.params);
+				return;
+			}
+			// The API restores masked values only for the same type, so the user re-enters them.
+			for (const field of ['url_fields', 'params']) {
+				const values = getValues(`${name}.${field}`) as
+					| Record<string, unknown>
+					| undefined;
+				for (const [key, value] of Object.entries(values ?? {})) {
+					if (value === SECRET_VALUE) setValue(`${name}.${field}.${key}`, '');
+				}
 			}
 		},
-		[name, original, setValue],
+		[name, original, getValues, setValue],
 	);
 
 	// Accordion header.

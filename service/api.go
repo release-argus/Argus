@@ -250,11 +250,13 @@ func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs 
 		// {OldIndex: "disc", Type: "discord", ...} - SecretValue maps to values in the 'disc' Notify.
 		sType := notify.GetType()
 		var oldURLFields, oldParams map[string]string
-		if oldIndex := secretRefs[i].OldIndex; oldIndex != "" && oldNotifiers[oldIndex] != nil {
-			oldURLFields, oldParams = oldNotifiers[oldIndex].URLFields, oldNotifiers[oldIndex].Params
+		// Restore only from the same type, as another type may show what this one censors.
+		oldIndex := secretRefs[i].OldIndex
+		if old := oldNotifiers[oldIndex]; oldIndex != "" && old != nil && old.GetType() == sType {
+			oldURLFields, oldParams = old.URLFields, old.Params
 		}
 
-		// Restore without an old Notify too, to drop the old indices and keys referenced.
+		// Restore without a same-type old Notify too, to drop the old indices and keys referenced.
 		safeFields := shoutrrr_types.SafeFieldsOf(sType)
 		safeFields.RestoreURLFields(oldURLFields, notify.URLFields)
 		safeFields.RestoreParams(oldParams, notify.Params)

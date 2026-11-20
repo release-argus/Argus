@@ -4407,7 +4407,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			notify: shoutrrr.Shoutrrrs{
 				"bar": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": util.SecretValue,
@@ -4417,7 +4417,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 				"foo": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": util.SecretValue,
@@ -4429,7 +4429,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			otherNotify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": "something",
@@ -4439,7 +4439,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 				"bar": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": "shazam",
@@ -4455,7 +4455,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			want: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": "shazam",
@@ -4465,7 +4465,7 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 				),
 				"bar": shoutrrr.New(
 					nil,
-					"", "",
+					"", "gotify",
 					nil,
 					map[string]string{
 						"apikey": "something",
@@ -5117,6 +5117,42 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
+			name: "secretRefs/old notifier of another type gives no secrets",
+			notify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "gotify",
+					nil,
+					map[string]string{"path": util.SecretValue},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			otherNotify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "generic",
+					nil,
+					map[string]string{"path": "/hooks/TOKEN"},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			secretRefs: map[string]shared.OldStringIndex{
+				"foo": {OldIndex: "foo"},
+			},
+			want: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "gotify",
+					nil,
+					map[string]string{"path": util.SecretValue},
+					nil,
+					nil, nil, nil,
+				),
+			},
+		},
+		{
 			name: "secretRefs/JSON array elements restored by old index",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
@@ -5200,6 +5236,14 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			&dashboard.Options{},
 		)
 		newService.Notify.Init(&newService.Status, notifyCfg)
+		// Init sets the ID each old type falls back to, as giveSecretsNotify compares types.
+		oldService := &Service{Notify: tc.otherNotify}
+		oldService.Status.Init(
+			0, len(oldService.Notify), 0,
+			status.ServiceInfo{ID: tc.name},
+			&dashboard.Options{},
+		)
+		oldService.Notify.Init(&oldService.Status, notifyCfg)
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
