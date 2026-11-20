@@ -78,9 +78,12 @@ func FromPayload(
 		payload.Options = util.MergeMaps(original.Options, payload.Options)
 		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields)
 		payload.Params = util.MergeMaps(original.Params, payload.Params)
-		originalURLFields, originalParams = original.URLFields, original.Params
+		// Restore only from the same type, as another type may show what this one censors.
+		if original.GetType() == nType {
+			originalURLFields, originalParams = original.URLFields, original.Params
+		}
 	}
-	// Restore without an original too, to drop the old indices and keys it reads.
+	// Restore without a same-type original too, to drop the old indices and keys it reads.
 	safeFields := types.SafeFieldsOf(nType)
 	safeFields.RestoreURLFields(originalURLFields, payload.URLFields)
 	safeFields.RestoreParams(originalParams, payload.Params)

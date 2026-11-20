@@ -593,6 +593,51 @@ test.describe('Service secret inheritance', () => {
 		);
 	});
 
+	test('notify: a type change clears masked values, and changing back restores them', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=NOTIFY_TYPE';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+
+		await openDashboardInEditMode(page);
+		await createService(page, id, {
+			notifiers: [
+				{
+					name: 'gotify-test',
+					text: {
+						Host: NOTIFY_GOTIFY.host,
+						Path: NOTIFY_GOTIFY.path,
+						Token: NOTIFY_GOTIFY.tokenPass,
+					},
+					typeLabel: 'Gotify',
+				},
+			],
+		});
+
+		const dialog = await openEditModalFromBackend(page, id);
+		const section = await openSection(dialog, 'Notify');
+		await section
+			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
+			.click();
+		const tokenInput = section.getByRole('textbox', {
+			name: 'Value field for Token',
+		});
+		const selectType = async (label: string) => {
+			await section.locator('#notify\\.0\\.type').click();
+			await dialog.getByRole('option', { exact: true, name: label }).click();
+		};
+
+		await expect(tokenInput, 'before type change').toHaveValue(SECRET_VALUE);
+
+		// The API restores a masked value only from a notifier of the same type.
+		await selectType('Telegram');
+		await expect(tokenInput, 'after type change').toHaveValue('');
+
+		await selectType('Gotify');
+		await expect(tokenInput, 'after changing back').toHaveValue(SECRET_VALUE);
+	});
+
 	test('notify: a masked generic header secret survives a key rename', async ({
 		page,
 	}, testInfo) => {

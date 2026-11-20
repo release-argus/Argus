@@ -208,6 +208,32 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name: "edit/no Main/type changed/masked value not restored",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_map_secrets",
+				Type:              typeWithDefaults,
+				URLFields: map[string]string{
+					"host":  util.SecretValue,
+					"token": testToken,
+				},
+			},
+			want: &Shoutrrr{
+				Type: typeWithDefaults,
+				URLFields: map[string]string{
+					"host":       util.SecretValue,
+					"token":      testToken,
+					"headers":    `{"Authorization":"Bearer x","X-Old":"old"}`,
+					"query_vars": `{"token":"abc"}`,
+				},
+				Params: map[string]string{
+					"actions":  `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+					"unlisted": "VALUE",
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
 			name: "edit/no Main/no Defaults/had type/renamed key's masked value restored",
 			payload: TestPayload{
 				ServiceIDPrevious: "test",
