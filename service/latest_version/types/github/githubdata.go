@@ -21,13 +21,9 @@ import (
 
 	"github.com/release-argus/Argus/config/decode"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
-	"github.com/release-argus/Argus/util"
 )
 
-var (
-	emptyListETag  atomic.Pointer[string]
-	defaultPerPage = 30
-)
+var emptyListETag atomic.Pointer[string]
 
 // Start empty, so that a Lookup asks unconditionally until a query learns the ETag.
 func init() {
@@ -43,7 +39,7 @@ const defaultAPIRoot = "https://api.github.com"
 type Data struct {
 	mu          sync.RWMutex         // Mutex to protect the Data.
 	etag        string               // GitHub ETag for conditional requests https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests.
-	perPage     int                  // Number of releases per page.
+	nextPage    int                  // Next page named by the response behind etag, 0 on the last page.
 	releases    []forgetypes.Release // Store Releases tied to an ETag.
 	tagFallback bool                 // Whether we have fallen back to using /tags instead of /releases.
 }
@@ -100,36 +96,22 @@ func (g *Data) ETag() string {
 	return g.etag
 }
 
-// SetPerPage of the Data.
-func (g *Data) SetPerPage(foundOnPage int) {
+// SetResponse stores the ETag, next page and releases of one response together.
+func (g *Data) SetResponse(etag string, nextPage int, releases []forgetypes.Release) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	g.perPage = util.ValueOr(g.perPage, defaultPerPage) * foundOnPage
+	g.etag = etag
+	g.nextPage = nextPage
+	g.releases = releases
 }
 
-// ResetPerPage of the Data.
-func (g *Data) ResetPerPage() {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	g.perPage = 0
-}
-
-// PerPage value of the Data.
-func (g *Data) PerPage() int {
+// NextPage value of the Data.
+func (g *Data) NextPage() int {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	return g.perPage
-}
-
-// SetReleases of the Data.
-func (g *Data) SetReleases(releases []forgetypes.Release) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	g.releases = releases
+	return g.nextPage
 }
 
 // Releases stored in the Data.
@@ -155,13 +137,13 @@ func (g *Data) Copy() *Data {
 
 	return &Data{
 		etag:        g.etag,
-		perPage:     g.perPage,
+		nextPage:    g.nextPage,
 		releases:    g.releases,
 		tagFallback: g.tagFallback,
 	}
 }
 
-// CopyFrom copies the ETag and Releases from the given Data to the provider.
+// CopyFrom copies the ETag, NextPage and Releases from the given Data to the receiver.
 func (g *Data) CopyFrom(from *Data) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -169,6 +151,7 @@ func (g *Data) CopyFrom(from *Data) {
 	defer from.mu.RUnlock()
 
 	g.etag = from.etag
+	g.nextPage = from.nextPage
 	g.releases = from.releases
 	g.tagFallback = from.tagFallback
 }

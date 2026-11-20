@@ -325,9 +325,12 @@ func TestLookup_Query__integration(t *testing.T) {
 			overrides:    `url: "release-argus/test-pagination"`,
 			overrideETag: new(""),
 			semVer:       true,
+			status: statusVars{
+				wantLatestVersion: new("1.2.3"),
+			},
 			want: want{
 				errRegex:    `^$`,
-				stdoutRegex: `on page 1`,
+				stdoutRegex: `(?s)GET \S+/releases\?page=2&per_page=100\n.*GET \S+/releases\?page=2&per_page=100\n`,
 			},
 		},
 		{

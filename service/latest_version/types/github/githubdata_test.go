@@ -18,7 +18,6 @@
 package github
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/test"
@@ -117,27 +116,50 @@ func TestData_ETag(t *testing.T) {
 	}
 }
 
-func TestData_PerPage(t *testing.T) {
-	for _, foundOnPage := range []int{1, 2, 10} {
-		t.Run(strconv.Itoa(foundOnPage), func(t *testing.T) {
+func TestData_SetResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     *Data
+		etag     string
+		nextPage int
+		releases []forgetypes.Release
+	}{
+		{
+			name:     "fresh Data takes the response",
+			data:     &Data{},
+			etag:     "foo",
+			nextPage: 3,
+			releases: testBodyObject,
+		},
+		{
+			name:     "a last page replaces every field of an earlier one",
+			data:     &Data{etag: "old", nextPage: 2, releases: testBodyObject},
+			etag:     "new",
+			nextPage: 0,
+			releases: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			data := &Data{}
+			tc.data.SetResponse(tc.etag, tc.nextPage, tc.releases)
 
-			data.SetPerPage(foundOnPage)
-
-			want := foundOnPage * defaultPerPage
-			if got := data.PerPage(); got != want {
-				t.Errorf("after SetPerPage: Data.PerPage() mismatch\ngot:  %d\nwant: %d", got, want)
+			if got := tc.data.ETag(); got != tc.etag {
+				t.Errorf("Data.ETag() mismatch\ngot:  %q\nwant: %q", got, tc.etag)
 			}
-
-			data.ResetPerPage()
-
-			if got, want := data.PerPage(), 0; got != want {
-				t.Errorf(
-					"after ResetPerPage: Data.PerPage() mismatch\ngot:  %d\nwant: %d",
-					got, want,
-				)
+			if got := tc.data.NextPage(); got != tc.nextPage {
+				t.Errorf("Data.NextPage() mismatch\ngot:  %d\nwant: %d", got, tc.nextPage)
+			}
+			if testErr := test.AssertSlicesEqualFunc(
+				t,
+				tc.data.Releases(),
+				tc.releases,
+				releaseEqual,
+				"Data.Releases()",
+			); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
@@ -162,7 +184,7 @@ func TestData_Releases(t *testing.T) {
 		{TagName: "foo"},
 		{TagName: "bar"},
 	}
-	testData.SetReleases(newReleases)
+	testData.releases = newReleases
 
 	got = testData.Releases()
 	if testErr := test.AssertSlicesEqualFunc(
@@ -172,7 +194,7 @@ func TestData_Releases(t *testing.T) {
 		releaseEqual,
 		"Data.Releases()",
 	); testErr != nil {
-		t.Fatalf("after SetReleases: %v", testErr)
+		t.Fatalf("seeded: %v", testErr)
 	}
 }
 
@@ -233,7 +255,8 @@ func TestData_Copy(t *testing.T) {
 		{
 			name: "filled",
 			gd: &Data{
-				etag: "foo",
+				etag:     "foo",
+				nextPage: 2,
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -249,6 +272,9 @@ func TestData_Copy(t *testing.T) {
 
 			if got.etag != tc.gd.etag {
 				t.Errorf("Data.etag mismatch\ngot:  %q\nwant: %q", got.etag, tc.gd.etag)
+			}
+			if got.nextPage != tc.gd.nextPage {
+				t.Errorf("Data.nextPage mismatch\ngot:  %d\nwant: %d", got.nextPage, tc.gd.nextPage)
 			}
 			if testErr := test.AssertSlicesEqualFunc(
 				t,
@@ -276,7 +302,8 @@ func TestData_CopyFrom(t *testing.T) {
 		{
 			name: "filled",
 			gd: &Data{
-				etag: "foo",
+				etag:     "foo",
+				nextPage: 2,
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -291,7 +318,8 @@ func TestData_CopyFrom(t *testing.T) {
 				},
 			},
 			gd: &Data{
-				etag: "foo",
+				etag:     "foo",
+				nextPage: 2,
 				releases: []forgetypes.Release{
 					{TagName: "bar"},
 				},
@@ -311,6 +339,12 @@ func TestData_CopyFrom(t *testing.T) {
 
 			if tc.fresh.etag != tc.gd.etag {
 				t.Errorf("Data.etag mismatch\ngot:  %q\nwant: %q", tc.fresh.etag, tc.gd.etag)
+			}
+			if tc.fresh.nextPage != tc.gd.nextPage {
+				t.Errorf(
+					"Data.nextPage mismatch\ngot:  %d\nwant: %d",
+					tc.fresh.nextPage, tc.gd.nextPage,
+				)
 			}
 			if testErr := test.AssertSlicesEqualFunc(
 				t,

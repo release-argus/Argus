@@ -291,8 +291,8 @@ func TestLookup_Copy(t *testing.T) {
 			lookup: &Lookup{
 				apiRoot: "http://127.0.0.1:1/api",
 				data: Data{
-					etag:    "foo",
-					perPage: 1,
+					etag:     "foo",
+					nextPage: 2,
 					releases: []forgetypes.Release{
 						{URL: "example.com"},
 					},
@@ -334,8 +334,8 @@ func TestLookup_Copy(t *testing.T) {
 				)
 				if err == nil {
 					lv.data = Data{
-						etag:    "foo",
-						perPage: 1,
+						etag:     "foo",
+						nextPage: 2,
 						releases: []forgetypes.Release{
 							{URL: "example.com"},
 						},
@@ -418,7 +418,7 @@ func TestLookup_Copy(t *testing.T) {
 
 			fieldTests = []test.FieldAssertion{
 				{Name: "data.etag", Got: got.data.etag, Want: tc.lookup.data.etag, Mode: test.CompareEqual},
-				{Name: "data.perPage", Got: got.data.perPage, Want: tc.lookup.data.perPage, Mode: test.CompareEqual},
+				{Name: "data.nextPage", Got: got.data.nextPage, Want: tc.lookup.data.nextPage, Mode: test.CompareEqual},
 				{Name: "data.tagFallback", Got: got.data.tagFallback, Want: tc.lookup.data.tagFallback, Mode: test.CompareEqual},
 			}
 			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
