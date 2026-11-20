@@ -1,6 +1,7 @@
 import type { Headers } from '@/utils/api/types/config/shared';
 
 export const DEPLOYED_VERSION_LOOKUP_TYPE = {
+	COMMAND: { label: 'Command', value: 'command' },
 	MANUAL: { label: 'Manual', value: 'manual' },
 	URL: { label: 'URL', value: 'url' },
 } as const;
@@ -11,8 +12,16 @@ export const deployedVersionLookupTypeOptions = Object.values(
 );
 
 export type DeployedVersionLookup =
+	| DeployedVersionLookupCommand
 	| DeployedVersionLookupManual
 	| DeployedVersionLookupURL;
+
+/* Type: command */
+export type DeployedVersionLookupCommand = {
+	type: typeof DEPLOYED_VERSION_LOOKUP_TYPE.COMMAND.value | null;
+	command?: string[];
+	regex?: string;
+};
 
 /* Type: manual */
 export type DeployedVersionLookupManual = {
