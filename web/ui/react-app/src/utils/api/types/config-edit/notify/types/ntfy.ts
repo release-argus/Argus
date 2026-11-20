@@ -8,9 +8,9 @@ import {
 	ntfyPriorityOptions,
 } from '@/utils/api/types/config/notify/ntfy';
 import {
-	flattenHeaderArray,
-	headersSchema,
-	headersSchemaWithValidation,
+	flattenMapEntries,
+	mapEntriesSchema,
+	mapEntriesSchemaWithValidation,
 } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import {
 	makeDefaultsAwareListPreprocessor,
@@ -29,22 +29,22 @@ export const ntfyActionBase = z.object({
 });
 export const ntfyActionBroadcast = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.BROADCAST.value),
-	extras: headersSchema,
+	extras: mapEntriesSchema,
 	intent: stringDefault,
 });
 export const ntfyActionBroadcastWithValidation = ntfyActionBroadcast.extend({
-	extras: headersSchemaWithValidation,
+	extras: mapEntriesSchemaWithValidation,
 	label: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
 export const ntfyActionHTTP = ntfyActionBase.extend({
 	action: z.literal(NTFY_ACTION_TYPE.HTTP.value),
 	body: stringDefault,
-	headers: headersSchema,
+	headers: mapEntriesSchema,
 	method: stringDefault,
 	url: stringDefault,
 });
 export const ntfyActionHTTPWithValidation = ntfyActionHTTP.extend({
-	headers: headersSchemaWithValidation,
+	headers: mapEntriesSchemaWithValidation,
 	method: z.string().min(1, REQUIRED_MESSAGE).default(''),
 	url: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
@@ -122,13 +122,13 @@ export const preprocessStringFromNtfyActions = z.preprocess((val: unknown) => {
 				case 'http':
 					return {
 						...item,
-						headers: flattenHeaderArray(item.headers),
+						headers: flattenMapEntries(item.headers),
 					};
 				// broadcast - extras as {KEY:VAL}, not {key:KEY, val:VAL}.
 				case 'broadcast':
 					return {
 						...item,
-						extras: flattenHeaderArray(item.extras),
+						extras: flattenMapEntries(item.extras),
 					};
 				default:
 					return item;

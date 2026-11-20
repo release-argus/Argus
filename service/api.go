@@ -197,7 +197,7 @@ func (s *Service) CheckFetches() error {
 // using secretRefs to locate secrets in maps/lists.
 func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	if oldService == nil {
-		// A new Service has no secrets to give, but its Notify JSON values may hold old indices.
+		// A new Service has no secrets to give, but its Notify JSON may hold old indices and keys.
 		s.giveSecretsNotify(nil, nil)
 		return
 	}
@@ -248,14 +248,16 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Look
 func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
 	for i, notify := range s.Notify {
 		// {OldIndex: "disc", Type: "discord", ...} - SecretValue maps to values in the 'disc' Notify.
+		sType := notify.GetType()
 		var oldURLFields, oldParams map[string]string
 		if oldIndex := secretRefs[i].OldIndex; oldIndex != "" && oldNotifiers[oldIndex] != nil {
 			oldURLFields, oldParams = oldNotifiers[oldIndex].URLFields, oldNotifiers[oldIndex].Params
 		}
 
-		// Restore without an old Notify too, so each JSON array element drops its old index.
-		shoutrrr_types.RestoreSecrets(oldURLFields, notify.URLFields)
-		shoutrrr_types.RestoreSecrets(oldParams, notify.Params)
+		// Restore without an old Notify too, to drop the old indices and keys referenced.
+		safeFields := shoutrrr_types.SafeFieldsOf(sType)
+		safeFields.RestoreURLFields(oldURLFields, notify.URLFields)
+		safeFields.RestoreParams(oldParams, notify.Params)
 	}
 }
 

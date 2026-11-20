@@ -3,33 +3,59 @@ import type { Headers } from '@/utils/api/types/config/shared';
 import {
 	headerSchema,
 	headerSchemaWithValidation,
+	mapEntrySchema,
+	mapEntrySchemaWithValidation,
 } from '@/utils/api/types/config-edit/shared/header/schemas';
 import { makeDefaultsAwareListPreprocessor } from '@/utils/api/types/config-edit/shared/preprocess';
+import { SECRET_VALUE } from '@/utils/api/types/config-edit/validators';
+
+type MapEntry = { key: string; old_key?: string | null; value: string };
+type RenamedSecret = { old_key: string; value: string };
 
 /**
- * Flattens the headers for the API.
+ * Returns the value to send for a JSON object entry.
  *
- * @param headers - The Headers[] to flatten {key: "KEY", value: "VAL"}[].
- * @returns The flattened object {KEY: VAL, ...}.
+ * @param key - The entry's key.
+ * @param oldKey - The key the entry loaded with.
+ * @param value - The entry's value.
+ * @returns `{old_key, value}` when renamed with its secret masked, else the value.
  */
-export const flattenHeaderArray = (headers?: Headers) => {
-	if (!headers) return undefined;
-	return headers.reduce<Record<string, string>>((obj, header) => {
-		obj[header.key] = header.value;
-		return obj;
-	}, {});
-};
+export const renamedSecret = (
+	key: string,
+	oldKey: string | null | undefined,
+	value: string,
+): string | RenamedSecret =>
+	value === SECRET_VALUE && oldKey && oldKey !== key
+		? { old_key: oldKey, value }
+		: value;
 
 /**
- * Converts 'headers' from an array of objects to a JSON string.
+ * Flattens JSON object entries for the API.
+ * A renamed entry still holding the secret placeholder carries its old key, so the API restores it.
  *
- * @param val - The `Headers[]` to convert.
- * @returns A JSON string of the headers.
+ * @param entries - The entries to flatten {key: "KEY", value: "VAL", old_key: "OLD"}[].
+ * @returns The flattened object {KEY: VAL, ...}, or undefined without entries.
  */
-export const preprocessStringFromHeaderArray = z.preprocess((val: unknown) => {
+export const flattenMapEntries = (entries?: MapEntry[]) =>
+	entries?.reduce<Record<string, string | RenamedSecret>>(
+		(obj, { key, old_key: oldKey, value }) => {
+			obj[key] = renamedSecret(key, oldKey, value);
+			return obj;
+		},
+		{},
+	);
+
+/**
+ * Converts map entries to a JSON object string.
+ * An entry renamed while its value is masked becomes `{old_key, value}`, so the API can restore it.
+ *
+ * @param val - The map entries to convert.
+ * @returns A JSON string of the entries.
+ */
+export const preprocessStringFromMapEntries = z.preprocess((val: unknown) => {
 	if (!val || !Array.isArray(val) || val.length === 0) return '';
 
-	const flattened = flattenHeaderArray(val);
+	const flattened = flattenMapEntries(val);
 	// Using defaults if any key empty.
 	if (flattened && Object.keys(flattened).some((arg) => !arg.trim())) return '';
 
@@ -37,20 +63,17 @@ export const preprocessStringFromHeaderArray = z.preprocess((val: unknown) => {
 }, z.string());
 
 /**
- * Defaults-aware variant of headers -> string preprocessor.
+ * Defaults-aware variant of the map entries -> string preprocessor.
  * - Empty array -> null
  * - Matches defaults (deep, via matchingFields=[]) -> null
  */
-export const preprocessStringFromHeaderArrayWithDefaults = (
+export const preprocessStringFromMapEntriesWithDefaults = (
 	defaults?: Record<string, unknown>[],
 ) =>
-	makeDefaultsAwareListPreprocessor(
-		preprocessStringFromHeaderArray.nullable(),
-		{
-			defaults: defaults,
-			matchingFields: [],
-		},
-	);
+	makeDefaultsAwareListPreprocessor(preprocessStringFromMapEntries.nullable(), {
+		defaults: defaults,
+		matchingFields: [],
+	});
 
 /**
  * Converts various header representations into an array of header objects.
@@ -70,6 +93,7 @@ export const preprocessToHeadersArray = <T extends z.ZodType>(
 				if (parsed && typeof parsed === 'object') {
 					return Object.entries(parsed).map(([key, value]) => ({
 						key,
+						old_key: key,
 						value: typeof value === 'string' ? value : JSON.stringify(value),
 					}));
 				}
@@ -86,6 +110,7 @@ export const preprocessToHeadersArray = <T extends z.ZodType>(
 				return Object.entries(arg).map(([key, value], i) => ({
 					key: key,
 					old_index: i,
+					old_key: key,
 					value: value,
 				}));
 			}
@@ -101,6 +126,12 @@ export const headersSchemaWithValidation = preprocessToHeadersArray(
 );
 /* Array of Header objects (no validation) */
 export const headersSchema = preprocessToHeadersArray(headerSchema);
+/* Array of JSON object entries (min length 1 on key and value) */
+export const mapEntriesSchemaWithValidation = preprocessToHeadersArray(
+	mapEntrySchemaWithValidation,
+);
+/* Array of JSON object entries (no validation) */
+export const mapEntriesSchema = preprocessToHeadersArray(mapEntrySchema);
 
 export const preprocessHeadersToHeadersSchema = (defaults?: Headers) =>
 	makeDefaultsAwareListPreprocessor(headersSchema.nullable(), {
