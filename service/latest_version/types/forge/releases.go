@@ -179,8 +179,9 @@ func releaseSortsBefore(a, b forgetypes.Release) bool {
 }
 
 // nextPageLink matches the page number of a Link header's "next" relation, e.g.
-// <https://api.example.com/repos/OWNER/REPO/releases?page=3>; rel="next".
-var nextPageLink = regexp.MustCompile(`<[^>]+page=(\d+)[^>]*>;\s*rel="next"`)
+// <https://api.example.com/repos/OWNER/REPO/releases?page=3&per_page=100>; rel="next".
+// Anchored on [?&] so a later per_page=N is not read as the page.
+var nextPageLink = regexp.MustCompile(`<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="next"`)
 
 // NextPage returns the page number the Link header's "next" relation addresses,
 // or 0 when there is none.

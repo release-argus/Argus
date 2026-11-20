@@ -66,13 +66,12 @@ func (l *Lookup) queryPage(
 	page int,
 	logFrom logx.LogFrom,
 ) (bool, int, error) {
-	body, nextPage, err := l.httpRequest(page, logFrom)
+	nextPage, err := l.httpRequest(page, logFrom)
 	if err != nil {
 		return false, 0, err
 	}
 
-	// Get the latest version, and its release date from the body.
-	version, releaseDate, err := l.getVersion(body, page, logFrom)
+	version, releaseDate, err := l.getVersion(page, logFrom)
 	if err != nil {
 		logx.Error(err, logFrom, true)
 		if nextPage == 0 {
@@ -87,17 +86,13 @@ func (l *Lookup) queryPage(
 	// Only set on the first check.
 	if checkNumber == 0 {
 		l.Status.SetLastQueried("")
-		// Adjust the page size if this version was not on the first page.
-		if page != 1 {
-			l.data.SetPerPage(page)
-		}
 	}
 
 	// If this version differs (new?).
 	previousLatestVersion := l.Status.LatestVersion()
 	if version != previousLatestVersion {
 		newVersion, err := l.handleNewVersion(
-			checkNumber,
+			checkNumber, page,
 			version, releaseDate, l.Status.LatestVersion(),
 			logFrom,
 		)
@@ -109,19 +104,20 @@ func (l *Lookup) queryPage(
 	return false, 0, nil
 }
 
-// httpRequest makes a HTTP GET request to the address of this Lookup and returns the body retrieved.
-func (l *Lookup) httpRequest(page int, logFrom logx.LogFrom) ([]byte, int, error) {
+// httpRequest makes a HTTP GET request to the address of this Lookup, stores any releases
+// retrieved, and returns the next page to request.
+func (l *Lookup) httpRequest(page int, logFrom logx.LogFrom) (int, error) {
 	req, err := l.createRequest(page, logFrom)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 
 	resp, body, err := l.getResponse(req, logFrom)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 
-	return l.handleResponse(resp, body, logFrom)
+	return l.handleResponse(resp, body, page, logFrom)
 }
 
 // createRequest returns a HTTP GET request to the address of this Lookup.
@@ -169,16 +165,17 @@ func (l *Lookup) getResponse(req *http.Request, logFrom logx.LogFrom) (*http.Res
 }
 
 // handleResponse processes the HTTP response based on the status code and takes appropriate action.
-//   - 200 OK, if the response body contains one or more releases, it returns the body.
-//     Otherwise, it conditionally falls back to the "/tags" endpoint (see [Lookup.useTagsAPI]).
-//   - 304 Not Modified, conditionally falls back to "/tags" when there are no cached releases.
-//   - 401 Unauthorized, 403 Forbidden, and 429 Too Many Requests, it logs the error and returns a nil body.
-//   - Unknown status code, it logs the error and returns a nil body along with an error.
-func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
+//   - 200 OK, it stores the releases with the ETag and next page of the response.
+//     An empty first page conditionally falls back to the "/tags" endpoint (see [Lookup.useTagsAPI]).
+//   - 304 Not Modified, conditionally falls back to "/tags" when there are no cached releases,
+//     and otherwise returns the cached response's next page.
+//   - 401 Unauthorized, 403 Forbidden, and 429 Too Many Requests, it logs and returns the error.
+//   - Unknown status code, it logs and returns the error.
+func (l *Lookup) handleResponse(resp *http.Response, body []byte, page int, logFrom logx.LogFrom) (int, error) {
 	switch resp.StatusCode {
 	// 200 - Resource has changed.
 	case http.StatusOK:
-		return l.handleStatusOK(resp, body, logFrom)
+		return l.handleStatusOK(resp, body, page, logFrom)
 
 	// 304 - Resource has not changed.
 	case http.StatusNotModified:
@@ -203,27 +200,26 @@ func (l *Lookup) handleResponse(resp *http.Response, body []byte, logFrom logx.L
 		resp.StatusCode, forge.BodyExcerpt(body),
 	)
 	logx.Error(err, logFrom, true)
-	return nil, 0, err
+	return 0, err
 }
 
-// handleStatusOK processes a 200 status code response
-// and returns any errors from the possible tag fallback request.
+// handleStatusOK processes a 200 status code response, storing its releases,
+// and returns any errors from parsing them or from the possible tag fallback request.
 //
 // 200 when the ETag changed.
-func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
+func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, page int, logFrom logx.LogFrom) (int, error) {
 	newETag := strings.TrimPrefix(resp.Header.Get("etag"), "W/")
-	l.data.SetETag(newETag)
 
 	// []byte{91, 93} == []byte("[]") == empty JSON array.
 	if len(body) == 2 && bytes.Equal(body, []byte{91, 93}) {
 		defaultAccessToken := util.FirstNonDefaultWithEnv(l.typeDefaults.AccessToken, l.typeHardDefaults.AccessToken)
-		firstPage := !strings.HasPrefix(resp.Request.URL.RawQuery, "page=")
+		firstPage := page <= 1
 		// Update the default empty list ETag if we used the default access_token.
 		if firstPage && (l.AccessToken == "" || l.AccessToken == defaultAccessToken) {
 			setEmptyListETag(newETag)
 		}
 
-		if l.useTagsAPI() {
+		if firstPage && l.useTagsAPI() {
 			l.data.SetTagFallback()
 			if l.data.TagFallback() {
 				logx.Verbose(
@@ -242,14 +238,18 @@ func (l *Lookup) handleStatusOK(resp *http.Response, body []byte, logFrom logx.L
 	}
 
 	nextPage := forge.NextPage(resp.Header.Get("Link"))
-	return body, nextPage, nil
+	if err := l.setReleases(body, newETag, nextPage); err != nil {
+		logx.Error(err, logFrom, true)
+		return 0, err
+	}
+	return nextPage, nil
 }
 
 // handleStatusNotModified processes a 304 status code response
 // and returns any errors from the possible tag fallback request.
 //
 // 304 when the ETag is unchanged, and the response body is empty.
-func (l *Lookup) handleStatusNotModified(logFrom logx.LogFrom) ([]byte, int, error) {
+func (l *Lookup) handleStatusNotModified(logFrom logx.LogFrom) (int, error) {
 	// Didn't find any releases before and nothing has changed?
 	if !l.data.hasReleases() {
 		if l.useTagsAPI() {
@@ -260,17 +260,17 @@ func (l *Lookup) handleStatusNotModified(logFrom logx.LogFrom) ([]byte, int, err
 				return l.httpRequest(0, logFrom)
 			}
 		}
-		return nil, 0, nil
+		return 0, nil
 	}
 
-	// Had releases, use them.
-	return nil, 2, nil
+	logx.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
+	return l.data.NextPage(), nil
 }
 
 // handleStatusUnauthorized processes a 401 status code response.
 //
 // 401 when the access token is invalid.
-func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
+func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom logx.LogFrom) (int, error) {
 	bodyStr := string(body)
 	var err error
 
@@ -283,13 +283,13 @@ func (l *Lookup) handleStatusUnauthorized(body []byte, logFrom logx.LogFrom) ([]
 	}
 	logx.Error(err, logFrom, true)
 
-	return nil, 0, err
+	return 0, err
 }
 
 // handleStatusForbidden processes a 403 status code response.
 //
 // 403 when the rate limit is exceeded.
-func (l *Lookup) handleStatusForbidden(body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
+func (l *Lookup) handleStatusForbidden(body []byte, logFrom logx.LogFrom) (int, error) {
 	bodyStr := string(body)
 	var err error
 
@@ -313,35 +313,26 @@ func (l *Lookup) handleStatusForbidden(body []byte, logFrom logx.LogFrom) ([]byt
 		logx.Error(err, logFrom, true)
 	}
 
-	return nil, 0, err
+	return 0, err
 }
 
 // handleStatusTooManyRequests processes a 429 status code response.
 //
 // 429 when too many requests made within a short period.
-func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) ([]byte, int, error) {
+func (l *Lookup) handleStatusTooManyRequests(body []byte, logFrom logx.LogFrom) (int, error) {
 	var message forgetypes.Message
 	if err := decode.Unmarshal("json", body, &message); err != nil {
 		err = fmt.Errorf("unmarshal of GitHub API data failed: %w", err)
 		logx.Error(err, logFrom, true)
-		return nil, 0, errors.New("too many requests made to GitHub")
+		return 0, errors.New("too many requests made to GitHub")
 	}
 
-	return nil, 0, fmt.Errorf("too many requests made to GitHub - %q", message.Message)
+	return 0, fmt.Errorf("too many requests made to GitHub - %q", message.Message)
 }
 
-// getVersion returns the version and date of the matching asset/release from `body`
-// that matches the URLCommands, and Regex requirements.
-func (l *Lookup) getVersion(body []byte, page int, logFrom logx.LogFrom) (string, string, error) {
-	// body length = 0 if GitHub ETag unchanged.
-	if len(body) != 0 {
-		if err := l.setReleases(body); err != nil {
-			return "", "", fmt.Errorf("release data failed to parse: %w", err)
-		}
-	} else {
-		// Recheck this ETag's filteredReleases in case filters/releases changed.
-		logx.Verbose("Using cached releases (ETag unchanged)", logFrom, true)
-	}
+// getVersion returns the version and date of the first stored release
+// that matches the URLCommands and Require.
+func (l *Lookup) getVersion(page int, logFrom logx.LogFrom) (string, string, error) {
 	filteredReleases := l.filterGitHubReleases(logFrom)
 	if len(filteredReleases) == 0 {
 		return "", "", fmt.Errorf(
@@ -356,22 +347,22 @@ func (l *Lookup) getVersion(body []byte, page int, logFrom logx.LogFrom) (string
 	)
 }
 
-// setReleases processes and stores the provided GitHub releases data.
-func (l *Lookup) setReleases(body []byte) error {
+// setReleases parses body and stores its releases with the etag and nextPage of its response.
+func (l *Lookup) setReleases(body []byte, etag string, nextPage int) error {
 	releases, err := l.unmarshalGitHubReleasesBody(body)
 	if err != nil {
-		return err
+		return fmt.Errorf("release data failed to parse: %w", err)
 	}
 
 	// Store unfiltered releases to support filter changes without a refetch.
-	l.data.SetReleases(releases)
+	l.data.SetResponse(etag, nextPage, releases)
 	return nil
 }
 
 // handleNewVersion processes the case of a new version find,
-// and re-checks if first run.
+// and re-checks page if first run.
 func (l *Lookup) handleNewVersion(
-	checkNumber int,
+	checkNumber, page int,
 	version, releaseDate, latestVersion string,
 	logFrom logx.LogFrom,
 ) (bool, error) {
@@ -384,12 +375,9 @@ func (l *Lookup) handleNewVersion(
 		logx.Verbose(msg, logFrom, latestVersion != "")
 		time.Sleep(time.Second)
 
-		newVersion, _, err := l.queryPage(1, 1, logFrom)
+		newVersion, _, err := l.queryPage(1, page, logFrom)
 		return newVersion, err
 	}
-
-	// Reset the PerPage.
-	l.data.ResetPerPage()
 
 	return l.HandleNewVersion(version, releaseDate, logFrom) //nolint:wrapcheck
 }

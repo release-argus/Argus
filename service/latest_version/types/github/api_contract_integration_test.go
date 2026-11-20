@@ -183,6 +183,16 @@ func TestAPIContract__nextPageIsNamedInALinkHeader(t *testing.T) {
 	}
 }
 
+func TestAPIContract__perPageCapsAt100(t *testing.T) {
+	t.Parallel()
+
+	releases := getList(t, "/repos/release-argus/test-pagination/releases?per_page=101")
+
+	if got, want := len(releases), 100; got != want {
+		t.Errorf("releases length mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+}
+
 func TestAPIContract__unknownRepositoryGives404(t *testing.T) {
 	t.Parallel()
 
