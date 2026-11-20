@@ -35,8 +35,8 @@ import {
 import { TelegramParseModeEnum } from '@/utils/api/types/config-edit/notify/types/telegram';
 import { ZulipTypeZodEnum } from '@/utils/api/types/config-edit/notify/types/zulip';
 import {
-	headersSchema,
-	preprocessStringFromHeaderArrayWithDefaults,
+	mapEntriesSchema,
+	preprocessStringFromMapEntriesWithDefaults,
 } from '@/utils/api/types/config-edit/shared/header/preprocess';
 import { nullString } from '@/utils/api/types/config-edit/shared/null-string';
 import {
@@ -200,13 +200,13 @@ export const notifyGenericSchema = notifyBaseSchema.extend({
 	type: z.literal(NOTIFY_TYPE_MAP.GENERIC.value),
 	url_fields: z
 		.object({
-			headers: headersSchema,
+			headers: mapEntriesSchema,
 			host: stringDefault, // Required.
-			json_payload_vars: headersSchema,
+			json_payload_vars: mapEntriesSchema,
 			password: stringDefault,
 			path: stringDefault,
 			port: stringDefault,
-			query_vars: headersSchema,
+			query_vars: mapEntriesSchema,
 			username: stringDefault,
 		})
 		.default({
@@ -654,7 +654,7 @@ export const notifyOpsGenieSchema = notifyBaseSchema.extend({
 			actions: opsGenieActionsSchema,
 			alias: stringDefault,
 			description: stringDefault,
-			details: headersSchema,
+			details: mapEntriesSchema,
 			entity: stringDefault,
 			note: stringDefault,
 			priority: stringDefault,
@@ -1367,13 +1367,13 @@ export const notifySchemaMapOutgoingWithDefaults = (
 				url_fields: notifyGenericSchemaOutgoing.shape.url_fields
 					.unwrap()
 					.extend({
-						headers: preprocessStringFromHeaderArrayWithDefaults(
+						headers: preprocessStringFromMapEntriesWithDefaults(
 							defaults?.url_fields?.headers,
 						),
-						json_payload_vars: preprocessStringFromHeaderArrayWithDefaults(
+						json_payload_vars: preprocessStringFromMapEntriesWithDefaults(
 							defaults?.url_fields?.json_payload_vars,
 						),
-						query_vars: preprocessStringFromHeaderArrayWithDefaults(
+						query_vars: preprocessStringFromMapEntriesWithDefaults(
 							defaults?.url_fields?.query_vars,
 						),
 					}),
@@ -1403,7 +1403,7 @@ export const notifySchemaMapOutgoingWithDefaults = (
 					actions: preprocessStringFromOpsGenieActionsWithDefaults(
 						defaults?.params?.actions,
 					),
-					details: preprocessStringFromHeaderArrayWithDefaults(
+					details: preprocessStringFromMapEntriesWithDefaults(
 						defaults?.params?.details,
 					),
 					responders: preprocessOpsGenieTargetsToStringWithDefaults(

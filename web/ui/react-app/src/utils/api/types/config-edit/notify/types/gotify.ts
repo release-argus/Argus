@@ -4,6 +4,7 @@ import {
 	GOTIFY_EXTRA_NAMESPACE,
 	gotifyExtraClientDisplayContentTypeOptions,
 } from '@/utils/api/types/config/notify/gotify.ts';
+import { renamedSecret } from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import {
 	makeDefaultsAwareListPreprocessor,
 	stringDefault,
@@ -58,10 +59,11 @@ const gotifyExtraClientNotificationSchemaWithValidation =
 			.default({ url: '' }),
 	});
 
-// namespace: other.
+// namespace: other. Keeps the namespace it loaded with, so the API can restore a renamed secret.
 const gotifyExtraOtherSchema = z.object({
 	_namespace: stringDefault,
 	namespace: z.literal(GOTIFY_EXTRA_NAMESPACE.OTHER.value),
+	old_namespace: z.string().nullable().default(null),
 	value: stringDefault,
 });
 const gotifyExtraOtherSchemaWithValidation = gotifyExtraOtherSchema.extend({
@@ -102,6 +104,7 @@ const preprocessGotifyExtras = (arg: unknown) => {
 							return {
 								_namespace: namespace,
 								namespace: GOTIFY_EXTRA_NAMESPACE.OTHER.value,
+								old_namespace: namespace,
 								value: value ?? '',
 							};
 						}
@@ -150,7 +153,11 @@ export const preprocessGotifyExtrasToString = z.preprocess(
 		const result: Record<string, unknown> = {};
 		for (const item of val) {
 			if (item.namespace === GOTIFY_EXTRA_NAMESPACE.OTHER.value) {
-				result[item._namespace] = item.value;
+				result[item._namespace] = renamedSecret(
+					item._namespace,
+					item.old_namespace,
+					item.value,
+				);
 			} else {
 				// Flatten the item and remove 'namespace' from the object.
 				result[item.namespace] = Object.fromEntries(

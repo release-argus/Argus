@@ -59,8 +59,8 @@ import {
 } from '@/utils/api/types/config-edit/notify/types/opsgenie.ts';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
 import {
-	headersSchema,
-	headersSchemaWithValidation,
+	mapEntriesSchema,
+	mapEntriesSchemaWithValidation,
 } from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import { superRefineNameUnique } from '@/utils/api/types/config-edit/shared/unique-name--super-refine';
@@ -254,8 +254,8 @@ const buildNotifySchema = (
 					path: ['params', 'details'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -429,8 +429,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'headers'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -444,8 +444,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'json_payload_vars'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -459,8 +459,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'query_vars'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],

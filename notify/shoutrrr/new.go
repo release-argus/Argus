@@ -80,9 +80,10 @@ func FromPayload(
 		payload.Params = util.MergeMaps(original.Params, payload.Params)
 		originalURLFields, originalParams = original.URLFields, original.Params
 	}
-	// Restore without an original too, so each JSON array element drops its old index.
-	types.RestoreSecrets(originalURLFields, payload.URLFields)
-	types.RestoreSecrets(originalParams, payload.Params)
+	// Restore without an original too, to drop the old indices and keys it reads.
+	safeFields := types.SafeFieldsOf(nType)
+	safeFields.RestoreURLFields(originalURLFields, payload.URLFields)
+	safeFields.RestoreParams(originalParams, payload.Params)
 
 	// Create the Notify.
 	s := New(

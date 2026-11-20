@@ -98,6 +98,8 @@ export type NotifyFieldsOptions = {
 	selects?: Record<string, string>;
 	/** Yes/No toggles, keyed by path under the notifier. */
 	booleans?: Record<string, boolean>;
+	/** `notify.X.url_fields.headers` - only applicable to type 'generic'. */
+	headers?: KeyVal[];
 };
 
 export type CreateServiceOptions = {
@@ -185,16 +187,16 @@ export const screenshotsUnder =
 		);
 
 /**
- * Fills the headers map for a lookup `section`, adding a row per entry.
+ * Fills the headers map in `section`, adding a row per entry.
  *
  * @param section - The accordion section containing the headers map.
- * @param prefix - The lookup's field-name prefix (`latest_version` or
- *   `deployed_version`); the rows live under `<prefix>.headers`.
+ * @param prefix - The field-name prefix (`latest_version`, `deployed_version`,
+ *   `notify.<index>.url_fields`); the rows live under `<prefix>.headers`.
  * @param entries - The key/value pairs to add.
  */
 const fillHeaders = async (
 	section: Locator,
-	prefix: 'latest_version' | 'deployed_version',
+	prefix: 'latest_version' | 'deployed_version' | `notify.${number}.url_fields`,
 	entries: KeyVal[],
 ) => {
 	for (let index = 0; index < entries.length; index++) {
@@ -446,7 +448,7 @@ export const openNotifyItem = async (section: Locator, index: number) => {
 };
 
 /**
- * Fills a notifier's text fields, selects and toggles.
+ * Fills a notifier's text fields, selects, toggles (and headers when type=generic).
  *
  * @param dialog - The modal dialog, which hosts the select options.
  * @param item - The notifier's accordion item.
@@ -471,6 +473,7 @@ const fillNotifyFields = async (
 	for (const [path, value] of Object.entries(notify.booleans ?? {})) {
 		await setBooleanWithDefault(item, `notify.${index}.${path}`, value);
 	}
+	await fillHeaders(item, `notify.${index}.url_fields`, notify.headers ?? []);
 };
 
 /**
@@ -502,6 +505,34 @@ const fillNotify = async (
 			.getByRole('textbox', { name: /^Value field for Name$/i })
 			.fill(notify.name);
 		await fillNotifyFields(dialog, item, index, notify);
+	}
+};
+
+/**
+ * Retries a service create for up to 90s, skipping the test when the lookup's upstream is
+ * unreachable. The server verifies the lookup over the network before responding, so this can be
+ * slow.
+ *
+ * @param create - Sends the create request and returns its response.
+ */
+export const retryCreate = async (
+	create: () => Promise<{ ok(): boolean; text(): Promise<string> }>,
+) => {
+	let lastError = '';
+	try {
+		await expect(async () => {
+			const response = await create();
+			lastError = response.ok() ? '' : await response.text();
+			expect(response.ok(), lastError).toBeTruthy();
+		}).toPass({ timeout: 90_000 });
+	} catch (err) {
+		test.skip(
+			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
+				lastError,
+			),
+			`upstream unreachable: ${lastError}`,
+		);
+		throw err;
 	}
 };
 
@@ -570,33 +601,18 @@ export const createService = async (
 		await fillWebhooks(dialog, options.webhooks);
 	}
 
-	// The server verifies the lookup over the network before responding, so this can be slow.
 	// A transient upstream failure leaves the modal open, so the submit is retried.
-	let lastError = '';
-	try {
-		await expect(async () => {
-			const [response] = await Promise.all([
-				page.waitForResponse(
-					(res) =>
-						res.url().includes('/api/v1/service/new') &&
-						res.request().method() === 'PUT',
-				),
-				dialog.locator('#modal-action').click(),
-			]);
-			lastError = response.ok() ? '' : await response.text();
-			expect(response.ok()).toBeTruthy();
-		}).toPass({ timeout: 90_000 });
-	} catch (err) {
-		// The server rejects a create it cannot verify upstream. A DNS or dial
-		// failure is the environment, so skip rather than fail.
-		test.skip(
-			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
-				lastError,
+	await retryCreate(async () => {
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(res) =>
+					res.url().includes('/api/v1/service/new') &&
+					res.request().method() === 'PUT',
 			),
-			`upstream unreachable: ${lastError}`,
-		);
-		throw err;
-	}
+			dialog.locator('#modal-action').click(),
+		]);
+		return response;
+	});
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
 	// The card, not the heading, as only the grid layout renders a heading.
 	await expect(serviceCard(page, id)).toBeVisible();

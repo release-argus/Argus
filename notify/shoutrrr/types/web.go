@@ -37,6 +37,8 @@ type SafeFields struct {
 	// JSON values, shown with each string and number censored bar those at the listed paths.
 	// A path joins object keys with "." and marks an array element with "[]", e.g. "[].label".
 	ParamJSON map[string][]string
+	// Paths of the objects in ParamJSON values whose keys may be renamed, "" being the whole value.
+	ParamJSONMaps map[string][]string
 }
 
 // SafeFieldsByType are the [SafeFields] of each notifier type.
@@ -69,7 +71,8 @@ var SafeFieldsByType = map[string]SafeFields{
 			"date", "disabletls", "insecureskipverify", "priority", "skiptlsverify", "title",
 			"useheader",
 		},
-		ParamJSON: map[string][]string{"extras": {"client::display.contentType"}},
+		ParamJSON:     map[string][]string{"extras": {"client::display.contentType"}},
+		ParamJSONMaps: map[string][]string{"extras": {""}},
 	},
 	"homeassistant": {
 		URLFields: []string{"host", "path", "port"},
@@ -121,6 +124,7 @@ var SafeFieldsByType = map[string]SafeFields{
 		ParamJSON: map[string][]string{
 			"actions": {"[].action", "[].intent", "[].label", "[].method"},
 		},
+		ParamJSONMaps: map[string][]string{"actions": {"[].extras", "[].headers"}},
 	},
 	"opsgenie": {
 		URLFields: []string{"host", "port"},
@@ -284,10 +288,7 @@ func censorNode(node any, path string, safePaths []string) any {
 	switch n := node.(type) {
 	case map[string]any:
 		for key, value := range n {
-			keyPath := key
-			if path != "" {
-				keyPath = path + "." + key
-			}
+			keyPath := joinPath(path, key)
 			if !slices.Contains(safePaths, keyPath) {
 				n[key] = censorNode(value, keyPath, safePaths)
 			}
@@ -302,18 +303,66 @@ func censorNode(node any, path string, safePaths []string) any {
 	return node
 }
 
+// joinPath returns the path of key in the object at path.
+func joinPath(path, key string) string {
+	if path == "" {
+		return key
+	}
+	return path + "." + key
+}
+
 // oldIndexKey is the key of a JSON array element that holds its index in the original array.
 const oldIndexKey = "old_index"
 
+// oldKeyKey is the key of a renamed JSON object value that holds its key in the original object.
+// The value is then an object of [oldKeyKey] and "value".
+const oldKeyKey = "old_key"
+
 // RestoreJSONValues restores the [util.SecretValue] values in value from original.
-// Object values are matched by key, and array elements by their oldIndexKey, which is dropped.
+// Object values are matched by key, and array elements by their [oldIndexKey], which is dropped.
 // A whole-value [util.SecretValue] is replaced with original.
 func RestoreJSONValues(original, value string) string {
+	return restoreJSON(original, value, nil)
+}
+
+// RestoreMapValues restores the [util.SecretValue] values in the JSON object value from original,
+// matching each by key, or by its [oldKeyKey] when renamed, which is dropped.
+// Any other value is restored by [RestoreJSONValues].
+func RestoreMapValues(original, value string) string {
+	return restoreJSON(original, value, &renames{sites: []string{""}})
+}
+
+// renames are the paths of the objects whose keys may be renamed, and the paths that are shown.
+type renames struct {
+	sites, shown []string
+}
+
+// from returns original, the value under the old key, to restore the value renamed to path.
+// It returns nil when original isn't a string or number, or when the API shows path.
+func (r *renames) from(original any, path string) any {
+	switch original.(type) {
+	case string, jsontext.Value:
+		for _, shown := range r.shown {
+			if path == shown || strings.HasPrefix(path, shown+".") || strings.HasPrefix(path, shown+"[]") {
+				return nil
+			}
+		}
+		return original
+	}
+	// An object or array could hold a secret at a shown path.
+	return nil
+}
+
+// restoreJSON restores value from original as [RestoreJSONValues] does,
+// and restores the renamed values at the sites of r from their old keys.
+func restoreJSON(original, value string, r *renames) string {
 	if value == util.SecretValue && original != "" {
 		return original
 	}
 	nothingToRestore := original == "" || !strings.Contains(value, util.SecretValue)
-	if nothingToRestore && !strings.Contains(value, oldIndexKey) {
+	hasReferences := strings.Contains(value, oldIndexKey) ||
+		(r != nil && strings.Contains(value, oldKeyKey))
+	if nothingToRestore && !hasReferences {
 		return value
 	}
 
@@ -326,18 +375,27 @@ func RestoreJSONValues(original, value string) string {
 		orig = nil
 	}
 	// Re-encoding decoded JSON cannot fail.
-	out, _ := decode.Marshal("json", restoreNode(orig, node))
+	out, _ := decode.Marshal("json", restoreNode(orig, node, "", r))
 
 	return string(out)
 }
 
-// restoreNode restores the [util.SecretValue] values under node from original.
-func restoreNode(original, node any) any {
+// restoreNode restores the [util.SecretValue] values under node, which sits at path, from original.
+func restoreNode(original, node any, path string, r *renames) any {
 	switch n := node.(type) {
 	case map[string]any:
 		orig, _ := original.(map[string]any)
+		isSite := r != nil && slices.Contains(r.sites, path)
 		for key, value := range n {
-			n[key] = restoreNode(orig[key], value)
+			valuePath := joinPath(path, key)
+			origValue := orig[key]
+			// Restore a renamed value only from its old key, so no other value's secret reaches it.
+			oldKey, inner, renamed := renamedValue(value)
+			// When the original is rename-shaped too, value is the original censored, not a rename.
+			if isSite && renamed && !isRenameShaped(origValue) {
+				value, origValue = inner, r.from(orig[oldKey], valuePath)
+			}
+			n[key] = restoreNode(origValue, value, valuePath, r)
 		}
 	case []any:
 		orig, _ := original.([]any)
@@ -351,7 +409,7 @@ func restoreNode(original, node any) any {
 				}
 				delete(elem, oldIndexKey)
 			}
-			n[i] = restoreNode(origElem, value)
+			n[i] = restoreNode(origElem, value, path+"[]", r)
 		}
 	case string:
 		if n == util.SecretValue && original != nil {
@@ -359,6 +417,37 @@ func restoreNode(original, node any) any {
 		}
 	}
 	return node
+}
+
+// renamedValue returns ref's [oldKeyKey] and "value" when they are its only keys and both strings.
+func renamedValue(ref any) (oldKey, value string, ok bool) {
+	obj, isObject := ref.(map[string]any)
+	if !isObject || len(obj) != 2 {
+		return "", "", false
+	}
+	oldKey, hasOldKey := obj[oldKeyKey].(string)
+	value, hasValue := obj["value"].(string)
+	if !hasOldKey || !hasValue {
+		return "", "", false
+	}
+	return oldKey, value, true
+}
+
+// isRenameShaped reports whether ref is an object of only [oldKeyKey] and "value", each a string
+// or number, so that it censors to a renamed value.
+func isRenameShaped(ref any) bool {
+	obj, isObject := ref.(map[string]any)
+	if !isObject || len(obj) != 2 {
+		return false
+	}
+	for _, key := range []string{oldKeyKey, "value"} {
+		switch obj[key].(type) {
+		case string, jsontext.Value:
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // unmarshalJSON decodes value, keeping each number as written rather than rounding it to a float64.
@@ -380,9 +469,29 @@ func unmarshalJSON(value string) (any, error) {
 	return node, err //nolint:wrapcheck
 }
 
-// RestoreSecrets restores target's censored values from original, including inside JSON values.
-func RestoreSecrets(original, target map[string]string) {
+// RestoreURLFields restores target's censored URL fields from original, including inside JSON.
+func (f SafeFields) RestoreURLFields(original, target map[string]string) {
+	restore(original, target, f.URLFieldMaps, nil, nil)
+}
+
+// RestoreParams restores target's censored params from original, including inside JSON.
+func (f SafeFields) RestoreParams(original, target map[string]string) {
+	restore(original, target, f.ParamMaps, f.ParamJSON, f.ParamJSONMaps)
+}
+
+// restore restores target's censored values from original.
+// A renamed key is restored from its old key only at the top level of a param listed in maps,
+// or in the objects at that param's jsonMaps paths.
+func restore(original, target map[string]string, maps []string, jsonPaths, jsonMaps map[string][]string) {
 	for key, value := range target {
-		target[key] = RestoreJSONValues(original[key], value)
+		sites := jsonMaps[key]
+		if slices.Contains(maps, key) {
+			sites = []string{""}
+		}
+		var r *renames
+		if len(sites) != 0 {
+			r = &renames{sites: sites, shown: jsonPaths[key]}
+		}
+		target[key] = restoreJSON(original[key], value, r)
 	}
 }

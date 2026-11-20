@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
 	DASHBOARD_SHOW_ALL,
 	openDashboardInEditMode,
@@ -9,6 +9,7 @@ import {
 	LOOKUP_LATEST_VERSION_JSON,
 	openEditModal,
 	openEditModalFromBackend,
+	retryCreate,
 	SECRET_VALUE,
 	saveEdit,
 	screenshot,
@@ -48,6 +49,55 @@ const selectType = async (section: Locator, dialog: Locator, type: string) => {
 	await dialog
 		.getByRole('option', { name: new RegExp(`^${type}$`, 'i') })
 		.click();
+};
+
+/**
+ * Creates a service through the API, with the `LOOKUP_LATEST_VERSION_JSON` lookup and `notify`.
+ *
+ * @param page - The dashboard page.
+ * @param id - The service ID.
+ * @param notify - The notifiers, as the API takes them.
+ */
+const createServiceWithNotify = async (
+	page: Page,
+	id: string,
+	notify: Record<string, unknown>[],
+) => {
+	const { url, urlCommandRegex } = LOOKUP_LATEST_VERSION_JSON;
+	await retryCreate(() =>
+		page.request.put('api/v1/service/new', {
+			data: {
+				id,
+				latest_version: {
+					type: 'url',
+					url,
+					url_commands: [
+						{ index: 0, regex: urlCommandRegex?.regex, type: 'regex' },
+					],
+				},
+				notify,
+			},
+		}),
+	);
+};
+
+/**
+ * Saves the edit modal, returning the first notifier's params as the UI sent them.
+ *
+ * @param page - The dashboard page.
+ * @param dialog - The open edit dialog.
+ */
+const saveEditNotifyParams = async (page: Page, dialog: Locator) => {
+	const [request] = await Promise.all([
+		page.waitForRequest(
+			(req) =>
+				req.url().includes('/api/v1/service/config') && req.method() === 'PUT',
+		),
+		saveEdit(dialog),
+	]);
+	return (
+		request.postDataJSON() as { notify: { params: Record<string, string> }[] }
+	).notify[0].params;
 };
 
 test.describe('Service secret inheritance', () => {
@@ -541,6 +591,157 @@ test.describe('Service secret inheritance', () => {
 			`${shotDir}/03-test-succeeded`,
 			testInfo.project.name,
 		);
+	});
+
+	test('notify: a masked generic header secret survives a key rename', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'SECRET_INHERIT=NOTIFY_HEADER_RENAME';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		const shotDir = `secret-inheritance/${baseID}`;
+		const endpoint = new URL(LOOKUP_BASIC_AUTH.urlValid);
+		const credentials = `${LOOKUP_BASIC_AUTH.username}:${LOOKUP_BASIC_AUTH.password}`;
+
+		await openDashboardInEditMode(page);
+
+		// The endpoint answers 401 unless the Authorization header holds its credentials.
+		await createService(page, id, {
+			notifiers: [
+				{
+					headers: [
+						{
+							key: 'authorization',
+							value: `Basic ${Buffer.from(credentials).toString('base64')}`,
+						},
+					],
+					name: 'generic-test',
+					text: { Host: endpoint.host, Path: endpoint.pathname.slice(1) },
+					typeLabel: 'Generic Webhook',
+				},
+			],
+		});
+
+		const dialog = await openEditModalFromBackend(page, id);
+		const section = await openSection(dialog, 'Notify');
+		await section
+			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
+			.click();
+		const headerKey = section.locator(
+			'input[name="notify.0.url_fields.headers.0.key"]',
+		);
+		const headerValue = section.locator(
+			'input[name="notify.0.url_fields.headers.0.value"]',
+		);
+
+		await expect(headerValue).toHaveValue(SECRET_VALUE);
+		await screenshot(
+			page,
+			`${shotDir}/01-secret-masked`,
+			testInfo.project.name,
+		);
+
+		await headerKey.fill('Authorization');
+		await saveEdit(dialog);
+		await screenshot(page, `${shotDir}/02-after-save`, testInfo.project.name);
+
+		const dialog2 = await openEditModal(page, id);
+		const section2 = await openSection(dialog2, 'Notify');
+		await section2
+			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
+			.click();
+		await expect(
+			section2.locator('input[name="notify.0.url_fields.headers.0.key"]'),
+		).toHaveValue('Authorization');
+		await section2.getByRole('button', { name: /send test message/i }).click();
+		await expect(dialog2.getByText('Success!')).toBeVisible({
+			timeout: 30_000,
+		});
+		await screenshot(
+			page,
+			`${shotDir}/03-test-succeeded`,
+			testInfo.project.name,
+		);
+	});
+
+	test('notify: a masked ntfy action extra is sent with its old key when renamed', async ({
+		page,
+	}, testInfo) => {
+		const id = withProject(
+			'SECRET_INHERIT=NOTIFY_NTFY_RENAME',
+			testInfo.project.name,
+		);
+		createdIDs.push(id);
+		await openDashboardInEditMode(page);
+		await createServiceWithNotify(page, id, [
+			{
+				name: 'ntfy-test',
+				params: {
+					actions: JSON.stringify([
+						{ action: 'broadcast', extras: { a: 'x' }, label: 'B' },
+					]),
+				},
+				type: 'ntfy',
+				url_fields: { topic: 'argus' },
+			},
+		]);
+
+		const dialog = await openEditModalFromBackend(page, id);
+		const section = await openSection(dialog, 'Notify');
+		await section
+			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
+			.click();
+		const row = 'notify.0.params.actions.0.extras.0';
+		await expect(section.locator(`input[name="${row}.value"]`)).toHaveValue(
+			SECRET_VALUE,
+		);
+		await section.locator(`input[name="${row}.key"]`).fill('b');
+
+		// Sends the old key with the mask, so the server can restore the secret.
+		const params = await saveEditNotifyParams(page, dialog);
+		expect(JSON.parse(params.actions)[0].extras).toEqual({
+			b: { old_key: 'a', value: SECRET_VALUE },
+		});
+	});
+
+	test('notify: a masked gotify custom extra is sent with its old namespace when renamed', async ({
+		page,
+	}, testInfo) => {
+		const id = withProject(
+			'SECRET_INHERIT=NOTIFY_GOTIFY_RENAME',
+			testInfo.project.name,
+		);
+		createdIDs.push(id);
+		await openDashboardInEditMode(page);
+		await createServiceWithNotify(page, id, [
+			{
+				name: 'gotify-test',
+				params: { extras: JSON.stringify({ 'my::ns': 'x' }) },
+				type: 'gotify',
+				url_fields: {
+					host: NOTIFY_GOTIFY.host,
+					path: NOTIFY_GOTIFY.path,
+					token: NOTIFY_GOTIFY.tokenPass,
+				},
+			},
+		]);
+
+		const dialog = await openEditModalFromBackend(page, id);
+		const section = await openSection(dialog, 'Notify');
+		await section
+			.locator('[data-slot="accordion-trigger"]', { hasText: /^0:/ })
+			.click();
+		const row = 'notify.0.params.extras.0';
+		await expect(section.locator(`input[name="${row}.value"]`)).toHaveValue(
+			SECRET_VALUE,
+		);
+		await section.locator(`input[name="${row}._namespace"]`).fill('your::ns');
+
+		// Sends the old key with the mask, so the server can restore the secret.
+		const params = await saveEditNotifyParams(page, dialog);
+		expect(JSON.parse(params.extras)).toEqual({
+			'your::ns': { old_key: 'my::ns', value: SECRET_VALUE },
+		});
 	});
 
 	test('latest_version=forgejo: an inherited host token survives a save', async ({

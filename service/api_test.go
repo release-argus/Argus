@@ -5081,6 +5081,42 @@ func TestService_GiveSecretsNotify(t *testing.T) {
 			},
 		},
 		{
+			name: "secretRefs/generic map value restored from its renamed key",
+			notify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "generic",
+					nil,
+					map[string]string{"headers": `{"X-Auth":{"old_key":"Authorization","value":"<secret>"}}`},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			otherNotify: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "generic",
+					nil,
+					map[string]string{"headers": `{"Authorization":"Bearer x"}`},
+					nil,
+					nil, nil, nil,
+				),
+			},
+			secretRefs: map[string]shared.OldStringIndex{
+				"foo": {OldIndex: "foo"},
+			},
+			want: shoutrrr.Shoutrrrs{
+				"foo": shoutrrr.New(
+					nil,
+					"", "generic",
+					nil,
+					map[string]string{"headers": `{"X-Auth":"Bearer x"}`},
+					nil,
+					nil, nil, nil,
+				),
+			},
+		},
+		{
 			name: "secretRefs/JSON array elements restored by old index",
 			notify: shoutrrr.Shoutrrrs{
 				"foo": shoutrrr.New(
