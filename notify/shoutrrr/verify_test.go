@@ -3959,6 +3959,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 }
 
 func TestBase_CheckValuesParams(t *testing.T) {
+	t.Setenv("ARGUS_TEST_NTFY_DISABLETLS", "yes")
 	tests := []struct {
 		name     string
 		itemType string
@@ -4051,6 +4052,78 @@ func TestBase_CheckValuesParams(t *testing.T) {
 				"timeout": "-5s",
 			},
 			errRegex: `^timeout: "-5s" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:     "ntfy/valid disabletls_",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "Yes",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "ntfy/valid disabletls_ from env var",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "${ARGUS_TEST_NTFY_DISABLETLS}",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "ntfy/invalid disabletls_",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "maybe",
+			},
+			errRegex: `^disabletls_: "maybe" <invalid>.*'yes' or 'no'.*$`,
+		},
+		{
+			name:     "ntfy/invalid disabletls_ from unset env var",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "${ARGUS_TEST_NTFY_DISABLETLS_UNSET}",
+			},
+			errRegex: `^disabletls_: "\$\{ARGUS_TEST_NTFY_DISABLETLS_UNSET\}" <invalid>.*$`,
+		},
+		{
+			name:     "telegram/valid preview",
+			itemType: "telegram",
+			params: map[string]string{
+				"preview": "false",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "smtp/invalid usestarttls",
+			itemType: "smtp",
+			params: map[string]string{
+				"usestarttls": "on",
+			},
+			errRegex: `^usestarttls: "on" <invalid>.*'yes' or 'no'.*$`,
+		},
+		{
+			name:     "mqtt/invalid deprecated disabletlsverification",
+			itemType: "mqtt",
+			params: map[string]string{
+				"disabletlsverification": "maybe",
+			},
+			errRegex: `^disabletlsverification: "maybe" <invalid>.*$`,
+		},
+		{
+			name:     "gotify/invalid skiptlsverify and useheader each reported",
+			itemType: "gotify",
+			params: map[string]string{
+				"skiptlsverify": "maybe",
+				"useheader":     "sometimes",
+			},
+			errRegex: `^skiptlsverify: "maybe" <invalid>.*\nuseheader: "sometimes" <invalid>.*$`,
+		},
+		{
+			name: "non-ntfy/disabletls_ not checked",
+			params: map[string]string{
+				"disabletls_": "maybe",
+			},
+			errRegex: `^$`,
 		},
 		{
 			name: "non-smtp/timeout not checked",

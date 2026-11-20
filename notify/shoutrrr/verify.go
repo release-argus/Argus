@@ -26,6 +26,7 @@ import (
 	"time"
 
 	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr/pkg/format"
 	goshoutrrrTypes "github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	"github.com/release-argus/Argus/config/decode"
@@ -1379,6 +1380,23 @@ func (b *Base) checkValuesParams(itemType string) error {
 					},
 				)
 			}
+		}
+	}
+
+	for _, key := range boolParams[itemType] {
+		value := b.GetParam(key)
+		if value == "" {
+			continue
+		}
+		if _, ok := format.ParseBool(util.EvalEnvVars(value), false); !ok {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         key,
+					Value:       value,
+					Description: "use 'yes' or 'no'",
+				},
+			)
 		}
 	}
 

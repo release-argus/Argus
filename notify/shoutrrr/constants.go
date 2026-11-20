@@ -23,6 +23,26 @@ const (
 	smtpAuthUnknown = "Unknown"
 )
 
+// boolParams are the params of each type that hold a boolean.
+var boolParams = map[string][]string{
+	"bark":          {"disabletls", "skiptlsverify"},
+	"discord":       {"json", "splitlines"},
+	"generic":       {"disabletls", "skiptlsverify"},
+	"gotify":        {"disabletls", "skiptlsverify", "useheader"},
+	"homeassistant": {"disabletls", "skiptlsverify"},
+	"matrix":        {"disabletls", "skiptlsverify"},
+	"mattermost":    {"disabletls", "skiptlsverify"},
+	"mqtt":          {"cleansession", "disabletls", "disabletlsverification", "retained", "skiptlsverify"},
+	"ntfy":          {"cache", "disabletls_", "firebase", "markdown", "skiptlsverify"},
+	"rocketchat":    {"disabletls", "skiptlsverify"},
+	"signal":        {"disabletls", "notifyself", "skiptlsverify"},
+	"signalgrid":    {"critical"},
+	"smtp":          {"requirestarttls", "skiptlsverify", "starttls", "usehtml", "usestarttls"},
+	"telegram":      {"notification", "preview", "skiptlsverify"},
+	"xmpp":          {"disabletls", "skiptlsverify"},
+	"zulip":         {"read_by_sender", "skiptlsverify"},
+}
+
 // durationParams are the params of each type that hold a duration.
 var durationParams = map[string][]string{
 	"pushover": {"retry", "expire"},
