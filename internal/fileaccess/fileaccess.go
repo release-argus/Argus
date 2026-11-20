@@ -28,14 +28,19 @@ import (
 const maxFileSize = 1 << 20
 
 type allowedRoots struct {
-	paths []string
+	paths []allowedRoot
+}
+
+type allowedRoot struct {
+	path   string
+	isFile bool
 }
 
 var configuredRoots atomic.Pointer[allowedRoots]
 
 // ConfigureAllowedRoots validates and sets the directories that lookups may read.
 func ConfigureAllowedRoots(paths []string) error {
-	roots := make([]string, 0, len(paths))
+	roots := make([]allowedRoot, 0, len(paths))
 	seen := make(map[string]struct{}, len(paths))
 	for _, path := range paths {
 		if strings.TrimSpace(path) == "" {
@@ -55,14 +60,14 @@ func ConfigureAllowedRoots(paths []string) error {
 		if err != nil {
 			return fmt.Errorf("stat %q: %w", path, err)
 		}
-		if !info.IsDir() {
-			return fmt.Errorf("%q is not a directory", path)
+		if !info.IsDir() && !info.Mode().IsRegular() {
+			return fmt.Errorf("%q is neither a directory nor a regular file", path)
 		}
 		if _, exists := seen[absolute]; exists {
 			continue
 		}
 		seen[absolute] = struct{}{}
-		roots = append(roots, absolute)
+		roots = append(roots, allowedRoot{path: absolute, isFile: !info.IsDir()})
 	}
 
 	configuredRoots.Store(&allowedRoots{paths: roots})
@@ -81,56 +86,70 @@ func Read(path string) ([]byte, error) {
 		return nil, errors.New("local file access is disabled; configure settings.data.file_read_roots")
 	}
 
-	for _, rootPath := range roots.paths {
-		relative, err := filepath.Rel(rootPath, path)
-		if err != nil || relative == "." || relative == ".." ||
-			strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+	var rootPath, relative string
+	for _, root := range roots.paths {
+		if root.isFile {
+			if path != root.path {
+				continue
+			}
+			rootPath = filepath.Dir(root.path)
+			relative = filepath.Base(root.path)
+			break
+		}
+
+		candidate, err := filepath.Rel(root.path, path)
+		if err != nil || candidate == "." || candidate == ".." ||
+			strings.HasPrefix(candidate, ".."+string(filepath.Separator)) {
 			continue
 		}
-
-		root, err := os.OpenRoot(rootPath)
-		if err != nil {
-			return nil, fmt.Errorf("open allowed root: %w", err)
-		}
-		defer root.Close()
-
-		info, err := root.Stat(relative)
-		if err != nil {
-			return nil, fmt.Errorf("stat file beneath allowed root: %w", err)
-		}
-		if !info.Mode().IsRegular() {
-			return nil, errors.New("file path must refer to a regular file")
-		}
-		if info.Size() > maxFileSize {
-			return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
-		}
-
-		file, err := root.Open(relative)
-		if err != nil {
-			return nil, fmt.Errorf("open file beneath allowed root: %w", err)
-		}
-		defer file.Close()
-
-		info, err = file.Stat()
-		if err != nil {
-			return nil, fmt.Errorf("stat file: %w", err)
-		}
-		if !info.Mode().IsRegular() {
-			return nil, errors.New("file path must refer to a regular file")
-		}
-		if info.Size() > maxFileSize {
-			return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
-		}
-
-		data, err := io.ReadAll(io.LimitReader(file, maxFileSize+1))
-		if err != nil {
-			return nil, fmt.Errorf("read file: %w", err)
-		}
-		if len(data) > maxFileSize {
-			return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
-		}
-		return data, nil
+		rootPath = root.path
+		relative = candidate
+		break
+	}
+	if rootPath == "" {
+		return nil, errors.New("file path is outside configured settings.data.file_read_roots")
 	}
 
-	return nil, errors.New("file path is outside configured settings.data.file_read_roots")
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return nil, fmt.Errorf("open allowed root: %w", err)
+	}
+	defer root.Close()
+
+	info, err := root.Stat(relative)
+	if err != nil {
+		return nil, fmt.Errorf("stat file beneath allowed root: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("file path must refer to a regular file")
+	}
+	if info.Size() > maxFileSize {
+		return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
+	}
+
+	file, err := root.Open(relative)
+	if err != nil {
+		return nil, fmt.Errorf("open file beneath allowed root: %w", err)
+	}
+	defer file.Close()
+
+	info, err = file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("stat file: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("file path must refer to a regular file")
+	}
+	if info.Size() > maxFileSize {
+		return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
+	}
+
+	data, err := io.ReadAll(io.LimitReader(file, maxFileSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("read file: %w", err)
+	}
+	if len(data) > maxFileSize {
+		return nil, fmt.Errorf("file exceeds the %d-byte limit", maxFileSize)
+	}
+	return data, nil
 }

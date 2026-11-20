@@ -56,6 +56,37 @@ func TestRead(t *testing.T) {
 	}
 }
 
+func TestReadAllowsConfiguredFileOnly(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "VERSION")
+	if err := os.WriteFile(path, []byte("version"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(path) failed: %v", err)
+	}
+	other := filepath.Join(dir, "other")
+	if err := os.WriteFile(other, []byte("other"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(other) failed: %v", err)
+	}
+	if err := ConfigureAllowedRoots([]string{path}); err != nil {
+		t.Fatalf("ConfigureAllowedRoots(file) failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := ConfigureAllowedRoots(nil); err != nil {
+			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		}
+	})
+
+	got, err := Read(path)
+	if err != nil {
+		t.Fatalf("Read(configured file) failed: %v", err)
+	}
+	if string(got) != "version" {
+		t.Errorf("Read(configured file) = %q, want %q", got, "version")
+	}
+	if _, err := Read(other); err == nil || !strings.Contains(err.Error(), "outside configured") {
+		t.Errorf("Read(other) error = %v, want outside-root error", err)
+	}
+}
+
 func TestReadRejectsUnsafeFiles(t *testing.T) {
 	root := t.TempDir()
 	if err := ConfigureAllowedRoots([]string{root}); err != nil {
@@ -144,7 +175,7 @@ func TestReadRejectsNamedPipesWithoutBlocking(t *testing.T) {
 	}
 }
 
-func TestConfigureAllowedRootsRejectsFilesAndPreservesConfiguration(t *testing.T) {
+func TestConfigureAllowedRootsRejectsInvalidPathsAndPreservesConfiguration(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "VERSION")
 	if err := os.WriteFile(path, []byte("version"), 0o600); err != nil {
@@ -159,8 +190,8 @@ func TestConfigureAllowedRootsRejectsFilesAndPreservesConfiguration(t *testing.T
 		}
 	})
 
-	if err := ConfigureAllowedRoots([]string{path}); err == nil {
-		t.Fatal("ConfigureAllowedRoots(file) unexpectedly succeeded")
+	if err := ConfigureAllowedRoots([]string{filepath.Join(root, "missing")}); err == nil {
+		t.Fatal("ConfigureAllowedRoots(missing path) unexpectedly succeeded")
 	}
 	if _, err := Read(path); err != nil {
 		t.Fatalf("Read() after invalid configuration failed: %v", err)
