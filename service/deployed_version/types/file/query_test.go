@@ -17,6 +17,7 @@
 package file
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,21 +30,19 @@ import (
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
-func TestLookup_QueryReadsSynologyVersion(t *testing.T) {
+func TestLookup_Query__readsVersionFile(t *testing.T) {
 	logtest.InitLog()
 
-	fixturePath, err := filepath.Abs(
-		"../../../../web/ui/react-app/tests/fixtures/files/Synology/VERSION",
-	)
-	if err != nil {
-		t.Fatalf("filepath.Abs() failed: %v", err)
+	fixturePath := filepath.Join(t.TempDir(), "VERSION")
+	if err := os.WriteFile(fixturePath, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := fileaccess.ConfigureAllowedRoots([]string{filepath.Dir(fixturePath)}); err != nil {
-		t.Fatalf("fileaccess.ConfigureAllowedRoots() failed: %v", err)
+	if err := fileaccess.ConfigureAllowedPaths([]string{fixturePath}); err != nil {
+		t.Fatalf("fileaccess.ConfigureAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := fileaccess.ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("fileaccess.ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 

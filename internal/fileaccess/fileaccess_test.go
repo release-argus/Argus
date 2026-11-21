@@ -30,12 +30,12 @@ func TestRead(t *testing.T) {
 	if err := os.WriteFile(path, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := ConfigureAllowedRoots([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedRoots() failed: %v", err)
+	if err := ConfigureAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -66,12 +66,12 @@ func TestReadAllowsConfiguredFileOnly(t *testing.T) {
 	if err := os.WriteFile(other, []byte("other"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile(other) failed: %v", err)
 	}
-	if err := ConfigureAllowedRoots([]string{path}); err != nil {
-		t.Fatalf("ConfigureAllowedRoots(file) failed: %v", err)
+	if err := ConfigureAllowedPaths([]string{path}); err != nil {
+		t.Fatalf("ConfigureAllowedPaths(file) failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -89,12 +89,12 @@ func TestReadAllowsConfiguredFileOnly(t *testing.T) {
 
 func TestReadRejectsUnsafeFiles(t *testing.T) {
 	root := t.TempDir()
-	if err := ConfigureAllowedRoots([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedRoots() failed: %v", err)
+	if err := ConfigureAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -150,12 +150,12 @@ func TestReadRejectsNamedPipesWithoutBlocking(t *testing.T) {
 	if err := exec.Command(mkfifo, path).Run(); err != nil {
 		t.Fatalf("creating named pipe failed: %v", err)
 	}
-	if err := ConfigureAllowedRoots([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedRoots() failed: %v", err)
+	if err := ConfigureAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -175,23 +175,23 @@ func TestReadRejectsNamedPipesWithoutBlocking(t *testing.T) {
 	}
 }
 
-func TestConfigureAllowedRootsRejectsInvalidPathsAndPreservesConfiguration(t *testing.T) {
+func TestConfigureAllowedPaths__rejectsInvalidPathsAndPreservesConfiguration(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "VERSION")
 	if err := os.WriteFile(path, []byte("version"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := ConfigureAllowedRoots([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedRoots(root) failed: %v", err)
+	if err := ConfigureAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("ConfigureAllowedPaths(root) failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedRoots(nil); err != nil {
-			t.Errorf("ConfigureAllowedRoots(nil) failed: %v", err)
+		if err := ConfigureAllowedPaths(nil); err != nil {
+			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
-	if err := ConfigureAllowedRoots([]string{filepath.Join(root, "missing")}); err == nil {
-		t.Fatal("ConfigureAllowedRoots(missing path) unexpectedly succeeded")
+	if err := ConfigureAllowedPaths([]string{filepath.Join(root, "missing")}); err == nil {
+		t.Fatal("ConfigureAllowedPaths(missing path) unexpectedly succeeded")
 	}
 	if _, err := Read(path); err != nil {
 		t.Fatalf("Read() after invalid configuration failed: %v", err)

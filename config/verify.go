@@ -44,7 +44,7 @@ func (c *Config) CheckValues() bool {
 				Err: err,
 			},
 		)
-	} else if err := fileaccess.ConfigureAllowedRoots(c.Settings.Data.FileReadRoots); err != nil {
+	} else if err := fileaccess.ConfigureAllowedPaths(c.Settings.Data.FileReadRoots); err != nil {
 		errs = append(
 			errs,
 			&decode.ErrKeyField{

@@ -38,8 +38,8 @@ type allowedRoot struct {
 
 var configuredRoots atomic.Pointer[allowedRoots]
 
-// ConfigureAllowedRoots validates and sets the directories that lookups may read.
-func ConfigureAllowedRoots(paths []string) error {
+// ConfigureAllowedPaths validates and sets the paths that lookups may read.
+func ConfigureAllowedPaths(paths []string) error {
 	roots := make([]allowedRoot, 0, len(paths))
 	seen := make(map[string]struct{}, len(paths))
 	for _, path := range paths {
