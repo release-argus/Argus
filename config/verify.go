@@ -44,7 +44,7 @@ func (c *Config) CheckValues() bool {
 				Err: err,
 			},
 		)
-	} else if err := fileaccess.ConfigureAllowedPaths(c.Settings.Data.FileReadRoots); err != nil {
+	} else if err := fileaccess.ConfigureAllowedPaths(c.Settings.Data.FileReadPaths); err != nil {
 		errs = append(
 			errs,
 			&decode.ErrKeyField{
@@ -52,8 +52,8 @@ func (c *Config) CheckValues() bool {
 				Err: &decode.ErrKeyField{
 					Key: "data",
 					Err: &decode.ErrField{
-						Key:         "file_read_roots",
-						Value:       fmt.Sprint(c.Settings.Data.FileReadRoots),
+						Key:         "file_read_paths",
+						Value:       fmt.Sprint(c.Settings.Data.FileReadPaths),
 						Description: err.Error(),
 					},
 				},

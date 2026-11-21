@@ -1,6 +1,6 @@
 settings:
   data:
-    file_read_roots:
+    file_read_paths:
       - web/ui/react-app/tests/fixtures/files
 defaults:
   service:

@@ -1,7 +1,7 @@
 settings:
   data:
     readonly: true
-    file_read_roots:
+    file_read_paths:
       - /app/file-fixtures
 
 service:

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fileaccess reads files from operator-configured roots.
+// Package fileaccess reads files from operator-configured paths.
 package fileaccess
 
 import (
@@ -27,20 +27,20 @@ import (
 
 const maxFileSize = 1 << 20
 
-type allowedRoots struct {
-	paths []allowedRoot
+type allowedPaths struct {
+	paths []allowedPath
 }
 
-type allowedRoot struct {
+type allowedPath struct {
 	path   string
 	isFile bool
 }
 
-var configuredRoots atomic.Pointer[allowedRoots]
+var configuredPaths atomic.Pointer[allowedPaths]
 
 // ConfigureAllowedPaths validates and sets the paths that lookups may read.
 func ConfigureAllowedPaths(paths []string) error {
-	roots := make([]allowedRoot, 0, len(paths))
+	allowed := make([]allowedPath, 0, len(paths))
 	seen := make(map[string]struct{}, len(paths))
 	for _, path := range paths {
 		if strings.TrimSpace(path) == "" {
@@ -67,58 +67,58 @@ func ConfigureAllowedPaths(paths []string) error {
 			continue
 		}
 		seen[absolute] = struct{}{}
-		roots = append(roots, allowedRoot{path: absolute, isFile: !info.IsDir()})
+		allowed = append(allowed, allowedPath{path: absolute, isFile: !info.IsDir()})
 	}
 
-	configuredRoots.Store(&allowedRoots{paths: roots})
+	configuredPaths.Store(&allowedPaths{paths: allowed})
 	return nil
 }
 
-// Read reads a regular file beneath one of the configured roots.
+// Read reads a regular file allowed by the configured paths.
 func Read(path string) ([]byte, error) {
 	if !filepath.IsAbs(path) {
 		return nil, errors.New("file path must be absolute")
 	}
 	path = filepath.Clean(path)
 
-	roots := configuredRoots.Load()
-	if roots == nil || len(roots.paths) == 0 {
-		return nil, errors.New("local file access is disabled; configure settings.data.file_read_roots")
+	allowed := configuredPaths.Load()
+	if allowed == nil || len(allowed.paths) == 0 {
+		return nil, errors.New("local file access is disabled; configure settings.data.file_read_paths")
 	}
 
-	var rootPath, relative string
-	for _, root := range roots.paths {
-		if root.isFile {
-			if path != root.path {
+	var baseDir, relative string
+	for _, allowedPath := range allowed.paths {
+		if allowedPath.isFile {
+			if path != allowedPath.path {
 				continue
 			}
-			rootPath = filepath.Dir(root.path)
-			relative = filepath.Base(root.path)
+			baseDir = filepath.Dir(allowedPath.path)
+			relative = filepath.Base(allowedPath.path)
 			break
 		}
 
-		candidate, err := filepath.Rel(root.path, path)
+		candidate, err := filepath.Rel(allowedPath.path, path)
 		if err != nil || candidate == "." || candidate == ".." ||
 			strings.HasPrefix(candidate, ".."+string(filepath.Separator)) {
 			continue
 		}
-		rootPath = root.path
+		baseDir = allowedPath.path
 		relative = candidate
 		break
 	}
-	if rootPath == "" {
-		return nil, errors.New("file path is outside configured settings.data.file_read_roots")
+	if baseDir == "" {
+		return nil, errors.New("file path is outside configured settings.data.file_read_paths")
 	}
 
-	root, err := os.OpenRoot(rootPath)
+	root, err := os.OpenRoot(baseDir)
 	if err != nil {
-		return nil, fmt.Errorf("open allowed root: %w", err)
+		return nil, fmt.Errorf("open file access directory: %w", err)
 	}
 	defer root.Close()
 
 	info, err := root.Stat(relative)
 	if err != nil {
-		return nil, fmt.Errorf("stat file beneath allowed root: %w", err)
+		return nil, fmt.Errorf("stat file under allowed path: %w", err)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, errors.New("file path must refer to a regular file")
@@ -129,7 +129,7 @@ func Read(path string) ([]byte, error) {
 
 	file, err := root.Open(relative)
 	if err != nil {
-		return nil, fmt.Errorf("open file beneath allowed root: %w", err)
+		return nil, fmt.Errorf("open file under allowed path: %w", err)
 	}
 	defer file.Close()
 

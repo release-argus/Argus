@@ -28,7 +28,7 @@ func (l *Lookup) CheckValues() error {
 	if l.Path == "" {
 		errs = append(errs, &decode.ErrField{
 			Key:         "path",
-			Description: "absolute path to a file beneath settings.data.file_read_roots",
+			Description: "absolute path to a file allowed by settings.data.file_read_paths",
 		})
 	} else if !filepath.IsAbs(l.Path) {
 		errs = append(errs, &decode.ErrField{

@@ -16,7 +16,7 @@ const DeployedVersionFile = () => {
 				required
 				tooltip={{
 					content:
-						'Absolute path to a file beneath a configured settings.data.file_read_roots directory',
+						'Absolute path to a file allowed by configured settings.data.file_read_paths',
 					type: 'string',
 				}}
 			/>

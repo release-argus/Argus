@@ -28,7 +28,7 @@ var Type = "file"
 type Lookup struct {
 	base.Lookup `json:",embed" yaml:",inline"`
 
-	Path  string `json:"path,omitzero" yaml:"path,omitzero"`   // Absolute path to a file beneath settings.data.file_read_roots.
+	Path  string `json:"path,omitzero" yaml:"path,omitzero"`   // Absolute path to a file allowed by settings.data.file_read_paths.
 	Regex string `json:"regex,omitzero" yaml:"regex,omitzero"` // RegEx with a capture group containing the version.
 }
 
