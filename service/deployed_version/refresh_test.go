@@ -17,6 +17,8 @@
 package deployedver
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -264,18 +266,101 @@ func TestRefresh__manual(t *testing.T) {
 	}
 }
 
-func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
+func TestRefresh__semanticVersioningOnlyIsPreview(t *testing.T) {
+	tests := []struct {
+		name               string
+		semanticVersioning string
+	}{
+		{
+			name:               "semantic_versioning toggled off",
+			semanticVersioning: "false",
+		},
+		{
+			name:               "semantic_versioning reset to the default",
+			semanticVersioning: "null",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, manual.Type, false, "7.8.9")
+			svcStatus := lookup.GetStatus()
+			options := lookup.GetOptions()
+			if tc.semanticVersioning == "null" {
+				defaultSemVer := util.FirstNonNilPtr(options.Defaults.SemanticVersioning, options.HardDefaults.SemanticVersioning)
+				options.SemanticVersioning = new(!*defaultSemVer)
+			}
+			hadSemanticVersioning := options.GetSemanticVersioning()
+
+			version, err := Refresh(
+				lookup,
+				manual.Type,
+				nil,
+				&tc.semanticVersioning,
+				nil,
+			)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if testErr := test.AssertFields(t, []test.FieldAssertion{
+				{Name: "version", Got: version, Want: "7.8.9", Mode: test.CompareEqual},
+				{Name: "Status.LatestVersion()", Got: svcStatus.DeployedVersion(), Want: "", Mode: test.CompareEqual},
+				{Name: "Status", Got: lookup.GetStatus(), Want: svcStatus, Mode: test.CompareEqual},
+				{Name: "len(Status.AnnounceChannel)", Got: len(svcStatus.AnnounceChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "len(Status.DatabaseChannel)", Got: len(svcStatus.DatabaseChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "Options.GetSemanticVersioning()", Got: options.GetSemanticVersioning(), Want: hadSemanticVersioning, Mode: test.CompareEqual},
+			}, ""); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestRefresh__typeChangeIsPreview(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("1.2.3"))
+	}))
+	t.Cleanup(srv.Close)
+
+	lookup := testLookup(t, manual.Type, false, "")
+	svcStatus := lookup.GetStatus()
+	options := lookup.GetOptions()
+	options.SemanticVersioning = new(true)
+
+	_, err := Refresh(
+		lookup,
+		manual.Type,
+		[]byte(`{"type": "url", "url": "`+srv.URL+`"}`),
+		new("false"),
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if testErr := test.AssertFields(t, []test.FieldAssertion{
+		{Name: "Options.GetSemanticVersioning()", Got: options.GetSemanticVersioning(), Want: true, Mode: test.CompareEqual},
+		{Name: "Status.DeployedVersion()", Got: svcStatus.DeployedVersion(), Want: "", Mode: test.CompareEqual},
+	}, ""); testErr != nil {
+		t.Error(testErr)
+	}
+}
+
+func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
 	tests := []struct {
 		name               string
 		semanticVersioning *string
 	}{
 		{
-			name:               "semantic_versioning toggled off",
-			semanticVersioning: new("false"),
+			name:               "semantic_versioning unchanged",
+			semanticVersioning: nil,
 		},
 		{
-			name:               "semantic_versioning reset to the default",
-			semanticVersioning: new("null"),
+			name:               "semantic_versioning toggled off",
+			semanticVersioning: new("false"),
 		},
 	}
 
@@ -284,52 +369,25 @@ func TestRefresh__previewKeepsLiveStatus(t *testing.T) {
 			t.Parallel()
 
 			lookup := testLookup(t, manual.Type, false, "")
-			hadStatus := lookup.GetStatus()
+			lookup.GetOptions().SemanticVersioning = new(true)
 
-			_, err := Refresh(
+			got, err := Refresh(
 				lookup,
-				manual.Type,
-				nil,
+				lookup.GetType(),
+				[]byte("null"),
 				tc.semanticVersioning,
 				nil,
 			)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			// An error, not a panic on the removed Lookup.
+			e := errfmt.FormatError(err)
+			if wantErrRegex := `^deployed_version: removed by overrides$`; !util.RegexCheck(wantErrRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
 			}
 
-			// applyOverridesJSON returns this same Lookup, so a detached Lookup.GetStatus would cut the
-			// Service off from the database and the WebSocket clients.
-			if gotStatus := lookup.GetStatus(); gotStatus != hadStatus {
-				t.Errorf("Lookup.GetStatus() mismatch\ngot:  %p\nwant: %p", gotStatus, hadStatus)
-			}
-
-			if lookup.GetStatus().AnnounceChannel == nil {
-				t.Error("Status.AnnounceChannel mismatch\ngot:  nil\nwant: non-nil")
-			}
-			if lookup.GetStatus().DatabaseChannel == nil {
-				t.Error("Status.DatabaseChannel mismatch\ngot:  nil\nwant: non-nil")
+			if got != "" {
+				t.Errorf("version mismatch\ngot:  %q\nwant: \"\"", got)
 			}
 		})
-	}
-}
-
-func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
-	lookup := testLookup(t, manual.Type, false, "")
-
-	got, err := Refresh(
-		lookup,
-		lookup.GetType(),
-		[]byte("null"),
-		nil,
-		nil,
-	)
-	e := errfmt.FormatError(err)
-	if wantErrRegex := `^deployed_version: removed by overrides$`; !util.RegexCheck(wantErrRegex, e) {
-		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
-	}
-
-	if got != "" {
-		t.Errorf("version mismatch\ngot:  %q\nwant: \"\"", got)
 	}
 }
 
