@@ -461,6 +461,7 @@ func (a *HubAuth) GetQueryToken(detail ContainerDetail) (string, error) {
 }
 
 // SetQueryToken stores the cached query token and expiry time, propagating to defaults when applicable.
+// A clear never reaches the shared defaults.
 func (d *HubAuthDefaults) SetQueryToken(q string, until time.Time) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -468,7 +469,7 @@ func (d *HubAuthDefaults) SetQueryToken(q string, until time.Time) {
 	d.queryToken = q
 	d.validUntil = until
 
-	if defaults, ok := d.Defaults().(*HubAuthDefaults); ok &&
+	if defaults, ok := d.Defaults().(*HubAuthDefaults); ok && q != "" &&
 		((d.Token == "" && d.Username == "") ||
 			(d.Token == defaults.Token && d.Username == defaults.Username)) {
 		defaults.SetQueryToken(q, until)
