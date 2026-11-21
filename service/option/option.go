@@ -132,6 +132,35 @@ func (o *Options) GetSemanticVersioning() bool {
 	)
 }
 
+// SemanticVersioningDiffers reports whether override (nil, "true", "false", "null") resolves differently.
+func (o *Options) SemanticVersioningDiffers(override *string) bool {
+	if override == nil {
+		return false
+	}
+
+	if *override == "null" {
+		return o.GetSemanticVersioning() != *util.FirstNonNilPtr(
+			o.Defaults.SemanticVersioning,
+			o.HardDefaults.SemanticVersioning,
+		)
+	}
+	return (*override == "true") != o.GetSemanticVersioning()
+}
+
+// SetSemanticVersioning applies the JSON semantic_versioning override to the receiver.
+func (o *Options) SetSemanticVersioning(override string) error {
+	semanticVersioning := util.ClonePtr(o.SemanticVersioning)
+	if err := decode.Unmarshal("json", []byte(override), &semanticVersioning); err != nil {
+		return &decode.ErrKeyField{
+			Key: "semantic_versioning",
+			Err: err,
+		}
+	}
+
+	o.SemanticVersioning = semanticVersioning
+	return nil
+}
+
 // VerifySemanticVersioning parses version as a semantic version, returning an error if invalid.
 func (o *Options) VerifySemanticVersioning(version string, logFrom logx.LogFrom) (*semver.Version, error) {
 	semanticVersion, err := semver.NewVersion(version)
