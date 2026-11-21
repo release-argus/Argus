@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/util"
 )
 
 func TestFailsBase_Init(t *testing.T) {
@@ -970,11 +971,16 @@ func TestFails_String(t *testing.T) {
 }
 
 func TestFails_Copy(t *testing.T) {
+	time2023 := time.Date(2023, 3, 3, 0, 0, 0, 0, time.UTC)
+	time2021 := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	time2022 := time.Date(2022, 2, 2, 0, 0, 0, 0, time.UTC)
+
 	tests := []struct {
 		name                               string
 		fromCommandFails, toCommandFails   []*bool
 		fromShoutrrrFails, toShoutrrrFails map[string]*bool
 		fromWebhookFails, toWebhookFails   map[string]*bool
+		fromNextRunnable, toNextRunnable   map[string]time.Time
 	}{
 		{
 			name:              "copy empty fails",
@@ -984,6 +990,19 @@ func TestFails_Copy(t *testing.T) {
 			toShoutrrrFails:   map[string]*bool{},
 			fromWebhookFails:  map[string]*bool{},
 			toWebhookFails:    map[string]*bool{},
+		},
+		{
+			name: "copy nextRunnable/replaces stale entries",
+			fromWebhookFails: map[string]*bool{
+				"foo": new(true),
+			},
+			fromNextRunnable: map[string]time.Time{
+				"foo": time2021,
+				"bar": time2022,
+			},
+			toNextRunnable: map[string]time.Time{
+				"baz": time2023,
+			},
 		},
 		{
 			name: "copy non-empty fails",
@@ -1106,6 +1125,9 @@ func TestFails_Copy(t *testing.T) {
 				to.Webhook.Set(k, v)
 			}
 
+			from.Webhook.nextRunnable = util.CopyMap(tc.fromNextRunnable)
+			to.Webhook.nextRunnable = util.CopyMap(tc.toNextRunnable)
+
 			to.Copy(&from)
 
 			if testErr := test.AssertSlicesEqual(
@@ -1114,7 +1136,7 @@ func TestFails_Copy(t *testing.T) {
 				failSliceValues(from.Command.fails),
 				"Fails.Command",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("after Copy: %v", testErr)
 			}
 			if testErr := test.AssertMapEqual(
 				t,
@@ -1122,7 +1144,7 @@ func TestFails_Copy(t *testing.T) {
 				failValues(from.Shoutrrr.fails),
 				"Fails.Shoutrrr",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("after Copy: %v", testErr)
 			}
 			if testErr := test.AssertMapEqual(
 				t,
@@ -1130,7 +1152,26 @@ func TestFails_Copy(t *testing.T) {
 				failValues(from.Webhook.fails),
 				"Fails.Webhook",
 			); testErr != nil {
-				t.Error(testErr)
+				t.Errorf("after Copy: %v", testErr)
+			}
+			if testErr := test.AssertMapEqual(
+				t,
+				to.Webhook.nextRunnable,
+				tc.fromNextRunnable,
+				"Fails.Webhook.nextRunnable",
+			); testErr != nil {
+				t.Errorf("after Copy: %v", testErr)
+			}
+
+			from.Webhook.nextRunnable["foo"] = time2023
+			from.Webhook.nextRunnable["new"] = time2023
+			if testErr := test.AssertMapEqual(
+				t,
+				to.Webhook.nextRunnable,
+				tc.fromNextRunnable,
+				"Fails.Webhook.nextRunnable",
+			); testErr != nil {
+				t.Errorf("after original mutated: %v", testErr)
 			}
 		})
 	}

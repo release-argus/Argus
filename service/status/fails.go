@@ -313,13 +313,13 @@ func (f *Fails) String(prefix string) string {
 	return result
 }
 
-// Copy returns a deep copy of the receiver.
+// Copy replaces the receiver's fail state with that of from.
 func (f *Fails) Copy(from *Fails) {
 	// Command.
 	f.Command.mu.Lock()
-	defer from.Command.mu.RUnlock()
-	from.Command.mu.RLock()
 	defer f.Command.mu.Unlock()
+	from.Command.mu.RLock()
+	defer from.Command.mu.RUnlock()
 
 	f.Command.fails = make([]*bool, len(from.Command.fails))
 	copy(f.Command.fails, from.Command.fails)
@@ -341,6 +341,7 @@ func (f *Fails) Copy(from *Fails) {
 
 	f.Webhook.fails = make(map[string]*bool, len(from.Webhook.fails))
 	maps.Copy(f.Webhook.fails, from.Webhook.fails)
+	f.Webhook.nextRunnable = util.CopyMap(from.Webhook.nextRunnable)
 }
 
 // resetFails clears command, shoutrrr, and webhook failure tracking.
