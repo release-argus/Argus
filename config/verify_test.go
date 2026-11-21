@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -387,6 +388,14 @@ func TestConfig_CheckValues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Serial: captures stdout.
+			if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
+				t.Fatalf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
+			}
+			t.Cleanup(func() {
+				if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
+					t.Errorf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
+				}
+			})
 
 			releaseLog := test.CaptureLog(t, logx.Default())
 			releaseStdout := test.CaptureStdout(t)
