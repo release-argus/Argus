@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.40.1](https://github.com/release-argus/Argus/compare/0.40.0...0.40.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **ui:** merge forgejo env-var hosts case-insensitively ([#1097](https://github.com/release-argus/Argus/issues/1097)) ([1562c12](https://github.com/release-argus/Argus/commit/1562c12310a1aa44595fc3fa3311bcbb667b899d))
+
 ## [0.40.0](https://github.com/release-argus/Argus/compare/0.39.1...0.40.0) (2026-11-20)
 
 
