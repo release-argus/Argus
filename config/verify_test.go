@@ -122,6 +122,21 @@ func TestConfig_CheckValues(t *testing.T) {
 			),
 		},
 		{
+			name: "invalid file read paths",
+			cfg: &Config{
+				Settings: Settings{
+					Data: DataSettings{
+						FileReadRoots: []string{""},
+					},
+				},
+			},
+			errRegex: test.TrimYAML(`
+				^settings:
+					data:
+						file_read_roots: "\[\]" <invalid> \(must not contain an empty path\)\s$`,
+			),
+		},
+		{
 			name: "invalid Defaults",
 			cfg: &Config{
 				Defaults: Defaults{
