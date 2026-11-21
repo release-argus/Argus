@@ -92,11 +92,11 @@ func ApplyOverrides(
 		previousAuth   RegistryAuth
 		previousDetail ContainerDetail
 	)
-	// Clear query token, and store previous state to inherit it from if query-token would retrieve the same token.
+	// Snapshot before clearing, so Inherit can restore the token when credentials still match.
 	if target != nil {
-		target.GetAuth().SetQueryToken("", time.Time{})
 		previousAuth = target.GetAuth().Copy()
 		previousDetail = target.Detail()
+		target.GetAuth().SetQueryToken("", time.Time{})
 	}
 
 	// Apply overrides.
