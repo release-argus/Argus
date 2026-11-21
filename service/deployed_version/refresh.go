@@ -19,12 +19,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/shared"
-	"github.com/release-argus/Argus/util"
 )
 
 // Refresh queries the lookup with the provided overrides, returning the deployed version and any error.
@@ -41,14 +39,8 @@ func Refresh(
 
 	logFrom := logx.LogFrom{Primary: lookup.GetServiceID(), Secondary: "deployed_version/refresh"}
 
-	// Whether this new `semantic_version` resolves differently than the current one.
-	semanticVerDiff := semanticVersioning != nil && (
-	// semantic_versioning explicitly null, and the default resolves to a different value.
-	(*semanticVersioning == "null" && lookup.GetOptions().GetSemanticVersioning() != *util.FirstNonNilPtr(
-		lookup.GetDefaults().Options.SemanticVersioning,
-		lookup.GetHardDefaults().Options.SemanticVersioning)) ||
-		// semantic_versioning now resolves to a different value than the default.
-		(*semanticVersioning != "null" && *semanticVersioning == "true" != lookup.GetOptions().GetSemanticVersioning()))
+	// Whether this new semantic_versioning resolves differently than the current one.
+	semanticVerDiff := lookup.GetOptions().SemanticVersioningDiffers(semanticVersioning)
 	// Create a new lookup if overrides provided, or `semantic_versioning` changed.
 	usingOverrides := overrides != nil || semanticVerDiff
 
@@ -113,7 +105,7 @@ func applyOverridesJSON(
 	newLookup, err := ApplyOverrides(
 		"yaml", overrides,
 		lookup,
-		lookup.GetOptions(),
+		lookup.GetOptions().Copy(),
 		lookup.GetStatus(),
 		base.DefaultsConfig{
 			Soft: lookup.GetDefaults(),
@@ -124,17 +116,16 @@ func applyOverridesJSON(
 		return nil, err
 	}
 
-	// Apply the new semantic_versioning JSON value.
-	if semanticVerDiff {
-		semanticVersioningRoot := util.ClonePtr(lookup.GetOptions().SemanticVersioning)
-		// Apply the new semantic_versioning JSON value.
-		if err := decode.Unmarshal("json", []byte(*semanticVersioning), &semanticVersioningRoot); err != nil {
-			return nil, &decode.ErrKeyField{
-				Key: "semantic_versioning",
-				Err: err,
-			}
-		}
-		newLookup.GetOptions().SemanticVersioning = semanticVersioningRoot
+	if !semanticVerDiff || newLookup == nil {
+		return newLookup, nil
+	}
+
+	// Without overrides the target comes back as-is, so copy it before changing its Options.
+	if newLookup == lookup {
+		newLookup = lookup.Copy(lookup.GetStatus())
+	}
+	if err := newLookup.GetOptions().SetSemanticVersioning(*semanticVersioning); err != nil {
+		return nil, err //nolint:wrapcheck
 	}
 
 	return newLookup, nil

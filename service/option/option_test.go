@@ -573,6 +573,199 @@ func TestOptions_GetSemanticVersioning(t *testing.T) {
 	}
 }
 
+func TestOptions_SemanticVersioningDiffers(t *testing.T) {
+	tests := []struct {
+		name                     string
+		rootValue                *bool
+		softDefault, hardDefault *bool
+		override                 *string
+		want                     bool
+	}{
+		{
+			name:        "nil/unchanged",
+			rootValue:   new(true),
+			hardDefault: new(false),
+			want:        false,
+		},
+		{
+			name:        "true/root true",
+			rootValue:   new(true),
+			hardDefault: new(false),
+			override:    new("true"),
+			want:        false,
+		},
+		{
+			name:        "true/root false",
+			rootValue:   new(false),
+			hardDefault: new(true),
+			override:    new("true"),
+			want:        true,
+		},
+		{
+			name:        "true/root unset, same hard default",
+			hardDefault: new(true),
+			override:    new("true"),
+			want:        false,
+		},
+		{
+			name:        "true/root unset, diff soft default",
+			softDefault: new(false),
+			hardDefault: new(true),
+			override:    new("true"),
+			want:        true,
+		},
+		{
+			name:        "false/root false",
+			rootValue:   new(false),
+			hardDefault: new(true),
+			override:    new("false"),
+			want:        false,
+		},
+		{
+			name:        "false/root true",
+			rootValue:   new(true),
+			hardDefault: new(false),
+			override:    new("false"),
+			want:        true,
+		},
+		{
+			name:        "false/root unset, same hard default",
+			hardDefault: new(false),
+			override:    new("false"),
+			want:        false,
+		},
+		{
+			name:        "false/root unset, diff hard default",
+			hardDefault: new(true),
+			override:    new("false"),
+			want:        true,
+		},
+		{
+			name:        "null/soft default set, root matches",
+			rootValue:   new(false),
+			softDefault: new(false),
+			hardDefault: new(true),
+			override:    new("null"),
+			want:        false,
+		},
+		{
+			name:        "null/soft default set, root differs",
+			rootValue:   new(true),
+			softDefault: new(false),
+			hardDefault: new(true),
+			override:    new("null"),
+			want:        true,
+		},
+		{
+			name:        "null/soft default set, root unset",
+			softDefault: new(false),
+			hardDefault: new(true),
+			override:    new("null"),
+			want:        false,
+		},
+		{
+			name:        "null/hard default set, root differs",
+			rootValue:   new(false),
+			hardDefault: new(true),
+			override:    new("null"),
+			want:        true,
+		},
+		{
+			name:        "null/hard default set, root matches",
+			rootValue:   new(true),
+			hardDefault: new(true),
+			override:    new("null"),
+			want:        false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			options := &Options{
+				Base:         Base{SemanticVersioning: tc.rootValue},
+				Defaults:     &Defaults{Base: Base{SemanticVersioning: tc.softDefault}},
+				HardDefaults: &Defaults{Base: Base{SemanticVersioning: tc.hardDefault}},
+			}
+
+			got := options.SemanticVersioningDiffers(tc.override)
+
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOptions_SetSemanticVersioning(t *testing.T) {
+	tests := []struct {
+		name      string
+		rootValue *bool
+		override  string
+		want      *bool
+		errRegex  string
+	}{
+		{
+			name:     "true/root unset",
+			override: "true",
+			want:     new(true),
+			errRegex: `^$`,
+		},
+		{
+			name:      "false/root true",
+			rootValue: new(true),
+			override:  "false",
+			want:      new(false),
+			errRegex:  `^$`,
+		},
+		{
+			name:      "null/clears root",
+			rootValue: new(true),
+			override:  "null",
+			want:      nil,
+			errRegex:  `^$`,
+		},
+		{
+			name:      "invalid/root unchanged",
+			rootValue: new(true),
+			override:  `"abc"`,
+			want:      new(true),
+			errRegex: test.TrimYAML(`
+				^semantic_versioning:
+					json: .* unmarshal JSON string into Go bool$`,
+			),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			options := &Options{Base: Base{SemanticVersioning: util.ClonePtr(tc.rootValue)}}
+			previous := options.SemanticVersioning
+
+			err := options.SetSemanticVersioning(tc.override)
+
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			got, want := test.StringifyPtr(options.SemanticVersioning), test.StringifyPtr(tc.want)
+			if got != want {
+				t.Errorf("Options.SemanticVersioning mismatch\ngot:  %q\nwant: %q", got, want)
+			}
+			if previous != nil && *previous != *tc.rootValue {
+				t.Errorf(
+					"Options.SemanticVersioning previous target mismatch\n"+
+						"got:  %t\nwant: %t (unchanged)",
+					*previous, *tc.rootValue,
+				)
+			}
+		})
+	}
+}
+
 func TestOptions_VerifySemanticVersioning(t *testing.T) {
 	tests := []struct {
 		name        string
