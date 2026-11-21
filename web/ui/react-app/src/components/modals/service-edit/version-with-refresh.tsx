@@ -53,6 +53,16 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	const schema = schemaFull.shape[vType];
 
 	const url = useWatch({ name: `${vType}.url` }) as string;
+	const deployedVersionType = useWatch({
+		name: 'deployed_version.type',
+	}) as string | undefined;
+	const filePath = useWatch({ name: 'deployed_version.path' }) as
+		| string
+		| undefined;
+	const hasSource =
+		vType === 'deployed_version' && deployedVersionType === 'file'
+			? !!filePath
+			: !!url;
 
 	const vTypeErrors = useErrors(vType, true);
 	const { data, refetchData } = useValuesRefetch(vType);
@@ -128,7 +138,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		refetchData();
 		// setTimeout to allow time for refetch setStates ^
 		const timeout = setTimeout(() => {
-			if (url) {
+			if (hasSource) {
 				fetchVersion();
 				setLastFetched(currentTime);
 			}
@@ -144,7 +154,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 				<Button
 					aria-label="Refresh the version"
 					className="ml-auto"
-					disabled={isFetching || !url}
+					disabled={isFetching || !hasSource}
 					onClick={refetch}
 					variant="secondary"
 				>

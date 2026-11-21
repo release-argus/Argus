@@ -47,6 +47,14 @@ export type LatestVersionOptions = {
 
 export type DeployedVersionOptions =
 	| {
+			/** `deployed_version.type` = 'file'. */
+			type: 'file';
+			/** `deployed_version.path`. */
+			path: string;
+			/** `deployed_version.regex`. */
+			regex: string;
+	  }
+	| {
 			/** `deployed_version.type` = 'manual'. */
 			type: 'manual';
 			/** `deployed_version.version`. */
@@ -326,6 +334,16 @@ const fillDeployedVersion = async (
 		await section
 			.locator('input[name="deployed_version.version"]')
 			.fill(options.version);
+		return;
+	}
+
+	if (options.type === 'file') {
+		await section
+			.locator('input[name="deployed_version.path"]')
+			.fill(options.path);
+		await section
+			.locator('input[name="deployed_version.regex"]')
+			.fill(options.regex);
 		return;
 	}
 

@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -42,6 +43,21 @@ func (c *Config) CheckValues() bool {
 			&decode.ErrKeyField{
 				Key: "settings",
 				Err: err,
+			},
+		)
+	} else if err := fileaccess.ConfigureAllowedRoots(c.Settings.Data.FileReadRoots); err != nil {
+		errs = append(
+			errs,
+			&decode.ErrKeyField{
+				Key: "settings",
+				Err: &decode.ErrKeyField{
+					Key: "data",
+					Err: &decode.ErrField{
+						Key:         "file_read_roots",
+						Value:       fmt.Sprint(c.Settings.Data.FileReadRoots),
+						Description: err.Error(),
+					},
+				},
 			},
 		)
 	}

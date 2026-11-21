@@ -809,6 +809,24 @@ func TestDecodeService(t *testing.T) {
 			`),
 		},
 		{
+			name:   "JSON/deployed_version/types/file",
+			format: "json",
+			data: test.TrimJSON(`{
+				"deployed_version": {
+					"type": "file",
+					"path": "/path/to/allowed/files/VERSION",
+					"regex": "productversion=\"([^\"]+)\""
+				}
+			}`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				deployed_version:
+					type: file
+					path: /path/to/allowed/files/VERSION
+					regex: productversion="([^"]+)"
+			`),
+		},
+		{
 			name:   "JSON/deployed_version/types/manual/full",
 			format: "json",
 			data: test.TrimJSON(`{
@@ -850,7 +868,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					deployed_version:
-						type: "unsupported" <invalid> .*\['manual', 'url'\].*$`,
+						type: "unsupported" <invalid> .*\['manual', 'url', 'file'\].*$`,
 			),
 		},
 		{
@@ -865,7 +883,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					deployed_version:
-						type: <required> .*\['manual', 'url'\].*$`,
+						type: <required> .*\['manual', 'url', 'file'\].*$`,
 			),
 		},
 		{

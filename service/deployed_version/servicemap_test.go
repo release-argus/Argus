@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/service/deployed_version/types/file"
 	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
 )
@@ -30,6 +31,11 @@ func TestServiceMap(t *testing.T) {
 		key      string
 		expected base.Interface
 	}{
+		{
+			name:     "file",
+			key:      "file",
+			expected: &file.Lookup{},
+		},
 		{
 			name:     "web",
 			key:      "web",

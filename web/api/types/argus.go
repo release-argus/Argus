@@ -36,7 +36,7 @@ type ServiceSummary struct {
 	WebURL              *string   `json:"url,omitzero" yaml:"url,omitzero"`                                     // URL to provide on the Web UI.
 	Icon                *string   `json:"icon,omitzero" yaml:"icon,omitzero"`                                   // Service.Dashboard.Icon / Service.Notify.*.Params.Icon / Service.Notify.*.Defaults.Params.Icon.
 	IconLinkTo          *string   `json:"icon_link_to,omitzero" yaml:"icon_link_to,omitzero"`                   // URL to redirect Icon clicks to.
-	DeployedVersionType *string   `json:"deployed_version_type,omitzero" yaml:"deployed_version_type,omitzero"` // "manual"|"url", empty string if no DeployedVersionLookup.
+	DeployedVersionType *string   `json:"deployed_version_type,omitzero" yaml:"deployed_version_type,omitzero"` // "file"|"manual"|"url", empty string if no DeployedVersionLookup.
 	Command             *int      `json:"command,omitzero" yaml:"command,omitzero"`                             // Amount of Commands to send on a new release.
 	Webhook             *int      `json:"webhook,omitzero" yaml:"webhook,omitzero"`                             // Amount of Webhooks to send on a new release.
 	Status              *Status   `json:"status,omitempty" yaml:"status,omitempty"`                             // Track the Status of this source (version and regex misses).
@@ -693,7 +693,7 @@ type RequireDocker struct {
 }
 
 type DeployedVersionLookupDefaults struct {
-	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "manual" | "url".
+	Type              string `json:"type,omitzero" yaml:"type,omitzero"`                               // "file" | "manual" | "url".
 	AllowInvalidCerts *bool  `json:"allow_invalid_certs,omitzero" yaml:"allow_invalid_certs,omitzero"` // Disallows invalid HTTPS certificates.
 	Method            string `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.
 }
@@ -706,10 +706,13 @@ func (d DeployedVersionLookupDefaults) IsZero() bool {
 
 // DeployedVersionLookup of the service.
 type DeployedVersionLookup struct {
-	Type string `json:"type,omitzero" yaml:"type,omitzero"` // Service Type, url/manual.
+	Type string `json:"type,omitzero" yaml:"type,omitzero"` // Service Type, file/manual/url.
 
 	// manual
 	Version string `json:"version,omitzero" yaml:"version,omitzero"` // Deployed version.
+
+	// file
+	Path string `json:"path,omitzero" yaml:"path,omitzero"` // Absolute path to a file.
 
 	// url
 	Method            string                 `json:"method,omitzero" yaml:"method,omitzero"`                           // HTTP method.

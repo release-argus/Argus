@@ -14,7 +14,7 @@ test.describe('Service creation modal - field validation', () => {
 	test.describe.configure({ mode: 'parallel' });
 
 	test.describe('Deployed Version', () => {
-		test('type=url - URL is optional but must be valid http(s):// if set', async ({
+		test('type=url - URL is optional but must be a valid HTTP(S) URL if set', async ({
 			page,
 		}, testInfo) => {
 			const shot = screenshotsUnder(
@@ -43,6 +43,83 @@ test.describe('Service creation modal - field validation', () => {
 			);
 
 			await expectValid(urlInput, 'https://example.com', shot, '03-url-valid');
+			await expectError(
+				urlInput,
+				'file:///etc/passwd',
+				"Invalid URL (Must start with 'http://' or 'https://').",
+				shot,
+				'04-url-file-invalid',
+			);
+		});
+
+		test('type=file - path and capture regex are required and validated', async ({
+			page,
+		}, testInfo) => {
+			const shot = screenshotsUnder(
+				page,
+				testInfo.project.name,
+				'service-creation-validation/deployed-version',
+			);
+			const dialog = await openCreateServiceModal(page);
+			const section = await openSection(dialog, 'Deployed Version');
+
+			await section.locator('#deployed_version\\.type').click();
+			await dialog.getByRole('option', { name: /^file$/i }).click();
+
+			const pathInput = section.locator(
+				'input[name="deployed_version.path"]',
+			);
+			await expectError(
+				pathInput,
+				undefined,
+				'Required.',
+				shot,
+				'01-file-path-required',
+			);
+			await expectError(
+				pathInput,
+				'relative/VERSION',
+				'Must be an absolute path.',
+				shot,
+				'02-file-path-must-be-absolute',
+			);
+			await expectValid(
+				pathInput,
+				'/path/to/allowed/files/VERSION',
+				shot,
+				'03-file-path-valid',
+			);
+
+			const regexInput = section.locator(
+				'input[name="deployed_version.regex"]',
+			);
+			await expectError(
+				regexInput,
+				undefined,
+				'Required.',
+				shot,
+				'04-file-regex-required',
+			);
+			await expectError(
+				regexInput,
+				'(',
+				'Invalid regular expression.',
+				shot,
+				'05-file-regex-invalid',
+			);
+			await expectError(
+				regexInput,
+				'productversion="[^"]+"',
+				'Must include a capture group containing the version.',
+				shot,
+				'06-file-regex-capture-required',
+			);
+			await expectValid(
+				regexInput,
+				'productversion="([^"]+)"',
+				shot,
+				'07-file-regex-valid',
+			);
 		});
 
 		test('type=url - regex becomes required when the template toggle is enabled', async ({

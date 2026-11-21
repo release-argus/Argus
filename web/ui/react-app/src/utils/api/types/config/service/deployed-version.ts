@@ -3,6 +3,7 @@ import type { Headers } from '@/utils/api/types/config/shared';
 export const DEPLOYED_VERSION_LOOKUP_TYPE = {
 	MANUAL: { label: 'Manual', value: 'manual' },
 	URL: { label: 'URL', value: 'url' },
+	FILE: { label: 'File', value: 'file' },
 } as const;
 export type DeployedVersionLookupType =
 	(typeof DEPLOYED_VERSION_LOOKUP_TYPE)[keyof typeof DEPLOYED_VERSION_LOOKUP_TYPE]['value'];
@@ -11,8 +12,15 @@ export const deployedVersionLookupTypeOptions = Object.values(
 );
 
 export type DeployedVersionLookup =
+	| DeployedVersionLookupFile
 	| DeployedVersionLookupManual
 	| DeployedVersionLookupURL;
+
+export type DeployedVersionLookupFile = {
+	type: typeof DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value | null;
+	path?: string;
+	regex?: string;
+};
 
 /* Type: manual */
 export type DeployedVersionLookupManual = {
