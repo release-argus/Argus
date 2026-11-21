@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { urlCommandsTrimArray } from '@/components/modals/service-edit/util';
-import { resolveForgeHost } from '@/components/modals/service-edit/util/service-url';
+import {
+	alignForgeHostNames,
+	resolveForgeHost,
+} from '@/components/modals/service-edit/util/service-url';
 import type { NonNull } from '@/types/util';
 import {
 	type DockerFilter,
@@ -379,7 +382,18 @@ export const buildLatestVersionLookupSchemaWithFallbacks = (
 	const path = 'latest_version';
 	const combinedDefaults = applyDefaultsRecursive<LatestVersionLookupDefaults>(
 		defaults ?? null,
-		hardDefaults,
+		hardDefaults?.forgejo?.host
+			? {
+					...hardDefaults,
+					forgejo: {
+						...hardDefaults.forgejo,
+						host: alignForgeHostNames(
+							defaults?.forgejo?.host,
+							hardDefaults.forgejo.host,
+						),
+					},
+				}
+			: hardDefaults,
 	);
 	const defaultType = isLatestVersionType(combinedDefaults.type)
 		? combinedDefaults.type
