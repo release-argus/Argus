@@ -366,6 +366,22 @@ func TestConfig_Decode(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name: "YAML/file read paths",
+			data: test.TrimYAML(`
+				settings:
+					data:
+						file_read_paths:
+							- /path/to/allowed
+			`),
+			want: test.TrimYAML(`
+				settings:
+					data:
+						file_read_paths:
+							- /path/to/allowed
+			`),
+			errRegex: `^$`,
+		},
+		{
 			name: "YAML/service subtree",
 			data: test.TrimYAML(`
 				service:

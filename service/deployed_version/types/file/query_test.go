@@ -19,6 +19,7 @@ package file
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/fileaccess"
@@ -27,14 +28,52 @@ import (
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	opt "github.com/release-argus/Argus/service/option"
 	opttest "github.com/release-argus/Argus/service/option/test"
+	"github.com/release-argus/Argus/service/status"
 	statustest "github.com/release-argus/Argus/service/status/test"
 )
 
 func TestLookup_Query__readsVersionFile(t *testing.T) {
 	logtest.InitLog()
 
+	lookup, svcStatus := newTestLookup(t, "productversion=\"7.2.2-72806\"\n")
+	if err := lookup.Query(false, logx.LogFrom{}); err != nil {
+		t.Fatalf("Lookup.Query() failed: %v", err)
+	}
+
+	if got, want := svcStatus.DeployedVersion(), "7.2.2-72806"; got != want {
+		t.Errorf("DeployedVersion() mismatch\ngot:  %q\nwant: %q", got, want)
+	}
+}
+
+func TestLookup_Query__rejectsUnusableVersionMatch(t *testing.T) {
+	logtest.InitLog()
+
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{name: "no match", content: "no version here\n"},
+		{name: "empty capture", content: "productversion=\"\"\n"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			lookup, svcStatus := newTestLookup(t, tc.content)
+			err := lookup.Query(false, logx.LogFrom{})
+			if err == nil || !strings.Contains(err.Error(), "did not capture a version") {
+				t.Fatalf("Lookup.Query() error = %v, want missing captured-version error", err)
+			}
+			if got := svcStatus.DeployedVersion(); got != "" {
+				t.Errorf("DeployedVersion() = %q after failed query, want empty", got)
+			}
+		})
+	}
+}
+
+func newTestLookup(t *testing.T, content string) (*Lookup, *status.Status) {
+	t.Helper()
+
 	fixturePath := filepath.Join(t.TempDir(), "VERSION")
-	if err := os.WriteFile(fixturePath, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(fixturePath, []byte(content), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
 	if err := fileaccess.ConfigureAllowedPaths([]string{fixturePath}); err != nil {
@@ -65,11 +104,5 @@ func TestLookup_Query__readsVersionFile(t *testing.T) {
 		Regex: `productversion="([^"]+)"`,
 	}
 	lookup.Init(options, svcStatus, base.DefaultsConfig{})
-	if err := lookup.Query(false, logx.LogFrom{}); err != nil {
-		t.Fatalf("Lookup.Query() failed: %v", err)
-	}
-
-	if got, want := svcStatus.DeployedVersion(), "7.2.2-72806"; got != want {
-		t.Errorf("DeployedVersion() mismatch\ngot:  %q\nwant: %q", got, want)
-	}
+	return lookup, svcStatus
 }

@@ -26,7 +26,10 @@ import (
 
 func TestRead(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, "VERSION")
+	path := filepath.Join(root, "nested", "VERSION")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatalf("os.MkdirAll() failed: %v", err)
+	}
 	if err := os.WriteFile(path, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
