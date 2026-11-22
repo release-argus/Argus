@@ -17,6 +17,9 @@
 package config
 
 import (
+	"fmt"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -92,6 +95,11 @@ func TestConfig_CheckValues(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig()
+	fileReadPaths := []string{
+		filepath.Join(t.TempDir(), "path1"),
+		filepath.Join(t.TempDir(), "path2"),
+		filepath.Join(t.TempDir(), "longer", "path3"),
+	}
 
 	tests := []struct {
 		name     string
@@ -127,14 +135,13 @@ func TestConfig_CheckValues(t *testing.T) {
 			cfg: &Config{
 				Settings: Settings{
 					Data: DataSettings{
-						FileReadPaths: []string{""},
+						FileReadPaths: fileReadPaths,
 					},
 				},
 			},
-			errRegex: test.TrimYAML(`
-				^settings:
-					data:
-						file_read_paths: "\[\]" <invalid> \(must not contain an empty path\)\s$`,
+			errRegex: fmt.Sprintf(
+				"(?s)^settings:\n  data:\n    file_read_paths: %s <invalid> .*resolve .*path1.*$",
+				regexp.QuoteMeta(fmt.Sprintf("%q", fmt.Sprint(fileReadPaths))),
 			),
 		},
 		{
