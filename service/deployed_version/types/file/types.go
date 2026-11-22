@@ -28,8 +28,9 @@ var Type = "file"
 type Lookup struct {
 	base.Lookup `json:",embed" yaml:",inline"`
 
-	Path  string `json:"path,omitzero" yaml:"path,omitzero"`   // Absolute path to a file allowed by settings.data.file_read_paths.
-	Regex string `json:"regex,omitzero" yaml:"regex,omitzero"` // RegEx with a capture group containing the version.
+	Path          string `json:"path,omitzero" yaml:"path,omitzero"`                     // Absolute path to a file allowed by settings.data.file_read_paths.
+	Regex         string `json:"regex,omitzero" yaml:"regex,omitzero"`                   // OPTIONAL: regex to extract the version.
+	RegexTemplate string `json:"regex_template,omitzero" yaml:"regex_template,omitzero"` // OPTIONAL: template to apply to the RegEx match.
 }
 
 // Copy returns a deep copy of the receiver.
@@ -39,9 +40,10 @@ func (l *Lookup) Copy(svcStatus *status.Status) base.Interface {
 	}
 
 	return &Lookup{
-		Lookup: *l.Lookup.Clone(svcStatus), //nolint:staticcheck
-		Path:   l.Path,
-		Regex:  l.Regex,
+		Lookup:        *l.Lookup.Clone(svcStatus), //nolint:staticcheck
+		Path:          l.Path,
+		Regex:         l.Regex,
+		RegexTemplate: l.RegexTemplate,
 	}
 }
 

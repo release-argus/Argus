@@ -38,23 +38,17 @@ func (l *Lookup) CheckValues() error {
 		})
 	}
 
+	if l.Regex != "" {
+		if _, err := regexp.Compile(l.Regex); err != nil {
+			errs = append(errs, &decode.ErrField{
+				Key:         "regex",
+				Value:       l.Regex,
+				Description: "invalid regular expression",
+			})
+		}
+	}
 	if l.Regex == "" {
-		errs = append(errs, &decode.ErrField{
-			Key:         "regex",
-			Description: "regular expression with a capture group containing the version",
-		})
-	} else if re, err := regexp.Compile(l.Regex); err != nil {
-		errs = append(errs, &decode.ErrField{
-			Key:         "regex",
-			Value:       l.Regex,
-			Description: "invalid regular expression",
-		})
-	} else if re.NumSubexp() == 0 {
-		errs = append(errs, &decode.ErrField{
-			Key:         "regex",
-			Value:       l.Regex,
-			Description: "must include a capture group containing the version",
-		})
+		l.RegexTemplate = ""
 	}
 
 	if len(errs) == 0 {

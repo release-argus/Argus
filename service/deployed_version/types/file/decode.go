@@ -36,6 +36,7 @@ func (l *Lookup) DecodeSelf(format string, data []byte) error {
 		l.Lookup = newL.Lookup
 		l.Path = newL.Path
 		l.Regex = newL.Regex
+		l.RegexTemplate = newL.RegexTemplate
 	}
 	return nil
 }

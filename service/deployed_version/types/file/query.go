@@ -17,10 +17,12 @@ package file
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/util"
 )
 
 // Track polls the file and updates the deployed version.
@@ -57,13 +59,33 @@ func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 		return err
 	}
 
-	versionMatch := regexp.MustCompile(l.Regex).FindStringSubmatch(string(content))
-	if len(versionMatch) < 2 || versionMatch[1] == "" {
-		err := fmt.Errorf("regex %q did not capture a version in %q", l.Regex, l.Path)
+	version := string(content)
+	if l.Regex == "" {
+		version = strings.TrimSpace(version)
+	}
+	if version == "" {
+		err := fmt.Errorf("no version found in %q", l.Path)
 		logx.Warn(err, logFrom, true)
 		return err
 	}
-	version := versionMatch[1]
+
+	if l.Regex != "" {
+		matches := regexp.MustCompile(l.Regex).FindAllStringSubmatch(version, 1)
+		if len(matches) == 0 {
+			err := fmt.Errorf(
+				"regex %q didn't return any matches on %q",
+				l.Regex, util.TruncateMessage(version, 100),
+			)
+			logx.Warn(err, logFrom, true)
+			return err
+		}
+		version = strings.TrimSpace(util.RegexTemplate(matches[0], l.RegexTemplate))
+		if version == "" {
+			err := fmt.Errorf("regex %q produced an empty version in %q", l.Regex, l.Path)
+			logx.Warn(err, logFrom, true)
+			return err
+		}
+	}
 
 	if l.Options.GetSemanticVersioning() {
 		if _, err := l.Options.VerifySemanticVersioning(version, logFrom); err != nil {
