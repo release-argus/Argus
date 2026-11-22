@@ -24,10 +24,19 @@ const DeployedVersionFile = () => {
 				colSize={{ lg: 6, sm: 12 }}
 				label="RegEx"
 				name={`${name}.regex`}
-				required
 				tooltip={{
 					content:
-						'RegEx to extract the version from the file; include a capture group, e.g. productversion="([^"]+)"',
+						'Optional RegEx to extract the version from the file. Without one, the full file contents are used.',
+					type: 'string',
+				}}
+			/>
+			<FieldText
+				colSize={{ lg: 6, sm: 12 }}
+				label="RegEx Template"
+				name={`${name}.regex_template`}
+				tooltip={{
+					content:
+						'Optional template for the RegEx match; e.g. $1.$2.$3 uses the first three capture groups.',
 					type: 'string',
 				}}
 			/>

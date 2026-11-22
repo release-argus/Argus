@@ -54,7 +54,7 @@ export const isValidURL = (arg: unknown) => {
 	if (typeof arg !== 'string') return false;
 
 	// Must start with 'http(s)://'.
-	if (!/^https?:/.test(arg)) return false;
+	if (!/^https?:\/\//.test(arg)) return false;
 
 	try {
 		const url = new URL(arg);

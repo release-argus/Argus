@@ -23,6 +23,7 @@ export const deployedVersionManualSchema = z.object({
 export const deployedVersionFileSchema = z.object({
 	path: stringDefault,
 	regex: stringDefault,
+	regex_template: stringDefault,
 	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value),
 });
 
@@ -32,6 +33,7 @@ const deployedVersionManualSchemaDefault = deployedVersionManualSchema.extend({
 const deployedVersionFileSchemaDefault = deployedVersionFileSchema.extend({
 	path: stringDefault,
 	regex: stringDefault,
+	regex_template: stringDefault,
 });
 
 /* Type: url */

@@ -91,14 +91,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 			},
 			true,
 		),
-		regex: regexStringWithFallback(true).superRefine((pattern, ctx) => {
-			if (pattern && !hasCaptureGroup(pattern)) {
-				ctx.addIssue({
-					code: CUSTOM_ISSUE_CODE,
-					message: 'Must include a capture group containing the version.',
-				});
-			}
-		}),
+		regex: regexStringWithFallback(false),
 	});
 
 	// Deployed version schema.
@@ -162,37 +155,4 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		schemaData: schemaData,
 		schemaDataDefaults: schemaDataDefaults,
 	};
-};
-
-const hasCaptureGroup = (pattern: string) => {
-	try {
-		new RegExp(pattern);
-	} catch {
-		return true;
-	}
-
-	let escaped = false;
-	let inCharacterClass = false;
-	for (let i = 0; i < pattern.length; i++) {
-		const char = pattern[i];
-		if (escaped) {
-			escaped = false;
-		} else if (char === '\\') {
-			escaped = true;
-		} else if (char === '[') {
-			inCharacterClass = true;
-		} else if (char === ']') {
-			inCharacterClass = false;
-		} else if (char === '(' && !inCharacterClass) {
-			if (pattern[i + 1] !== '?') return true;
-			if (
-				pattern[i + 2] === '<' &&
-				pattern[i + 3] !== '=' &&
-				pattern[i + 3] !== '!'
-			) {
-				return true;
-			}
-		}
-	}
-	return false;
 };

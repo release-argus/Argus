@@ -20,6 +20,7 @@ export type DeployedVersionLookupFile = {
 	type: typeof DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value | null;
 	path?: string;
 	regex?: string;
+	regex_template?: string;
 };
 
 /* Type: manual */
