@@ -6,7 +6,7 @@
 #    enabled: true
 #  data:
 #    # Allow local-file deployed-version lookups only beneath these directories.
-#    file_read_roots:
+#    file_read_paths:
 #      - /path/to/allowed/files
 service:
   release-argus/Argus:
