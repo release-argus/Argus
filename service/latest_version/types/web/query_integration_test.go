@@ -17,6 +17,8 @@
 package web
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -27,6 +29,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/base"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -35,7 +38,7 @@ import (
 
 func TestLookup_Query(t *testing.T) {
 	testLookupVersions := testLookup(t, false)
-	if _, err := testLookupVersions.query(logx.LogFrom{}); err != nil {
+	if _, err := testLookupVersions.query(true, logx.LogFrom{}); err != nil {
 		t.Fatalf("Lookup.query() failed: %v", err)
 	}
 
@@ -480,6 +483,32 @@ func TestLookup_Query(t *testing.T) {
 				}
 				lookup.DeleteMetrics(lookup)
 			}
+		})
+	}
+}
+
+func TestLookup_Query__noSideEffects(t *testing.T) {
+	tests := []struct {
+		name               string
+		startLatestVersion string
+	}{
+		{name: "first version", startLatestVersion: ""},
+		{name: "newer version", startLatestVersion: "1.2.2"},
+		{name: "same version", startLatestVersion: "1.2.3"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte("ver1.2.3"))
+			}))
+			t.Cleanup(server.Close)
+			lookup := testLookup(t, false)
+			lookup.URL = server.URL
+
+			lvbasetest.AssertQueryNoSideEffects(t, lookup, tc.startLatestVersion, "1.2.3")
 		})
 	}
 }

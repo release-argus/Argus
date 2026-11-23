@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"testing"
 	"time"
 )
 
@@ -45,7 +44,7 @@ type FieldAssertion struct {
 
 // AssertFields checks every row and joins the mismatches, each named target.Name.
 func AssertFields(
-	t *testing.T,
+	t TB,
 	fieldTests []FieldAssertion,
 	target string,
 ) error {

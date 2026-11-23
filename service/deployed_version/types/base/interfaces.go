@@ -37,7 +37,8 @@ type BaseInterface interface {
 	// persisting it without announcing it.
 	ApplyConfiguredVersion()
 
-	// Query the receiver for the deployed version.
+	// Query the receiver for the deployed version, recording the result (metrics, DB, announces, logs)
+	// only if metrics.
 	Query(metrics bool, logFrom logx.LogFrom) (err error)
 
 	// InheritSecrets copies secrets from otherLookup.

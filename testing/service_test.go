@@ -126,12 +126,11 @@ func TestServiceTest(t *testing.T) {
 			}),
 		},
 		{
-			name: "service with deployed version lookup",
+			name: "service with latest and deployed version lookups",
 			flag: "argus",
 			ok:   true,
 			stdoutRegex: test.TrimYAML(`
 				Latest Release - "[0-9]+\.[0-9]+\.[0-9]+"
-				INFO: .*Updated to.*
 				INFO: .*Deployed version - "[0-9]+\.[0-9]+\.[0-9]+"`),
 			services: test.Must(t, func() (service.Services, error) {
 				return service.DecodeServices(

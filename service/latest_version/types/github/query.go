@@ -31,9 +31,10 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Query queries GitHub releases, sets Prometheus metrics if requested, and returns whether a new version was found.
+// Query queries GitHub releases, recording the result (metrics, DB, announces, logs) only if metrics,
+// and returns whether a new version was found.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
-	isNewVersion, err := l.query(logFrom)
+	isNewVersion, err := l.query(metrics, logFrom)
 
 	if metrics {
 		l.QueryMetrics(l, err)
@@ -43,14 +44,14 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 }
 
 // query iterates pages of the GitHub releases API and returns whether a new version was found.
-func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
+func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) (bool, error) {
 	page := 1
 	var newVersion bool
 	var err error
 
 	// Query until we find a version or run out of pages.
 	for page > 0 {
-		newVersion, page, err = l.queryPage(0, page, logFrom)
+		newVersion, page, err = l.queryPage(0, page, writeToDB, logFrom)
 		if newVersion {
 			return true, nil
 		}
@@ -64,6 +65,7 @@ func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 func (l *Lookup) queryPage(
 	checkNumber int,
 	page int,
+	writeToDB bool,
 	logFrom logx.LogFrom,
 ) (bool, int, error) {
 	nextPage, err := l.httpRequest(page, logFrom)
@@ -94,13 +96,14 @@ func (l *Lookup) queryPage(
 		newVersion, err := l.handleNewVersion(
 			checkNumber, page,
 			version, releaseDate, l.Status.LatestVersion(),
+			writeToDB,
 			logFrom,
 		)
 		return newVersion, 0, err
 	}
 
 	// Inherit version.
-	l.HandleNoVersionChange(checkNumber, version, logFrom)
+	l.HandleNoVersionChange(checkNumber, version, writeToDB, logFrom)
 	return false, 0, nil
 }
 
@@ -364,6 +367,7 @@ func (l *Lookup) setReleases(body []byte, etag string, nextPage int) error {
 func (l *Lookup) handleNewVersion(
 	checkNumber, page int,
 	version, releaseDate, latestVersion string,
+	writeToDB bool,
 	logFrom logx.LogFrom,
 ) (bool, error) {
 	// Confirm that the version has changed.
@@ -372,12 +376,12 @@ func (l *Lookup) handleNewVersion(
 			"Possibly found a new version (From %q to %q). Checking again",
 			latestVersion, version,
 		)
-		logx.Verbose(msg, logFrom, latestVersion != "")
+		logx.Verbose(msg, logFrom, writeToDB && latestVersion != "")
 		time.Sleep(time.Second)
 
-		newVersion, _, err := l.queryPage(1, page, logFrom)
+		newVersion, _, err := l.queryPage(1, page, writeToDB, logFrom)
 		return newVersion, err
 	}
 
-	return l.HandleNewVersion(version, releaseDate, logFrom) //nolint:wrapcheck
+	return l.HandleNewVersion(version, releaseDate, writeToDB, logFrom) //nolint:wrapcheck
 }

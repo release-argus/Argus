@@ -25,12 +25,14 @@ import (
 // TB is the subset of [testing.TB] used by these helpers, so that their
 // reporting paths can be exercised with a [FakeT].
 type TB interface {
+	Cleanup(f func())
 	Context() context.Context
 	Log(args ...any)
 	Logf(format string, args ...any)
 	Errorf(format string, args ...any)
 	Fatalf(format string, args ...any)
 	Helper()
+	Name() string
 	Skipf(format string, args ...any)
 }
 
@@ -42,10 +44,14 @@ type abortFakeT struct{}
 // FakeT records what a helper reports rather than failing the test, so that a
 // helper's own failure paths can be asserted on.
 type FakeT struct {
-	Logs   []string
-	Errors []string
-	Fatals []string
-	Skips  []string
+	Logs     []string
+	Errors   []string
+	Fatals   []string
+	Skips    []string
+	cleanups []func()
+
+	// TestName is what Name returns.
+	TestName string
 
 	// Abort makes Fatalf and Skipf stop the caller, standing in for the
 	// [runtime.Goexit] a real [testing.T] performs. Read the outcome with
@@ -82,6 +88,26 @@ func (f *FakeT) Skipf(format string, args ...any) {
 
 // Helper is a no-op.
 func (f *FakeT) Helper() {}
+
+// Name returns [FakeT.TestName].
+func (f *FakeT) Name() string {
+	return f.TestName
+}
+
+// Cleanup registers fn for [FakeT.RunCleanups].
+func (f *FakeT) Cleanup(fn func()) {
+	f.cleanups = append(f.cleanups, fn)
+}
+
+// RunCleanups runs the registered cleanups, last registered first, as a testing.T would.
+func (f *FakeT) RunCleanups() {
+	for len(f.cleanups) > 0 {
+		last := len(f.cleanups) - 1
+		fn := f.cleanups[last]
+		f.cleanups = f.cleanups[:last]
+		fn()
+	}
+}
 
 func (f *FakeT) abort() {
 	if f.Abort {

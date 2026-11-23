@@ -56,10 +56,10 @@ func (l *Lookup) ApplyConfiguredVersion() {
 }
 
 // Query applies the manual version override if set, validating semantic versioning
-// if required.
+// if required, and recording the result (DB, announces) only if metrics.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 	_, err := l.apply(
-		applyOptions{writeToDB: metrics, announce: true, rateLimit: true},
+		applyOptions{writeToDB: metrics, announce: metrics, rateLimit: true},
 		logFrom,
 	)
 
