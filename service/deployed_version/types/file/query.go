@@ -47,11 +47,6 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 }
 
 func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
-	if err := l.CheckValues(); err != nil {
-		logx.Error(err, logFrom, true)
-		return err
-	}
-
 	content, err := fileaccess.Read(l.Path)
 	if err != nil {
 		err = fmt.Errorf("read deployed version from %q: %w", l.Path, err)
@@ -70,7 +65,13 @@ func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 	}
 
 	if l.Regex != "" {
-		matches := regexp.MustCompile(l.Regex).FindAllStringSubmatch(version, 1)
+		pattern, err := regexp.Compile(l.Regex)
+		if err != nil {
+			err = fmt.Errorf("invalid regex %q: %w", l.Regex, err)
+			logx.Error(err, logFrom, true)
+			return err
+		}
+		matches := pattern.FindAllStringSubmatch(version, 1)
 		if len(matches) == 0 {
 			err := fmt.Errorf(
 				"regex %q didn't return any matches on %q",

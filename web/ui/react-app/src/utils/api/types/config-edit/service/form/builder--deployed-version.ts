@@ -6,9 +6,9 @@ import {
 	type DeployedVersionLookupURL,
 } from '@/utils/api/types/config/service/deployed-version';
 import {
+	deployedVersionFileSchema,
 	type deployedVersionLookupSchema,
 	deployedVersionLookupSchemaDefault,
-	deployedVersionFileSchema,
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
 	isDeployedVersionType,
@@ -48,9 +48,6 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 	const defaultType = isDeployedVersionType(combinedDefaults.type)
 		? combinedDefaults.type
 		: undefined;
-	const schemaDataDefaultsType = isDeployedVersionType(combinedDefaults.type)
-		? combinedDefaults.type
-		: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value;
 
 	// Manual schema.
 	const dvManualSchema = deployedVersionManualSchema;
@@ -139,12 +136,12 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		data: {
 			...combinedDefaults,
 			headers: headersSchemaDataDefaults,
-			type: schemaDataDefaultsType,
+			type: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value,
 		},
 		fallback: {
 			headers: headersSchemaDataDefaults,
 			method: null,
-			type: schemaDataDefaultsType as DeployedVersionLookupType,
+			type: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value as DeployedVersionLookupType,
 		},
 		path: `${path} (defaults)`,
 		schema: deployedVersionLookupSchemaDefault,

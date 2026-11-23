@@ -32,46 +32,87 @@ type allowedPaths struct {
 }
 
 type allowedPath struct {
-	path   string
-	isFile bool
+	path       string
+	matchPaths []string
+	isFile     bool
 }
 
 var configuredPaths atomic.Pointer[allowedPaths]
 
-// ConfigureAllowedPaths validates and sets the paths that lookups may read.
-func ConfigureAllowedPaths(paths []string) error {
-	allowed := make([]allowedPath, 0, len(paths))
-	seen := make(map[string]struct{}, len(paths))
-	for _, path := range paths {
-		if strings.TrimSpace(path) == "" {
-			return errors.New("must not contain an empty path")
-		}
+// ValidateAllowedPaths checks that every path is an existing directory or regular file.
+func ValidateAllowedPaths(paths []string) error {
+	_, err := resolveAllowedPaths(paths)
+	return err
+}
 
-		absolute, err := filepath.Abs(path)
-		if err != nil {
-			return fmt.Errorf("resolve %q: %w", path, err)
-		}
-		absolute, err = filepath.EvalSymlinks(absolute)
-		if err != nil {
-			return fmt.Errorf("resolve %q: %w", path, err)
-		}
-
-		info, err := os.Stat(absolute)
-		if err != nil {
-			return fmt.Errorf("stat %q: %w", path, err)
-		}
-		if !info.IsDir() && !info.Mode().IsRegular() {
-			return fmt.Errorf("%q is neither a directory nor a regular file", path)
-		}
-		if _, exists := seen[absolute]; exists {
-			continue
-		}
-		seen[absolute] = struct{}{}
-		allowed = append(allowed, allowedPath{path: absolute, isFile: !info.IsDir()})
+// SetAllowedPaths sets the paths that lookups may read.
+func SetAllowedPaths(paths []string) error {
+	allowed, err := resolveAllowedPaths(paths)
+	if err != nil {
+		return err
 	}
-
 	configuredPaths.Store(&allowedPaths{paths: allowed})
 	return nil
+}
+
+func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
+	allowed := make([]allowedPath, 0, len(paths))
+	seen := make(map[string]int, len(paths))
+	for _, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			return nil, errors.New("must not contain an empty path")
+		}
+
+		configured, err := filepath.Abs(path)
+		if err != nil {
+			return nil, fmt.Errorf("resolve %q: %w", path, err)
+		}
+		configured = filepath.Clean(configured)
+		resolved, err := filepath.EvalSymlinks(configured)
+		if err != nil {
+			return nil, fmt.Errorf("resolve %q: %w", path, err)
+		}
+
+		info, err := os.Stat(resolved)
+		if err != nil {
+			return nil, fmt.Errorf("stat %q: %w", path, err)
+		}
+		if !info.IsDir() && !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("%q is neither a directory nor a regular file", path)
+		}
+		matchPaths := []string{configured}
+		if resolved != configured {
+			matchPaths = append(matchPaths, resolved)
+		}
+		if index, exists := seen[resolved]; exists {
+			allowed[index].matchPaths = appendUnique(allowed[index].matchPaths, matchPaths...)
+			continue
+		}
+		seen[resolved] = len(allowed)
+		allowed = append(allowed, allowedPath{
+			path:       resolved,
+			matchPaths: matchPaths,
+			isFile:     !info.IsDir(),
+		})
+	}
+
+	return allowed, nil
+}
+
+func appendUnique(paths []string, additions ...string) []string {
+	for _, addition := range additions {
+		found := false
+		for _, path := range paths {
+			if path == addition {
+				found = true
+				break
+			}
+		}
+		if !found {
+			paths = append(paths, addition)
+		}
+	}
+	return paths
 }
 
 // Read reads a regular file allowed by the configured paths.
@@ -89,22 +130,32 @@ func Read(path string) ([]byte, error) {
 	var baseDir, relative string
 	for _, allowedPath := range allowed.paths {
 		if allowedPath.isFile {
-			if path != allowedPath.path {
-				continue
+			for _, matchPath := range allowedPath.matchPaths {
+				if path == matchPath {
+					baseDir = filepath.Dir(allowedPath.path)
+					relative = filepath.Base(allowedPath.path)
+					break
+				}
 			}
-			baseDir = filepath.Dir(allowedPath.path)
-			relative = filepath.Base(allowedPath.path)
-			break
-		}
-
-		candidate, err := filepath.Rel(allowedPath.path, path)
-		if err != nil || candidate == "." || candidate == ".." ||
-			strings.HasPrefix(candidate, ".."+string(filepath.Separator)) {
+			if baseDir != "" {
+				break
+			}
 			continue
 		}
-		baseDir = allowedPath.path
-		relative = candidate
-		break
+
+		for _, matchPath := range allowedPath.matchPaths {
+			candidate, err := filepath.Rel(matchPath, path)
+			if err != nil || candidate == "." || candidate == ".." ||
+				strings.HasPrefix(candidate, ".."+string(filepath.Separator)) {
+				continue
+			}
+			baseDir = allowedPath.path
+			relative = candidate
+			break
+		}
+		if baseDir != "" {
+			break
+		}
 	}
 	if baseDir == "" {
 		return nil, errors.New("file path is outside configured settings.data.file_read_paths")

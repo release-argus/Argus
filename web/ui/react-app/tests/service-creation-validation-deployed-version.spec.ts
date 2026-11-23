@@ -52,7 +52,7 @@ test.describe('Service creation modal - field validation', () => {
 			);
 		});
 
-		test('type=file - path and capture regex are required and validated', async ({
+		test('type=file - path is required and optional regex is validated', async ({
 			page,
 		}, testInfo) => {
 			const shot = screenshotsUnder(
@@ -93,13 +93,7 @@ test.describe('Service creation modal - field validation', () => {
 			const regexInput = section.locator(
 				'input[name="deployed_version.regex"]',
 			);
-			await expectError(
-				regexInput,
-				undefined,
-				'Required.',
-				shot,
-				'04-file-regex-required',
-			);
+			await expectValid(regexInput, undefined, shot, '04-file-regex-optional');
 			await expectError(
 				regexInput,
 				'(',
@@ -107,19 +101,7 @@ test.describe('Service creation modal - field validation', () => {
 				shot,
 				'05-file-regex-invalid',
 			);
-			await expectError(
-				regexInput,
-				'productversion="[^"]+"',
-				'Must include a capture group containing the version.',
-				shot,
-				'06-file-regex-capture-required',
-			);
-			await expectValid(
-				regexInput,
-				'productversion="([^"]+)"',
-				shot,
-				'07-file-regex-valid',
-			);
+			await expectValid(regexInput, '.*', shot, '06-file-regex-without-capture');
 		});
 
 		test('type=url - regex becomes required when the template toggle is enabled', async ({

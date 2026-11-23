@@ -318,6 +318,13 @@ func TestDataSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/FileReadPaths",
+			data: DataSettings{
+				FileReadPaths: []string{"/path/to/file"},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/Readonly",
 			data: DataSettings{
 				Readonly: new(true),

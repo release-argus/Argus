@@ -28,6 +28,7 @@ import (
 
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
 )
@@ -122,6 +123,17 @@ func (s SettingsBase) IsZero() bool {
 // CheckValues validates the fields of the receiver.
 func (s *SettingsBase) CheckValues() error {
 	var errs []error
+
+	// Data.
+	if err := s.Data.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.ErrKeyField{
+				Key: "data",
+				Err: err,
+			},
+		)
+	}
 
 	// Auth.
 	if err := s.Auth.CheckValues(); err != nil {
@@ -305,6 +317,22 @@ func (s DataSettings) IsZero() bool {
 	return s.DatabaseFile == "" &&
 		len(s.FileReadPaths) == 0 &&
 		s.Readonly == nil
+}
+
+// CheckValues validates the fields of the receiver.
+func (s *DataSettings) CheckValues() error {
+	paths := make([]string, len(s.FileReadPaths))
+	for i, path := range s.FileReadPaths {
+		paths[i] = util.EvalEnvVars(path)
+	}
+	if err := fileaccess.ValidateAllowedPaths(paths); err != nil {
+		return &decode.ErrField{
+			Key:         "file_read_paths",
+			Value:       fmt.Sprint(s.FileReadPaths),
+			Description: err.Error(),
+		}
+	}
+	return nil
 }
 
 // LogSettings holds log-related settings for the binary.
@@ -825,6 +853,23 @@ func (s *Settings) DataDatabaseFile() string {
 		s.Data.DatabaseFile,
 		s.HardDefaults.Data.DatabaseFile,
 	)
+}
+
+// DataFileReadPaths resolves the allowed local-file lookup paths.
+func (s *Settings) DataFileReadPaths() []string {
+	paths := s.FromFlags.Data.FileReadPaths
+	if len(paths) == 0 {
+		paths = s.Data.FileReadPaths
+	}
+	if len(paths) == 0 {
+		paths = s.HardDefaults.Data.FileReadPaths
+	}
+
+	resolved := make([]string, len(paths))
+	for i, path := range paths {
+		resolved[i] = util.EvalEnvVars(path)
+	}
+	return resolved
 }
 
 // DataReadonly resolves whether config changes should be withheld from disk.

@@ -99,6 +99,12 @@ func TestLookup_Query__rejectsUnusableVersionMatch(t *testing.T) {
 			wantErr: "didn't return any matches",
 		},
 		{
+			name:    "invalid regex",
+			content: "version",
+			regex:   "(",
+			wantErr: "invalid regex",
+		},
+		{
 			name:    "empty version",
 			content: "productversion=\"\"\n",
 			regex:   `productversion="([^"]*)"`,
@@ -155,12 +161,12 @@ func newTestLookup(t *testing.T, content string) (*Lookup, *status.Status) {
 	if err := os.WriteFile(fixturePath, []byte(content), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := fileaccess.ConfigureAllowedPaths([]string{fixturePath}); err != nil {
-		t.Fatalf("fileaccess.ConfigureAllowedPaths() failed: %v", err)
+	if err := fileaccess.SetAllowedPaths([]string{fixturePath}); err != nil {
+		t.Fatalf("fileaccess.SetAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := fileaccess.SetAllowedPaths(nil); err != nil {
+			t.Errorf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -183,5 +189,8 @@ func newTestLookup(t *testing.T, content string) (*Lookup, *status.Status) {
 		Regex: `productversion="([^"]+)"`,
 	}
 	lookup.Init(options, svcStatus, base.DefaultsConfig{})
+	if err := lookup.CheckValues(); err != nil {
+		t.Fatalf("Lookup.CheckValues() failed: %v", err)
+	}
 	return lookup, svcStatus
 }

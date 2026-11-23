@@ -395,12 +395,12 @@ func TestConfig_CheckValues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Serial: captures stdout.
-			if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
-				t.Fatalf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
+			if err := fileaccess.SetAllowedPaths(nil); err != nil {
+				t.Fatalf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
 			}
 			t.Cleanup(func() {
-				if err := fileaccess.ConfigureAllowedPaths(nil); err != nil {
-					t.Errorf("fileaccess.ConfigureAllowedPaths(nil) failed: %v", err)
+				if err := fileaccess.SetAllowedPaths(nil); err != nil {
+					t.Errorf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
 				}
 			})
 

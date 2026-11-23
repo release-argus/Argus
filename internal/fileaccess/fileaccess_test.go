@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// go:build build
+//go:build build
 
 package fileaccess
 
@@ -35,12 +35,12 @@ func TestRead(t *testing.T) {
 	if err := os.WriteFile(path, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := ConfigureAllowedPaths([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
+	if err := SetAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("SetAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := SetAllowedPaths(nil); err != nil {
+			t.Errorf("SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -71,12 +71,12 @@ func TestReadAllowsConfiguredFileOnly(t *testing.T) {
 	if err := os.WriteFile(other, []byte("other"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile(other) failed: %v", err)
 	}
-	if err := ConfigureAllowedPaths([]string{path}); err != nil {
-		t.Fatalf("ConfigureAllowedPaths(file) failed: %v", err)
+	if err := SetAllowedPaths([]string{path}); err != nil {
+		t.Fatalf("SetAllowedPaths(file) failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := SetAllowedPaths(nil); err != nil {
+			t.Errorf("SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -94,12 +94,12 @@ func TestReadAllowsConfiguredFileOnly(t *testing.T) {
 
 func TestReadRejectsUnsafeFiles(t *testing.T) {
 	root := t.TempDir()
-	if err := ConfigureAllowedPaths([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
+	if err := SetAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("SetAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := SetAllowedPaths(nil); err != nil {
+			t.Errorf("SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -155,12 +155,12 @@ func TestReadRejectsNamedPipesWithoutBlocking(t *testing.T) {
 	if err := exec.Command(mkfifo, path).Run(); err != nil {
 		t.Fatalf("creating named pipe failed: %v", err)
 	}
-	if err := ConfigureAllowedPaths([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedPaths() failed: %v", err)
+	if err := SetAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("SetAllowedPaths() failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := SetAllowedPaths(nil); err != nil {
+			t.Errorf("SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
@@ -180,25 +180,76 @@ func TestReadRejectsNamedPipesWithoutBlocking(t *testing.T) {
 	}
 }
 
-func TestConfigureAllowedPaths__rejectsInvalidPathsAndPreservesConfiguration(t *testing.T) {
+func TestSetAllowedPaths__rejectsInvalidPathsAndPreservesConfiguration(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "VERSION")
 	if err := os.WriteFile(path, []byte("version"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
-	if err := ConfigureAllowedPaths([]string{root}); err != nil {
-		t.Fatalf("ConfigureAllowedPaths(root) failed: %v", err)
+	if err := SetAllowedPaths([]string{root}); err != nil {
+		t.Fatalf("SetAllowedPaths(root) failed: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := ConfigureAllowedPaths(nil); err != nil {
-			t.Errorf("ConfigureAllowedPaths(nil) failed: %v", err)
+		if err := SetAllowedPaths(nil); err != nil {
+			t.Errorf("SetAllowedPaths(nil) failed: %v", err)
 		}
 	})
 
-	if err := ConfigureAllowedPaths([]string{filepath.Join(root, "missing")}); err == nil {
-		t.Fatal("ConfigureAllowedPaths(missing path) unexpectedly succeeded")
+	if err := ValidateAllowedPaths([]string{filepath.Join(root, "missing")}); err == nil {
+		t.Fatal("ValidateAllowedPaths(missing path) unexpectedly succeeded")
+	}
+	if err := SetAllowedPaths([]string{filepath.Join(root, "missing")}); err == nil {
+		t.Fatal("SetAllowedPaths(missing path) unexpectedly succeeded")
 	}
 	if _, err := Read(path); err != nil {
 		t.Fatalf("Read() after invalid configuration failed: %v", err)
+	}
+}
+
+func TestRead__symlinkedAllowedPaths(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink creation may require elevated privileges")
+	}
+
+	root := t.TempDir()
+	path := filepath.Join(root, "VERSION")
+	if err := os.WriteFile(path, []byte("version"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(path) failed: %v", err)
+	}
+	alias := filepath.Join(t.TempDir(), "alias")
+	if err := os.Symlink(root, alias); err != nil {
+		t.Fatalf("os.Symlink(directory) failed: %v", err)
+	}
+	fileAlias := filepath.Join(t.TempDir(), "VERSION")
+	if err := os.Symlink(path, fileAlias); err != nil {
+		t.Fatalf("os.Symlink(file) failed: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name        string
+		allowedPath string
+		readPath    string
+	}{
+		{name: "directory symlink", allowedPath: alias, readPath: filepath.Join(alias, "VERSION")},
+		{name: "file symlink", allowedPath: fileAlias, readPath: fileAlias},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := SetAllowedPaths([]string{tc.allowedPath}); err != nil {
+				t.Fatalf("SetAllowedPaths() failed: %v", err)
+			}
+			t.Cleanup(func() {
+				if err := SetAllowedPaths(nil); err != nil {
+					t.Errorf("SetAllowedPaths(nil) failed: %v", err)
+				}
+			})
+
+			got, err := Read(tc.readPath)
+			if err != nil {
+				t.Fatalf("Read() failed: %v", err)
+			}
+			if string(got) != "version" {
+				t.Errorf("Read() = %q, want %q", got, "version")
+			}
+		})
 	}
 }
