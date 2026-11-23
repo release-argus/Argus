@@ -20,12 +20,16 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
+
 	"github.com/release-argus/Argus/command"
 	"github.com/release-argus/Argus/config/decode"
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -46,6 +50,7 @@ import (
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
+	"github.com/release-argus/Argus/web/metric"
 	"github.com/release-argus/Argus/webhook"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
@@ -1480,6 +1485,12 @@ func TestFromPayload_ReadFromFail(t *testing.T) {
 	}
 }
 
+// Patterns for [status.Status.LastQueried] after [Service.CheckFetches].
+const (
+	lastQueriedNow  = `^[1-9]\d{3}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$` // Track waits an interval.
+	lastQueriedZero = `^0001-01-01T00:00:00Z$`                      // Track queries straight away.
+)
+
 func TestService_CheckFetches(t *testing.T) {
 	svcCfg := plainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
@@ -1495,151 +1506,128 @@ func TestService_CheckFetches(t *testing.T) {
 	if err := testDVL.Query(false, logx.LogFrom{}); err != nil {
 		t.Fatalf("deployedver.Lookup.Query() failed: %v", err)
 	}
+	// Each part is trimmed on its own, so parts may be indented differently.
+	decodeService := func(parts ...string) *Service {
+		for i := range parts {
+			parts[i] = test.TrimYAML(parts[i])
+		}
+		yaml := strings.Join(parts, "\n")
+		return test.Must(t, func() (*Service, error) {
+			return DecodeService("yaml", []byte(yaml), id, svcCfg, notifyCfg, whCfg)
+		})
+	}
+	lvYAML := "latest_version:\n" + lvtest.Lookup(t, "url", false).String("  ")
+	dvYAML := "deployed_version:\n" + dvtest.Lookup(t, "url", false, "").String("  ")
+
 	tests := []struct {
 		name                                      string
 		svc                                       *Service
 		startLatestVersion, wantLatestVersion     string
 		startDeployedVersion, wantDeployedVersion string
+		lastQueriedRegex                          string
 		errRegex                                  string
 	}{
 		{
-			name: "have LatestVersion/nil DeployedVersionLookup",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
+			name:                 "have LatestVersion/nil DeployedVersionLookup",
+			svc:                  decodeService(lvYAML),
 			startLatestVersion:   "foo",
+			wantLatestVersion:    "foo",
+			startDeployedVersion: "bar",
+			wantDeployedVersion:  "bar",
+			lastQueriedRegex:     lastQueriedZero, // LV diff.
+			errRegex:             `^$`,
+		},
+		{
+			name:                 "have LatestVersion/have DeployedVersion",
+			svc:                  decodeService(lvYAML, dvYAML),
+			startLatestVersion:   "foo",
+			wantLatestVersion:    "foo",
+			startDeployedVersion: "bar",
+			wantDeployedVersion:  "bar",
+			lastQueriedRegex:     lastQueriedZero, // LV/DV diff.
+			errRegex:             `^$`,
+		},
+		{
+			name:                 "have LatestVersion/have DeployedVersion/both unchanged",
+			svc:                  decodeService(lvYAML, dvYAML),
+			startLatestVersion:   testLV.GetStatus().LatestVersion(),
+			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
+			startDeployedVersion: testDVL.GetStatus().DeployedVersion(),
+			wantDeployedVersion:  testDVL.GetStatus().DeployedVersion(),
+			lastQueriedRegex:     lastQueriedNow, // Unchanged.
+			errRegex:             `^$`,
+		},
+		{
+			name:                 "have LatestVersion/fills DeployedVersion",
+			svc:                  decodeService(lvYAML, dvYAML),
+			startLatestVersion:   "foo",
+			wantLatestVersion:    "foo",
+			startDeployedVersion: "",
+			wantDeployedVersion:  testDVL.GetStatus().DeployedVersion(),
+			lastQueriedRegex:     lastQueriedZero, // LV diff.
+			errRegex:             `^$`,
+		},
+		{
+			name:                 "fills LatestVersion/have DeployedVersion",
+			svc:                  decodeService(lvYAML, dvYAML),
 			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
 			startDeployedVersion: "bar",
 			wantDeployedVersion:  "bar",
+			lastQueriedRegex:     lastQueriedZero, // DV diff.
 			errRegex:             `^$`,
 		},
 		{
-			name: "have LatestVersion/have DeployedVersionLookup",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", false, "").String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
-			wantDeployedVersion:  testDVL.GetStatus().DeployedVersion(),
-			startDeployedVersion: "bar",
-			errRegex:             `^$`,
+			name:                "fills both",
+			svc:                 decodeService(lvYAML, dvYAML),
+			wantLatestVersion:   testLV.GetStatus().LatestVersion(),
+			wantDeployedVersion: testDVL.GetStatus().DeployedVersion(),
+			lastQueriedRegex:    lastQueriedNow, // LV/DV unset previously.
+			errRegex:            `^$`,
 		},
 		{
-			name: "latest_version query fails",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", true).String("  ")+`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", false, "").String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
+			name:               "latest_version query fails",
+			svc:                decodeService("latest_version:\n"+lvtest.Lookup(t, "url", true).String("  "), dvYAML),
 			startLatestVersion: "foo",
 			wantLatestVersion:  "foo",
+			lastQueriedRegex:   `^$`, // Left unset on failure.
 			errRegex: test.TrimYAML(`
 				^latest_version fetches failed:
 					x509 \(certificate invalid\)$`,
 			),
 		},
 		{
-			name: "deployed_version query fails",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", true, "").String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
+			name:                 "deployed_version query fails",
+			svc:                  decodeService(lvYAML, "deployed_version:\n"+dvtest.Lookup(t, "url", true, "").String("  ")),
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
+			wantLatestVersion:    "foo",
 			startDeployedVersion: "bar",
 			wantDeployedVersion:  "bar",
+			lastQueriedRegex:     `^$`, // Left unset on failure.
 			errRegex: test.TrimYAML(`
 				^deployed_version fetches failed:
 					x509 \(certificate invalid\)$`,
 			),
 		},
 		{
-			name: "both queried",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", false, "").String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			wantLatestVersion:   testLV.GetStatus().LatestVersion(),
-			wantDeployedVersion: testDVL.GetStatus().DeployedVersion(),
-			errRegex:            `^$`,
-		},
-		{
 			name: "manual deployed_version is left for AddService to apply",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-						deployed_version:
-							type: manual
-							version: 1.2.3
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
+			svc: decodeService(lvYAML, `
+				deployed_version:
+					type: manual
+					version: 1.2.3`),
 			startLatestVersion:   "foo",
-			wantLatestVersion:    testLV.GetStatus().LatestVersion(),
+			wantLatestVersion:    "foo",
 			startDeployedVersion: "bar",
-			wantDeployedVersion:  "bar", // A manual lookup is not queried.
+			wantDeployedVersion:  "bar",           // A manual lookup is not queried.
+			lastQueriedRegex:     lastQueriedZero, // LV diff.
 			errRegex:             `^$`,
 		},
 		{
 			name: "active=false queries neither",
-			svc: test.Must(t, func() (*Service, error) {
-				return DecodeService(
-					"yaml", []byte(test.TrimYAML(`
-						options:
-							active: false
-						latest_version:
-						`+lvtest.Lookup(t, "url", false).String("  ")+`
-						deployed_version:
-						`+dvtest.Lookup(t, "url", false, "").String("  ")+`
-					`)),
-					id,
-					svcCfg, notifyCfg, whCfg,
-				)
-			}),
-			errRegex: `^$`,
+			svc: decodeService(`
+				options:
+					active: false`, lvYAML, dvYAML),
+			lastQueriedRegex: `^$`, // Never queried.
+			errRegex:         `^$`,
 		},
 	}
 
@@ -1679,11 +1667,163 @@ func TestService_CheckFetches(t *testing.T) {
 				)
 			}
 
+			if got := tc.svc.Status.LastQueried(); !util.RegexCheck(tc.lastQueriedRegex, got) {
+				t.Errorf("Status.LastQueried() mismatch\ngot:  %q\nwant: %q", got, tc.lastQueriedRegex)
+			}
+
 			if got, want := len(tc.svc.Status.AnnounceChannel), 0; got != want {
 				t.Errorf(
 					"Status.AnnounceChannel message count mismatch\ngot:  %d\nwant: %d",
 					got, want,
 				)
+			}
+		})
+	}
+}
+
+func TestService_CheckFetches__noSideEffects(t *testing.T) {
+	svcCfg := plainDefaultsConfig()
+	notifyCfg := shoutrrrtest.PlainConfig()
+	whCfg := whtest.PlainConfig()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("1.2.3"))
+	}))
+	t.Cleanup(server.Close)
+	const failURL = "http://127.0.0.1:1"
+	const failRegex = `^latest_version fetches failed:`
+
+	type versions struct {
+		latestVersion, latestVersionTimestamp     string
+		deployedVersion, deployedVersionTimestamp string
+		approvedVersion, lastQueried              string
+	}
+	have := versions{
+		latestVersion: "0.0.0", latestVersionTimestamp: "2020-01-02T03:04:05Z",
+		deployedVersion: "1.0.0", deployedVersionTimestamp: "2020-01-02T03:04:06Z",
+		approvedVersion: "2.0.0", lastQueried: "2020-01-02T03:04:07Z",
+	}
+
+	tests := []struct {
+		name                                   string
+		url, deployedVersionURL                string
+		start                                  versions
+		errRegex                               string
+		wantLatestVersion, wantDeployedVersion string
+		lastQueriedRegex                       string
+	}{
+		{
+			name:                "has versions/success",
+			url:                 server.URL,
+			start:               have,
+			errRegex:            `^$`,
+			wantLatestVersion:   have.latestVersion,
+			wantDeployedVersion: have.deployedVersion,
+			lastQueriedRegex:    lastQueriedZero, // LV diff.
+		},
+		{
+			name:                "has versions/with deployed_version/success",
+			url:                 server.URL,
+			deployedVersionURL:  server.URL,
+			start:               have,
+			errRegex:            `^$`,
+			wantLatestVersion:   have.latestVersion,
+			wantDeployedVersion: have.deployedVersion,
+			lastQueriedRegex:    lastQueriedZero, // LV/DV diff.
+		},
+		{
+			name:                "has versions/failure",
+			url:                 failURL,
+			start:               have,
+			errRegex:            failRegex,
+			wantLatestVersion:   have.latestVersion,
+			wantDeployedVersion: have.deployedVersion,
+			lastQueriedRegex:    `^2020-01-02T03:04:07Z$`, // Unchanged.
+		},
+		{
+			name:                "lacks versions/success",
+			url:                 server.URL,
+			errRegex:            `^$`,
+			wantLatestVersion:   "1.2.3",
+			wantDeployedVersion: "1.2.3", // Without a deployed_version, it copies LatestVersion.
+			lastQueriedRegex:    lastQueriedNow,
+		},
+		{
+			name:             "lacks versions/failure",
+			url:              failURL,
+			errRegex:         failRegex,
+			lastQueriedRegex: `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			yaml := test.TrimYAML(`
+				latest_version:
+				  type: url
+					url: ` + tc.url)
+			if tc.deployedVersionURL != "" {
+				yaml += "\n" + test.TrimYAML(`
+					deployed_version:
+					  type: url
+						url: `+tc.deployedVersionURL)
+			}
+			svc := test.Must(t, func() (*Service, error) {
+				return DecodeService("yaml", []byte(yaml), t.Name(), svcCfg, notifyCfg, whCfg)
+			})
+			svc.Defaults = svcCfg.Soft
+			svc.HardDefaults = svcCfg.Hard
+			svc.Options.SetDefaults(&svc.Defaults.Options, &svc.HardDefaults.Options)
+			announceChannel := make(chan []byte, 8)
+			databaseChannel := make(chan dbtype.Message, 8)
+			svc.init(notifyCfg, whCfg, announceChannel, databaseChannel, nil)
+			svc.Status.SetLatestVersion(tc.start.latestVersion, tc.start.latestVersionTimestamp, false)
+			svc.Status.SetDeployedVersion(tc.start.deployedVersion, tc.start.deployedVersionTimestamp, false)
+			svc.Status.SetApprovedVersion(tc.start.approvedVersion, false)
+			if tc.start.lastQueried != "" {
+				svc.Status.SetLastQueried(tc.start.lastQueried)
+			}
+			failed := true
+			svc.Status.Fails.Command.Init(1)
+			svc.Status.Fails.Command.Set(0, true)
+			svc.Status.Fails.Webhook.Init(1)
+			svc.Status.Fails.Webhook.Set("wh", &failed)
+			// Distinct from every state, so a write is visible.
+			sentinel := 99.0
+			gauge := metric.LatestVersionIsDeployed.WithLabelValues(svc.ID)
+			gauge.Set(sentinel)
+			t.Cleanup(func() { metric.DeletePrometheusGauge(metric.LatestVersionIsDeployed, svc.ID, "") })
+
+			err := svc.CheckFetches()
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+
+			rows := []test.FieldAssertion{
+				{Name: "len(Status.AnnounceChannel)", Got: len(svc.Status.AnnounceChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "len(Status.DatabaseChannel)", Got: len(svc.Status.DatabaseChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "metric.LatestVersionIsDeployed", Got: testutil.ToFloat64(gauge), Want: sentinel, Mode: test.CompareEqual},
+				{Name: "metric.DeployedVersionQueryResultTotal", Got: testutil.ToFloat64(metric.DeployedVersionQueryResultTotal.WithLabelValues(svc.ID, "url", metric.ActionResultSuccess)), Want: 0.0, Mode: test.CompareEqual},
+				{Name: "Status.Fails.Command.Get(0)", Got: test.StringifyPtr(svc.Status.Fails.Command.Get(0)), Want: "true", Mode: test.CompareEqual},
+				{Name: `Status.Fails.Webhook.Get("wh")`, Got: test.StringifyPtr(svc.Status.Fails.Webhook.Get("wh")), Want: "true", Mode: test.CompareEqual},
+				{Name: "Status.LatestVersion()", Got: svc.Status.LatestVersion(), Want: tc.wantLatestVersion, Mode: test.CompareEqual},
+				{Name: "Status.DeployedVersion()", Got: svc.Status.DeployedVersion(), Want: tc.wantDeployedVersion, Mode: test.CompareEqual},
+				{Name: "Status.ApprovedVersion()", Got: svc.Status.ApprovedVersion(), Want: tc.start.approvedVersion, Mode: test.CompareEqual},
+			}
+			if tc.start.latestVersion != "" {
+				// A version the Service has is left as it was, for Track to act on.
+				rows = append(rows,
+					test.FieldAssertion{Name: "Status.LatestVersionTimestamp()", Got: svc.Status.LatestVersionTimestamp(), Want: tc.start.latestVersionTimestamp, Mode: test.CompareEqual},
+					test.FieldAssertion{Name: "Status.DeployedVersionTimestamp()", Got: svc.Status.DeployedVersionTimestamp(), Want: tc.start.deployedVersionTimestamp, Mode: test.CompareEqual},
+				)
+			}
+			if testErr := test.AssertFields(t, rows, ""); testErr != nil {
+				t.Error(testErr)
+			}
+			if got := svc.Status.LastQueried(); !util.RegexCheck(tc.lastQueriedRegex, got) {
+				t.Errorf("Status.LastQueried() mismatch\ngot:  %q\nwant: %q", got, tc.lastQueriedRegex)
 			}
 		})
 	}
