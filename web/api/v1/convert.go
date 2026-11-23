@@ -347,9 +347,10 @@ func convertAndCensorDeployedVersionLookup(input deployedver.Lookup) *apitype.De
 	switch dvl := input.(type) {
 	case *dvfile.Lookup:
 		return &apitype.DeployedVersionLookup{
-			Type:  input.GetType(),
-			Path:  dvl.Path,
-			Regex: dvl.Regex,
+			Type:          input.GetType(),
+			Path:          dvl.Path,
+			Regex:         dvl.Regex,
+			RegexTemplate: dvl.RegexTemplate,
 		}
 	case *dvweb.Lookup:
 		apiDVL := apitype.DeployedVersionLookup{

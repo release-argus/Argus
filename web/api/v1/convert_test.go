@@ -1701,13 +1701,15 @@ func TestConvertAndCensorDeployedVersionLookup(t *testing.T) {
 		{
 			name: "file/lookup",
 			input: &dvfile.Lookup{
-				Path:  "/path/to/allowed/files/VERSION",
-				Regex: `productversion="([^"]+)"`,
+				Path:          "/path/to/allowed/files/VERSION",
+				Regex:         `productversion="([^"]+)"`,
+				RegexTemplate: "v$1",
 			},
 			want: &apitype.DeployedVersionLookup{
-				Type:  "file",
-				Path:  "/path/to/allowed/files/VERSION",
-				Regex: `productversion="([^"]+)"`,
+				Type:          "file",
+				Path:          "/path/to/allowed/files/VERSION",
+				Regex:         `productversion="([^"]+)"`,
+				RegexTemplate: "v$1",
 			},
 		},
 		{
