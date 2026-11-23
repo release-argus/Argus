@@ -225,16 +225,37 @@ func TestRead__symlinkedAllowedPaths(t *testing.T) {
 		t.Fatalf("os.Symlink(file) failed: %v", err)
 	}
 
-	for _, tc := range []struct {
-		name        string
-		allowedPath string
-		readPath    string
+	tests := []struct {
+		name         string
+		allowedPaths []string
+		readPaths    []string
+		wantEntries  int
 	}{
-		{name: "directory symlink", allowedPath: alias, readPath: filepath.Join(alias, "VERSION")},
-		{name: "file symlink", allowedPath: fileAlias, readPath: fileAlias},
-	} {
+		{
+			name:         "directory symlink",
+			allowedPaths: []string{alias},
+			readPaths:    []string{filepath.Join(alias, "VERSION")},
+			wantEntries:  1,
+		},
+		{
+			name:         "file symlink",
+			allowedPaths: []string{fileAlias},
+			readPaths:    []string{fileAlias},
+			wantEntries:  1,
+		},
+		{
+			name:         "directory and its symlink are merged",
+			allowedPaths: []string{root, alias, root},
+			readPaths:    []string{path, filepath.Join(alias, "VERSION")},
+			wantEntries:  1,
+		},
+	}
+
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := SetAllowedPaths([]string{tc.allowedPath}); err != nil {
+			// Serial: the allowed paths are process-wide.
+
+			if err := SetAllowedPaths(tc.allowedPaths); err != nil {
 				t.Fatalf("SetAllowedPaths() failed: %v", err)
 			}
 			t.Cleanup(func() {
@@ -243,12 +264,17 @@ func TestRead__symlinkedAllowedPaths(t *testing.T) {
 				}
 			})
 
-			got, err := Read(tc.readPath)
-			if err != nil {
-				t.Fatalf("Read() failed: %v", err)
+			if got := len(configuredPaths.Load().paths); got != tc.wantEntries {
+				t.Errorf("configured entry count mismatch\ngot:  %d\nwant: %d", got, tc.wantEntries)
 			}
-			if string(got) != "version" {
-				t.Errorf("Read() = %q, want %q", got, "version")
+			for _, readPath := range tc.readPaths {
+				got, err := Read(readPath)
+				if err != nil {
+					t.Fatalf("Read(%q) failed: %v", readPath, err)
+				}
+				if got, want := string(got), "version"; got != want {
+					t.Errorf("Read(%q) mismatch\ngot:  %q\nwant: %q", readPath, got, want)
+				}
 			}
 		})
 	}
