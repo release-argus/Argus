@@ -148,7 +148,7 @@ test.describe('Service creation', () => {
 		});
 	});
 
-	test('deployed-version=file reads and extracts the Synology version', async ({
+	test('deployed-version=file reads and extracts the version', async ({
 		page,
 	}, testInfo) => {
 		const baseID = 'DEPLOYED_VERSION=FILE';
@@ -159,7 +159,7 @@ test.describe('Service creation', () => {
 		await createService(page, id, {
 			deployedVersion: {
 				path: fileURLToPath(
-					new URL('./fixtures/files/Synology/VERSION', import.meta.url),
+					new URL('./fixtures/files/VERSION', import.meta.url),
 				),
 				regex: 'productversion="([^"]+)"',
 				type: 'file',
