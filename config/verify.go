@@ -78,7 +78,7 @@ func (c *Config) CheckValues() bool {
 			errs,
 			&decode.ErrKeyField{
 				Key: "notify",
-				Err: notifyErr,gst
+				Err: notifyErr,
 			},
 		)
 	}
