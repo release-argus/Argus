@@ -5,7 +5,7 @@
 #  auth:
 #    enabled: true
 #  data:
-#    # Allow local-file deployed-version lookups only beneath these directories.
+#    # Directories (and anything beneath them) or individual files that file deployed-version lookups may read.
 #    file_read_paths:
 #      - /path/to/allowed/files
 service:
