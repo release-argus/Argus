@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 )
@@ -101,14 +102,7 @@ func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
 
 func appendUnique(paths []string, additions ...string) []string {
 	for _, addition := range additions {
-		found := false
-		for _, path := range paths {
-			if path == addition {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(paths, addition) {
 			paths = append(paths, addition)
 		}
 	}
