@@ -850,7 +850,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					deployed_version:
-						type: "unsupported" <invalid> .*\['manual', 'url'\].*$`,
+						type: "unsupported" <invalid> .*\['command', 'manual', 'url'\].*$`,
 			),
 		},
 		{
@@ -865,7 +865,7 @@ func TestDecodeService(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^"__name__":
 					deployed_version:
-						type: <required> .*\['manual', 'url'\].*$`,
+						type: <required> .*\['command', 'manual', 'url'\].*$`,
 			),
 		},
 		{
