@@ -364,6 +364,19 @@ export const urlPrefixValidator: RegexValidation = {
 	regex: /^https?:\/\//,
 };
 
+/**
+ * Absolute file path validator.
+ *
+ * A loose check, as the browser can't know the server's OS:
+ * - accepts POSIX (`/`),
+ * - Windows drive (`C:\` / `C:/`)
+ * - UNC (`\\`) prefixes.
+ */
+export const absoluteFilePathValidator: RegexValidation = {
+	message: 'Must be an absolute path.',
+	regex: /^(?:\/|[A-Za-z]:[\\/]|\\\\)/,
+};
+
 type IsUsingDefaultsParams<T> = {
 	/* The input data */
 	arg: T;

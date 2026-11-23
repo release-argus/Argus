@@ -18,6 +18,7 @@ import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import type { BuilderResponse } from '@/utils/api/types/config-edit/shared/types';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import {
+	absoluteFilePathValidator,
 	CUSTOM_ISSUE_CODE,
 	REQUIRED_MESSAGE,
 	regexStringWithFallback,
@@ -81,13 +82,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 			}
 		});
 	const dvFileSchema = deployedVersionFileSchema.extend({
-		path: stringWithFallback(
-			{
-				message: 'Must be an absolute path.',
-				regex: /^(?:\/|[A-Za-z]:[\\/]|\\\\)/,
-			},
-			true,
-		),
+		path: stringWithFallback(absoluteFilePathValidator, true),
 		regex: regexStringWithFallback(false),
 	});
 
