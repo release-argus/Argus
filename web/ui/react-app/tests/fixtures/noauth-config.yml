@@ -31,3 +31,27 @@ service:
       icon: https://raw.githubusercontent.com/release-argus/Argus/master/web/ui/react-app/public/favicon.svg
       icon_link_to: https://release-argus.io
       web_url: https://github.com/release-argus/Argus/blob/master/CHANGELOG.md
+  playwright/no-release:
+    name: No release yet
+    latest_version:
+      type: url
+      url: http://localhost:1/
+      url_commands:
+        - type: regex
+          regex: ver([0-9.]+)
+    webhook:
+      no-release:
+        type: github
+        url: https://valid.release-argus.io/hooks/github-style
+        secret: argus
+  playwright/no-release-manual:
+    name: No release yet (manual)
+    latest_version:
+      type: url
+      url: http://localhost:1/
+      url_commands:
+        - type: regex
+          regex: ver([0-9.]+)
+    deployed_version:
+      type: manual
+      version: 1.0.0

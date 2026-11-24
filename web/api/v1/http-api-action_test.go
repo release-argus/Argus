@@ -407,18 +407,19 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
 	tests := []struct {
-		name          string
-		serviceID     *string
-		active        *bool
-		payload       *string
-		target        *string
-		commands      command.Commands
-		commandFails  []*bool
-		webhooks      webhook.Webhooks
-		webhookFails  map[string]*bool
-		removeDVL     bool
-		latestVersion string
-		wants         wants
+		name            string
+		serviceID       *string
+		active          *bool
+		payload         *string
+		target          *string
+		commands        command.Commands
+		commandFails    []*bool
+		webhooks        webhook.Webhooks
+		webhookFails    map[string]*bool
+		removeDVL       bool
+		latestVersion   string
+		noLatestVersion bool
+		wants           wants
 	}{
 		{
 			name:    "invalid payload",
@@ -449,6 +450,29 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 				bodyRegex:       `^{"message":"service is inactive, actions can't be run for it"}$`,
 				statusCode:      http.StatusBadRequest,
 				wantSkipMessage: false,
+			},
+		},
+		{
+			name:            "ARGUS_SKIP/latest_version lookup has not found a version",
+			target:          new(ActionSkip),
+			noLatestVersion: true,
+			wants: wants{
+				stdoutRegex: `^WARNING: .*no latest version found yet, so there is no release to action`,
+				bodyRegex:   `^{"message":"no latest version found yet, so there is no release to action"}$`,
+				statusCode:  http.StatusConflict,
+			},
+		},
+		{
+			name:   "ARGUS_ALL/latest_version lookup has not found a version",
+			target: new(ActionAll),
+			commands: command.Commands{
+				{"true", "no-latest-version"},
+			},
+			noLatestVersion: true,
+			wants: wants{
+				stdoutRegex: `^WARNING: .*no latest version found yet, so there is no release to action`,
+				bodyRegex:   `^{"message":"no latest version found yet, so there is no release to action"}$`,
+				statusCode:  http.StatusConflict,
 			},
 		},
 		{
@@ -750,8 +774,10 @@ func TestHTTP_HTTPServiceRunActions(t *testing.T) {
 
 			svc.Status.SetAnnounceChannel(api.Config.HardDefaults.Service.Status.AnnounceChannel)
 			svc.Status.SetDeployedVersion("2.0.0", "", false)
-			svc.Status.SetLatestVersion(util.ValueOr(tc.latestVersion, "3.0.0"), "", false)
-			svc.Status.SetApprovedVersion("2.0.0", false)
+			if !tc.noLatestVersion {
+				svc.Status.SetLatestVersion(util.ValueOr(tc.latestVersion, "3.0.0"), "", false)
+				svc.Status.SetApprovedVersion("2.0.0", false)
+			}
 
 			api.Config.OrderMu.Lock()
 			api.Config.Service[tc.name] = svc

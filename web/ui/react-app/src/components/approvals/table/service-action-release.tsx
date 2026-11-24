@@ -11,6 +11,7 @@ import type {
 	ModalType,
 	ServiceSummary,
 } from '@/utils/api/types/config/summary';
+import { hasRelease } from '@/utils/api/types/requests/service-edit';
 
 type ServiceActionReleaseProps = {
 	/* The row in the table */
@@ -58,7 +59,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 	const updateSkipped = service.status?.state === 'SKIPPED';
 	const canApproveManually =
 		!haveUpdateAction &&
-		service.status?.state !== 'UP_TO_DATE' &&
+		(updateAvailable || updateSkipped) &&
 		service.deployed_version_type === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value;
 
 	return (
@@ -87,7 +88,7 @@ export const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					Skip
 				</Button>
 			)}
-			{canAction && haveUpdateAction && (
+			{canAction && haveUpdateAction && hasRelease(service) && (
 				<Button
 					aria-label={updateSkipped ? 'Approve release' : 'Resend actions'}
 					key="approve"

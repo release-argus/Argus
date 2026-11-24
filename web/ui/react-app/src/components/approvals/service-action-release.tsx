@@ -7,6 +7,7 @@ import type {
 	ModalType,
 	ServiceSummary,
 } from '@/utils/api/types/config/summary';
+import { hasRelease } from '@/utils/api/types/requests/service-edit';
 
 type ServiceActionReleaseProps = {
 	service: ServiceSummary;
@@ -89,7 +90,7 @@ const ServiceActionRelease: FC<ServiceActionReleaseProps> = ({
 					Skip
 				</Button>
 			)}
-			{info.haveUpdateAction && (
+			{info.haveUpdateAction && hasRelease(service) && (
 				<Button
 					aria-label={updateSkipped ? 'Approve release' : 'Resend actions'}
 					key="approve"

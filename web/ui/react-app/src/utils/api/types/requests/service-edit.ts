@@ -105,11 +105,20 @@ export const applyDeployedVersionUpdate = (
 	);
 };
 
+/**
+ * Reports whether the service has a release to action, as the API refuses
+ * actions until its latest_version lookup finds a version.
+ *
+ * @param service - The service's summary.
+ */
+export const hasRelease = (service: ServiceSummary) =>
+	Boolean(service.status?.latest_version);
+
 export const getServiceUpdateState = (
 	status: StatusSummaryType,
 ): ServiceUpdateState => {
-	// Loading 'status' still.
-	if (!status.latest_version && !status.deployed_version) return null;
+	// Loading, or nothing to action until the latest_version lookup finds a version.
+	if (!status.latest_version) return null;
 
 	// Latest version is deployed.
 	if (status.latest_version === status.deployed_version) return 'UP_TO_DATE';
