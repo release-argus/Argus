@@ -858,8 +858,11 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 		return
 	}
 
-	// DeployedVersion is LatestVersion if there is no DeployedVersionLookup.
-	if newService.DeployedVersionLookup == nil {
+	// Without a DeployedVersionLookup, DeployedVersion follows LatestVersion,
+	// unless it is behind a release awaiting its Commands/Webhooks.
+	if newService.DeployedVersionLookup == nil &&
+		(newService.Status.DeployedVersion() == "" ||
+			(len(newService.Command) == 0 && len(newService.Webhook) == 0)) {
 		newService.Status.SetDeployedVersion(
 			newService.Status.LatestVersion(),
 			newService.Status.LatestVersionTimestamp(),
