@@ -19,64 +19,279 @@ package file
 import (
 	"testing"
 
-	"github.com/release-argus/Argus/service/deployed_version/types/base"
+	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/test"
+	opttest "github.com/release-argus/Argus/service/option/test"
+	"github.com/release-argus/Argus/service/status"
 )
 
-func TestLookup_Decode__emptyOrNull(t *testing.T) {
-	for _, data := range []string{"", "null"} {
-		t.Run(data, func(t *testing.T) {
-			got, err := Decode("yaml", []byte(data), nil, nil, base.DefaultsConfig{})
-			if err != nil {
-				t.Fatalf("Decode() failed: %v", err)
+func TestLookup_DecodeSelf(t *testing.T) {
+	dvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
+
+	tests := []struct {
+		name         string
+		format, data string
+		errRegex     string
+		want         string
+	}{
+		{
+			name:     "JSON/empty",
+			format:   "json",
+			data:     ``,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/empty object",
+			format:   "json",
+			data:     `{}`,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "YAML/empty",
+			format:   "yaml",
+			data:     ``,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "YAML/null",
+			format:   "yaml",
+			data:     `null`,
+			errRegex: `^$`,
+			want:     "{}\n",
+		},
+		{
+			name:     "JSON/invalid payload decode error",
+			format:   "json",
+			data:     `{`,
+			errRegex: `unexpected`,
+		},
+		{
+			name:     "JSON/invalid data types",
+			format:   "json",
+			data:     `{"path": ["/VERSION"]}`,
+			errRegex: `^json: .*unmarshal.*$`,
+		},
+		{
+			name:   "JSON/filled",
+			format: "json",
+			data: test.TrimJSON(`{
+				"type": "file",
+				"path": "/VERSION",
+				"regex": "v([0-9]+)-([0-9]+)",
+				"regex_template": "$1.$2"
+			}`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: file
+				path: /VERSION
+				regex: v([0-9]+)-([0-9]+)
+				regex_template: $1.$2
+			`),
+		},
+		{
+			name:   "YAML/filled",
+			format: "yaml",
+			data: test.TrimYAML(`
+				type: file
+				path: /VERSION
+				regex: 'v([0-9]+)-([0-9]+)'
+				regex_template: '$1.$2'
+			`),
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: file
+				path: /VERSION
+				regex: v([0-9]+)-([0-9]+)
+				regex_template: $1.$2
+			`),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			options := opttest.PlainOptions(optCfg)
+			svcStatus := &status.Status{}
+			lookup := &Lookup{}
+			lookup.Init(
+				options,
+				svcStatus,
+				dvCfg,
+			)
+
+			lookup, err, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Lookup, error) {
+					err := lookup.DecodeSelf(format, data)
+					return lookup, err
+				},
+				tc.format, tc.data,
+				func(v *Lookup) string { return v.String("") },
+				tc.want,
+				tc.errRegex,
+				"Lookup.DecodeSelf",
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
 			}
-			if got != nil {
-				t.Errorf("Decode() = %#v, want nil", got)
+			if err != nil || lookup == nil {
+				return
+			}
+
+			fieldTests := []test.FieldAssertion{
+				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
 			}
 		})
 	}
 }
 
-func TestLookup_Decode__baseDecodeError(t *testing.T) {
-	if _, err := Decode("yaml", []byte("type: []"), nil, nil, base.DefaultsConfig{}); err == nil {
-		t.Fatal("Decode() unexpectedly succeeded with an invalid base field")
-	}
-}
+func TestLookup_ApplyOverrides(t *testing.T) {
+	dvCfg := plainDefaultsConfig()
+	optCfg := opttest.PlainDefaultsConfig()
 
-func TestLookup_Decode__fileDecodeError(t *testing.T) {
-	if _, err := Decode("yaml", []byte("path: []"), nil, nil, base.DefaultsConfig{}); err == nil {
-		t.Fatal("Decode() unexpectedly succeeded with an invalid file field")
-	}
-}
-
-func TestLookup_DecodeSelf__errorAndSuccess(t *testing.T) {
-	lookup := &Lookup{Path: "/before"}
-	if err := lookup.DecodeSelf("yaml", []byte("path: []")); err == nil {
-		t.Fatal("DecodeSelf() unexpectedly succeeded with an invalid file field")
-	}
-	if lookup.Path != "/before" {
-		t.Errorf("Path after failed DecodeSelf() = %q, want %q", lookup.Path, "/before")
+	type Args struct {
+		format, data string
+		target       *Lookup
 	}
 
-	if err := lookup.DecodeSelf("yaml", []byte("path: /after\nregex: 'v([0-9.]+)'")); err != nil {
-		t.Fatalf("DecodeSelf() failed: %v", err)
+	tests := []struct {
+		name     string
+		args     Args
+		errRegex string
+		want     string
+	}{
+		{
+			name: "empty data returns previous",
+			args: Args{
+				format: "json",
+				data:   "",
+				target: &Lookup{},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "invalid payload causes decode error",
+			args: Args{
+				format: "json",
+				data:   `{`,
+				target: &Lookup{},
+			},
+			errRegex: `unexpected`,
+		},
+		{
+			name: "override error/base.Lookup",
+			args: Args{
+				format: "json",
+				data:   `{"type": []}`,
+				target: &Lookup{},
+			},
+			errRegex: `^json: .*unmarshal.*$`,
+		},
+		{
+			name: "override error/Lookup",
+			args: Args{
+				format: "json",
+				data:   `{"path": ["/VERSION"]}`,
+				target: &Lookup{},
+			},
+			errRegex: `^json: .*unmarshal.*$`,
+		},
+		{
+			name: "partial override keeps other fields",
+			args: Args{
+				format: "json",
+				data:   `{"regex": "v([0-9.]+)"}`,
+				target: &Lookup{
+					Path:          "/VERSION",
+					Regex:         "re",
+					RegexTemplate: "$1",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				path: /VERSION
+				regex: v([0-9.]+)
+				regex_template: $1
+			`),
+		},
+		{
+			name: "filled",
+			args: Args{
+				format: "json",
+				data: test.TrimJSON(`{
+					"type": "file",
+					"path": "/new/VERSION",
+					"regex": "v([0-9.]+)",
+					"regex_template": "$1-beta"
+				}`),
+				target: &Lookup{
+					Path:          "/VERSION",
+					Regex:         "re",
+					RegexTemplate: "template",
+				},
+			},
+			errRegex: `^$`,
+			want: test.TrimYAML(`
+				type: file
+				path: /new/VERSION
+				regex: v([0-9.]+)
+				regex_template: $1-beta
+			`),
+		},
 	}
-	if lookup.Path != "/after" || lookup.Regex != "v([0-9.]+)" {
-		t.Errorf("DecodeSelf() result = %#v, want path and regex updated", lookup)
-	}
-}
 
-func TestLookup_ApplyOverrides__errorAndEmptyData(t *testing.T) {
-	lookup := &Lookup{Path: "/before"}
-	if err := lookup.ApplyOverrides("yaml", []byte("path: []")); err == nil {
-		t.Fatal("ApplyOverrides() unexpectedly succeeded with an invalid file field")
-	}
-	if err := lookup.ApplyOverrides("yaml", nil); err != nil {
-		t.Fatalf("ApplyOverrides(empty) failed: %v", err)
-	}
-	if err := lookup.ApplyOverrides("yaml", []byte("path: /after")); err != nil {
-		t.Fatalf("ApplyOverrides() failed: %v", err)
-	}
-	if lookup.Path != "/after" {
-		t.Errorf("Path after ApplyOverrides() = %q, want %q", lookup.Path, "/after")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			options := opttest.PlainOptions(optCfg)
+			svcStatus := &status.Status{}
+			tc.args.target.Init(options, svcStatus, dvCfg)
+			if tc.want == "" {
+				tc.want = decode.ToYAMLString(tc.args.target, "")
+			}
+
+			lookup, err, testErr := test.AssertApplyOverrides(
+				t,
+				tc.args.target,
+				func(format string, data []byte, v *Lookup) (*Lookup, error) {
+					err := v.ApplyOverrides(format, data)
+					return v, err
+				},
+				tc.args.format, tc.args.data,
+				func(v *Lookup) string { return decode.ToYAMLString(v, "") },
+				tc.want,
+				tc.errRegex,
+				true,
+				"Lookup.ApplyOverrides",
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
+			}
+			if err != nil || lookup == nil {
+				return
+			}
+
+			fieldTests := []test.FieldAssertion{
+				{Name: "Options", Got: lookup.Options, Want: options, Mode: test.CompareSamePointer},
+				{Name: "Status", Got: lookup.Status, Want: svcStatus, Mode: test.CompareSamePointer},
+				{Name: "Defaults", Got: lookup.Defaults, Want: dvCfg.Soft, Mode: test.CompareSamePointer},
+				{Name: "HardDefaults", Got: lookup.HardDefaults, Want: dvCfg.Hard, Mode: test.CompareSamePointer},
+			}
+			if testErr := test.AssertFields(t, fieldTests, "Lookup"); testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
 	}
 }

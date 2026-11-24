@@ -32,7 +32,7 @@ func TestRead(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatalf("os.MkdirAll() failed: %v", err)
 	}
-	if err := os.WriteFile(path, []byte("productversion=\"7.2.2-72806\"\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("productversion=\"1.2.3-54321\"\n"), 0o600); err != nil {
 		t.Fatalf("os.WriteFile() failed: %v", err)
 	}
 	if err := SetAllowedPaths([]string{root}); err != nil {
@@ -48,7 +48,7 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read() failed: %v", err)
 	}
-	if want := "productversion=\"7.2.2-72806\"\n"; string(got) != want {
+	if want := "productversion=\"1.2.3-54321\"\n"; string(got) != want {
 		t.Errorf("Read() mismatch\ngot:  %q\nwant: %q", got, want)
 	}
 
