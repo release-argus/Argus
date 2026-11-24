@@ -124,12 +124,9 @@ func Read(path string) ([]byte, error) {
 	var baseDir, relative string
 	for _, allowedPath := range allowed.paths {
 		if allowedPath.isFile {
-			for _, matchPath := range allowedPath.matchPaths {
-				if path == matchPath {
-					baseDir = filepath.Dir(allowedPath.path)
-					relative = filepath.Base(allowedPath.path)
-					break
-				}
+			if slices.Contains(allowedPath.matchPaths, path) {
+				baseDir = filepath.Dir(allowedPath.path)
+				relative = filepath.Base(allowedPath.path)
 			}
 			if baseDir != "" {
 				break
