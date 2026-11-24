@@ -43,6 +43,7 @@ import (
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/web/metric"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -149,6 +150,13 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			api.httpLatestVersionRefreshUncreated(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
+
+			// A preview leaves no metrics behind for its placeholder ID.
+			assertNoMetricSeries(t, "httpVersionRefreshUncreated_Latest", map[string]metricSeriesDeleter{
+				"LatestVersionIsDeployed":       metric.LatestVersionIsDeployed,
+				"LatestVersionQueryResultLast":  metric.LatestVersionQueryResultLast,
+				"LatestVersionQueryResultTotal": metric.LatestVersionQueryResultTotal,
+			})
 
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
@@ -271,6 +279,13 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			api.httpDeployedVersionRefreshUncreated(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
+
+			// A preview leaves no metrics behind for its placeholder ID.
+			assertNoMetricSeries(t, "httpVersionRefreshUncreated_Deployed", map[string]metricSeriesDeleter{
+				"LatestVersionIsDeployed":         metric.LatestVersionIsDeployed,
+				"DeployedVersionQueryResultLast":  metric.DeployedVersionQueryResultLast,
+				"DeployedVersionQueryResultTotal": metric.DeployedVersionQueryResultTotal,
+			})
 
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
