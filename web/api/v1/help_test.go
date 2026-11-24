@@ -185,6 +185,8 @@ func testLoad(t *testing.T, file string) *config.Config {
 	if !cfg.Load(t.Context(), g, file, &flags) {
 		t.Fatalf("Config.Load(%q) failed", file)
 	}
+	// The SaveHandler flushes a pending save once the test ends, so wait for it.
+	t.Cleanup(func() { _ = g.Wait() })
 	announceChannel := make(chan []byte, 8)
 	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
