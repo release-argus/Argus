@@ -857,10 +857,7 @@ func (s *Settings) DataDatabaseFile() string {
 
 // DataFileReadPaths resolves the allowed local-file lookup paths.
 func (s *Settings) DataFileReadPaths() []string {
-	paths := s.FromFlags.Data.FileReadPaths
-	if len(paths) == 0 {
-		paths = s.Data.FileReadPaths
-	}
+	paths := s.Data.FileReadPaths
 	if len(paths) == 0 {
 		paths = s.HardDefaults.Data.FileReadPaths
 	}
