@@ -41,8 +41,9 @@ func Refresh(
 
 	// Whether this new semantic_versioning resolves differently than the current one.
 	semanticVerDiff := lookup.GetOptions().SemanticVersioningDiffers(semanticVersioning)
+	hasOverrides := len(overrides) != 0
 	// Create a new lookup if overrides provided, or `semantic_versioning` changed.
-	usingOverrides := overrides != nil || semanticVerDiff
+	usingOverrides := hasOverrides || semanticVerDiff
 
 	// Create a new Lookup if overrides provided.
 	newLookup, err := applyOverridesJSON(
@@ -60,17 +61,17 @@ func Refresh(
 	}
 
 	// Refreshing an already-`manual` lookup commits the version carried in the overrides.
-	committing := overrides != nil &&
+	committing := hasOverrides &&
 		newLookup.GetType() == dvmanual.Type && previousType == dvmanual.Type
 	// Anything else queried with overrides is a preview of an unsaved config change.
 	previewing := usingOverrides && !committing
 
 	// A preview must not reach the live Service, so give it a detached Status.
-	if previewing && newLookup != lookup {
+	if previewing {
 		newLookup.SetStatus(lookup.GetStatus().Copy(false))
 	}
 
-	if overrides != nil {
+	if hasOverrides {
 		newLookup.InheritSecrets(lookup, secretRefs)
 		// Check values as they may have changed.
 		if err := newLookup.CheckValues(); err != nil {
