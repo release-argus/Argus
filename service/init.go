@@ -67,10 +67,11 @@ func (s *Service) init(
 	s.Status.Init(
 		len(s.Command), len(s.Notify), len(s.Webhook),
 		status.ServiceInfo{
-			ID:         s.ID,
-			Name:       s.Name,
-			Comment:    s.Comment,
-			ServiceURL: serviceURL,
+			ID:                       s.ID,
+			Name:                     s.Name,
+			Comment:                  s.Comment,
+			ServiceURL:               serviceURL,
+			HasDeployedVersionLookup: s.DeployedVersionLookup != nil,
 		},
 		&s.Dashboard,
 	)

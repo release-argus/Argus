@@ -35,12 +35,14 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                 string
-		versions             versions
-		writeToDB            bool
-		wantAnnounce         bool
-		wantNotify           bool
-		wantDatabaseMessages int
+		name                     string
+		versions                 versions
+		hasDeployedVersionLookup bool
+		writeToDB                bool
+		wantAnnounce             bool
+		wantNotify               bool
+		wantDatabaseMessages     int
+		stdoutRegex              string
 	}{
 		{
 			name: "first version found/no deployed version/DB write",
@@ -54,6 +56,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantAnnounce:         true,
 			wantNotify:           false,
 			wantDatabaseMessages: 2,
+			stdoutRegex:          `^INFO: .*Latest Release - "1\.0\.0"\n$`,
 		},
 		{
 			name: "first version found/no deployed version/no DB write",
@@ -67,6 +70,22 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantAnnounce:         false,
 			wantNotify:           false,
 			wantDatabaseMessages: 0,
+			stdoutRegex:          `^$`,
+		},
+		{
+			name: "first version found/no deployed version/have DeployedVersionLookup",
+			versions: versions{
+				initialLatestVersion:   "",
+				initialDeployedVersion: "",
+				newVersion:             "1.0.0",
+				releaseDate:            "2024-01-01",
+			},
+			hasDeployedVersionLookup: true,
+			writeToDB:                true,
+			wantAnnounce:             true,
+			wantNotify:               false,
+			wantDatabaseMessages:     1,
+			stdoutRegex:              `^INFO: .*Latest Release - "1\.0\.0"\n$`,
 		},
 		{
 			name: "first version found/have newer deployed version",
@@ -80,6 +99,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantAnnounce:         true,
 			wantNotify:           false,
 			wantDatabaseMessages: 1,
+			stdoutRegex:          `^INFO: .*Latest Release - "1\.0\.0"\n$`,
 		},
 		{
 			name: "first version found/have older deployed version",
@@ -93,6 +113,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			wantAnnounce:         true,
 			wantNotify:           false,
 			wantDatabaseMessages: 1,
+			stdoutRegex:          `^INFO: .*Latest Release - "1\.0\.0"\n$`,
 		},
 		{
 			name: "new version found/DB write",
@@ -105,6 +126,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			writeToDB:            true,
 			wantNotify:           true,
 			wantDatabaseMessages: 1,
+			stdoutRegex:          `^INFO: .*New Release - "1\.1\.0"\n$`,
 		},
 		{
 			name: "new version found/no DB write",
@@ -117,6 +139,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			writeToDB:            false,
 			wantNotify:           true,
 			wantDatabaseMessages: 0,
+			stdoutRegex:          `^$`,
 		},
 		{
 			name: "same version found, which shouldn't occur in practice",
@@ -129,12 +152,14 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			writeToDB:            true,
 			wantNotify:           true,
 			wantDatabaseMessages: 0,
+			stdoutRegex:          `^INFO: .*New Release - "1\.0\.0"\n$`,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: captures stdout.
+			releaseLog := test.CaptureLog(t, logx.Default())
 
 			logFrom := logx.LogFrom{Primary: "TestLookup_HandleNewVersion", Secondary: tc.name}
 			lookup := &Lookup{
@@ -145,7 +170,8 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			lookup.Status.Init(
 				0, 0, 0,
 				status.ServiceInfo{
-					ID: tc.name,
+					ID:                       tc.name,
+					HasDeployedVersionLookup: tc.hasDeployedVersionLookup,
 				},
 				&dashboard.Options{},
 			)
@@ -157,6 +183,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 				tc.writeToDB,
 				logFrom,
 			)
+			stdout := releaseLog()
 			if err != nil {
 				t.Errorf("Lookup.HandleNewVersion() failed: %v", err)
 			}
@@ -191,11 +218,18 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			}
 
 			wantDeployedVersion := util.ValueOr(tc.versions.initialDeployedVersion, tc.versions.newVersion)
+			if tc.hasDeployedVersionLookup {
+				wantDeployedVersion = tc.versions.initialDeployedVersion
+			}
 			if got := lookup.Status.DeployedVersion(); got != wantDeployedVersion {
 				t.Errorf(
 					"Status.DeployedVersion() mismatch\ngot:  %q\nwant: %q",
 					got, wantDeployedVersion,
 				)
+			}
+
+			if !util.RegexCheck(tc.stdoutRegex, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.stdoutRegex)
 			}
 		})
 	}
@@ -226,6 +260,13 @@ func TestLookup_HandleNoVersionChange(t *testing.T) {
 		{
 			name:          "no DB write, so no announce",
 			checkNumber:   0,
+			writeToDB:     false,
+			wantAnnounces: 0,
+			stdoutRegex:   `^$`,
+		},
+		{
+			name:          "the second check without a DB write, so no log or announce",
+			checkNumber:   1,
 			writeToDB:     false,
 			wantAnnounces: 0,
 			stdoutRegex:   `^$`,

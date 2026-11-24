@@ -126,6 +126,7 @@ func TestStatus_Copy(t *testing.T) {
 		"2023-01-03T00:00:00Z",
 		&dashboard.Options{},
 	)
+	status.hasDeployedVersionLookup = true
 
 	tests := []struct {
 		name         string
@@ -146,6 +147,7 @@ func TestStatus_Copy(t *testing.T) {
 				{Name: "ServiceInfo.LatestVersion", Got: copiedStatus.ServiceInfo.LatestVersion, Want: status.ServiceInfo.LatestVersion, Mode: test.CompareEqual},
 				{Name: "latestVersionTimestamp", Got: copiedStatus.latestVersionTimestamp, Want: status.latestVersionTimestamp, Mode: test.CompareEqual},
 				{Name: "lastQueried", Got: copiedStatus.lastQueried, Want: status.lastQueried, Mode: test.CompareEqual},
+				{Name: "HasDeployedVersionLookup()", Got: copiedStatus.HasDeployedVersionLookup(), Want: true, Mode: test.CompareEqual},
 			}
 			if testErr := test.AssertFields(t, fieldTests, "Status"); testErr != nil {
 				t.Fatal(testErr)
@@ -330,6 +332,7 @@ func TestStatus_Init(t *testing.T) {
 		shoutrrrs, commands, webhooks int
 		serviceID                     string
 		webURL                        string
+		hasDeployedVersionLookup      bool
 	}{
 		{
 			name:      "ServiceID",
@@ -338,6 +341,10 @@ func TestStatus_Init(t *testing.T) {
 		{
 			name:   "WebURL",
 			webURL: "https://example.com",
+		},
+		{
+			name:                     "HasDeployedVersionLookup",
+			hasDeployedVersionLookup: true,
 		},
 		{
 			name:      "shoutrrrs",
@@ -370,8 +377,9 @@ func TestStatus_Init(t *testing.T) {
 			status.Init(
 				tc.commands, tc.shoutrrrs, tc.webhooks,
 				ServiceInfo{
-					ID:   tc.serviceID,
-					Name: tc.name,
+					ID:                       tc.serviceID,
+					Name:                     tc.name,
+					HasDeployedVersionLookup: tc.hasDeployedVersionLookup,
 				},
 				&dashboard.Options{
 					WebURL: tc.webURL,
@@ -388,6 +396,12 @@ func TestStatus_Init(t *testing.T) {
 				t.Errorf(
 					"after Init: Status.GetWebURL() mismatch\ngot:  %q\nwant: %q",
 					got, tc.webURL,
+				)
+			}
+			if got := status.HasDeployedVersionLookup(); got != tc.hasDeployedVersionLookup {
+				t.Errorf(
+					"after Init: Status.HasDeployedVersionLookup() mismatch\ngot:  %t\nwant: %t",
+					got, tc.hasDeployedVersionLookup,
 				)
 			}
 			// Init sets only the map's capacity.

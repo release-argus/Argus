@@ -48,7 +48,8 @@ func (l *Lookup) Track() {
 	}
 }
 
-// Query fetches the deployed version, sets Prometheus metrics if requested, and returns any error.
+// Query fetches the deployed version, recording the result (metrics, DB, announces, logs) only if
+// metrics, and returns any error.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
 	err := l.query(metrics, logFrom)
 
@@ -72,7 +73,7 @@ func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 	}
 
 	// Set the deployed version if it has changed.
-	l.HandleNewVersion(version, "", writeToDB, writeToDB, logFrom) //nolint:wrapcheck
+	l.HandleNewVersion(version, "", writeToDB, writeToDB, logFrom)
 
 	return nil
 }

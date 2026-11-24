@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// HandleNewVersion handles a new version, updating the status, and logging the event if writeToDB.
+// HandleNewVersion records a new version - persisting, logging and announcing it only if writeToDB.
 func (l *Lookup) HandleNewVersion(
 	version, releaseDate string,
 	writeToDB bool,
@@ -33,7 +33,7 @@ func (l *Lookup) HandleNewVersion(
 	// First version found.
 	if l.Status.LatestVersion() == "" {
 		l.Status.SetLatestVersion(version, releaseDate, writeToDB)
-		if l.Status.DeployedVersion() == "" {
+		if !l.Status.HasDeployedVersionLookup() && l.Status.DeployedVersion() == "" {
 			l.Status.SetDeployedVersion(version, "", writeToDB)
 		}
 		if writeToDB {
@@ -48,14 +48,12 @@ func (l *Lookup) HandleNewVersion(
 
 	// New version found.
 	l.Status.SetLatestVersion(version, "", writeToDB)
-	if writeToDB {
-		msg := fmt.Sprintf("New Release - %q", version)
-		logx.Info(msg, logFrom, true)
-	}
+	logx.Info(fmt.Sprintf("New Release - %q", version), logFrom, writeToDB)
 	return true, nil
 }
 
-// HandleNoVersionChange handles a re-check that found the same version, announcing the query.
+// HandleNoVersionChange handles a check that found the same version - logging and announcing
+// the query only if writeToDB.
 func (l *Lookup) HandleNoVersionChange(
 	checkNumber int,
 	version string,
@@ -66,7 +64,7 @@ func (l *Lookup) HandleNoVersionChange(
 		logx.Verbose(
 			fmt.Sprintf("Staying on %q as that's the latest version in the second check", version),
 			logFrom,
-			true,
+			writeToDB,
 		)
 	}
 
