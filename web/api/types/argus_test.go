@@ -1250,6 +1250,13 @@ func TestDataSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/FileReadPaths",
+			dataSettings: DataSettings{
+				FileReadPaths: []string{"/srv/versions"},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/Readonly",
 			dataSettings: DataSettings{
 				Readonly: new(true),
@@ -1259,8 +1266,9 @@ func TestDataSettings_IsZero(t *testing.T) {
 		{
 			name: "non-empty/all",
 			dataSettings: DataSettings{
-				DatabaseFile: "somewhere.db",
-				Readonly:     new(true),
+				DatabaseFile:  "somewhere.db",
+				FileReadPaths: []string{"/srv/versions"},
+				Readonly:      new(true),
 			},
 			want: false,
 		},

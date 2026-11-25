@@ -239,13 +239,15 @@ func (s *Settings) IsZero() bool {
 
 // DataSettings contains data settings for the program.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitzero" yaml:"database_file,omitzero"` // Database file path.
-	Readonly     *bool  `json:"readonly,omitzero" yaml:"readonly,omitzero"`           // Disable saving config changes to disk.
+	DatabaseFile  string   `json:"database_file,omitzero" yaml:"database_file,omitzero"`     // Database file path.
+	FileReadPaths []string `json:"file_read_paths,omitzero" yaml:"file_read_paths,omitzero"` // Directories or individual files local-file lookups may read.
+	Readonly      *bool    `json:"readonly,omitzero" yaml:"readonly,omitzero"`               // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (d DataSettings) IsZero() bool {
 	return d.DatabaseFile == "" &&
+		len(d.FileReadPaths) == 0 &&
 		d.Readonly == nil
 }
 
