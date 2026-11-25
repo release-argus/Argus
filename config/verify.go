@@ -45,18 +45,21 @@ func (c *Config) CheckValues() bool {
 				Err: err,
 			},
 		)
-	} else if err := fileaccess.SetAllowedPaths(c.Settings.DataFileReadPaths()); err != nil {
-		errs = append(errs, &decode.ErrKeyField{
-			Key: "settings",
-			Err: &decode.ErrKeyField{
-				Key: "data",
-				Err: &decode.ErrField{
-					Key:         "file_read_paths",
-					Value:       fmt.Sprint(c.Settings.DataFileReadPaths()),
-					Description: err.Error(),
+	} else {
+		paths := c.Settings.DataFileReadPaths()
+		if err := fileaccess.SetAllowedPaths(paths); err != nil {
+			errs = append(errs, &decode.ErrKeyField{
+				Key: "settings",
+				Err: &decode.ErrKeyField{
+					Key: "data",
+					Err: &decode.ErrField{
+						Key:         "file_read_paths",
+						Value:       fmt.Sprint(paths),
+						Description: err.Error(),
+					},
 				},
-			},
-		})
+			})
+		}
 	}
 	// defaults.
 	defaultsErr, defaultsChanged := c.Defaults.CheckValues()

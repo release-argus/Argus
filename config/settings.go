@@ -321,11 +321,7 @@ func (s DataSettings) IsZero() bool {
 
 // CheckValues validates the fields of the receiver.
 func (s *DataSettings) CheckValues() error {
-	paths := make([]string, len(s.FileReadPaths))
-	for i, path := range s.FileReadPaths {
-		paths[i] = util.EvalEnvVars(path)
-	}
-	if err := fileaccess.ValidateAllowedPaths(paths); err != nil {
+	if err := fileaccess.ValidateAllowedPaths(evalEnvVarsSlice(s.FileReadPaths)); err != nil {
 		return &decode.ErrField{
 			Key:         "file_read_paths",
 			Value:       fmt.Sprint(s.FileReadPaths),
@@ -862,9 +858,14 @@ func (s *Settings) DataFileReadPaths() []string {
 		paths = s.HardDefaults.Data.FileReadPaths
 	}
 
-	resolved := make([]string, len(paths))
-	for i, path := range paths {
-		resolved[i] = util.EvalEnvVars(path)
+	return evalEnvVarsSlice(paths)
+}
+
+// evalEnvVarsSlice returns a copy of values with environment variables evaluated.
+func evalEnvVarsSlice(values []string) []string {
+	resolved := make([]string, len(values))
+	for i, value := range values {
+		resolved[i] = util.EvalEnvVars(value)
 	}
 	return resolved
 }
