@@ -11,6 +11,35 @@ export const deployedVersionLookupTypeOptions = Object.values(
 	DEPLOYED_VERSION_LOOKUP_TYPE,
 );
 
+/**
+ * Whether the deployed version lookup has the field its type reads the version from.
+ *
+ * @param dv - The deployed version lookup.
+ * @returns `path` for 'file', `version` for 'manual', and `url` for 'url' is non-empty.
+ */
+export const hasDeployedVersionSource = (
+	dv:
+		| {
+				type?: string | null;
+				path?: string | null;
+				url?: string | null;
+				version?: string | null;
+		  }
+		| null
+		| undefined,
+): boolean => {
+	switch (dv?.type) {
+		case DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value:
+			return !!dv.path;
+		case DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value:
+			return !!dv.version;
+		case DEPLOYED_VERSION_LOOKUP_TYPE.URL.value:
+			return !!dv.url;
+		default:
+			return false;
+	}
+};
+
 export type DeployedVersionLookup =
 	| DeployedVersionLookupFile
 	| DeployedVersionLookupManual

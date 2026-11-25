@@ -1,3 +1,4 @@
+import { useWatch } from 'react-hook-form';
 import { FieldText } from '@/components/generic/field';
 import VersionWithRefresh from '@/components/modals/service-edit/version-with-refresh';
 
@@ -6,6 +7,9 @@ import VersionWithRefresh from '@/components/modals/service-edit/version-with-re
  */
 const DeployedVersionFile = () => {
 	const name = 'deployed_version';
+	const regexTemplate = (useWatch({
+		name: `${name}.regex_template`,
+	}) ?? '') as string;
 
 	return (
 		<>
@@ -13,7 +17,6 @@ const DeployedVersionFile = () => {
 				colSize={{ lg: 6, sm: 12 }}
 				label="Path"
 				name={`${name}.path`}
-				required
 				tooltip={{
 					content:
 						'Absolute path to a file allowed by configured settings.data.file_read_paths',
@@ -24,6 +27,7 @@ const DeployedVersionFile = () => {
 				colSize={{ lg: 6, sm: 12 }}
 				label="RegEx"
 				name={`${name}.regex`}
+				required={regexTemplate ? 'Required for templating' : undefined}
 				tooltip={{
 					content:
 						'Optional RegEx to extract the version from the file. Without one, the full file contents are used.',

@@ -12,6 +12,10 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors, removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import {
+	type DeployedVersionLookupType,
+	hasDeployedVersionSource,
+} from '@/utils/api/types/config/service/deployed-version';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 import {
 	type URLCommandsSchemaWithValidation,
@@ -55,13 +59,17 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	const url = useWatch({ name: `${vType}.url` }) as string;
 	const deployedVersionType = useWatch({
 		name: 'deployed_version.type',
-	}) as string | undefined;
+	}) as DeployedVersionLookupType | undefined;
 	const filePath = useWatch({ name: 'deployed_version.path' }) as
 		| string
 		| undefined;
 	const hasSource =
-		vType === 'deployed_version' && deployedVersionType === 'file'
-			? !!filePath
+		vType === 'deployed_version'
+			? hasDeployedVersionSource({
+					path: filePath,
+					type: deployedVersionType,
+					url,
+				})
 			: !!url;
 
 	const vTypeErrors = useErrors(vType, true);

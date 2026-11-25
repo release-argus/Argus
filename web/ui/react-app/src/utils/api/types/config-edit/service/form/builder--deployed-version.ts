@@ -81,10 +81,21 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 				});
 			}
 		});
-	const dvFileSchema = deployedVersionFileSchema.extend({
-		path: stringWithFallback(absoluteFilePathValidator, true),
-		regex: regexStringWithFallback(false),
-	});
+	const dvFileSchema = deployedVersionFileSchema
+		.extend({
+			path: stringWithFallback(absoluteFilePathValidator, false),
+			regex: regexStringWithFallback(false),
+		})
+		.superRefine((arg, ctx) => {
+			// `regex` required if `regex_template` is set.
+			if (arg.regex_template && !arg.regex) {
+				ctx.addIssue({
+					code: CUSTOM_ISSUE_CODE,
+					message: REQUIRED_MESSAGE,
+					path: ['regex'],
+				});
+			}
+		});
 
 	// Deployed version schema.
 	const schemaRaw = z.discriminatedUnion('type', [

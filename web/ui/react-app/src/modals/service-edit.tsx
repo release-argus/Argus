@@ -28,7 +28,7 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { DeleteModal } from '@/modals/delete-confirm';
 import { extractErrors } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
-import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
+import { hasDeployedVersionSource } from '@/utils/api/types/config/service/deployed-version';
 import { mapServiceToAPIRequest } from '@/utils/api/types/config-edit/service/api/conversions';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -196,17 +196,11 @@ const ServiceEditModalWithData: FC<ServiceEditModalWithDataProps> = ({
 						() => ({
 							active: dataPayload.options.active,
 							command: dataPayload.command?.length,
-							deployed_version_type:
-								dataPayload.deployed_version &&
-								(dataPayload.deployed_version.type ===
-								DEPLOYED_VERSION_LOOKUP_TYPE.URL.value
-									? !!dataPayload.deployed_version.url
-									: dataPayload.deployed_version.type ===
-											DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value
-										? !!dataPayload.deployed_version.path
-										: !!dataPayload.deployed_version.version)
-									? dataPayload.deployed_version.type
-									: undefined,
+							deployed_version_type: hasDeployedVersionSource(
+								dataPayload.deployed_version,
+							)
+								? dataPayload.deployed_version?.type
+								: undefined,
 							icon: dataPayload.dashboard?.icon,
 							icon_link_to: dataPayload.dashboard?.icon_link_to,
 							id: dataPayload.id,
