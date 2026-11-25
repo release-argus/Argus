@@ -21,20 +21,27 @@ import {
  */
 const EditServiceDeployedVersion = () => {
 	const name = 'deployed_version';
-	const { serviceID } = useSchemaContext();
+	const { serviceID, schemaDataDefaults } = useSchemaContext();
+	const defaultType = schemaDataDefaults?.deployed_version?.type;
 	const { setValue } = useFormContext();
 
-	const selectedType = useWatch({
-		name: `${name}.type`,
-	}) as DeployedVersionLookupType;
+	const selectedType =
+		(useWatch({
+			name: `${name}.type`,
+		}) as DeployedVersionLookupType | '') ||
+		(defaultType as DeployedVersionLookupType);
 	const { data: serviceData } = useServiceSummary(serviceID);
+
+	// URL type: fill the row with type+method.
+	const typeColSize =
+		selectedType === DEPLOYED_VERSION_LOOKUP_TYPE.URL.value ? 6 : 4;
 
 	return (
 		<AccordionItem value="deployed_version">
 			<AccordionTrigger>Deployed Version:</AccordionTrigger>
 			<AccordionContent className="grid grid-cols-12 gap-2">
 				<FieldSelect
-					colSize={{ lg: 2, xs: 6 }}
+					colSize={{ lg: 3, sm: typeColSize, xs: typeColSize }}
 					label="Type"
 					name={`${name}.type`}
 					onChange={(opt) => {

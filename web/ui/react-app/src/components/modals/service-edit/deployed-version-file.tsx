@@ -14,7 +14,7 @@ const DeployedVersionFile = () => {
 	return (
 		<>
 			<FieldText
-				colSize={{ lg: 6, sm: 12 }}
+				colSize={{ lg: 9, sm: 8, xs: 8 }}
 				label="Path"
 				name={`${name}.path`}
 				tooltip={{
@@ -24,7 +24,7 @@ const DeployedVersionFile = () => {
 				}}
 			/>
 			<FieldText
-				colSize={{ lg: 6, sm: 12 }}
+				colSize={{ xs: 6 }}
 				label="RegEx"
 				name={`${name}.regex`}
 				required={regexTemplate ? 'Required for templating' : undefined}
@@ -35,7 +35,7 @@ const DeployedVersionFile = () => {
 				}}
 			/>
 			<FieldText
-				colSize={{ lg: 6, sm: 12 }}
+				colSize={{ xs: 6 }}
 				label="RegEx Template"
 				name={`${name}.regex_template`}
 				tooltip={{
