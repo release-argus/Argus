@@ -23,12 +23,13 @@ import (
 type Lookup = base.Interface
 
 // IsEqual reports whether this and other represent the same lookup, excluding status.
+// The interval and active options are ignored, as they do not change the version found.
 func IsEqual(this, other Lookup) bool {
 	if other == nil || this == nil {
 		// Equal if both are nil.
 		return other == nil && this == nil
 	}
 
-	return this.GetOptions().String() == other.GetOptions().String() &&
+	return this.GetOptions().SameSemanticVersioning(other.GetOptions()) &&
 		this.String("") == other.String("")
 }

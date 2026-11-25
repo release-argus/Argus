@@ -225,7 +225,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	}
 	// Keep DeployedVersion if the DeployedVersionLookup is unchanged.
 	if deployedver.IsEqual(s.DeployedVersionLookup, oldService.DeployedVersionLookup) &&
-		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		oldService.Options.SameSemanticVersioning(&s.Options) {
 		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), oldService.Status.DeployedVersionTimestamp(), false)
 	}
 }

@@ -2386,6 +2386,180 @@ func TestService_GiveSecrets(t *testing.T) {
 			`),
 		},
 		{
+			name: "Options.Active/changed retains Status.LatestVersion",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							active: false
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			oldService: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							active: true
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			statusTests: statusTests{
+				oldLatestVersion:               "1.2.3",
+				expectedLatestVersion:          "1.2.3",
+				oldLatestVersionTimestamp:      timestamp,
+				expectedLatestVersionTimestamp: timestamp,
+			},
+			secretRefs: secretRefs{},
+			want: test.TrimYAML(`
+				options:
+					active: false
+				latest_version:
+					type: url
+					url: https://example.com
+			`),
+		},
+		{
+			name: "Options.Interval/changed retains Status.LatestVersion",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							interval: 20m
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			oldService: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							interval: 10m
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			statusTests: statusTests{
+				oldLatestVersion:               "1.2.3",
+				expectedLatestVersion:          "1.2.3",
+				oldLatestVersionTimestamp:      timestamp,
+				expectedLatestVersionTimestamp: timestamp,
+			},
+			secretRefs: secretRefs{},
+			want: test.TrimYAML(`
+				options:
+					interval: 20m
+				latest_version:
+					type: url
+					url: https://example.com
+			`),
+		},
+		{
+			name: "Options.SemanticVersioning/changed loses Status.LatestVersion",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							semantic_versioning: false
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			oldService: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							semantic_versioning: true
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			statusTests: statusTests{
+				oldLatestVersion:          "1.2.3",
+				oldLatestVersionTimestamp: timestamp,
+			},
+			secretRefs: secretRefs{},
+			want: test.TrimYAML(`
+				options:
+					semantic_versioning: false
+				latest_version:
+					type: url
+					url: https://example.com
+			`),
+		},
+		{
+			name: "Options.SemanticVersioning/set and unchanged retains Status.DeployedVersion",
+			svc: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							semantic_versioning: true
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			oldService: test.Must(t, func() (*Service, error) {
+				return DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							semantic_versioning: true
+						latest_version:
+							type: url
+							url: https://example.com
+						`)),
+					id,
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			statusTests: statusTests{
+				oldLatestVersion:                 "1.2.3",
+				expectedLatestVersion:            "1.2.3",
+				oldLatestVersionTimestamp:        timestamp,
+				expectedLatestVersionTimestamp:   timestamp,
+				oldDeployedVersion:               "1.2.2",
+				expectedDeployedVersion:          "1.2.2",
+				oldDeployedVersionTimestamp:      timestamp,
+				expectedDeployedVersionTimestamp: timestamp,
+			},
+			secretRefs: secretRefs{},
+			want: test.TrimYAML(`
+				options:
+					semantic_versioning: true
+				latest_version:
+					type: url
+					url: https://example.com
+			`),
+		},
+		{
 			name: "DeployedVersion.URL/unchanged retains Status.DeployedVersion",
 			svc: test.Must(t, func() (*Service, error) {
 				return DecodeService(

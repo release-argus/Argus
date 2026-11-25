@@ -147,6 +147,23 @@ func (o *Options) SemanticVersioningDiffers(override *string) bool {
 	return (*override == "true") != o.GetSemanticVersioning()
 }
 
+// SameSemanticVersioning reports whether the receiver and other set semantic_versioning to the
+// same value, or both leave it unset.
+func (o *Options) SameSemanticVersioning(other *Options) bool {
+	var this, that *bool
+	if o != nil {
+		this = o.SemanticVersioning
+	}
+	if other != nil {
+		that = other.SemanticVersioning
+	}
+
+	if this == nil || that == nil {
+		return this == nil && that == nil
+	}
+	return *this == *that
+}
+
 // SetSemanticVersioning applies the JSON semantic_versioning override to the receiver.
 func (o *Options) SetSemanticVersioning(override string) error {
 	semanticVersioning := util.ClonePtr(o.SemanticVersioning)
