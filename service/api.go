@@ -135,6 +135,12 @@ func FromPayload(
 	if err, _ := field.CheckValues(); err != nil {
 		return nil, err
 	}
+	if err := field.Notify.CheckURLs(); err != nil {
+		return nil, &decode.ErrKeyField{
+			Key: "notify",
+			Err: err,
+		}
+	}
 	return field, nil
 }
 
@@ -191,6 +197,8 @@ func (s *Service) CheckFetches() error {
 // using secretRefs to locate secrets in maps/lists.
 func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	if oldService == nil {
+		// A new Service has no secrets to give, but its Notify JSON may hold old indices and keys.
+		s.giveSecretsNotify(nil, nil)
 		return
 	}
 
@@ -238,29 +246,20 @@ func (s *Service) giveSecretsDeployedVersion(oldDeployedVersion deployedver.Look
 
 // giveSecretsNotify copies secrets from oldNotifiers into the receiver's Notify.
 func (s *Service) giveSecretsNotify(oldNotifiers shoutrrr.Shoutrrrs, secretRefs map[string]shared.OldStringIndex) {
-	if len(s.Notify) == 0 || len(oldNotifiers) == 0 ||
-		len(secretRefs) == 0 {
-		return
-	}
-
 	for i, notify := range s.Notify {
 		// {OldIndex: "disc", Type: "discord", ...} - SecretValue maps to values in the 'disc' Notify.
-		// Map SecretValue in `i` to this index.
+		sType := notify.GetType()
+		var oldURLFields, oldParams map[string]string
+		// Restore only from the same type, as another type may show what this one censors.
 		oldIndex := secretRefs[i].OldIndex
-		// Not a reference to an old Notify?
-		if oldIndex == "" {
-			continue
-		}
-		oldNotify := oldNotifiers[oldIndex]
-		// Reference doesn't exist?
-		if oldNotify == nil {
-			continue
+		if old := oldNotifiers[oldIndex]; oldIndex != "" && old != nil && old.GetType() == sType {
+			oldURLFields, oldParams = old.URLFields, old.Params
 		}
 
-		// url_fields
-		util.RestoreMaskedValues(oldNotify.URLFields, notify.URLFields, shoutrrr_types.CensorableURLFields)
-		// params
-		util.RestoreMaskedValues(oldNotify.Params, notify.Params, shoutrrr_types.CensorableParams)
+		// Restore without a same-type old Notify too, to drop the old indices and keys referenced.
+		safeFields := shoutrrr_types.SafeFieldsOf(sType)
+		safeFields.RestoreURLFields(oldURLFields, notify.URLFields)
+		safeFields.RestoreParams(oldParams, notify.Params)
 	}
 }
 

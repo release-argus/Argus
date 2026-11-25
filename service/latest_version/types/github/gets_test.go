@@ -18,7 +18,6 @@
 package github
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -87,24 +86,23 @@ func TestLookup_URL(t *testing.T) {
 		url         string
 		tagFallback bool
 		page        int
-		foundOnPage int
 		want        string
 	}{
 		{
 			name: "Repo escaping/a repo cannot climb out of the /repos prefix",
 			url:  "../..",
-			want: "https://api.github.com/repos/%2E%2E/%2E%2E/releases",
+			want: "https://api.github.com/repos/%2E%2E/%2E%2E/releases?per_page=100",
 		},
 		{
 			name: "Repo/releases",
 			url:  test.ArgusGitHubRepo,
-			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases",
+			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?per_page=100",
 		},
 		{
 			name:        "Repo/tags",
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
-			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags",
+			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags?per_page=100",
 		},
 		{
 			name: "API URL",
@@ -115,50 +113,20 @@ func TestLookup_URL(t *testing.T) {
 			name: "Repo/page 1",
 			url:  test.ArgusGitHubRepo,
 			page: 1,
-			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases",
+			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?per_page=100",
 		},
 		{
 			name: "Repo/page >1",
 			url:  test.ArgusGitHubRepo,
 			page: 2,
-			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?page=2",
-		},
-		{
-			name:        "Repo/per_page",
-			url:         test.ArgusGitHubRepo,
-			foundOnPage: 2,
-			want: fmt.Sprintf(
-				"https://api.github.com/repos/%s/releases?per_page=%d",
-				test.ArgusGitHubRepo, 2*defaultPerPage,
-			),
-		},
-		{
-			name:        "Repo/page >1 and per_page",
-			url:         test.ArgusGitHubRepo,
-			page:        2,
-			foundOnPage: 4,
-			want: fmt.Sprintf(
-				"https://api.github.com/repos/%s/releases?page=2&per_page=%d",
-				test.ArgusGitHubRepo, 4*defaultPerPage,
-			),
+			want: "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/releases?page=2&per_page=100",
 		},
 		{
 			name:        "Repo/tag fallback and page >1",
 			url:         test.ArgusGitHubRepo,
 			tagFallback: true,
 			page:        3,
-			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags?page=3",
-		},
-		{
-			name:        "Repo/tag fallback, page >1, and per_page",
-			url:         test.ArgusGitHubRepo,
-			tagFallback: true,
-			page:        3,
-			foundOnPage: 7,
-			want: fmt.Sprintf(
-				"https://api.github.com/repos/%s/tags?page=3&per_page=%d",
-				test.ArgusGitHubRepo, 7*defaultPerPage,
-			),
+			want:        "https://api.github.com/repos/" + test.ArgusGitHubRepo + "/tags?page=3&per_page=100",
 		},
 	}
 
@@ -171,7 +139,6 @@ func TestLookup_URL(t *testing.T) {
 			if tc.tagFallback {
 				lookup.GetGitHubData().SetTagFallback()
 			}
-			lookup.data.SetPerPage(tc.foundOnPage)
 
 			got := lookup.url(tc.page)
 

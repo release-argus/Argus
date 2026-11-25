@@ -94,20 +94,20 @@ export type WebhookOptions = {
 	maxTries?: string;
 };
 
-/** A `gotify` notifier. */
-export type NotifyOptions = {
-	/** `notify.X.type` - only 'gotify' is supported here. */
-	type: 'gotify';
+/** A notifier of any type, filled by field. */
+export type NotifyFieldsOptions = {
+	/** `notify.X.type`, as labelled in the type select (e.g. 'Gotify'). */
+	typeLabel: string;
 	/** `notify.X.name`. */
 	name: string;
-	/** `notify.X.url_fields.host`. */
-	host: string;
-	/** `notify.X.url_fields.path`. */
-	path?: string;
-	/** `notify.X.url_fields.token` (the masked secret). */
-	token: string;
-	/** `notify.X.params.title`. */
-	title?: string;
+	/** Text fields, keyed by label. */
+	text?: Record<string, string>;
+	/** Selects, keyed by path under the notifier (e.g. 'params.qos'), valued by option label. */
+	selects?: Record<string, string>;
+	/** Yes/No toggles, keyed by path under the notifier. */
+	booleans?: Record<string, boolean>;
+	/** `notify.X.url_fields.headers` - only applicable to type 'generic'. */
+	headers?: KeyVal[];
 };
 
 export type CreateServiceOptions = {
@@ -119,7 +119,7 @@ export type CreateServiceOptions = {
 	 * response isn't a parseable MAJOR.MINOR.PATCH version. */
 	semanticVersioning?: boolean;
 	active?: boolean;
-	notifiers?: NotifyOptions[];
+	notifiers?: NotifyFieldsOptions[];
 	webhooks?: WebhookOptions[];
 };
 
@@ -195,16 +195,16 @@ export const screenshotsUnder =
 		);
 
 /**
- * Fills the headers map for a lookup `section`, adding a row per entry.
+ * Fills the headers map in `section`, adding a row per entry.
  *
  * @param section - The accordion section containing the headers map.
- * @param prefix - The lookup's field-name prefix (`latest_version` or
- *   `deployed_version`); the rows live under `<prefix>.headers`.
+ * @param prefix - The field-name prefix (`latest_version`, `deployed_version`,
+ *   `notify.<index>.url_fields`); the rows live under `<prefix>.headers`.
  * @param entries - The key/value pairs to add.
  */
 const fillHeaders = async (
 	section: Locator,
-	prefix: 'latest_version' | 'deployed_version',
+	prefix: 'latest_version' | 'deployed_version' | `notify.${number}.url_fields`,
 	entries: KeyVal[],
 ) => {
 	for (let index = 0; index < entries.length; index++) {
@@ -439,12 +439,71 @@ const fillWebhooks = async (dialog: Locator, webhooks: WebhookOptions[]) => {
 };
 
 /**
+ * The notifier at `index` within the Notify `section`.
+ *
+ * @param section - The Notify accordion section.
+ * @param index - The notifier's index.
+ * @returns The notifier's accordion item.
+ */
+export const notifyItem = (section: Locator, index: number) =>
+	section.locator('[data-slot="accordion-item"]', {
+		has: section.page().locator('[data-slot="accordion-trigger"]', {
+			hasText: new RegExp(`^${index}:`),
+		}),
+	});
+
+/**
+ * Expands the notifier at `index` within the Notify `section`.
+ *
+ * @param section - The Notify accordion section.
+ * @param index - The notifier's index.
+ * @returns The notifier's accordion item.
+ */
+export const openNotifyItem = async (section: Locator, index: number) => {
+	const item = notifyItem(section, index);
+	await item.locator('[data-slot="accordion-trigger"]').click();
+	return item;
+};
+
+/**
+ * Fills a notifier's text fields, selects, toggles (and headers when type=generic).
+ *
+ * @param dialog - The modal dialog, which hosts the select options.
+ * @param item - The notifier's accordion item.
+ * @param index - The notifier's index.
+ * @param notify - The notifier's options.
+ */
+const fillNotifyFields = async (
+	dialog: Locator,
+	item: Locator,
+	index: number,
+	notify: NotifyFieldsOptions,
+) => {
+	for (const [label, value] of Object.entries(notify.text ?? {})) {
+		await item
+			.getByRole('textbox', { exact: true, name: `Value field for ${label}` })
+			.fill(value);
+	}
+	for (const [path, option] of Object.entries(notify.selects ?? {})) {
+		await item.locator(`[id="notify.${index}.${path}"]`).click();
+		await dialog.getByRole('option', { exact: true, name: option }).click();
+	}
+	for (const [path, value] of Object.entries(notify.booleans ?? {})) {
+		await setBooleanWithDefault(item, `notify.${index}.${path}`, value);
+	}
+	await fillHeaders(item, `notify.${index}.url_fields`, notify.headers ?? []);
+};
+
+/**
  * Fills in the `notify` accordion section, adding one item per entry.
  *
  * @param dialog - The modal dialog.
  * @param notifiers - The notifiers to add.
  */
-const fillNotify = async (dialog: Locator, notifiers: NotifyOptions[]) => {
+const fillNotify = async (
+	dialog: Locator,
+	notifiers: NotifyFieldsOptions[],
+) => {
 	await dialog.getByRole('button', { name: /^Notify:?$/i }).click();
 	const section = dialog
 		.locator('[data-slot="accordion-item"]', { hasText: 'Notify' })
@@ -453,32 +512,45 @@ const fillNotify = async (dialog: Locator, notifiers: NotifyOptions[]) => {
 	for (let index = 0; index < notifiers.length; index++) {
 		const notify = notifiers[index];
 		await section.getByRole('button', { name: /add notify/i }).click();
-
-		const item = section.locator('[data-slot="accordion-item"]').nth(index);
-		await item.locator('[data-slot="accordion-trigger"]').click();
+		const item = await openNotifyItem(section, index);
 
 		await section.locator(`#notify\\.${index}\\.type`).click();
-		await dialog.getByRole('option', { exact: true, name: 'Gotify' }).click();
+		await dialog
+			.getByRole('option', { exact: true, name: notify.typeLabel })
+			.click();
 
 		await item
 			.getByRole('textbox', { name: /^Value field for Name$/i })
 			.fill(notify.name);
-		await item
-			.getByRole('textbox', { name: /^Value field for Host$/i })
-			.fill(notify.host);
-		if (notify.path !== undefined) {
-			await item
-				.getByRole('textbox', { name: /^Value field for Path$/i })
-				.fill(notify.path);
-		}
-		await item
-			.getByRole('textbox', { name: /^Value field for Token$/i })
-			.fill(notify.token);
-		if (notify.title !== undefined) {
-			await item
-				.getByRole('textbox', { name: /^Value field for Title$/i })
-				.fill(notify.title);
-		}
+		await fillNotifyFields(dialog, item, index, notify);
+	}
+};
+
+/**
+ * Retries a service create for up to 90s, skipping the test when the lookup's upstream is
+ * unreachable. The server verifies the lookup over the network before responding, so this can be
+ * slow.
+ *
+ * @param create - Sends the create request and returns its response.
+ */
+export const retryCreate = async (
+	create: () => Promise<{ ok(): boolean; text(): Promise<string> }>,
+) => {
+	let lastError = '';
+	try {
+		await expect(async () => {
+			const response = await create();
+			lastError = response.ok() ? '' : await response.text();
+			expect(response.ok(), lastError).toBeTruthy();
+		}).toPass({ timeout: 90_000 });
+	} catch (err) {
+		test.skip(
+			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
+				lastError,
+			),
+			`upstream unreachable: ${lastError}`,
+		);
+		throw err;
 	}
 };
 
@@ -547,36 +619,64 @@ export const createService = async (
 		await fillWebhooks(dialog, options.webhooks);
 	}
 
-	// The server verifies the lookup over the network before responding, so this can be slow.
 	// A transient upstream failure leaves the modal open, so the submit is retried.
-	let lastError = '';
-	try {
-		await expect(async () => {
-			const [response] = await Promise.all([
-				page.waitForResponse(
-					(res) =>
-						res.url().includes('/api/v1/service/new') &&
-						res.request().method() === 'PUT',
-				),
-				dialog.locator('#modal-action').click(),
-			]);
-			lastError = response.ok() ? '' : await response.text();
-			expect(response.ok()).toBeTruthy();
-		}).toPass({ timeout: 90_000 });
-	} catch (err) {
-		// The server rejects a create it cannot verify upstream. A DNS or dial
-		// failure is the environment, so skip rather than fail.
-		test.skip(
-			/i\/o timeout|no such host|connection refused|TLS handshake timeout/.test(
-				lastError,
+	await retryCreate(async () => {
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(res) =>
+					res.url().includes('/api/v1/service/new') &&
+					res.request().method() === 'PUT',
 			),
-			`upstream unreachable: ${lastError}`,
-		);
-		throw err;
-	}
+			dialog.locator('#modal-action').click(),
+		]);
+		return response;
+	});
 	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
 	// The card, not the heading, as only the grid layout renders a heading.
 	await expect(serviceCard(page, id)).toBeVisible();
+};
+
+/**
+ * Opens the edit modal for an existing service (edit mode must already be on).
+ *
+ * @param page - The dashboard page.
+ * @param id - The ID of the service to edit.
+ * @returns The open edit dialog.
+ */
+export const openEditModal = async (page: Page, id: string) => {
+	const card = serviceCard(page, id);
+	await expect(card).toBeVisible();
+	await card.getByRole('button', { name: /edit/i }).click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog).toBeVisible();
+	return dialog;
+};
+
+/**
+ * Reloads, then opens the edit modal, so it loads the service from the backend,
+ * where secrets come back masked, rather than from create-time state.
+ *
+ * @param page - The dashboard page.
+ * @param id - The ID of the service to edit.
+ * @returns The open edit dialog.
+ */
+export const openEditModalFromBackend = async (page: Page, id: string) => {
+	await page.reload();
+	return openEditModal(page, id);
+};
+
+/**
+ * Submits the edit modal via "Confirm" and waits for it to close. The button
+ * only enables once the form is dirty, so asserting it's enabled also confirms
+ * the edit registered. The save re-verifies server-side.
+ *
+ * @param dialog - The open edit dialog.
+ */
+export const saveEdit = async (dialog: Locator) => {
+	const confirm = dialog.locator('#modal-action');
+	await expect(confirm).toBeEnabled();
+	await confirm.click();
+	await expect(dialog).not.toBeVisible({ timeout: 30_000 });
 };
 
 /**

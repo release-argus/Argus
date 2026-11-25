@@ -751,7 +751,7 @@ func TestService_CheckValues(t *testing.T) {
 								type: discord
 								url_fields:
 									token: x
-									webhookid: y
+									webhookid: "123456789012345678"
 						webhook:
 							wh:
 								type: github

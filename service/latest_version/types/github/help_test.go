@@ -167,3 +167,13 @@ func startGitHubServer(t *testing.T, server *githubServer) *githubServer {
 
 	return forgetest.Start(t, server, httptest.NewServer)
 }
+
+// requestedPages returns the page parameter of each request server received, in order.
+func requestedPages(server *githubServer) []string {
+	requests := server.Requests()
+	pages := make([]string, len(requests))
+	for i, request := range requests {
+		pages[i] = request.Query.Get("page")
+	}
+	return pages
+}

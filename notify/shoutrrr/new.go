@@ -73,13 +73,20 @@ func FromPayload(
 	payload.Options = util.EnsureMap(payload.Options)
 	payload.URLFields = util.EnsureMap(payload.URLFields)
 	payload.Params = util.EnsureMap(payload.Params)
+	var originalURLFields, originalParams map[string]string
 	if original != nil {
 		payload.Options = util.MergeMaps(original.Options, payload.Options)
 		payload.URLFields = util.MergeMaps(original.URLFields, payload.URLFields)
-		payload.URLFields = util.RestoreMaskedValues(original.URLFields, payload.URLFields, types.CensorableURLFields)
 		payload.Params = util.MergeMaps(original.Params, payload.Params)
-		payload.Params = util.RestoreMaskedValues(original.Params, payload.Params, types.CensorableParams)
+		// Restore only from the same type, as another type may show what this one censors.
+		if original.GetType() == nType {
+			originalURLFields, originalParams = original.URLFields, original.Params
+		}
 	}
+	// Restore without a same-type original too, to drop the old indices and keys it reads.
+	safeFields := types.SafeFieldsOf(nType)
+	safeFields.RestoreURLFields(originalURLFields, payload.URLFields)
+	safeFields.RestoreParams(originalParams, payload.Params)
 
 	// Create the Notify.
 	s := New(
@@ -97,6 +104,9 @@ func FromPayload(
 	errs, _ := s.CheckValues()
 	if errs != nil {
 		return nil, errs
+	}
+	if err := s.CheckURL(); err != nil {
+		return nil, err
 	}
 	return s, nil
 }

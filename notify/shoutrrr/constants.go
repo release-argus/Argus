@@ -23,13 +23,43 @@ const (
 	smtpAuthUnknown = "Unknown"
 )
 
+// boolParams are the params of each type that hold a boolean.
+var boolParams = map[string][]string{
+	"bark":          {"disabletls", "skiptlsverify"},
+	"discord":       {"json", "splitlines"},
+	"generic":       {"disabletls", "skiptlsverify"},
+	"gotify":        {"disabletls", "skiptlsverify", "useheader"},
+	"homeassistant": {"disabletls", "skiptlsverify"},
+	"matrix":        {"disabletls", "skiptlsverify"},
+	"mattermost":    {"disabletls", "skiptlsverify"},
+	"mqtt":          {"cleansession", "disabletls", "disabletlsverification", "retained", "skiptlsverify"},
+	"ntfy":          {"cache", "disabletls_", "firebase", "markdown", "skiptlsverify"},
+	"rocketchat":    {"disabletls", "skiptlsverify"},
+	"signal":        {"disabletls", "notifyself", "skiptlsverify"},
+	"signalgrid":    {"critical"},
+	"smtp":          {"requirestarttls", "skiptlsverify", "starttls", "usehtml", "usestarttls"},
+	"telegram":      {"notification", "preview", "skiptlsverify"},
+	"xmpp":          {"disabletls", "skiptlsverify"},
+	"zulip":         {"read_by_sender", "skiptlsverify"},
+}
+
+// durationParams are the params of each type that hold a duration.
+var durationParams = map[string][]string{
+	"pushover": {"retry", "expire"},
+	"smtp":     {"timeout"},
+}
+
 var (
-	barkNtfyParamScheme    = []string{"http", "https"}
 	barkParamSound         = []string{"alarm", "anticipate", "bell", "birdsong", "bloom", "calypso", "chime", "choo", "descent", "electronic", "fanfare", "glass", "gotosleep", "healthnotification", "horn", "ladder", "mailsent", "minuet", "multiwaynotification", "newmail", "newsflash", "noir", "paymentsuccess", "shake", "sherwoodforest", "silence", "spell", "suspense", "telegraph", "tiptoes", "typewriters", "update"}
 	genericParamMethod     = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
+	mqttParamQoS           = []string{"AtMostOnce", "AtLeastOnce", "ExactlyOnce"}
 	ntfyParamPriority      = []string{"min", "low", "default", "high", "max"}
+	pagerDutyParamAction   = []string{"trigger", "acknowledge", "resolve"}
+	pagerDutyParamSeverity = []string{"critical", "error", "warning", "info"}
+	signalParamTextMode    = []string{"None", "Normal", "Styled"}
+	signalgridParamType    = []string{"SUCCESS", "INFO", "WARN", "CRIT"}
 	smtpParamAuth          = []string{"None", smtpAuthUnknown, "Plain", "Login", "CRAMMD5", "OAuth2"}
 	smtpParamEncryption    = []string{"Auto", "ExplicitTLS", "ImplicitTLS", "None"}
-	telegramParamParsemode = []string{"None", "HTML", "Markdown"}
+	telegramParamParsemode = []string{"None", "HTML", "Markdown", "MarkdownV2"}
 	zulipParamType         = []string{"channel", "direct"}
 )

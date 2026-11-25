@@ -26,10 +26,12 @@ import (
 	"time"
 
 	goshoutrrr "github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr/pkg/format"
 	goshoutrrrTypes "github.com/nicholas-fedor/shoutrrr/pkg/types"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
+	serviceinfo "github.com/release-argus/Argus/service/status/info"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/polymorphic"
 )
@@ -142,19 +144,67 @@ func (s *Shoutrrr) CheckValues() (error, bool) {
 		)
 	}
 
-	// Exclude matrix since it logs in, so may run into a rate-limit.
-	if len(errs) == 0 && s.GetType() != "matrix" {
-		//#nosec G104 -- Disregard as we are not giving any rawURLs.
-		sender, _ := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
-		if _, err := sender.Locate(s.BuildURL()); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
 	if len(errs) == 0 {
 		return nil, changed
 	}
 	return errors.Join(errs...), false
+}
+
+// CheckURL returns the error Shoutrrr gives when locating the service for the receiver's URL.
+func (s *Shoutrrr) CheckURL() error {
+	// Legacy Teams configs (Office 365 Connectors) skip Locate, as Shoutrrr rejects their URL.
+	if s.GetType() == "teams" && s.GetURLField("group") != "" {
+		return nil
+	}
+
+	//#nosec G104 -- Disregard as we are not giving any rawURLs.
+	sender, _ := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
+	_, err := sender.Locate(s.BuildURL())
+	return err //nolint:wrapcheck
+}
+
+// CheckURLs returns the [Shoutrrr.CheckURL] errors of each Shoutrrr.
+func (s *Shoutrrrs) CheckURLs() error {
+	if s == nil {
+		return nil
+	}
+
+	var errs []error
+	for _, key := range util.SortedKeys(*s) {
+		if err := (*s)[key].CheckURL(); err != nil {
+			errs = append(
+				errs,
+				&decode.ErrKeyField{
+					Key: key,
+					Err: err,
+				},
+			)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// LogWarnings logs each Shoutrrr of serviceID that will fail to send, and the unknown params each will drop.
+func (s *Shoutrrrs) LogWarnings(serviceID string) {
+	if s == nil {
+		return
+	}
+
+	for _, key := range util.SortedKeys(*s) {
+		notify := (*s)[key]
+		logFrom := logx.LogFrom{Primary: serviceID, Secondary: key}
+		if err := notify.CheckURL(); err != nil {
+			logx.Warn(fmt.Sprintf("failed to locate notify, so it will fail to send: %v", err), logFrom, true)
+			continue
+		}
+
+		//#nosec G104 -- Disregard as we are not giving any rawURLs.
+		sender, _ := goshoutrrr.CreateSenderWithOptions(goshoutrrrTypes.SenderOptions{})
+		url := notify.BuildURL()
+		if unknown := unknownParams(sender, url, *notify.BuildParams(serviceinfo.ServiceInfo{})); len(unknown) > 0 {
+			logx.Warn(fmt.Sprintf("dropping unknown params %q", unknown), logFrom, true)
+		}
+	}
 }
 
 // CheckValues validates the fields of the receiver,
@@ -297,6 +347,20 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 	}
 
 	switch shoutrrrType {
+	case "bark":
+		// Deprecated: scheme -> disabletls.
+		if scheme := b.GetParam("scheme"); scheme != "" {
+			if b.GetParam("disabletls") == "" {
+				logx.Deprecated("Replacing 'notify.bark.params.scheme' with 'notify.bark.params.disabletls'")
+				disableTLS := "no"
+				if strings.EqualFold(scheme, "http") {
+					disableTLS = "yes"
+				}
+				b.setParam("disabletls", disableTLS)
+			}
+			b.deleteParam("scheme")
+			changed = true
+		}
 	case "generic":
 		// Deprecated: requestmethod -> method.
 		if v := b.GetParam("requestmethod"); v != "" {
@@ -326,6 +390,22 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			b.deleteParam("threadid")
 			changed = true
 		}
+	case "gotify":
+		// Deprecated: insecureskipverify -> skiptlsverify.
+		if v := b.GetParam("insecureskipverify"); v != "" {
+			if b.GetParam("skiptlsverify") == "" {
+				logx.Deprecated("Renaming 'notify.gotify.params.insecureskipverify' to 'notify.gotify.params.skiptlsverify'")
+				b.setParam("skiptlsverify", v)
+			}
+			b.deleteParam("insecureskipverify")
+			changed = true
+		}
+		// Deprecated: Gotify sets the date itself.
+		if b.GetParam("date") != "" {
+			logx.Deprecated("Removing 'notify.gotify.params.date', as Gotify sets the date of each message")
+			b.deleteParam("date")
+			changed = true
+		}
 	case "ifttt":
 		// Deprecated: usemessageasvalue -> messagevalue.
 		if v := b.GetParam("usemessageasvalue"); v != "" {
@@ -346,6 +426,15 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			changed = true
 		}
 	case "matrix":
+		// Deprecated: username -> user.
+		if v := b.getURLField("username"); v != "" {
+			if b.getURLField("user") == "" {
+				logx.Deprecated("Renaming 'notify.matrix.url_fields.username' to 'notify.matrix.url_fields.user'")
+				b.setURLField("user", v)
+			}
+			b.deleteURLField("username")
+			changed = true
+		}
 		// Remove #'s in channel aliases.
 		if rooms := b.GetParam("rooms"); strings.Contains(rooms, "#") {
 			b.setParam(
@@ -354,20 +443,73 @@ func (b *Base) correctSelf(shoutrrrType string) (changed bool) {
 			)
 			changed = true
 		}
+	case "mqtt":
+		// QoS, map Shoutrrr's numeric aliases to the names.
+		if qos := b.GetParam("qos"); qos != "" {
+			if i, err := strconv.Atoi(qos); err == nil && i >= 0 && i < len(mqttParamQoS) {
+				b.setParam("qos", mqttParamQoS[i])
+				changed = true
+			}
+		}
 	case "mattermost":
 		// Channel, strip leading /
 		if channel, ok := strings.CutPrefix(b.getURLField("channel"), "/"); ok {
 			b.setURLField("channel", channel)
 			changed = true
 		}
+	case "opsgenie":
+		// Deprecated: 1-5 -> P1-P5.
+		if priority := b.GetParam("priority"); len(priority) == 1 && priority >= "1" && priority <= "5" {
+			logx.Deprecated(fmt.Sprintf(
+				"Replacing 'notify.opsgenie.params.priority' %q with %q",
+				priority, "P"+priority,
+			))
+			b.setParam("priority", "P"+priority)
+			changed = true
+		}
 	case "ntfy":
-		// Deprecated: disabletls -> disabletlsverification.
+		// Deprecated: disabletls -> skiptlsverify.
 		if disableTLS := b.GetParam("disabletls"); disableTLS != "" {
-			if disableTLSVerification := b.GetParam("disabletlsverification"); disableTLSVerification == "" {
-				logx.Deprecated("Renaming 'notify.ntfy.params.disabletls' to 'notify.ntfy.params.disabletlsverification'")
-				b.setParam("disabletlsverification", disableTLS)
+			if b.GetParam("skiptlsverify") == "" {
+				logx.Deprecated("Renaming 'notify.ntfy.params.disabletls' to 'notify.ntfy.params.skiptlsverify'")
+				b.setParam("skiptlsverify", disableTLS)
 			}
 			b.deleteParam("disabletls")
+			changed = true
+		}
+		// Deprecated: disabletlsverification -> skiptlsverify.
+		if disableTLSVerification := b.GetParam("disabletlsverification"); disableTLSVerification != "" {
+			if b.GetParam("skiptlsverify") == "" {
+				logx.Deprecated("Renaming 'notify.ntfy.params.disabletlsverification' to 'notify.ntfy.params.skiptlsverify'")
+				b.setParam("skiptlsverify", disableTLSVerification)
+			}
+			b.deleteParam("disabletlsverification")
+			changed = true
+		}
+		// Deprecated: scheme -> disabletls_.
+		if scheme := b.GetParam("scheme"); scheme != "" {
+			if b.GetParam("disabletls_") == "" {
+				logx.Deprecated(
+					"Replacing 'notify.ntfy.params.scheme' with 'notify.ntfy.params.disabletls_'" +
+						" - the next major release will rename it to 'notify.ntfy.params.disabletls'",
+				)
+				disableTLS := "no"
+				if strings.EqualFold(scheme, "http") {
+					disableTLS = "yes"
+				}
+				b.setParam("disabletls_", disableTLS)
+			}
+			b.deleteParam("scheme")
+			changed = true
+		}
+	case "signal":
+		// Deprecated: apikey -> token.
+		if v := b.GetParam("apikey"); v != "" {
+			if b.GetParam("token") == "" {
+				logx.Deprecated("Renaming 'notify.signal.params.apikey' to 'notify.signal.params.token'")
+				b.setParam("token", v)
+			}
+			b.deleteParam("apikey")
 			changed = true
 		}
 	case "slack":
@@ -695,8 +837,19 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "lark":
+		// lark://host/token
+		if s.GetURLField("token") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "token",
+					Description: "e.g. 'https://open.larksuite.com/open-apis/bot/v2/hook/[ TOKEN ]'",
+				},
+			)
+		}
 	case "matrix":
-		// matrix://user:password@host[:port]/[?rooms=!roomID1,roomAlias2]][&disableTLS=yes]
+		// matrix://user:password@host[:port]/[?rooms=!roomID1,roomAlias2][&disabletls=yes]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -735,6 +888,26 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "mqtt":
+		// mqtt://[username[:password]@]host[:port]/topic
+		if s.GetURLField("host") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "host",
+					Description: "e.g. 'mqtt.example.com'",
+				},
+			)
+		}
+		if s.GetURLField("topic") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "topic",
+					Description: "e.g. 'home/argus/releases'",
+				},
+			)
+		}
 	case "ntfy":
 		// ntfy://[username]:[password]@[host][:port]/topic
 		if s.GetURLField("topic") == "" {
@@ -764,6 +937,17 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				&decode.ErrField{
 					Key:         "apikey",
 					Description: "e.g. 'xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx'",
+				},
+			)
+		}
+	case "pagerduty":
+		// pagerduty://[host[:port]]/integrationkey
+		if s.GetURLField("integrationkey") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "integrationkey",
+					Description: "32 hex characters, from the Events API v2 integration",
 				},
 			)
 		}
@@ -808,7 +992,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "rocketchat":
-		// rocketchat://[username@]host[:port]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port]/tokenA/tokenB[/channel]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -836,12 +1020,50 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "signal":
+		// signal://[user:password@]host[:port]/source/recipient1[/recipient2...]
+		if s.GetURLField("host") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "host",
+					Description: "e.g. 'signal-api.example.com'",
+				},
+			)
+		}
+		if s.GetURLField("source") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "source",
+					Description: "e.g. '+1234567890'",
+				},
+			)
+		}
+		if s.GetURLField("recipients") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "recipients",
+					Description: "e.g. '+1234567890,group.abc'",
+				},
+			)
+		}
+	case "signalgrid":
+		// signalgrid://clientkey@channel
+		if s.GetURLField("clientkey") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key: "clientkey",
+				},
+			)
+		}
 		if s.GetURLField("channel") == "" {
 			errs = append(
 				errs,
 				&decode.ErrField{
-					Key:         "channel",
-					Description: "e.g. 'argusChannel' or '@user'",
+					Key: "channel",
 				},
 			)
 		}
@@ -887,6 +1109,82 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 				},
 			)
 		}
+	case "twilio":
+		// twilio://accountsid:authtoken@fromnumber/tonumber1[/tonumber2...]
+		if s.GetURLField("accountsid") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "accountsid",
+					Description: "e.g. 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'",
+				},
+			)
+		}
+		if s.GetURLField("authtoken") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key: "authtoken",
+				},
+			)
+		}
+		if s.GetURLField("fromnumber") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "fromnumber",
+					Description: "e.g. '+1234567890'",
+				},
+			)
+		}
+		if s.GetURLField("tonumbers") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "tonumbers",
+					Description: "e.g. '+1234567890,+1987654321'",
+				},
+			)
+		}
+	case "wecom":
+		// wecom://key
+		if s.GetURLField("key") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "key",
+					Description: "the key=... value of the group bot webhook URL",
+				},
+			)
+		}
+	case "xmpp":
+		// xmpp://user:password@host[:port]/
+		if s.GetURLField("host") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "host",
+					Description: "e.g. 'xmpp.example.com'",
+				},
+			)
+		}
+		if s.GetURLField("user") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "user",
+					Description: "e.g. 'argus' or 'argus@example.com'",
+				},
+			)
+		}
+		if s.GetURLField("password") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key: "password",
+				},
+			)
+		}
 	case "zulip":
 		// zulip://botMail:botKey@host:port
 		if s.GetURLField("host") == "" {
@@ -917,7 +1215,7 @@ func (s *Shoutrrr) checkValuesURLFields() error {
 			)
 		}
 	case "generic":
-		// generic://host[:port][/path]
+		// generic://[username[:password]@]host[:port][/path]
 		if s.GetURLField("host") == "" {
 			errs = append(
 				errs,
@@ -1040,6 +1338,17 @@ func (s *Shoutrrr) checkValuesParams() error {
 				},
 			)
 		}
+	case "xmpp":
+		// xmpp://user:password@host[:port]/?to=X[&rooms=X]
+		if s.GetParam("to") == "" && s.GetParam("rooms") == "" {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         "to",
+					Description: "'to' and/or 'rooms' required, e.g. 'user@example.com'",
+				},
+			)
+		}
 	}
 
 	if len(errs) == 0 {
@@ -1058,19 +1367,36 @@ func (b *Base) checkValuesParams(itemType string) error {
 		errs = append(errs, e)
 	}
 
-	// Timeout, must be a positive duration.
-	if itemType == "smtp" {
-		if timeout := b.GetParam("timeout"); timeout != "" {
-			if d, err := time.ParseDuration(timeout); err != nil || d <= 0 {
+	// Durations, must be positive.
+	for _, key := range durationParams[itemType] {
+		if value := b.GetParam(key); value != "" {
+			if d, err := time.ParseDuration(value); err != nil || d <= 0 {
 				errs = append(
 					errs,
 					&decode.ErrField{
-						Key:         "timeout",
-						Value:       timeout,
+						Key:         key,
+						Value:       value,
 						Description: "use a positive 'AhBmCs' duration, e.g. '10s'",
 					},
 				)
 			}
+		}
+	}
+
+	for _, key := range boolParams[itemType] {
+		value := b.GetParam(key)
+		if value == "" {
+			continue
+		}
+		if _, ok := format.ParseBool(util.EvalEnvVars(value), false); !ok {
+			errs = append(
+				errs,
+				&decode.ErrField{
+					Key:         key,
+					Value:       value,
+					Description: "use 'yes' or 'no'",
+				},
+			)
 		}
 	}
 
@@ -1100,9 +1426,6 @@ func (b *Base) checkValuesParamsSelects(itemType string) error {
 
 	switch itemType {
 	case "bark":
-		if err := b.validateParamSelect("scheme", barkNtfyParamScheme); err != nil {
-			errs = append(errs, err)
-		}
 		if err := b.validateParamSelect("sound", barkParamSound); err != nil {
 			errs = append(errs, err)
 		}
@@ -1110,11 +1433,27 @@ func (b *Base) checkValuesParamsSelects(itemType string) error {
 		if err := b.validateParamSelect("method", genericParamMethod); err != nil {
 			errs = append(errs, err)
 		}
+	case "mqtt":
+		if err := b.validateParamSelect("qos", mqttParamQoS); err != nil {
+			errs = append(errs, err)
+		}
 	case "ntfy":
 		if err := b.validateParamSelect("priority", ntfyParamPriority); err != nil {
 			errs = append(errs, err)
 		}
-		if err := b.validateParamSelect("scheme", barkNtfyParamScheme); err != nil {
+	case "pagerduty":
+		if err := b.validateParamSelect("action", pagerDutyParamAction); err != nil {
+			errs = append(errs, err)
+		}
+		if err := b.validateParamSelect("severity", pagerDutyParamSeverity); err != nil {
+			errs = append(errs, err)
+		}
+	case "signal":
+		if err := b.validateParamSelect("textmode", signalParamTextMode); err != nil {
+			errs = append(errs, err)
+		}
+	case "signalgrid":
+		if err := b.validateParamSelect("type", signalgridParamType); err != nil {
 			errs = append(errs, err)
 		}
 	case "smtp":

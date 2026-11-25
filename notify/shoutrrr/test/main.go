@@ -77,7 +77,7 @@ func Shoutrrr(failing, selfSignedCert bool) *shoutrrr.Shoutrrr {
 	s.Failed = &s.ServiceStatus.Fails.Shoutrrr
 
 	if failing {
-		s.URLFields["token"] = test.NotifyGotify.TokenMalformed
+		s.URLFields["token"] = test.NotifyGotify.TokenRejected
 	}
 	return s
 }

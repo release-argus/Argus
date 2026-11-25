@@ -17,40 +17,64 @@
 package latestver
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/latest_version/filter"
 	"github.com/release-argus/Argus/service/latest_version/types/web"
+	opttest "github.com/release-argus/Argus/service/option/test"
 	statustest "github.com/release-argus/Argus/service/status/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
 func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
-	lookup := testLookup(t, "url", false)
-
-	version, announce, err := Refresh(
-		lookup,
-		[]byte("null"),
-		nil,
-		nil,
-		plainDefaultsConfig(),
-	)
-
-	// An error, not a panic on the removed Lookup.
-	e := errfmt.FormatError(err)
-	if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
-		t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
+	tests := []struct {
+		name               string
+		semanticVersioning *string
+	}{
+		{
+			name:               "semantic_versioning unchanged",
+			semanticVersioning: nil,
+		},
+		{
+			name:               "semantic_versioning toggled off",
+			semanticVersioning: new("false"),
+		},
 	}
 
-	if version != "" || announce {
-		t.Errorf(
-			"version, announce mismatch\ngot:  %q, %t\nwant: %q, %t",
-			version, announce,
-			"", false,
-		)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			lookup := testLookup(t, "url", false)
+			lookup.GetOptions().SemanticVersioning = new(true)
+
+			version, announce, err := Refresh(
+				lookup,
+				[]byte("null"),
+				tc.semanticVersioning,
+				nil,
+				plainDefaultsConfig(),
+			)
+
+			// An error, not a panic on the removed Lookup.
+			e := errfmt.FormatError(err)
+			if wantErrRegex := `removed by overrides`; !util.RegexCheck(wantErrRegex, e) {
+				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, wantErrRegex)
+			}
+
+			if version != "" || announce {
+				t.Errorf(
+					"version, announce mismatch\ngot:  %q, %t\nwant: %q, %t",
+					version, announce,
+					"", false,
+				)
+			}
+		})
 	}
 }
 
@@ -398,5 +422,96 @@ func TestApplyOverridesJSON(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRefresh__semanticVersioningOnlyIsPreview(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("2.0.0"))
+	}))
+	t.Cleanup(srv.Close)
+
+	tests := []struct {
+		name               string
+		semanticVersioning string
+	}{
+		{
+			name:               "semantic_versioning toggled off",
+			semanticVersioning: "false",
+		},
+		{
+			name:               "semantic_versioning reset to the default",
+			semanticVersioning: "null",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svcStatus, _ := statustest.New("yaml", nil)
+			svcStatus.SetLatestVersion("1.0.0", "", false)
+			options := opttest.Options(t)
+			options.SemanticVersioning = new(true)
+			lookup, err := Decode(
+				"yaml", []byte("type: url\nurl: "+srv.URL+"\nurl_commands: []\n"),
+				options,
+				svcStatus,
+				plainDefaultsConfig(),
+			)
+			if err != nil {
+				t.Fatalf("Decode() failed: %v", err)
+			}
+			if tc.semanticVersioning == "null" {
+				options.SemanticVersioning = new(false)
+			}
+			hadSemanticVersioning := options.GetSemanticVersioning()
+
+			version, announce, err := Refresh(
+				lookup,
+				nil,
+				&tc.semanticVersioning,
+				nil,
+				plainDefaultsConfig(),
+			)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if testErr := test.AssertFields(t, []test.FieldAssertion{
+				{Name: "version", Got: version, Want: "2.0.0", Mode: test.CompareEqual},
+				{Name: "announce", Got: announce, Want: false, Mode: test.CompareEqual},
+				{Name: "Status.LatestVersion()", Got: svcStatus.LatestVersion(), Want: "1.0.0", Mode: test.CompareEqual},
+				{Name: "len(Status.AnnounceChannel)", Got: len(svcStatus.AnnounceChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "len(Status.DatabaseChannel)", Got: len(svcStatus.DatabaseChannel), Want: 0, Mode: test.CompareEqual},
+				{Name: "Options.GetSemanticVersioning()", Got: options.GetSemanticVersioning(), Want: hadSemanticVersioning, Mode: test.CompareEqual},
+			}, ""); testErr != nil {
+				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestApplyOverridesJSON__typeChangeCopiesOptions(t *testing.T) {
+	lookup := testLookup(t, "url", false)
+	options := lookup.GetOptions()
+	options.SemanticVersioning = new(true)
+
+	newLookup, err := applyOverridesJSON(
+		lookup,
+		[]byte(`{"type": "github", "url": "release-argus/Argus"}`),
+		true,
+		new("false"),
+		plainDefaultsConfig(),
+	)
+	if err != nil {
+		t.Fatalf("applyOverridesJSON() failed: %v", err)
+	}
+
+	if testErr := test.AssertFields(t, []test.FieldAssertion{
+		{Name: "newLookup.GetOptions()", Got: newLookup.GetDefaults(), Want: options, Mode: test.CompareDifferentPointer},
+		{Name: "Options.GetSemanticVersioning()", Got: options.GetSemanticVersioning(), Want: true, Mode: test.CompareEqual},
+	}, ""); testErr != nil {
+		t.Error(testErr)
 	}
 }

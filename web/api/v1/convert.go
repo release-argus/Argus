@@ -412,7 +412,7 @@ func convertAndCensorNotifiersDefaults(input shoutrrr.ShoutrrrsDefaults) apitype
 			URLFields: notify.URLFields,
 			Params:    notify.Params,
 		}
-		n.Censor()
+		n.Censor(util.FirstNonDefault(notify.Type, name))
 		notifiers[name] = n
 	}
 
@@ -433,7 +433,7 @@ func convertAndCensorNotifiers(input shoutrrr.Shoutrrrs) apitype.Notifiers {
 			URLFields: notify.URLFields,
 			Params:    notify.Params,
 		}
-		n.Censor()
+		n.Censor(notify.GetType())
 		notifiers[name] = n
 	}
 

@@ -22,6 +22,31 @@ export const forgeHostEntry = (
 };
 
 /**
+ * Re-keys `hardHosts` onto the `hosts` spelling of each name, as names match
+ * case-insensitively but the layers merge by exact key.
+ */
+export const alignForgeHostNames = (
+	hosts?: Record<string, LatestVersionLookupForgejoHostDefaults>,
+	hardHosts?: Record<string, LatestVersionLookupForgejoHostDefaults>,
+) => {
+	if (!hosts || !hardHosts) return hardHosts;
+
+	const spellings = new Map<string, string>();
+	for (const name of Object.keys(hosts).sort()) {
+		const key = name.toLowerCase();
+		if (!spellings.has(key)) spellings.set(key, name);
+	}
+
+	return Object.fromEntries(
+		Object.entries(hardHosts).map(([name, entry]) => {
+			const spelling = spellings.get(name.toLowerCase()) ?? name;
+			// A spelling the hard layer already holds is never overwritten.
+			return [spelling in hardHosts ? name : spelling, entry];
+		}),
+	);
+};
+
+/**
  * Resolves a forge `host` to the instance it addresses.
  *
  * A host may name a defaults entry or be a URL itself; a name wins.

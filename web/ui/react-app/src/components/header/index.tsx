@@ -99,12 +99,12 @@ const Header = () => {
 					</Button>
 
 					<Link
-						className="mr-2 flex h-full items-center gap-2 rounded-md outline-none focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+						className="focus-visible:ring-ring/50 mr-2 flex h-full items-center gap-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:outline-1"
 						onClick={closeMobileMenu}
 						to="/approvals"
 					>
 						<img alt="" className="h-full w-auto" src="favicon.svg" />
-						<h4 className="my-auto scroll-m-20 font-semibold text-xl tracking-tight">
+						<h4 className="my-auto scroll-m-20 text-xl font-semibold tracking-tight">
 							Argus
 						</h4>
 					</Link>
@@ -138,7 +138,7 @@ const Header = () => {
 											<Link
 												className={cn(
 													'group inline-flex h-9 w-max items-center rounded-md px-4 py-2',
-													'font-medium text-sm',
+													'text-sm font-medium',
 												)}
 												to={option.href}
 											>

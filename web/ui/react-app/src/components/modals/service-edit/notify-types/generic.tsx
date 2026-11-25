@@ -106,6 +106,24 @@ const GENERIC = ({
 						type: 'element',
 					}}
 				/>
+				<FieldText
+					defaultVal={defaults?.url_fields?.username}
+					label="Username"
+					name={`${name}.url_fields.username`}
+					tooltip={{
+						content: 'Basic auth username',
+						type: 'string',
+					}}
+				/>
+				<FieldText
+					defaultVal={defaults?.url_fields?.password}
+					label="Password"
+					name={`${name}.url_fields.password`}
+					tooltip={{
+						content: 'Basic auth password',
+						type: 'string',
+					}}
+				/>
 				<FieldKeyValMap
 					defaults={defaults?.url_fields?.headers}
 					name={`${name}.url_fields.headers`}
@@ -209,6 +227,15 @@ const GENERIC = ({
 					defaultValue={defaults?.params?.disabletls}
 					label="Disable TLS"
 					name={`${name}.params.disabletls`}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
+						type: 'string',
+					}}
 				/>
 			</FieldSet>
 		</FieldSet>

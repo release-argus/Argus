@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { BooleanWithDefault } from '@/components/generic';
 import {
 	FieldSelect,
 	FieldText,
@@ -13,9 +14,7 @@ import { withDefaultOption } from '@/components/modals/service-edit/util';
 import { FieldSet } from '@/components/ui/field';
 import { useSchemaContext } from '@/contexts/service-edit-zod-type';
 import {
-	type BarkScheme,
 	type BarkSound,
-	barkSchemeOptions,
 	barkSoundOptions,
 } from '@/utils/api/types/config/notify/bark';
 import type { NotifyBarkSchema } from '@/utils/api/types/config-edit/notify/schemas';
@@ -38,13 +37,6 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 	// Ensure selects have a valid value.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: fallback on first load.
 	useEffect(() => {
-		ensureValue<BarkScheme>({
-			defaultValue: defaults?.params?.scheme,
-			fallback: Object.values(barkSchemeOptions)[0].value,
-			getValues,
-			path: `${name}.params.scheme`,
-			setValue,
-		});
 		ensureValue<BarkSound>({
 			defaultValue: defaults?.params?.sound,
 			fallback: Object.values(barkSoundOptions)[0].value,
@@ -53,11 +45,6 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 			setValue,
 		});
 	}, [main]);
-
-	const barkSchemeOptionsNormalised = useMemo(
-		() => withDefaultOption(barkSchemeOptions, defaults?.params?.scheme),
-		[defaults?.params?.scheme],
-	);
 
 	const barkSoundOptionsNormalised = useMemo(
 		() =>
@@ -108,16 +95,6 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 			</FieldSet>
 			<FieldSet className="col-span-full grid grid-cols-subgrid">
 				<Heading title="Params" />
-				<FieldSelect
-					colSize={{ sm: 3 }}
-					label="Scheme"
-					name={`${name}.params.scheme`}
-					options={barkSchemeOptionsNormalised}
-					tooltip={{
-						content: 'Server protocol',
-						type: 'string',
-					}}
-				/>
 				<FieldText
 					colSize={{ sm: 3 }}
 					defaultVal={defaults?.params?.badge}
@@ -129,6 +106,7 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 					}}
 				/>
 				<FieldText
+					colSize={{ sm: 9 }}
 					defaultVal={defaults?.params?.copy}
 					label="Copy"
 					name={`${name}.params.copy`}
@@ -172,6 +150,24 @@ const BARK = ({ name, main }: { name: string; main?: NotifyBarkSchema }) => {
 					name={`${name}.params.icon`}
 					tooltip={{
 						content: 'URL to an icon',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.disabletls}
+					label="Disable TLS"
+					name={`${name}.params.disabletls`}
+					tooltip={{
+						content: 'Send over HTTP instead of HTTPS',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
 						type: 'string',
 					}}
 				/>

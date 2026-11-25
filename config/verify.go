@@ -23,6 +23,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
 
@@ -108,6 +109,10 @@ func (c *Config) CheckValues() bool {
 		fmt.Println(errfmt.FormatError(combinedErr))
 		logx.Fatal("Config could not be parsed successfully.", logx.LogFrom{})
 		return false
+	}
+
+	for _, id := range util.SortedKeys(c.Service) {
+		c.Service[id].Notify.LogWarnings(id)
 	}
 
 	// All files valid, queue save if changed.

@@ -18,6 +18,7 @@ package docker
 
 import (
 	"testing"
+	"time"
 
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
@@ -545,6 +546,153 @@ func TestApplyOverrides(t *testing.T) {
 				"ApplyOverrides",
 			); testErr != nil {
 				t.Error(testErr)
+			}
+		})
+	}
+}
+
+func TestApplyOverrides_QueryToken(t *testing.T) {
+	const (
+		queryToken = "query-token"
+		ecrInit    = `{"type":"ecr", "image":"a/b"}`
+		hubInit    = `{"type":"hub", "image":"a/b","auth":{"username":"u","token":"t"}}`
+		ghcrInit   = `{"type":"ghcr","image":"a/b"}`
+	)
+
+	tests := []struct {
+		name     string
+		initial  string
+		override string
+		want     string
+	}{
+		{
+			name:     "hub/unchanged credentials keep the token",
+			initial:  hubInit,
+			override: `{"image":"c/d"}`,
+			want:     queryToken,
+		},
+		{
+			name:     "hub/secret placeholder keeps the token",
+			initial:  hubInit,
+			override: `{"auth":{"token":"` + util.SecretValue + `"}}`,
+			want:     queryToken,
+		},
+		{
+			name:     "hub/changed token clears the token",
+			initial:  hubInit,
+			override: `{"auth":{"token":"t2"}}`,
+			want:     "",
+		},
+		{
+			name:     "hub/changed username clears the token",
+			initial:  hubInit,
+			override: `{"auth":{"username":"u2"}}`,
+			want:     "",
+		},
+		{
+			name:     "ghcr/unchanged credentials and image keep the token",
+			initial:  ghcrInit,
+			override: `{"tag":"{{ version }}"}`,
+			want:     queryToken,
+		},
+		{
+			name:     "ghcr/changed image clears the token",
+			initial:  ghcrInit,
+			override: `{"image":"c/d"}`,
+			want:     "",
+		},
+		{
+			name:     "ghcr/changed token is not inherited",
+			initial:  ghcrInit,
+			override: `{"auth":{"token":"t2"}}`,
+			want:     "t2", // Decoding the new token derives the query token from it.
+		},
+		{
+			name:     "ecr/anonymous token is always kept",
+			initial:  ecrInit,
+			override: `{"image":"c/d"}`,
+			want:     queryToken,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			defaults, _ := plainDefaults()
+			target, err := Decode("json", []byte(tc.initial), defaults)
+			if err != nil {
+				t.Fatalf("Decode() failed: %v", err)
+			}
+			target.GetAuth().SetQueryToken(queryToken, time.Now().Add(time.Hour))
+
+			got, err := ApplyOverrides("json", []byte(tc.override), target, defaults)
+			if err != nil {
+				t.Fatalf("ApplyOverrides() failed: %v", err)
+			}
+
+			gotToken, _ := got.GetAuth().GetQueryTokenSelf()
+			if gotToken != tc.want {
+				t.Errorf(
+					"Registry.GetAuth().GetQueryTokenSelf() mismatch\ngot:  %q\nwant: %q",
+					gotToken, tc.want,
+				)
+			}
+		})
+	}
+}
+
+func TestApplyOverrides_SharedDefaultsQueryToken(t *testing.T) {
+	const sharedToken = "shared-token"
+
+	tests := []struct {
+		name     string
+		initial  string
+		override string
+	}{
+		{
+			name:     "hub/unchanged credentials",
+			initial:  `{"type":"hub","image":"a/b"}`,
+			override: `{"image":"c/d"}`,
+		},
+		{
+			name:     "hub/changed token",
+			initial:  `{"type":"hub","image":"a/b"}`,
+			override: `{"auth":{"token":"t2"}}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			defaults, _ := plainDefaults()
+			sharedAuth := defaults.Registry.Hub.GetAuth()
+			hub, ok := sharedAuth.(*HubAuthDefaults)
+			if !ok {
+				t.Fatalf(
+					"Registry.Hub.GetAuth() type mismatch\ngot:  %T\nwant: *HubAuthDefaults",
+					sharedAuth,
+				)
+			}
+			hub.Username, hub.Token = "u", "t"
+			target, err := Decode("json", []byte(tc.initial), defaults)
+			if err != nil {
+				t.Fatalf("Decode() failed: %v", err)
+			}
+			sharedAuth.SetQueryToken(sharedToken, time.Now().Add(time.Hour))
+
+			if _, err := ApplyOverrides("json", []byte(tc.override), target, defaults); err != nil {
+				t.Fatalf("ApplyOverrides() failed: %v", err)
+			}
+
+			gotToken, _ := sharedAuth.GetQueryTokenSelf()
+			if gotToken != sharedToken {
+				t.Errorf(
+					"Defaults.Registry.Hub.GetAuth().GetQueryTokenSelf() mismatch\n"+
+						"got:  %q\nwant: %q",
+					gotToken, sharedToken,
+				)
 			}
 		})
 	}

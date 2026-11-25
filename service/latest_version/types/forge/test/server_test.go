@@ -116,6 +116,7 @@ func TestStart_doesNotOverrideWhatTheCallerSet(t *testing.T) {
 func TestRelativeNextPageLink(t *testing.T) {
 	tests := []struct {
 		name       string
+		query      string
 		next, last int
 		want       string
 	}{
@@ -137,13 +138,20 @@ func TestRelativeNextPageLink(t *testing.T) {
 			last: -1,
 			want: `</repos/o/r/releases?page=3>; rel="next"`,
 		},
+		{
+			name:  "other query parameters follow the page",
+			query: "?per_page=100&page=2",
+			next:  3,
+			last:  4,
+			want:  `</repos/o/r/releases?page=3&per_page=100>; rel="next", </repos/o/r/releases?page=4&per_page=100>; rel="last"`,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			request := httptest.NewRequest(http.MethodGet, "/repos/o/r/releases", nil)
+			request := httptest.NewRequest(http.MethodGet, "/repos/o/r/releases"+tc.query, nil)
 
 			got := RelativeNextPageLink(request, tc.next, tc.last)
 
@@ -262,6 +270,43 @@ func TestServer_Serve(t *testing.T) {
 			path:       "/repos/o/r/releases",
 			wantStatus: http.StatusOK,
 			wantBody:   releasesBody,
+		},
+		{
+			name: "valid/a page answers its own ETag with 304",
+			endpoints: map[string]Endpoint{
+				"releases": {Pages: []string{"page-1", "page-2"}, PageETags: []string{`"p1"`, `"p2"`}},
+			},
+			path:        "/repos/o/r/releases?page=2",
+			header:      http.Header{"If-None-Match": []string{`"p2"`}},
+			wantStatus:  http.StatusNotModified,
+			wantBody:    "",
+			wantHeaders: map[string]string{"ETag": `"p2"`},
+		},
+		{
+			name: "valid/a page serves its body to another page's ETag",
+			endpoints: map[string]Endpoint{
+				"releases": {Pages: []string{"page-1", "page-2"}, PageETags: []string{`"p1"`, `"p2"`}},
+			},
+			path:        "/repos/o/r/releases?page=2",
+			header:      http.Header{"If-None-Match": []string{`"p1"`}},
+			wantStatus:  http.StatusOK,
+			wantBody:    "page-2",
+			wantHeaders: map[string]string{"ETag": `"p2"`},
+		},
+		{
+			name: "valid/a page beyond PageETags falls back to ETag",
+			endpoints: map[string]Endpoint{
+				"releases": {
+					Pages:     []string{"page-1", "page-2", "page-3"},
+					PageETags: []string{`"p1"`},
+					ETag:      `"all"`,
+				},
+			},
+			path:        "/repos/o/r/releases?page=2",
+			header:      http.Header{"If-None-Match": []string{`"all"`}},
+			wantStatus:  http.StatusNotModified,
+			wantBody:    "",
+			wantHeaders: map[string]string{"ETag": `"all"`},
 		},
 		{
 			name: "valid/page one of a paginated endpoint names the next and last pages",

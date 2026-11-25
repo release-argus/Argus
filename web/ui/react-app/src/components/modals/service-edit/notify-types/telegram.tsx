@@ -92,6 +92,16 @@ const TELEGRAM = ({
 					label="Title"
 					name={`${name}.params.title`}
 				/>
+				<FieldText
+					colSize={{ sm: 12 }}
+					defaultVal={defaults?.params?.apiurl}
+					label="API URL"
+					name={`${name}.params.apiurl`}
+					tooltip={{
+						content: 'Bot API server base URL, e.g. https://api.telegram.org',
+						type: 'string',
+					}}
+				/>
 				<BooleanWithDefault
 					defaultValue={defaults?.params?.notification}
 					label="Notification"
@@ -107,6 +117,15 @@ const TELEGRAM = ({
 					name={`${name}.params.preview`}
 					tooltip={{
 						content: 'Enable web page previews on messages',
+						type: 'string',
+					}}
+				/>
+				<BooleanWithDefault
+					defaultValue={defaults?.params?.skiptlsverify}
+					label="Skip TLS Verification"
+					name={`${name}.params.skiptlsverify`}
+					tooltip={{
+						content: 'Skip TLS certificate verification',
 						type: 'string',
 					}}
 				/>

@@ -245,6 +245,8 @@ test.describe('Service creation modal - field validation', () => {
 				SCHEMALESS_UNIQUE_FORGEJO_HOST,
 				'Internal (https://git.internal.example)',
 				`Project (${PROJECT_FORGEJO_URL})`,
+				// The environment's WORK merges into the file's Work.
+				'Work (https://git.work.example)',
 			]);
 			await hostInput.blur();
 
@@ -309,6 +311,15 @@ test.describe('Service creation modal - field validation', () => {
 				'false',
 			);
 			await shot('07-forgejo-host-defaults-url-named', section);
+
+			await selectOrCreate(hostInput, 'Work');
+
+			// The token comes only from the environment layer, so the layers merged as one entry.
+			await expect(hostField, 'after Work host').toHaveValue('Work');
+			await expect(tokenInput, 'after Work host').toHaveAttribute(
+				'placeholder',
+				SECRET_VALUE,
+			);
 
 			await selectOrCreate(hostInput, 'git.example.com');
 

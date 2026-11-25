@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.40.1](https://github.com/release-argus/Argus/compare/0.40.0...0.40.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **ui:** merge forgejo env-var hosts with config-file hosts case-insensitively ([#1097](https://github.com/release-argus/Argus/issues/1097)) ([1562c12](https://github.com/release-argus/Argus/commit/1562c12310a1aa44595fc3fa3311bcbb667b899d))
+
+## [0.40.0](https://github.com/release-argus/Argus/compare/0.39.1...0.40.0) (2026-11-20)
+
+
+### Features
+
+* **notify:** add basic auth to generic webhooks ([b54304b](https://github.com/release-argus/Argus/commit/b54304b19344ff9654056a67038d08b6cd862379))
+* **notify:** keep secrets of renamed map keys ([#1096](https://github.com/release-argus/Argus/issues/1096)) ([a46be2a](https://github.com/release-argus/Argus/commit/a46be2a857167118f1a83dc19c5960760da90831))
+* **notify:** support Shoutrrr v0.25.0 services and params ([9bd1077](https://github.com/release-argus/Argus/commit/9bd107741af289d4714d7dce8988bb6f4b61b12a))
+* **notify:** validate boolean params ([ce2cd9d](https://github.com/release-argus/Argus/commit/ce2cd9dd1cc62493f31c0d082fc1381368604bd8))
+
+
+### Bug Fixes
+
+* **lv-github:** re-check the page a release was found on ([#1095](https://github.com/release-argus/Argus/issues/1095)) ([9641dfe](https://github.com/release-argus/Argus/commit/9641dfefcd18bcfb71ffe2679b42c67a0a877c78))
+* **notify:** censor all but each type's safe fields ([205ed18](https://github.com/release-argus/Argus/commit/205ed18c140609b8db3677bec004dcaca46c0886))
+* **notify:** censor ntfy actions and gotify extras by value ([b95bfec](https://github.com/release-argus/Argus/commit/b95bfecae483b3b5dcd4b45960f099c2b4ea565e))
+* **notify:** restore secrets only from a same-type notifier ([ab0254f](https://github.com/release-argus/Argus/commit/ab0254f1be833bb4b154b0e6c2e5aa84498c941a))
+* **ui:** restore instance secrets by value, not RHF dirty state ([e360164](https://github.com/release-argus/Argus/commit/e3601647bfb8e9b5f23c6e29e0a1f4813813739b))
+
 ## [0.39.1](https://github.com/release-argus/Argus/compare/0.39.0...0.39.1) (2026-11-17)
 
 

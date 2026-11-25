@@ -96,18 +96,6 @@ func ClonePtr[T any](ptr *T) *T {
 	return &val
 }
 
-// RestoreMaskedValues loops through fields and replaces values in target equal to [SecretValue] with values from original
-// if non-empty.
-func RestoreMaskedValues[K comparable](original, target map[K]string, fields []K) map[K]string {
-	for _, field := range fields {
-		if target[field] == SecretValue && original[field] != "" {
-			target[field] = original[field]
-		}
-	}
-
-	return target
-}
-
 // Indentation returns the indentation of a given line based on the specified indent size.
 func Indentation(line string, indentSize uint8) string {
 	if indentSize == 0 {

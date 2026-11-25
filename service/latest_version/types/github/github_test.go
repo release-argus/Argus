@@ -153,7 +153,7 @@ func TestLookup_FilterGitHubReleases(t *testing.T) {
 			}
 			lv.UsePreRelease = &tc.usePreReleases
 			lv.Options.SemanticVersioning = &tc.semanticVersioning
-			lv.GetGitHubData().SetReleases(tc.releases)
+			lv.data.releases = tc.releases
 
 			filteredReleases := lv.filterGitHubReleases(logx.LogFrom{})
 

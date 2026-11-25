@@ -17,8 +17,11 @@
 package v1
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -47,6 +50,25 @@ import (
 	apitype "github.com/release-argus/Argus/web/api/types"
 	"github.com/release-argus/Argus/webhook"
 )
+
+// dialNoLinger dials with SetLinger(0) so closed connections skip TCP TIME_WAIT                                       │
+// and don't exhaust ports.
+func dialNoLinger(ctx context.Context, network, addr string) (net.Conn, error) {
+	conn, err := (&net.Dialer{}).DialContext(ctx, network, addr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial: %w", err)
+	}
+	tcpConn, ok := conn.(*net.TCPConn)
+	if !ok {
+		_ = conn.Close()
+		return nil, fmt.Errorf("failed to set linger on %T", conn)
+	}
+	if err := tcpConn.SetLinger(0); err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("failed to set linger: %w", err)
+	}
+	return tcpConn, nil
+}
 
 func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 	// Each route is named by its disabled_routes key, or '-'-prefixed if it has none.
@@ -299,7 +321,9 @@ func TestHTTP_SetupRoutesAPI__disableRoutes(t *testing.T) {
 					api.SetupRoutesAPI()
 					ts := httptest.NewServer(api.Router)
 					t.Cleanup(ts.Close)
-					client := http.Client{}
+					transport := &http.Transport{DialContext: dialNoLinger}
+					t.Cleanup(transport.CloseIdleConnections)
+					client := http.Client{Transport: transport}
 
 					for _, tc := range tests {
 						t.Run(tc.name, func(t *testing.T) {

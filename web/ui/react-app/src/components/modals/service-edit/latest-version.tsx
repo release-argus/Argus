@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useFormContext, useFormState, useWatch } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { BooleanWithDefault } from '@/components/generic';
 import {
 	FieldKeyValMap,
@@ -37,7 +37,7 @@ const EditServiceLatestVersion = () => {
 	const name = 'latest_version';
 	const hostFieldName = `${name}.host`;
 	const urlFieldName = `${name}.url`;
-	const { getFieldState, getValues, setValue, trigger } = useFormContext();
+	const { getValues, setValue, trigger } = useFormContext();
 	const { schemaData, schemaDataDefaults, typeDataDefaults } =
 		useSchemaContext();
 
@@ -120,10 +120,6 @@ const EditServiceLatestVersion = () => {
 
 	const tokenField = `${name}.access_token`;
 	const certsField = `${name}.allow_invalid_certs`;
-	// Only untouched values follow the instance - once typed in, a field is the user's.
-	const formState = useFormState({ name: [tokenField, certsField] });
-	const tokenUntouched = !getFieldState(tokenField, formState).isDirty;
-	const certsUntouched = !getFieldState(certsField, formState).isDirty;
 
 	const forgejoHosts =
 		typeDataDefaults?.latest_version?.[LATEST_VERSION_LOOKUP_TYPE.FORGEJO.value]
@@ -143,25 +139,25 @@ const EditServiceLatestVersion = () => {
 	const previousInstance = useRef<string | null>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: setValue stable, stored values read on change.
 	useEffect(() => {
-		if (previousInstance.current === null) {
-			previousInstance.current = currentInstance;
-			return;
-		}
-		if (previousInstance.current === currentInstance) return;
+		const previous = previousInstance.current;
 		previousInstance.current = currentInstance;
+		if (previous === null || previous === currentInstance) return;
 
-		// Undirtied writes throughout, so a cleared field stays ours to restore.
-		const backToStored = currentInstance === storedInstance;
-		if (tokenUntouched)
-			setValue(
-				tokenField,
-				backToStored ? (savedShared?.access_token ?? '') : '',
-			);
-		if (certsUntouched)
-			setValue(
-				certsField,
-				backToStored ? (savedShared?.allow_invalid_certs ?? null) : null,
-			);
+		const valuesFor = (instance: string) =>
+			instance === storedInstance
+				? {
+						certs: savedShared?.allow_invalid_certs ?? null,
+						token: savedShared?.access_token ?? '',
+					}
+				: { certs: null, token: '' };
+		// Only untouched values follow the instance - once typed in, a field is the user's.
+		// Judged by value, as RHF may mark a field dirty after a programmatic clear.
+		const left = valuesFor(previous);
+		const next = valuesFor(currentInstance);
+		if ((getValues(tokenField) ?? '') === left.token)
+			setValue(tokenField, next.token);
+		if ((getValues(certsField) ?? null) === left.certs)
+			setValue(certsField, next.certs);
 	}, [currentInstance]);
 
 	// Add default to type options.

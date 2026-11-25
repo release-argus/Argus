@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -54,8 +55,8 @@ func TestShoutrrr_TestSend(t *testing.T) {
 			sType: new("somethingUnknown"),
 			errRegex: test.TrimYAML(`
 				^failed to create Shoutrrr sender:
-					creating sender with options for URLs \[\]:
-						error initializing router services:
+					creating sender:
+						error initializing router services: URL 0:
 							unknown service: ""$`,
 			),
 		},
@@ -244,6 +245,9 @@ func TestShoutrrrs_CheckValues(t *testing.T) {
 	}
 }
 
+// testTwilioSID is split so secret scanners do not take it for a real account SID.
+const testTwilioSID = "AC" + "0123456789abcdef" + "0123456789abcdef"
+
 func TestShoutrrr_CheckValues(t *testing.T) {
 	testS := testShoutrrr(false, false)
 	tests := []struct {
@@ -387,13 +391,13 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			sType:    testS.Type,
 			urlFields: map[string]string{
 				"host":  "foo",
-				"token": "bar",
+				"token": "AAAAAAAAAAAAAAA",
 				"port":  ":8080",
 				"path":  "/test",
 			},
 			wantURLFields: map[string]string{
 				"host":  "foo",
-				"token": "bar",
+				"token": "AAAAAAAAAAAAAAA",
 				"port":  "8080",
 				"path":  "test",
 			},
@@ -429,7 +433,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed: true,
 		},
 		{
-			name:     "ntfy.params.disabletls -> disabletlsverification",
+			name:     "ntfy.params.disabletlsverification -> skiptlsverify",
 			errRegex: `^$`,
 			sType:    "ntfy",
 			urlFields: map[string]string{
@@ -439,15 +443,15 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"topic": "123",
 			},
 			params: map[string]string{
-				"disabletls": "true",
+				"disabletlsverification": "true",
 			},
 			wantParams: map[string]string{
-				"disabletlsverification": "true",
+				"skiptlsverify": "true",
 			},
 			changed: true,
 		},
 		{
-			name:     "ntfy.params.disabletls not pulled to disabletlsverification if disabletlsverification already defined",
+			name:     "ntfy.params.disabletlsverification not pulled to skiptlsverify if skiptlsverify already defined",
 			errRegex: `^$`,
 			sType:    "ntfy",
 			urlFields: map[string]string{
@@ -457,11 +461,11 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				"topic": "123",
 			},
 			params: map[string]string{
-				"disabletls":             "true",
-				"disabletlsverification": "false",
+				"disabletlsverification": "true",
+				"skiptlsverify":          "false",
 			},
 			wantParams: map[string]string{
-				"disabletlsverification": "false",
+				"skiptlsverify": "false",
 			},
 			changed: true,
 		},
@@ -482,7 +486,7 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 				testS.Type,
 				nil,
 				map[string]string{
-					"token": "bar",
+					"token": "AAAAAAAAAAAAAAA",
 				},
 				nil,
 			),
@@ -542,32 +546,11 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			changed:  true,
 		},
 		{
-			name:  "homeassistant/fail Locate on an out-of-range port",
-			sType: "homeassistant",
-			urlFields: map[string]string{
-				"host":  "homeassistant.example.com",
-				"port":  "99999",
-				"token": "bish",
-			},
-			errRegex: `port is invalid`,
-			changed:  false,
-		},
-		{
-			name:  "gotify/fail CreateSender",
-			sType: "gotify",
-			urlFields: map[string]string{
-				"host":  "https://	example.com",
-				"token": "bish",
-			},
-			errRegex: `failed to parse URL`,
-			changed:  false,
-		},
-		{
 			name:      "teams/new-style (Power Automate URL)",
 			sType:     "teams",
 			urlFields: map[string]string{},
 			params: map[string]string{
-				"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc",
+				"host": "https://prod-00.westus.logic.azure.com:443/workflows/abc?sig=SIG",
 			},
 			errRegex: `^$`,
 			changed:  false,
@@ -587,6 +570,99 @@ func TestShoutrrr_CheckValues(t *testing.T) {
 			},
 			errRegex: `^$`,
 			changed:  false,
+		},
+		{
+			name:  "lark/valid",
+			sType: "lark",
+			urlFields: map[string]string{
+				"host":  "open.larksuite.com",
+				"token": "TOKEN",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "mqtt/valid",
+			sType: "mqtt",
+			urlFields: map[string]string{
+				"host":  "mqtt.example.com",
+				"topic": "argus/releases",
+			},
+			params: map[string]string{
+				"qos": "atleastonce",
+			},
+			wantParams: map[string]string{
+				"qos": "AtLeastOnce",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "pagerduty/valid",
+			sType: "pagerduty",
+			urlFields: map[string]string{
+				"integrationkey": "0123456789abcdef0123456789abcdef",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "rocketchat/valid without channel",
+			sType: "rocketchat",
+			urlFields: map[string]string{
+				"host":   "rocketchat.example.com",
+				"tokena": "TOKENA",
+				"tokenb": "TOKENB",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "signal/valid",
+			sType: "signal",
+			urlFields: map[string]string{
+				"host":       "signal.example.com",
+				"source":     "+15551234567",
+				"recipients": "+15557654321,u:argus.01",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "signalgrid/valid",
+			sType: "signalgrid",
+			urlFields: map[string]string{
+				"clientkey": "CLIENTKEY",
+				"channel":   "CHANNEL",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "twilio/valid",
+			sType: "twilio",
+			urlFields: map[string]string{
+				"accountsid": testTwilioSID,
+				"authtoken":  "TOKEN",
+				"fromnumber": "+15551234567",
+				"tonumbers":  "+15557654321,+15550000000",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "wecom/valid",
+			sType: "wecom",
+			urlFields: map[string]string{
+				"key": "693a0006-7a0c-4bc4-97a0-0ec2a1fa5aaa",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "xmpp/valid",
+			sType: "xmpp",
+			urlFields: map[string]string{
+				"host":     "xmpp.example.com",
+				"user":     "argus",
+				"password": "pass",
+			},
+			params: map[string]string{
+				"to": "user@example.com",
+			},
+			errRegex: `^$`,
 		},
 	}
 
@@ -1263,6 +1339,82 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
+			name:      "bark/scheme http -> disabletls",
+			sType:     "bark",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "http",
+			},
+			want: map[string]string{
+				"disabletls": "yes",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "bark/scheme HTTP -> disabletls",
+			sType:     "bark",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "HTTP",
+			},
+			want: map[string]string{
+				"disabletls": "yes",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "bark/scheme https -> disabletls",
+			sType:     "bark",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "https",
+			},
+			want: map[string]string{
+				"disabletls": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "bark/scheme HTTPS -> disabletls",
+			sType:     "bark",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "HTTPS",
+			},
+			want: map[string]string{
+				"disabletls": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "bark/scheme -> disabletls (but disabletls already defined)",
+			sType:     "bark",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme":     "http",
+				"disabletls": "no",
+			},
+			want: map[string]string{
+				"disabletls": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
 			name:      "discord/threadid -> thread_id",
 			sType:     "discord",
 			mapTarget: "params",
@@ -1356,6 +1508,49 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantChanged: true,
 		},
 		{
+			name:      "gotify/insecureskipverify -> skiptlsverify",
+			sType:     "gotify",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"insecureskipverify": "yes",
+			},
+			want: map[string]string{
+				"skiptlsverify": "yes",
+			},
+			wantAbsent: []string{
+				"insecureskipverify",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "gotify/insecureskipverify -> skiptlsverify (but skiptlsverify already defined)",
+			sType:     "gotify",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"insecureskipverify": "yes",
+				"skiptlsverify":      "no",
+			},
+			want: map[string]string{
+				"skiptlsverify": "no",
+			},
+			wantAbsent: []string{
+				"insecureskipverify",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "gotify/date removed",
+			sType:     "gotify",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"date": "2006-01-02T15:04:05Z",
+			},
+			wantAbsent: []string{
+				"date",
+			},
+			wantChanged: true,
+		},
+		{
 			name:      "ifttt/usemessageasvalue -> messagevalue",
 			sType:     "ifttt",
 			mapTarget: "params",
@@ -1418,6 +1613,37 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantChanged: true,
 		},
 		{
+			name:      "matrix/username -> user",
+			sType:     "matrix",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"username": "argus",
+			},
+			want: map[string]string{
+				"user": "argus",
+			},
+			wantAbsent: []string{
+				"username",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "matrix/username -> user (but user already defined)",
+			sType:     "matrix",
+			mapTarget: "url_fields",
+			startAs: map[string]string{
+				"user":     "other",
+				"username": "argus",
+			},
+			want: map[string]string{
+				"user": "other",
+			},
+			wantAbsent: []string{
+				"username",
+			},
+			wantChanged: true,
+		},
+		{
 			name:      "matrix/rooms/leading #",
 			sType:     "matrix",
 			mapTarget: "params",
@@ -1452,6 +1678,29 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
+			name:      "mqtt/qos, numeric alias",
+			sType:     "mqtt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"qos": "1",
+			},
+			want: map[string]string{
+				"qos": "AtLeastOnce",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "mqtt/qos, out of range left for CheckValues",
+			sType:     "mqtt",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"qos": "3",
+			},
+			want: map[string]string{
+				"qos": "3",
+			},
+		},
+		{
 			name:      "mattermost/channel, leading slash",
 			sType:     "mattermost",
 			mapTarget: "url_fields",
@@ -1475,14 +1724,79 @@ func TestBase_CorrectSelf(t *testing.T) {
 			},
 		},
 		{
-			name:      "ntfy/disabletls -> disabletlsverification",
+			name:      "opsgenie/priority 3 -> P3",
+			sType:     "opsgenie",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"priority": "3",
+			},
+			want: map[string]string{
+				"priority": "P3",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "opsgenie/priority P2 kept",
+			sType:     "opsgenie",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"priority": "P2",
+			},
+			want: map[string]string{
+				"priority": "P2",
+			},
+		},
+		{
+			name:      "opsgenie/priority 6 kept",
+			sType:     "opsgenie",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"priority": "6",
+			},
+			want: map[string]string{
+				"priority": "6",
+			},
+		},
+		{
+			name:      "ntfy/disabletlsverification -> skiptlsverify",
 			sType:     "ntfy",
 			mapTarget: "params",
 			startAs: map[string]string{
-				"disabletls": "true",
+				"disabletlsverification": "true",
 			},
 			want: map[string]string{
+				"skiptlsverify": "true",
+			},
+			wantAbsent: []string{
+				"disabletlsverification",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/disabletlsverification -> skiptlsverify (but skiptlsverify already defined)",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
 				"disabletlsverification": "true",
+				"skiptlsverify":          "false",
+			},
+			want: map[string]string{
+				"skiptlsverify": "false",
+			},
+			wantAbsent: []string{
+				"disabletlsverification",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/disabletls -> skiptlsverify",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"disabletls": "yes",
+			},
+			want: map[string]string{
+				"skiptlsverify": "yes",
 			},
 			wantAbsent: []string{
 				"disabletls",
@@ -1490,18 +1804,143 @@ func TestBase_CorrectSelf(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name:      "ntfy/disabletls -> disabletlsverification (but disabletlsverification already defined)",
+			name:      "ntfy/disabletls -> skiptlsverify (but skiptlsverify already defined)",
 			sType:     "ntfy",
 			mapTarget: "params",
 			startAs: map[string]string{
-				"disabletls":             "true",
-				"disabletlsverification": "false",
+				"disabletls":    "yes",
+				"skiptlsverify": "no",
 			},
 			want: map[string]string{
-				"disabletlsverification": "false",
+				"skiptlsverify": "no",
 			},
 			wantAbsent: []string{
 				"disabletls",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/scheme http -> disabletls_",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "http",
+			},
+			want: map[string]string{
+				"disabletls_": "yes",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/scheme HTTP -> disabletls_",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "HTTP",
+			},
+			want: map[string]string{
+				"disabletls_": "yes",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/scheme https -> disabletls_",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "https",
+			},
+			want: map[string]string{
+				"disabletls_": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/scheme HTTPS -> disabletls_",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme": "HTTPS",
+			},
+			want: map[string]string{
+				"disabletls_": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/scheme -> disabletls_ (but disabletls_ already defined)",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"scheme":      "http",
+				"disabletls_": "no",
+			},
+			want: map[string]string{
+				"disabletls_": "no",
+			},
+			wantAbsent: []string{
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "ntfy/disabletls and scheme -> skiptlsverify and disabletls_",
+			sType:     "ntfy",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"disabletls": "yes",
+				"scheme":     "http",
+			},
+			want: map[string]string{
+				"disabletls_":   "yes",
+				"skiptlsverify": "yes",
+			},
+			wantAbsent: []string{
+				"disabletls",
+				"scheme",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "signal/apikey -> token",
+			sType:     "signal",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"apikey": "secret",
+			},
+			want: map[string]string{
+				"token": "secret",
+			},
+			wantAbsent: []string{
+				"apikey",
+			},
+			wantChanged: true,
+		},
+		{
+			name:      "signal/apikey -> token (but token already defined)",
+			sType:     "signal",
+			mapTarget: "params",
+			startAs: map[string]string{
+				"apikey": "secret",
+				"token":  "other",
+			},
+			want: map[string]string{
+				"token": "other",
+			},
+			wantAbsent: []string{
+				"apikey",
 			},
 			wantChanged: true,
 		},
@@ -1871,6 +2310,206 @@ func TestBase_NormaliseParamSelect(t *testing.T) {
 
 			if got := b.GetParam(key); got != tc.wantValue {
 				t.Fatalf("Base.GetParam() mismatch\ngot:  %q\nwant: %q", got, tc.wantValue)
+			}
+		})
+	}
+}
+
+func TestShoutrrr_CheckURL(t *testing.T) {
+	tests := []struct {
+		name              string
+		sType             string
+		urlFields, params map[string]string
+		errRegex          string
+	}{
+		{
+			name:  "homeassistant/fail Locate on an out-of-range port",
+			sType: "homeassistant",
+			urlFields: map[string]string{
+				"host":  "homeassistant.example.com",
+				"port":  "99999",
+				"token": "bish",
+			},
+			errRegex: `invalid URL port`,
+		},
+		{
+			name:  "gotify/fail CreateSender",
+			sType: "gotify",
+			urlFields: map[string]string{
+				"host":  "https://	example.com",
+				"token": "bish",
+			},
+			errRegex: `failed to parse URL`,
+		},
+		{
+			name:  "pagerduty/invalid integrationkey",
+			sType: "pagerduty",
+			urlFields: map[string]string{
+				"integrationkey": "KEY",
+			},
+			errRegex: `^pagerduty:\n.*invalid integration key format`,
+		},
+		{
+			name:  "twilio/invalid accountsid",
+			sType: "twilio",
+			urlFields: map[string]string{
+				"accountsid": "SID",
+				"authtoken":  "TOKEN",
+				"fromnumber": "+15551234567",
+				"tonumbers":  "+15557654321",
+			},
+			errRegex: `^twilio:\n.*account SID must be AC followed by 32 hexadecimal characters`,
+		},
+		{
+			name:  "teams/legacy skips Locate",
+			sType: "teams",
+			urlFields: map[string]string{
+				"altid":      "ALTID",
+				"group":      "GROUP",
+				"groupowner": "GROUPOWNER",
+				"tenant":     "TENANT",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:  "twilio/valid",
+			sType: "twilio",
+			urlFields: map[string]string{
+				"accountsid": testTwilioSID,
+				"authtoken":  "TOKEN",
+				"fromnumber": "+15551234567",
+				"tonumbers":  "+15557654321",
+			},
+			errRegex: `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := testShoutrrr(false, false)
+			s.Type = tc.sType
+			s.Main = &Defaults{}
+			s.Main.InitMaps()
+			s.URLFields = util.CopyMap(tc.urlFields)
+			s.Params = util.CopyMap(tc.params)
+
+			err := s.CheckURL()
+
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+		})
+	}
+}
+
+func TestShoutrrrs_CheckURLs(t *testing.T) {
+	pagerDuty := func(integrationKey string) *Shoutrrr {
+		return New(
+			nil, "", "pagerduty",
+			nil, map[string]string{"integrationkey": integrationKey}, nil,
+			&Defaults{}, &Defaults{}, &Defaults{},
+		)
+	}
+	validKey := "0123456789abcdef0123456789abcdef"
+
+	tests := []struct {
+		name      string
+		shoutrrrs *Shoutrrrs
+		errRegex  string
+	}{
+		{
+			name:      "nil",
+			shoutrrrs: nil,
+			errRegex:  `^$`,
+		},
+		{
+			name:      "valid",
+			shoutrrrs: &Shoutrrrs{"bar": pagerDuty(validKey)},
+			errRegex:  `^$`,
+		},
+		{
+			name:      "invalid/keyed by ID",
+			shoutrrrs: &Shoutrrrs{"bar": pagerDuty(validKey), "foo": pagerDuty("KEY")},
+			errRegex:  `^foo:\n  pagerduty:\n    invalid integration key format`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tc.shoutrrrs.CheckURLs()
+
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+		})
+	}
+}
+
+func TestShoutrrrs_LogWarnings(t *testing.T) {
+	notify := func(sType string, urlFields, params map[string]string) *Shoutrrr {
+		return New(
+			nil, "", sType,
+			nil, urlFields, params,
+			&Defaults{}, &Defaults{}, &Defaults{},
+		)
+	}
+	gotifyURLFields := map[string]string{"host": "example.com", "token": "AAAAAAAAAAAAAAA"}
+
+	tests := []struct {
+		name      string
+		shoutrrrs *Shoutrrrs
+		want      string
+	}{
+		{
+			name:      "nil",
+			shoutrrrs: nil,
+			want:      `^$`,
+		},
+		{
+			name:      "valid",
+			shoutrrrs: &Shoutrrrs{"foo": notify("gotify", gotifyURLFields, nil)},
+			want:      `^$`,
+		},
+		{
+			name: "unlocatable",
+			shoutrrrs: &Shoutrrrs{
+				"foo": notify("pagerduty", map[string]string{"integrationkey": "KEY"}, nil),
+			},
+			want: `^WARNING: service_id \(foo\), failed to locate notify, so it will fail to send: pagerduty: invalid integration key`,
+		},
+		{
+			name: "unknown params",
+			shoutrrrs: &Shoutrrrs{
+				"foo": notify("gotify", gotifyURLFields, map[string]string{"bogus": "x", "priority": "1"}),
+			},
+			want: `^WARNING: service_id \(foo\), dropping unknown params \["bogus"\]\n$`,
+		},
+		{
+			name: "ntfy disabletls_ known",
+			shoutrrrs: &Shoutrrrs{
+				"foo": notify("ntfy", map[string]string{"topic": "TOPIC"}, map[string]string{"disabletls_": "yes"}),
+			},
+			want: `^$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+
+			releaseStdout := test.CaptureLog(t, logx.Default())
+
+			tc.shoutrrrs.LogWarnings("service_id")
+
+			stdout := releaseStdout()
+			if !util.RegexCheck(tc.want, stdout) {
+				t.Errorf("stdout mismatch\ngot:  %q\nwant: %q", stdout, tc.want)
 			}
 		})
 	}
@@ -2586,8 +3225,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 			errRegex: test.TrimYAML(`
 				^host: <required>.*
 				tokena: <required>.*
-				tokenb: <required>.*
-				channel: <required>.*$`,
+				tokenb: <required>.*$`,
 			),
 		},
 		{
@@ -2628,7 +3266,7 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 				"tokena": "bash",
 				"tokenb": "bosh",
 			},
-			errRegex: `^channel: <required>.*$`,
+			errRegex: `^$`,
 		},
 		{
 			name:  "rocketchat/valid",
@@ -2885,6 +3523,65 @@ func TestShoutrrr_CheckValuesURLFields(t *testing.T) {
 				"query_vars": `{foo:bar}`,
 			},
 			errRegex: `^query_vars: "{foo:bar}" <invalid>.*$`,
+		},
+		{
+			name:     "lark/invalid",
+			sType:    "lark",
+			errRegex: `^token: <required>.*$`,
+		},
+		{
+			name:  "mqtt/invalid",
+			sType: "mqtt",
+			errRegex: test.TrimYAML(`
+				^host: <required>.*
+				topic: <required>.*$`,
+			),
+		},
+		{
+			name:     "pagerduty/invalid",
+			sType:    "pagerduty",
+			errRegex: `^integrationkey: <required>.*$`,
+		},
+		{
+			name:  "signal/invalid",
+			sType: "signal",
+			errRegex: test.TrimYAML(`
+				^host: <required>.*
+				source: <required>.*
+				recipients: <required>.*$`,
+			),
+		},
+		{
+			name:  "signalgrid/invalid",
+			sType: "signalgrid",
+			errRegex: test.TrimYAML(`
+				^clientkey: <required>
+				channel: <required>$`,
+			),
+		},
+		{
+			name:  "twilio/invalid",
+			sType: "twilio",
+			errRegex: test.TrimYAML(`
+				^accountsid: <required>.*
+				authtoken: <required>
+				fromnumber: <required>.*
+				tonumbers: <required>.*$`,
+			),
+		},
+		{
+			name:     "wecom/invalid",
+			sType:    "wecom",
+			errRegex: `^key: <required>.*$`,
+		},
+		{
+			name:  "xmpp/invalid",
+			sType: "xmpp",
+			errRegex: test.TrimYAML(`
+				^host: <required>.*
+				user: <required>.*
+				password: <required>$`,
+			),
 		},
 	}
 
@@ -3192,6 +3889,19 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:     "xmpp/no to or rooms",
+			sType:    "xmpp",
+			errRegex: `^to: <required>.*rooms.*$`,
+		},
+		{
+			name:  "xmpp/rooms only",
+			sType: "xmpp",
+			params: map[string]string{
+				"rooms": "room@conf.example.com",
+			},
+			errRegex: `^$`,
+		},
+		{
 			name:  "zulip/type=invalid",
 			sType: "zulip",
 			params: map[string]string{
@@ -3249,6 +3959,7 @@ func TestShoutrrr_CheckValuesParams(t *testing.T) {
 }
 
 func TestBase_CheckValuesParams(t *testing.T) {
+	t.Setenv("ARGUS_TEST_NTFY_DISABLETLS", "yes")
 	tests := []struct {
 		name     string
 		itemType string
@@ -3299,6 +4010,26 @@ func TestBase_CheckValuesParams(t *testing.T) {
 			errRegex: `^$`,
 		},
 		{
+			name:     "pushover/valid retry and expire",
+			itemType: "pushover",
+			params: map[string]string{
+				"retry":  "30s",
+				"expire": "1h",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "pushover/invalid retry and expire",
+			itemType: "pushover",
+			params: map[string]string{
+				"retry":  "30",
+				"expire": "0s",
+			},
+			errRegex: test.TrimYAML(`
+				^retry: "30" <invalid>.*
+				expire: "0s" <invalid>.*$`),
+		},
+		{
 			name:     "smtp/invalid timeout",
 			itemType: "smtp",
 			params: map[string]string{
@@ -3321,6 +4052,78 @@ func TestBase_CheckValuesParams(t *testing.T) {
 				"timeout": "-5s",
 			},
 			errRegex: `^timeout: "-5s" <invalid>.*positive.*duration.*$`,
+		},
+		{
+			name:     "ntfy/valid disabletls_",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "Yes",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "ntfy/valid disabletls_ from env var",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "${ARGUS_TEST_NTFY_DISABLETLS}",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "ntfy/invalid disabletls_",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "maybe",
+			},
+			errRegex: `^disabletls_: "maybe" <invalid>.*'yes' or 'no'.*$`,
+		},
+		{
+			name:     "ntfy/invalid disabletls_ from unset env var",
+			itemType: "ntfy",
+			params: map[string]string{
+				"disabletls_": "${ARGUS_TEST_NTFY_DISABLETLS_UNSET}",
+			},
+			errRegex: `^disabletls_: "\$\{ARGUS_TEST_NTFY_DISABLETLS_UNSET\}" <invalid>.*$`,
+		},
+		{
+			name:     "telegram/valid preview",
+			itemType: "telegram",
+			params: map[string]string{
+				"preview": "false",
+			},
+			errRegex: `^$`,
+		},
+		{
+			name:     "smtp/invalid usestarttls",
+			itemType: "smtp",
+			params: map[string]string{
+				"usestarttls": "on",
+			},
+			errRegex: `^usestarttls: "on" <invalid>.*'yes' or 'no'.*$`,
+		},
+		{
+			name:     "mqtt/invalid deprecated disabletlsverification",
+			itemType: "mqtt",
+			params: map[string]string{
+				"disabletlsverification": "maybe",
+			},
+			errRegex: `^disabletlsverification: "maybe" <invalid>.*$`,
+		},
+		{
+			name:     "gotify/invalid skiptlsverify and useheader each reported",
+			itemType: "gotify",
+			params: map[string]string{
+				"skiptlsverify": "maybe",
+				"useheader":     "sometimes",
+			},
+			errRegex: `^skiptlsverify: "maybe" <invalid>.*\nuseheader: "sometimes" <invalid>.*$`,
+		},
+		{
+			name: "non-ntfy/disabletls_ not checked",
+			params: map[string]string{
+				"disabletls_": "maybe",
+			},
+			errRegex: `^$`,
 		},
 		{
 			name: "non-smtp/timeout not checked",
@@ -3359,40 +4162,28 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 		wantParam map[string]string
 	}{
 		{
-			name:     "bark/valid scheme+sound normalised",
+			name:     "bark/valid sound normalised",
 			itemType: "bark",
 			params: map[string]string{
-				"scheme": "HTTP",
-				"sound":  "BELL",
+				"sound": "BELL",
 			},
 			errRegex: `^$`,
 			wantParam: map[string]string{
-				"scheme": "http",
-				"sound":  "bell",
+				"sound": "bell",
 			},
 		},
 		{
-			name:     "bark/invalid scheme and sound aggregated",
+			name:     "bark/invalid sound",
 			itemType: "bark",
 			params: map[string]string{
-				"scheme": "-",
-				"sound":  "nope",
+				"sound": "nope",
 			},
 			errRegex: "^" + regexp.QuoteMeta(
-				errfmt.FormatError(
-					errors.Join(
-						&polymorphic.ErrInvalidValue{
-							Key:     "scheme",
-							Value:   "-",
-							Allowed: barkNtfyParamScheme,
-						},
-						&polymorphic.ErrInvalidValue{
-							Key:     "sound",
-							Value:   "nope",
-							Allowed: barkParamSound,
-						},
-					),
-				),
+				polymorphic.ErrInvalidValue{
+					Key:     "sound",
+					Value:   "nope",
+					Allowed: barkParamSound,
+				}.Error(),
 			) + "$",
 		},
 		{
@@ -3421,40 +4212,28 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			) + "$",
 		},
 		{
-			name:     "ntfy/valid priority and scheme",
+			name:     "ntfy/valid priority",
 			itemType: "ntfy",
 			params: map[string]string{
 				"priority": "DEFAULT",
-				"scheme":   "HTTPS",
 			},
 			errRegex: `^$`,
 			wantParam: map[string]string{
 				"priority": "default",
-				"scheme":   "https",
 			},
 		},
 		{
-			name:     "ntfy/invalid priority and scheme aggregated",
+			name:     "ntfy/invalid priority",
 			itemType: "ntfy",
 			params: map[string]string{
 				"priority": "urgENT",
-				"scheme":   "ftp",
 			},
 			errRegex: "^" + regexp.QuoteMeta(
-				errfmt.FormatError(
-					errors.Join(
-						polymorphic.ErrInvalidValue{
-							Key:     "priority",
-							Value:   "urgENT",
-							Allowed: ntfyParamPriority,
-						},
-						polymorphic.ErrInvalidValue{
-							Key:     "scheme",
-							Value:   "ftp",
-							Allowed: barkNtfyParamScheme,
-						},
-					),
-				),
+				polymorphic.ErrInvalidValue{
+					Key:     "priority",
+					Value:   "urgENT",
+					Allowed: ntfyParamPriority,
+				}.Error(),
 			) + "$",
 		},
 		{
@@ -3509,11 +4288,11 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			name:     "telegram/valid parsemode",
 			itemType: "telegram",
 			params: map[string]string{
-				"parsemode": "markdown",
+				"parsemode": "markdownv2",
 			},
 			errRegex: `^$`,
 			wantParam: map[string]string{
-				"parsemode": "Markdown",
+				"parsemode": "MarkdownV2",
 			},
 		},
 		{
@@ -3546,6 +4325,122 @@ func TestBase_CheckValuesParamsSelects(t *testing.T) {
 			itemType: "smtp",
 			params:   map[string]string{},
 			errRegex: `^$`,
+		},
+		{
+			name:     "mqtt/valid qos normalised",
+			itemType: "mqtt",
+			params: map[string]string{
+				"qos": "exactlyonce",
+			},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"qos": "ExactlyOnce",
+			},
+		},
+		{
+			name:     "mqtt/invalid qos",
+			itemType: "mqtt",
+			params: map[string]string{
+				"qos": "Sometimes",
+			},
+			errRegex: "^" + regexp.QuoteMeta(
+				polymorphic.ErrInvalidValue{
+					Key:     "qos",
+					Value:   "Sometimes",
+					Allowed: mqttParamQoS,
+				}.Error(),
+			) + "$",
+		},
+		{
+			name:     "pagerduty/valid action and severity normalised",
+			itemType: "pagerduty",
+			params: map[string]string{
+				"action":   "RESOLVE",
+				"severity": "Warning",
+			},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"action":   "resolve",
+				"severity": "warning",
+			},
+		},
+		{
+			name:     "pagerduty/invalid action",
+			itemType: "pagerduty",
+			params: map[string]string{
+				"action": "snooze",
+			},
+			errRegex: "^" + regexp.QuoteMeta(
+				polymorphic.ErrInvalidValue{
+					Key:     "action",
+					Value:   "snooze",
+					Allowed: pagerDutyParamAction,
+				}.Error(),
+			) + "$",
+		},
+		{
+			name:     "pagerduty/invalid severity",
+			itemType: "pagerduty",
+			params: map[string]string{
+				"severity": "fatal",
+			},
+			errRegex: "^" + regexp.QuoteMeta(
+				polymorphic.ErrInvalidValue{
+					Key:     "severity",
+					Value:   "fatal",
+					Allowed: pagerDutyParamSeverity,
+				}.Error(),
+			) + "$",
+		},
+		{
+			name:     "signal/valid textmode normalised",
+			itemType: "signal",
+			params: map[string]string{
+				"textmode": "styled",
+			},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"textmode": "Styled",
+			},
+		},
+		{
+			name:     "signal/invalid textmode",
+			itemType: "signal",
+			params: map[string]string{
+				"textmode": "Bold",
+			},
+			errRegex: "^" + regexp.QuoteMeta(
+				polymorphic.ErrInvalidValue{
+					Key:     "textmode",
+					Value:   "Bold",
+					Allowed: signalParamTextMode,
+				}.Error(),
+			) + "$",
+		},
+		{
+			name:     "signalgrid/invalid type",
+			itemType: "signalgrid",
+			params: map[string]string{
+				"type": "PANIC",
+			},
+			errRegex: "^" + regexp.QuoteMeta(
+				polymorphic.ErrInvalidValue{
+					Key:     "type",
+					Value:   "PANIC",
+					Allowed: signalgridParamType,
+				}.Error(),
+			) + "$",
+		},
+		{
+			name:     "signalgrid/valid type normalised",
+			itemType: "signalgrid",
+			params: map[string]string{
+				"type": "crit",
+			},
+			errRegex: `^$`,
+			wantParam: map[string]string{
+				"type": "CRIT",
+			},
 		},
 	}
 

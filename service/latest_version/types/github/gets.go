@@ -23,6 +23,9 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
+// apiPageSize is the most releases/tags GitHub returns per page; a page costs one request at any size.
+const apiPageSize = 100
+
 // GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return Type
@@ -58,17 +61,10 @@ func (l *Lookup) url(page int) string {
 		l.apiRootOrDefault(), forge.EscapedOwnerRepo(rawURL), apiTarget,
 	)
 
-	params := make([]string, 0, 2)
 	if page > 1 {
-		params = append(params, fmt.Sprintf("page=%d", page))
+		return fmt.Sprintf("%s?page=%d&per_page=%d", base, page, apiPageSize)
 	}
-	if perPage := l.data.PerPage(); perPage != 0 {
-		params = append(params, fmt.Sprintf("per_page=%d", perPage))
-	}
-	if len(params) == 0 {
-		return base
-	}
-	return base + "?" + strings.Join(params, "&")
+	return fmt.Sprintf("%s?per_page=%d", base, apiPageSize)
 }
 
 // usePreRelease resolves whether to consider GitHub PreReleases for new versions.
@@ -84,6 +80,8 @@ func (l *Lookup) usePreRelease() bool {
 //
 // Cannot use /tags when filtering on regex_content - tags have no release assets to
 // match against.
+//
+// TODO: Replace the inferred /tags fallback with an explicit releases/tags/any target.
 func (l *Lookup) useTagsAPI() bool {
 	return l.Require == nil || l.Require.RegexContent == ""
 }

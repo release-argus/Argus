@@ -21,10 +21,12 @@ import (
 	"maps"
 	"math/rand"
 	net_url "net/url"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr/pkg/format"
 	"github.com/nicholas-fedor/shoutrrr/pkg/router"
 	"github.com/nicholas-fedor/shoutrrr/pkg/types"
 
@@ -134,13 +136,20 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("apikey"),
 			s.GetParam("devices"),
 		)
+	case "lark":
+		// lark://host/token
+		url = fmt.Sprintf(
+			"lark://%s/%s",
+			s.GetURLField("host"),
+			s.GetURLField("token"),
+		)
 	case "matrix":
-		// matrix://user:password@host[:port]/[?disableTLS=yes][&rooms=!roomID1[,roomAlias2]]
+		// matrix://user:password@host[:port]/[?disabletls=yes][&rooms=!roomID1[,roomAlias2]]
 		port := s.GetURLField("port")
 		disableTLS := s.GetParam("disabletls")
 		rooms := s.GetParam("rooms")
 		query := buildQuery(
-			queryParam("disableTLS", disableTLS),
+			queryParam("disabletls", disableTLS),
 			queryParam("rooms", rooms),
 		)
 
@@ -165,6 +174,18 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(port, ":"+port),
 			s.GetURLField("token"),
 			util.ValueUnlessZero(channel, "/"+channel),
+		)
+	case "mqtt":
+		// mqtt://[username[:password]@]host[:port]/topic[?disabletls=X]
+		port := s.GetURLField("port")
+
+		url = fmt.Sprintf(
+			"mqtt://%s%s%s/%s%s",
+			userInfo(s.GetURLField("username"), s.GetURLField("password")),
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			s.GetURLField("topic"),
+			buildQuery(queryParam("disabletls", s.GetParam("disabletls"))),
 		)
 	case "notifiarr":
 		// notifiarr://apikey[?channel=X&color=X&image=X&name=X&thumbnail=X]
@@ -207,6 +228,16 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(port, ":"+port),
 			s.GetURLField("apikey"),
 		)
+	case "pagerduty":
+		// pagerduty://[host[:port]]/integrationkey
+		port := s.GetURLField("port")
+
+		url = fmt.Sprintf(
+			"pagerduty://%s%s/%s",
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			s.GetURLField("integrationkey"),
+		)
 	case "pushbullet":
 		// pushbullet://token/targets
 		url = fmt.Sprintf(
@@ -225,17 +256,37 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			util.ValueUnlessZero(devices, "?devices="+devices),
 		)
 	case "rocketchat":
-		// rocketchat://[username@]host[:port]/tokenA/tokenB/channel
+		// rocketchat://[username@]host[:port]/tokenA/tokenB[/channel]
 		username := s.GetURLField("username")
 		port := s.GetURLField("port")
+		channel := s.GetURLField("channel")
 
 		url = fmt.Sprintf(
-			"rocketchat://%s%s%s/%s/%s/%s",
+			"rocketchat://%s%s%s/%s/%s%s",
 			util.ValueUnlessZero(username, username+"@"),
 			s.GetURLField("host"),
 			util.ValueUnlessZero(port, ":"+port),
 			s.GetURLField("tokena"),
 			s.GetURLField("tokenb"),
+			util.ValueUnlessZero(channel, "/"+channel),
+		)
+	case "signal":
+		// signal://[user:password@]host[:port]/source/recipient1[/recipient2...]
+		port := s.GetURLField("port")
+
+		url = fmt.Sprintf(
+			"signal://%s%s%s/%s/%s",
+			userInfo(s.GetURLField("user"), s.GetURLField("password")),
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			s.GetURLField("source"),
+			strings.ReplaceAll(s.GetURLField("recipients"), ",", "/"),
+		)
+	case "signalgrid":
+		// signalgrid://clientkey@channel
+		url = fmt.Sprintf(
+			"signalgrid://%s@%s",
+			s.GetURLField("clientkey"),
 			s.GetURLField("channel"),
 		)
 	case "slack":
@@ -278,6 +329,32 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			s.GetURLField("token"),
 			s.GetParam("chats"),
 		)
+	case "twilio":
+		// twilio://accountsid:authtoken@fromnumber/tonumber1[/tonumber2...]
+		url = fmt.Sprintf(
+			"twilio://%s%s/%s",
+			userInfo(s.GetURLField("accountsid"), s.GetURLField("authtoken")),
+			s.GetURLField("fromnumber"),
+			strings.ReplaceAll(s.GetURLField("tonumbers"), ",", "/"),
+		)
+	case "wecom":
+		// wecom://key
+		url = "wecom://" + s.GetURLField("key")
+	case "xmpp":
+		// xmpp://user:password@host[:port]/[?rooms=X][&to=X]
+		port := s.GetURLField("port")
+		query := buildQuery(
+			queryParam("rooms", s.GetParam("rooms")),
+			queryParam("to", s.GetParam("to")),
+		)
+
+		url = fmt.Sprintf(
+			"xmpp://%s%s%s/%s",
+			userInfo(s.GetURLField("user"), s.GetURLField("password")),
+			s.GetURLField("host"),
+			util.ValueUnlessZero(port, ":"+port),
+			query,
+		)
 	case "zulip":
 		// zulip://botMail:botKey@host[:port][?read_by_sender=true&stream=X&title=X&to=X&topic=X&type=X]
 		port := s.GetURLField("port")
@@ -305,7 +382,7 @@ func (s *Shoutrrr) BuildURL() (url string) {
 			query,
 		)
 	case "generic":
-		// generic://example.com[:port][/path]
+		// generic://[username[:password]@]example.com[:port][/path]
 		port := s.GetURLField("port")
 		path := s.GetURLField("path")
 
@@ -321,7 +398,8 @@ func (s *Shoutrrr) BuildURL() (url string) {
 		urlParams := buildQuery(parts...)
 
 		url = fmt.Sprintf(
-			"generic://%s%s%s%s",
+			"generic://%s%s%s%s%s",
+			userInfo(s.GetURLField("username"), s.GetURLField("password")),
 			s.GetURLField("host"),
 			util.ValueUnlessZero(port, ":"+port),
 			util.ValueUnlessZero(path, "/"+path),
@@ -377,6 +455,12 @@ func (s *Shoutrrr) BuildParams(info serviceinfo.ServiceInfo) *types.Params {
 	// 'Unknown' auth means "no method given". Let Shoutrrr handle it.
 	if s.GetType() == "smtp" && strings.EqualFold(params["auth"], smtpAuthUnknown) {
 		delete(params, "auth")
+	}
+
+	// ntfy 'disabletls_' holds Shoutrrr's 'disabletls' until the next major release.
+	if disableTLS, ok := params["disabletls_"]; ok && s.GetType() == "ntfy" {
+		params["disabletls"] = disableTLS
+		delete(params, "disabletls_")
 	}
 
 	return &params
@@ -488,6 +572,9 @@ func (s *Shoutrrr) getSender(
 
 	// Build the params.
 	params := s.BuildParams(serviceInfo)
+	for _, key := range unknownParams(sender, url, *params) {
+		delete(*params, key)
+	}
 	if title != "" {
 		(*params)["title"] = title
 	}
@@ -499,6 +586,41 @@ func (s *Shoutrrr) getSender(
 	}
 
 	return sender, message, params, url, nil
+}
+
+// payloadParams are the params a Shoutrrr service reads into its message rather than its config,
+// keyed by URL scheme.
+var payloadParams = map[string][]string{
+	"gotify":     {"extras"},
+	"mattermost": {"channel", "username"},
+	"notifiarr":  {"content", "fields", "footer", "icon", "id", "update"},
+	"rocketchat": {"channel", "username"},
+}
+
+// unknownParams returns the sorted keys of params that the service at url rejects at send.
+func unknownParams(sender *router.ServiceRouter, url string, params types.Params) (unknown []string) {
+	service, err := sender.Locate(url)
+	if err != nil {
+		return nil
+	}
+	resolver := format.NewPropKeyResolver(format.GetServiceConfig(service))
+
+	scheme, _, _ := strings.Cut(url, "://")
+	for key := range params {
+		lower := strings.ToLower(key)
+		if lower == types.TitleKey ||
+			lower == types.MessageKey ||
+			lower == types.LevelKey ||
+			slices.Contains(payloadParams[scheme], lower) {
+			continue
+		}
+
+		if _, err := resolver.Get(lower); errors.Is(err, format.ErrInvalidConfigKey) {
+			unknown = append(unknown, key)
+		}
+	}
+	slices.Sort(unknown)
+	return unknown
 }
 
 // send delivers the message via the given sender and params, retrying up to max_tries times.
@@ -634,6 +756,18 @@ func queryParam(key, val string) string {
 		return ""
 	}
 	return key + "=" + net_url.QueryEscape(val)
+}
+
+// userInfo returns the escaped "[username][:password]@", or "" when both are empty.
+func userInfo(username, password string) string {
+	switch {
+	case password != "":
+		return net_url.UserPassword(username, password).String() + "@"
+	case username != "":
+		return net_url.User(username).String() + "@"
+	default:
+		return ""
+	}
 }
 
 // buildQuery joins the non-empty "key=value" parts into a URL query string,

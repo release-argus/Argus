@@ -844,6 +844,12 @@ func TestNextPage(t *testing.T) {
 			want: 4,
 		},
 		{
+			name: "page before per_page",
+			link: `<https://api.example.com/repos/o/r/releases?page=1&per_page=100>; rel="prev",` +
+				`<https://api.example.com/repos/o/r/releases?page=3&per_page=100>; rel="next"`,
+			want: 3,
+		},
+		{
 			name: "last page, no next",
 			link: `<https://api.example.com/repos/o/r/releases?page=1>; rel="first",` +
 				`<https://api.example.com/repos/o/r/releases?page=3>; rel="prev"`,

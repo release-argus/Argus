@@ -2210,10 +2210,10 @@ var hardDefaultsStr = test.TrimYAML(`
 					port: '443'
 				params:
 					disabletls: 'no'
-					insecureskipverify: 'no'
 					priority: '0'
+					skiptlsverify: 'no'
 					title: Argus
-					useheader: 'no'
+					useheader: 'yes'
 			homeassistant:
 				type: homeassistant
 				options:
@@ -2239,6 +2239,14 @@ var hardDefaultsStr = test.TrimYAML(`
 					delay: 0s
 					max_tries: '3'
 					message: '{{ service_name | default:service_id }} - {{ version }} released'
+			lark:
+				type: lark
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+				url_fields:
+					host: open.larksuite.com
 			matrix:
 				type: matrix
 				options:
@@ -2260,6 +2268,15 @@ var hardDefaultsStr = test.TrimYAML(`
 					username: Argus
 				params:
 					disabletls: 'no'
+			mqtt:
+				type: mqtt
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+				params:
+					cleansession: 'yes'
+					disabletls: 'no'
 			notifiarr:
 				type: notifiarr
 				options:
@@ -2275,10 +2292,18 @@ var hardDefaultsStr = test.TrimYAML(`
 				url_fields:
 					host: ntfy.sh
 				params:
-					disabletlsverification: 'no'
+					cache: 'yes'
+					firebase: 'yes'
+					skiptlsverify: 'no'
 					title: Argus
 			opsgenie:
 				type: opsgenie
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+			pagerduty:
+				type: pagerduty
 				options:
 					delay: 0s
 					max_tries: '3'
@@ -2307,6 +2332,20 @@ var hardDefaultsStr = test.TrimYAML(`
 					port: '443'
 			shoutrrr:
 				type: shoutrrr
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+			signal:
+				type: signal
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+				params:
+					notifyself: 'yes'
+			signalgrid:
+				type: signalgrid
 				options:
 					delay: 0s
 					max_tries: '3'
@@ -2345,6 +2384,24 @@ var hardDefaultsStr = test.TrimYAML(`
 				params:
 					notification: 'yes'
 					preview: 'yes'
+			twilio:
+				type: twilio
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+			wecom:
+				type: wecom
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
+			xmpp:
+				type: xmpp
+				options:
+					delay: 0s
+					max_tries: '3'
+					message: '{{ service_name | default:service_id }} - {{ version }} released'
 			zulip:
 				type: zulip
 				options:

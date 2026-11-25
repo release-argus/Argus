@@ -19,20 +19,28 @@ import {
 	notifyHomeAssistantSchema,
 	notifyIFTTTSchema,
 	notifyJoinSchema,
+	notifyLarkSchema,
 	notifyMatrixSchema,
 	notifyMatterMostSchema,
+	notifyMQTTSchema,
 	notifyNotifiarrSchema,
 	notifyNtfySchema,
 	notifyOpsGenieSchema,
+	notifyPagerDutySchema,
 	notifyPushbulletSchema,
 	notifyPushoverSchema,
 	notifyRocketChatSchema,
 	notifySchemaMap,
 	notifyShoutrrrSchema,
+	notifySignalgridSchema,
+	notifySignalSchema,
 	notifySlackSchema,
 	notifySMTPSchema,
 	notifyTeamsSchema,
 	notifyTelegramSchema,
+	notifyTwilioSchema,
+	notifyWeComSchema,
+	notifyXMPPSchema,
 	notifyZulipSchema,
 } from '@/utils/api/types/config-edit/notify/schemas';
 import {
@@ -51,8 +59,8 @@ import {
 } from '@/utils/api/types/config-edit/notify/types/opsgenie.ts';
 import { buildSuperRefine } from '@/utils/api/types/config-edit/shared/builder--super-refine';
 import {
-	headersSchema,
-	headersSchemaWithValidation,
+	mapEntriesSchema,
+	mapEntriesSchemaWithValidation,
 } from '@/utils/api/types/config-edit/shared/header/preprocess.ts';
 import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import { superRefineNameUnique } from '@/utils/api/types/config-edit/shared/unique-name--super-refine';
@@ -61,6 +69,8 @@ import {
 	atLeastTwo,
 } from '@/utils/api/types/config-edit/util';
 import {
+	CUSTOM_ISSUE_CODE,
+	getNested,
 	validateArrayFieldWithSchemas,
 	validateDuration,
 	validateHexKey,
@@ -70,6 +80,8 @@ import {
 	validateNumberString,
 	validateRequired,
 } from '@/utils/api/types/config-edit/validators';
+
+const XMPP_RECIPIENT_REQUIRED_MESSAGE = 'To or Rooms required.';
 
 /* Validators shared by all notify types. */
 const defaultValidators = [
@@ -172,6 +184,12 @@ const buildNotifySchema = (
 				{ path: ['params', 'devices'], validator: validateRequired },
 			]);
 			break;
+		case NOTIFY_TYPE_MAP.LARK.value:
+			schema = buildSuperRefine(notifyLarkSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'token'], validator: validateRequired },
+			]);
+			break;
 		case NOTIFY_TYPE_MAP.MATRIX.value:
 			schema = buildSuperRefine(notifyMatrixSchema, mains, defaults, [
 				...defaultValidators,
@@ -186,6 +204,14 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
 				{ path: ['url_fields', 'token'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.MQTT.value:
+			schema = buildSuperRefine(notifyMQTTSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'host'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+				{ path: ['url_fields', 'topic'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.NTFY.value:
@@ -228,8 +254,8 @@ const buildNotifySchema = (
 					path: ['params', 'details'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -260,6 +286,13 @@ const buildNotifySchema = (
 				},
 			]);
 			break;
+		case NOTIFY_TYPE_MAP.PAGERDUTY.value:
+			schema = buildSuperRefine(notifyPagerDutySchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'integrationkey'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+			]);
+			break;
 		case NOTIFY_TYPE_MAP.PUSHBULLET.value:
 			schema = buildSuperRefine(notifyPushbulletSchema, mains, defaults, [
 				...defaultValidators,
@@ -274,16 +307,34 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'user'], validator: validateRequired },
 				{ path: ['params', 'priority'], validator: validateNumberString },
 				{ path: ['params', 'encryptionkey'], validator: validateHexKey },
+				{ path: ['params', 'retry'], validator: validateDuration },
+				{ path: ['params', 'expire'], validator: validateDuration },
+				{ path: ['params', 'timestamp'], validator: validateNumberString },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.ROCKET_CHAT.value:
 			schema = buildSuperRefine(notifyRocketChatSchema, mains, defaults, [
 				...defaultValidators,
-				{ path: ['url_fields', 'channel'], validator: validateRequired },
 				{ path: ['url_fields', 'host'], validator: validateRequired },
 				{ path: ['url_fields', 'port'], validator: validateNumberString },
 				{ path: ['url_fields', 'tokena'], validator: validateRequired },
 				{ path: ['url_fields', 'tokenb'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.SIGNAL.value:
+			schema = buildSuperRefine(notifySignalSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'host'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+				{ path: ['url_fields', 'recipients'], validator: validateRequired },
+				{ path: ['url_fields', 'source'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.SIGNALGRID.value:
+			schema = buildSuperRefine(notifySignalgridSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'channel'], validator: validateRequired },
+				{ path: ['url_fields', 'clientkey'], validator: validateRequired },
 			]);
 			break;
 		case NOTIFY_TYPE_MAP.SLACK.value:
@@ -318,6 +369,49 @@ const buildNotifySchema = (
 				{ path: ['url_fields', 'token'], validator: validateRequired },
 			]);
 			break;
+		case NOTIFY_TYPE_MAP.TWILIO.value:
+			schema = buildSuperRefine(notifyTwilioSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'accountsid'], validator: validateRequired },
+				{ path: ['url_fields', 'authtoken'], validator: validateRequired },
+				{ path: ['url_fields', 'fromnumber'], validator: validateRequired },
+				{ path: ['url_fields', 'tonumbers'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.WECOM.value:
+			schema = buildSuperRefine(notifyWeComSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'key'], validator: validateRequired },
+			]);
+			break;
+		case NOTIFY_TYPE_MAP.XMPP.value:
+			schema = buildSuperRefine(notifyXMPPSchema, mains, defaults, [
+				...defaultValidators,
+				{ path: ['url_fields', 'host'], validator: validateRequired },
+				{ path: ['url_fields', 'password'], validator: validateRequired },
+				{ path: ['url_fields', 'port'], validator: validateNumberString },
+				{ path: ['url_fields', 'user'], validator: validateRequired },
+			]).superRefine((arg, ctx) => {
+				const recipientPaths = [
+					['params', 'to'],
+					['params', 'rooms'],
+				];
+				const hasRecipient = recipientPaths.some(
+					(path) =>
+						getNested(arg, path) ||
+						getNested(mains[arg.name] ?? null, path) ||
+						getNested(defaults, path),
+				);
+				if (hasRecipient) return;
+				for (const path of recipientPaths) {
+					ctx.addIssue({
+						code: CUSTOM_ISSUE_CODE,
+						message: XMPP_RECIPIENT_REQUIRED_MESSAGE,
+						path,
+					});
+				}
+			});
+			break;
 		case NOTIFY_TYPE_MAP.ZULIP.value:
 			schema = buildSuperRefine(notifyZulipSchema, mains, defaults, [
 				...defaultValidators,
@@ -335,8 +429,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'headers'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -350,8 +444,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'json_payload_vars'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],
@@ -365,8 +459,8 @@ const buildNotifySchema = (
 					path: ['url_fields', 'query_vars'],
 					props: [
 						{
-							defaultSchema: headersSchema,
-							schema: headersSchemaWithValidation,
+							defaultSchema: mapEntriesSchema,
+							schema: mapEntriesSchemaWithValidation,
 						},
 					],
 					validator: [validateArrayFieldWithSchemas, validateListUniqueKeys],

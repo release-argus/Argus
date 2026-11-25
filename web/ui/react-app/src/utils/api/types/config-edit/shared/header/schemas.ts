@@ -12,3 +12,12 @@ export const headerSchemaWithValidation = headerSchema.extend({
 	key: z.string().min(1, REQUIRED_MESSAGE).default(''),
 	value: z.string().min(1, REQUIRED_MESSAGE).default(''),
 });
+
+/* JSON object entry, keeping the key it loaded with so the API can restore a renamed secret. */
+export const mapEntrySchema = headerSchema.extend({
+	old_key: z.string().nullable().default(null),
+});
+/* JSON object entry (min length 1 on key and value) */
+export const mapEntrySchemaWithValidation = headerSchemaWithValidation.extend({
+	old_key: z.string().nullable().default(null),
+});

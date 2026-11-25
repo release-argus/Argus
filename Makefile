@@ -62,6 +62,7 @@ BASE_URL                   ?= http://localhost:$(PLAYWRIGHT_PORT)
 
 # Second, auth-enabled instance for the auth e2e specs.
 PLAYWRIGHT_CONFIG_SRC       = $(PLAYWRIGHT_TESTS_DIR)/fixtures/noauth-config.yml
+PLAYWRIGHT_ENV              = ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_ACCESS_TOKEN=dummy-work-token
 PLAYWRIGHT_AUTH_CONFIG_SRC  = $(PLAYWRIGHT_TESTS_DIR)/fixtures/auth-config.yml
 PLAYWRIGHT_AUTH_CONFIG_FILE = $(PLAYWRIGHT_TESTS_DIR)/playwright-auth-config.yml
 PLAYWRIGHT_AUTH_DB_FILE     = $(PLAYWRIGHT_TESTS_DIR)/playwright-auth-tests.db
@@ -85,9 +86,9 @@ i=0; until curl -sf $(1)/api/v1/healthcheck >/dev/null; do \
 done
 endef
 
-# start_argus,<config>,<db>,<port>,<log>,<pid-file>: launch a background Argus instance.
+# start_argus,<config>,<db>,<port>,<log>,<pid-file>[,<env>]: launch a background Argus instance.
 define start_argus
-./$(OUTPUT_BINARY) -config.file $(1) -data.database-file $(2) -web.listen-port $(3) -log.level DEBUG > $(4) 2>&1 & echo $$! > $(5)
+$(6) ./$(OUTPUT_BINARY) -config.file $(1) -data.database-file $(2) -web.listen-port $(3) -log.level DEBUG > $(4) 2>&1 & echo $$! > $(5)
 endef
 
 # stop_argus,<pid-file>: kill the pid-file's process (if running) and remove it.
@@ -124,7 +125,7 @@ playwright-tests-setup:
 	cp $(PLAYWRIGHT_AUTH_CONFIG_SRC) $(PLAYWRIGHT_AUTH_CONFIG_FILE)
 	rm -f $(PLAYWRIGHT_AUTH_DB_FILE)*
 	@if [ ! -x ./$(OUTPUT_BINARY) ] || [ -n "$(FORCE)" ]; then $(MAKE) build; fi
-	$(call start_argus,$(PLAYWRIGHT_CONFIG_FILE),$(PLAYWRIGHT_DB_FILE),$(PLAYWRIGHT_PORT),$(PLAYWRIGHT_LOG_FILE),$(PLAYWRIGHT_PID_FILE))
+	$(call start_argus,$(PLAYWRIGHT_CONFIG_FILE),$(PLAYWRIGHT_DB_FILE),$(PLAYWRIGHT_PORT),$(PLAYWRIGHT_LOG_FILE),$(PLAYWRIGHT_PID_FILE),$(PLAYWRIGHT_ENV))
 	$(call start_argus,$(PLAYWRIGHT_AUTH_CONFIG_FILE),$(PLAYWRIGHT_AUTH_DB_FILE),$(PLAYWRIGHT_AUTH_PORT),$(PLAYWRIGHT_AUTH_LOG_FILE),$(PLAYWRIGHT_AUTH_PID_FILE))
 	@$(call wait_for_argus,http://localhost:$(PLAYWRIGHT_PORT),$(PLAYWRIGHT_LOG_FILE))
 	@$(call wait_for_argus,http://localhost:$(PLAYWRIGHT_AUTH_PORT),$(PLAYWRIGHT_AUTH_LOG_FILE))

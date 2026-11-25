@@ -19,13 +19,90 @@ package shoutrrr
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 
+	"github.com/nicholas-fedor/shoutrrr/pkg/format"
+	"github.com/nicholas-fedor/shoutrrr/pkg/router"
+
 	"github.com/release-argus/Argus/internal/test"
+	shoutrrr_types "github.com/release-argus/Argus/notify/shoutrrr/types"
 	"github.com/release-argus/Argus/service/status"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
+
+func TestSupportedTypes_SafeFields(t *testing.T) {
+	// A type missing from SafeFieldsByType shows none of its values, so the lists must match.
+	want := slices.Sorted(slices.Values(SupportedTypes))
+	got := util.SortedKeys(shoutrrr_types.SafeFieldsByType)
+
+	if testErr := test.AssertSlicesEqual(t, got, want, "SafeFieldsByType keys"); testErr != nil {
+		t.Error(testErr)
+	}
+}
+
+var secretParams = map[string][]string{
+	"bark":      {"url"},
+	"join":      {"devices"},
+	"lark":      {"secret"},
+	"notifiarr": {"apikey"},
+	"ntfy":      {"attach", "click", "token"},
+	"pagerduty": {"details"},
+	"pushover":  {"devices", "encryptionkey", "key"},
+	"signal":    {"apikey", "password", "token"},
+	"smtp":      {"clientsecret", "refreshtoken"},
+	"teams":     {"host"},
+	"twilio":    {"apikey"},
+	"wecom":     {"key"},
+	"xmpp":      {"roompassword"},
+}
+
+func TestSafeFieldsByType_ShoutrrrParams(t *testing.T) {
+	var serviceRouter router.ServiceRouter
+	for _, sType := range SupportedTypes {
+		// The shoutrrr type sends a raw URL, so has no Shoutrrr service of its own.
+		if sType == "shoutrrr" {
+			continue
+		}
+
+		t.Run(sType, func(t *testing.T) {
+			t.Parallel()
+
+			service, err := serviceRouter.NewService(sType)
+			if err != nil {
+				t.Fatalf("ServiceRouter.NewService() failed: %v", err)
+			}
+			resolver := format.NewPropKeyResolver(format.GetServiceConfig(service))
+			safeFields := shoutrrr_types.SafeFieldsOf(sType)
+			safe := slices.Concat(
+				safeFields.Params, safeFields.ParamMaps, util.SortedKeys(safeFields.ParamJSON),
+			)
+
+			queryFields := resolver.QueryFields()
+			// Each param a Shoutrrr bump adds must be classified before its value is shown.
+			for _, key := range queryFields {
+				isSafe := slices.Contains(safe, key)
+				isSecret := slices.Contains(secretParams[sType], key)
+				if isSafe == isSecret {
+					t.Errorf(
+						"param %q classification mismatch\n"+
+							"got:  safe=%t, secret=%t\nwant: one of safe, secret",
+						key, isSafe, isSecret,
+					)
+				}
+			}
+			for _, key := range secretParams[sType] {
+				if !slices.Contains(queryFields, key) {
+					t.Errorf(
+						"PropKeyResolver.QueryFields() %q mismatch\ngot:  absent\nwant: present",
+						key,
+					)
+				}
+			}
+		})
+	}
+}
 
 // ############
 // # DECODING #

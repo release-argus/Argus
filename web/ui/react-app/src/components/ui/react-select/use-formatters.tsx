@@ -25,7 +25,7 @@ export const useFormatters = () => {
 			<span>{data.label}</span>
 			<span
 				className={
-					'rounded-md bg-secondary px-1 font-normal text-secondary-foreground text-xs shadow-sm'
+					'bg-secondary text-secondary-foreground rounded-md px-1 text-xs font-normal shadow-sm'
 				}
 			>
 				{data.options.length}

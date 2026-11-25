@@ -46,7 +46,7 @@ export const ListPage = ({
 }: ListPageProps): ReactElement => (
 	<>
 		<div className="flex items-center justify-between pb-2">
-			<h2 className="scroll-m-20 font-semibold text-3xl tracking-tight">
+			<h2 className="scroll-m-20 text-3xl font-semibold tracking-tight">
 				{title}
 			</h2>
 			<Button aria-label={addLabel} onClick={onAdd}>

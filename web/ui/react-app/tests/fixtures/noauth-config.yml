@@ -23,6 +23,9 @@ defaults:
             url: https://valid.release-argus.io/forgejo
             access_token: ${ARGUS_TEST_FORGEJO_TOKEN}
             allow_invalid_certs: false
+          # Token from ARGUS_SERVICE_LATEST_VERSION_FORGEJO_HOST_WORK_ACCESS_TOKEN (Makefile PLAYWRIGHT_ENV).
+          Work:
+            url: https://git.work.example
 service:
   release-argus/Argus:
     latest_version:

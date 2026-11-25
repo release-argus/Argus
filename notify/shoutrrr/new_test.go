@@ -41,6 +41,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		"topic": "foo",
 	}
 	typeOther := "slack"
+	typeWithMapSecrets := "generic"
 
 	serviceNotifiers := &Shoutrrrs{
 		"no_main_no_type": &Shoutrrr{},
@@ -56,6 +57,18 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		},
 		"main_with_type_and_no_defaults": &Shoutrrr{
 			Type: typeWithNoDefaults,
+		},
+		"no_main_with_map_secrets": &Shoutrrr{
+			Type: typeWithMapSecrets,
+			URLFields: map[string]string{
+				"host":       "example.com",
+				"headers":    `{"Authorization":"Bearer x","X-Old":"old"}`,
+				"query_vars": `{"token":"abc"}`,
+			},
+			Params: map[string]string{
+				"actions":  `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+				"unlisted": "VALUE",
+			},
 		},
 	}
 	mains := ShoutrrrsDefaults{
@@ -82,6 +95,7 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 		typeWithDefaults:   &Defaults{},
 		typeWithNoDefaults: &Defaults{},
 		typeOther:          &Defaults{},
+		typeWithMapSecrets: &Defaults{},
 	}
 
 	tests := []struct {
@@ -162,6 +176,83 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 			want: &Shoutrrr{
 				Type:      typeWithNoDefaults,
 				URLFields: typeWithNoDefaultsURLFields,
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "edit/no Main/no Defaults/had type/masked values restored",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_map_secrets",
+				URLFields: map[string]string{
+					"headers":    `{"Authorization":"<secret>","X-New":"new"}`,
+					"query_vars": `{"token":"<secret>"}`,
+				},
+				Params: map[string]string{
+					"actions":  `[{"label":"B","old_index":1,"url":"<secret>"}]`,
+					"unlisted": util.SecretValue,
+				},
+			},
+			want: &Shoutrrr{
+				Type: typeWithMapSecrets,
+				URLFields: map[string]string{
+					"host":       "example.com",
+					"headers":    `{"Authorization":"Bearer x","X-New":"new"}`,
+					"query_vars": `{"token":"abc"}`,
+				},
+				Params: map[string]string{
+					"actions":  `[{"label":"B","url":"https://b"}]`,
+					"unlisted": "VALUE",
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "edit/no Main/type changed/masked value not restored",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_map_secrets",
+				Type:              typeWithDefaults,
+				URLFields: map[string]string{
+					"host":  util.SecretValue,
+					"token": testToken,
+				},
+			},
+			want: &Shoutrrr{
+				Type: typeWithDefaults,
+				URLFields: map[string]string{
+					"host":       util.SecretValue,
+					"token":      testToken,
+					"headers":    `{"Authorization":"Bearer x","X-Old":"old"}`,
+					"query_vars": `{"token":"abc"}`,
+				},
+				Params: map[string]string{
+					"actions":  `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+					"unlisted": "VALUE",
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "edit/no Main/no Defaults/had type/renamed key's masked value restored",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				NamePrevious:      "no_main_with_map_secrets",
+				URLFields: map[string]string{
+					"headers": `{"X-Auth":{"old_key":"Authorization","value":"<secret>"}}`,
+				},
+			},
+			want: &Shoutrrr{
+				Type: typeWithMapSecrets,
+				URLFields: map[string]string{
+					"host":       "example.com",
+					"headers":    `{"X-Auth":"Bearer x"}`,
+					"query_vars": `{"token":"abc"}`,
+				},
+				Params: map[string]string{
+					"actions":  `[{"label":"A","url":"https://a"},{"label":"B","url":"https://b"}]`,
+					"unlisted": "VALUE",
+				},
 			},
 			errRegex: `^$`,
 		},
@@ -259,6 +350,37 @@ func TestShoutrrr_FromPayload(t *testing.T) {
 				URLFields: typeWithNoDefaultsURLFields,
 			},
 			errRegex: `^$`,
+		},
+		{
+			name: "new/JSON old indices dropped",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				Name:              typeWithNoDefaults,
+				URLFields:         typeWithNoDefaultsURLFields,
+				Params: map[string]string{
+					"actions": `[{"action":"view","label":"A","old_index":null,"url":"https://a"}]`,
+				},
+			},
+			want: &Shoutrrr{
+				Type:      typeWithNoDefaults,
+				URLFields: typeWithNoDefaultsURLFields,
+				Params: map[string]string{
+					"actions": `[{"action":"view","label":"A","url":"https://a"}]`,
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "new/fail/URL not located",
+			payload: TestPayload{
+				ServiceIDPrevious: "test",
+				Name:              typeWithDefaults,
+				URLFields: map[string]string{
+					"host":  "https://\texample.com",
+					"token": testToken,
+				},
+			},
+			errRegex: `failed to parse URL`,
 		},
 		{
 			name: "new/have Main, have Defaults/core",

@@ -40,6 +40,10 @@ type Endpoint struct {
 	Pages   []string          // One body per page.
 	Endless bool              // Serve Body on every page, always naming a next page.
 	ETag    string            // ETag to serve, and to answer a matching If-None-Match with 304.
+
+	// PageETags gives page N the ETag PageETags[N-1] in place of ETag, as each page of a
+	// real list carries its own.
+	PageETags []string
 }
 
 // RecordedRequest is a request the fixture server received.
@@ -108,16 +112,20 @@ func Start(
 	return server
 }
 
-// RelativeNextPageLink names the next, and any known last, page relative to the request.
+// RelativeNextPageLink names the next, and any known last, page relative to the request,
+// keeping its other query parameters after page as GitHub does.
 func RelativeNextPageLink(r *http.Request, next, last int) string {
-	if last <= 0 {
-		return fmt.Sprintf(`<%s?page=%d>; rel="next"`, r.URL.Path, next)
+	pageURL := func(page int) string {
+		query := r.URL.Query()
+		query.Set("page", strconv.Itoa(page))
+		return r.URL.Path + "?" + query.Encode()
 	}
 
-	return fmt.Sprintf(
-		`<%s?page=%d>; rel="next", <%s?page=%d>; rel="last"`,
-		r.URL.Path, next, r.URL.Path, last,
-	)
+	if last <= 0 {
+		return fmt.Sprintf(`<%s>; rel="next"`, pageURL(next))
+	}
+
+	return fmt.Sprintf(`<%s>; rel="next", <%s>; rel="last"`, pageURL(next), pageURL(last))
 }
 
 // serve replies to a request for one of the configured endpoints.
@@ -143,10 +151,20 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page := 1
+	if raw := r.URL.Query().Get("page"); raw != "" {
+		page, _ = strconv.Atoi(raw)
+	}
+
+	etag := endpoint.ETag
+	if page >= 1 && page <= len(endpoint.PageETags) {
+		etag = endpoint.PageETags[page-1]
+	}
+
 	// Serve the ETag, answering a weakly-matching If-None-Match with 304.
-	if endpoint.ETag != "" {
-		w.Header().Set("ETag", endpoint.ETag)
-		if StrongETag(r.Header.Get("If-None-Match")) == StrongETag(endpoint.ETag) {
+	if etag != "" {
+		w.Header().Set("ETag", etag)
+		if StrongETag(r.Header.Get("If-None-Match")) == StrongETag(etag) {
 			s.mu.Lock()
 			s.notModified++
 			s.mu.Unlock()
@@ -158,11 +176,6 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 
 	body := endpoint.Body
 	if endpoint.Endless || len(endpoint.Pages) > 0 {
-		page := 1
-		if raw := r.URL.Query().Get("page"); raw != "" {
-			page, _ = strconv.Atoi(raw)
-		}
-
 		switch {
 		case endpoint.Endless:
 			w.Header().Set("Link", s.NextPageLink(r, page+1, 0))

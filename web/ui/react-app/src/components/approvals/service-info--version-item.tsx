@@ -64,7 +64,7 @@ const ServiceInfoVersionItem: FC<ServiceInfoVersionItemProps> = ({
 				delayDuration={500}
 			>
 				{Icon && <Icon />}
-				<p className="flex h-4 items-center justify-end text-balance font-mono font-semibold">
+				<p className="flex h-4 items-center justify-end font-mono font-semibold text-balance">
 					{value ?? 'Unknown'}
 				</p>
 			</Tip>
