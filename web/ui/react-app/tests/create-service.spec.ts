@@ -1,5 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { expect, type Page, test } from '@playwright/test';
 import {
 	expectUpdateState,
 	expectVersions,
@@ -166,7 +166,7 @@ test.describe('Service creation', () => {
 			},
 		});
 		await expectVersions(page, id, {
-			deployed: '7.2.2-72806',
+			deployed: '1.2.3-54321',
 			latest: '1.2.3',
 		});
 		await deleteService(page, id);
