@@ -19,6 +19,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/status"
+	"github.com/release-argus/Argus/util"
 )
 
 // Type is the lookup type identifier for file-based deployed version lookups.
@@ -55,4 +56,9 @@ func (l *Lookup) String(prefix string) string {
 // GetType returns the type of the receiver.
 func (l *Lookup) GetType() string {
 	return Type
+}
+
+// path returns the file path to read, with any environment variables evaluated.
+func (l *Lookup) path() string {
+	return util.EvalEnvVars(l.Path)
 }

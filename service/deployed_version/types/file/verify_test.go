@@ -26,8 +26,9 @@ func TestLookup_CheckValues(t *testing.T) {
 	tests := []struct {
 		name              string
 		data              string
+		env               map[string]string
 		errRegex          string
-		wantRegexTemplate string // Cleared if no regex.
+		wantRegexTemplate string
 	}{
 		{
 			name: "valid lookup",
@@ -75,8 +76,31 @@ func TestLookup_CheckValues(t *testing.T) {
 				path: /VERSION
 				regex_template: "$1.$2.$3"
 			`),
-			errRegex:          `^$`,
-			wantRegexTemplate: "",
+			errRegex:          `^regex: <required> \(regex_template needs a regex match to work from\)$`,
+			wantRegexTemplate: "$1.$2.$3",
+		},
+		{
+			name: "path/env var expands to absolute",
+			data: test.TrimYAML(`
+				path: ${ARGUS_TEST_DV_FILE_DIR}/VERSION
+			`),
+			env:      map[string]string{"ARGUS_TEST_DV_FILE_DIR": "/data"},
+			errRegex: `^$`,
+		},
+		{
+			name: "path/env var unset gives relative",
+			data: test.TrimYAML(`
+				path: ${ARGUS_TEST_DV_FILE_DIR_UNSET}/VERSION
+			`),
+			errRegex: `^path: ".*VERSION" <invalid> .*must be an absolute path\)$`,
+		},
+		{
+			name: "path/env var empty gives empty path",
+			data: test.TrimYAML(`
+				path: ${ARGUS_TEST_DV_FILE_PATH_EMPTY}
+			`),
+			env:      map[string]string{"ARGUS_TEST_DV_FILE_PATH_EMPTY": ""},
+			errRegex: `^path: <required>`,
 		},
 		{
 			name: "all decode",
@@ -96,7 +120,8 @@ func TestLookup_CheckValues(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			// Serial: sets env vars.
+			test.IsolateEnv(t, tc.env)
 
 			lookup := testLookup(t, "")
 			input, err := Decode(

@@ -274,19 +274,11 @@ func TestLookup_Query(t *testing.T) {
 			announces:   0,
 		},
 		{
-			name:        "regex/invalid",
-			content:     "1.2.3",
-			overrides:   `regex: '('`,
-			wantVersion: `^$`,
-			errRegex:    `^invalid regex "\(":\s+error parsing regexp: .*$`,
-			announces:   0,
-		},
-		{
 			name:        "regex/produced an empty version",
 			content:     `productversion=""` + "\n",
 			overrides:   `regex: 'productversion="([^"]*)"'`,
 			wantVersion: `^$`,
-			errRegex:    `^regex .* produced an empty version in .*$`,
+			errRegex:    `^regex .* produced an empty version$`,
 			announces:   0,
 		},
 		{

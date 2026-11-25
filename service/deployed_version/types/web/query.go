@@ -19,44 +19,23 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
-	"time"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/httpx"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/util"
 )
 
 // Track polls the URL at the configured interval, updating the deployed version on each query.
 func (l *Lookup) Track() {
-	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
-
-	// Track forever.
-	for {
-		// If we are deleting this Service, stop tracking it.
-		if l.Status.Deleting() {
-			return
-		}
-
-		// Query the deployed version.
-		_ = l.Query(true, logFrom) //nolint:errcheck
-
-		// Sleep interval between queries.
-		time.Sleep(l.Options.GetIntervalDuration())
-	}
+	base.Track(l)
 }
 
 // Query fetches the deployed version, sets Prometheus metrics if requested, and returns any error.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
-	err := l.query(metrics, logFrom)
-
-	if metrics {
-		l.QueryMetrics(l, err)
-	}
-
-	return err
+	return l.QueryWithMetrics(l, l.query, metrics, logFrom) //nolint:wrapcheck
 }
 
 // query fetches the deployed version URL and updates DeployedVersion if changed.
@@ -179,20 +158,12 @@ func (l *Lookup) getVersion(body []byte, logFrom logx.LogFrom) (string, error) {
 
 	// If a regex is provided, use it to extract the version.
 	if l.Regex != "" {
-		re := regexp.MustCompile(l.Regex)
-		texts := re.FindAllStringSubmatch(version, 1)
-
-		if len(texts) == 0 {
-			err := fmt.Errorf(
-				"regex %q didn't return any matches on %q",
-				l.Regex, util.TruncateMessage(version, 100),
-			)
+		var err error
+		version, err = base.ExtractVersion(version, l.Regex, l.RegexTemplate)
+		if err != nil {
 			logx.Warn(err, logFrom, true)
-			return "", err
+			return "", err //nolint:wrapcheck
 		}
-
-		regexMatches := texts[0]
-		version = util.RegexTemplate(regexMatches, l.RegexTemplate)
 	}
 
 	// If semantic versioning is enabled, check the version is in the correct format.

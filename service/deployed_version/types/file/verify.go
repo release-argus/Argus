@@ -25,15 +25,16 @@ import (
 // CheckValues validates the fields of the receiver.
 func (l *Lookup) CheckValues() error {
 	var errs []error
-	if l.Path == "" {
+	path := l.path()
+	if path == "" {
 		errs = append(errs, &decode.ErrField{
 			Key:         "path",
 			Description: "absolute path to a file allowed by settings.data.file_read_paths",
 		})
-	} else if !filepath.IsAbs(l.Path) {
+	} else if !filepath.IsAbs(path) {
 		errs = append(errs, &decode.ErrField{
 			Key:         "path",
-			Value:       l.Path,
+			Value:       path,
 			Description: "must be an absolute path",
 		})
 	}
@@ -46,9 +47,11 @@ func (l *Lookup) CheckValues() error {
 				Description: "invalid regular expression",
 			})
 		}
-	}
-	if l.Regex == "" {
-		l.RegexTemplate = ""
+	} else if l.RegexTemplate != "" {
+		errs = append(errs, &decode.ErrField{
+			Key:         "regex",
+			Description: "regex_template needs a regex match to work from",
+		})
 	}
 
 	if len(errs) == 0 {

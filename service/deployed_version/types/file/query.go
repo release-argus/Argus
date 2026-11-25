@@ -16,40 +16,28 @@ package file
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
-	"time"
 
 	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
-	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 )
 
 // Track polls the file and updates the deployed version.
 func (l *Lookup) Track() {
-	logFrom := logx.LogFrom{Primary: l.GetServiceID()}
-	for {
-		if l.Status.Deleting() {
-			return
-		}
-		_ = l.Query(true, logFrom) //nolint:errcheck
-		time.Sleep(l.Options.GetIntervalDuration())
-	}
+	base.Track(l)
 }
 
 // Query reads the file and updates the deployed version.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) error {
-	err := l.query(metrics, logFrom)
-	if metrics {
-		l.QueryMetrics(l, err)
-	}
-	return err
+	return l.QueryWithMetrics(l, l.query, metrics, logFrom) //nolint:wrapcheck
 }
 
 func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
-	content, err := fileaccess.Read(l.Path)
+	path := l.path()
+	content, err := fileaccess.Read(path)
 	if err != nil {
-		err = fmt.Errorf("read deployed version from %q: %w", l.Path, err)
+		err = fmt.Errorf("read deployed version from %q: %w", path, err)
 		logx.Error(err, logFrom, true)
 		return err
 	}
@@ -59,32 +47,16 @@ func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) error {
 		version = strings.TrimSpace(version)
 	}
 	if version == "" {
-		err := fmt.Errorf("no version found in %q", l.Path)
+		err := fmt.Errorf("no version found in %q", path)
 		logx.Warn(err, logFrom, true)
 		return err
 	}
 
 	if l.Regex != "" {
-		pattern, err := regexp.Compile(l.Regex)
+		version, err = base.ExtractVersion(version, l.Regex, l.RegexTemplate)
 		if err != nil {
-			err = fmt.Errorf("invalid regex %q: %w", l.Regex, err)
-			logx.Error(err, logFrom, true)
-			return err
-		}
-		matches := pattern.FindAllStringSubmatch(version, 1)
-		if len(matches) == 0 {
-			err := fmt.Errorf(
-				"regex %q didn't return any matches on %q",
-				l.Regex, util.TruncateMessage(version, 100),
-			)
 			logx.Warn(err, logFrom, true)
-			return err
-		}
-		version = strings.TrimSpace(util.RegexTemplate(matches[0], l.RegexTemplate))
-		if version == "" {
-			err := fmt.Errorf("regex %q produced an empty version in %q", l.Regex, l.Path)
-			logx.Warn(err, logFrom, true)
-			return err
+			return err //nolint:wrapcheck
 		}
 	}
 
