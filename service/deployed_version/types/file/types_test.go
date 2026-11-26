@@ -260,7 +260,7 @@ func TestLookup_GetType(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestLookup_String(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig()
 

@@ -18,6 +18,7 @@ package fileaccess
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -334,6 +335,168 @@ func TestCheckFileInfo(t *testing.T) {
 				t.Errorf("checkFileInfo() mismatch\ngot:  %v\nwant: %v", got, tc.want)
 			}
 		})
+	}
+}
+
+type fakeOpenedFile struct {
+	reader  io.Reader
+	info    fs.FileInfo
+	statErr error
+}
+
+func (f fakeOpenedFile) Read(p []byte) (int, error) {
+	return f.reader.Read(p)
+}
+
+func (f fakeOpenedFile) Stat() (fs.FileInfo, error) {
+	return f.info, f.statErr
+}
+
+type failingReader struct {
+	err error
+}
+
+func (r failingReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
+
+func TestReadOpenedFile(t *testing.T) {
+	statErr := errors.New("stat failed")
+	readErr := errors.New("read failed")
+	tests := []struct {
+		name string
+		file fakeOpenedFile
+		want string
+		err  error
+	}{
+		{
+			name: "stat error",
+			file: fakeOpenedFile{
+				statErr: statErr,
+			},
+			err: statErr,
+		},
+		{
+			name: "file changed to non-regular",
+			file: fakeOpenedFile{
+				info: fakeInfo{mode: fs.ModeDir},
+			},
+			err: errNotRegular,
+		},
+		{
+			name: "file changed to over the size limit",
+			file: fakeOpenedFile{
+				info: fakeInfo{size: maxFileSize + 1},
+			},
+			err: errTooLarge,
+		},
+		{
+			name: "read error",
+			file: fakeOpenedFile{
+				info:   fakeInfo{size: 1},
+				reader: failingReader{err: readErr},
+			},
+			err: readErr,
+		},
+		{
+			name: "file grows over the size limit after stat",
+			file: fakeOpenedFile{
+				info:   fakeInfo{size: maxFileSize},
+				reader: strings.NewReader(strings.Repeat("x", maxFileSize+1)),
+			},
+			err: errTooLarge,
+		},
+		{
+			name: "file read",
+			file: fakeOpenedFile{
+				info:   fakeInfo{size: 3},
+				reader: strings.NewReader("1.2"),
+			},
+			want: "1.2",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := readOpenedFile(tc.file)
+			if !errors.Is(err, tc.err) {
+				t.Errorf("readOpenedFile() error mismatch\ngot:  %v\nwant: %v", err, tc.err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("readOpenedFile() mismatch\ngot:  %q\nwant: %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveAllowedPaths__operationErrors(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "VERSION")
+	writeFile(t, path, "1.2.3")
+
+	absErr := errors.New("absolute path failed")
+	statErr := errors.New("stat failed")
+	parentResolutionErr := errors.New("parent resolution failed")
+	tests := []struct {
+		name      string
+		configure func(*pathResolutionOps)
+		wantErr   error
+	}{
+		{
+			name: "absolute path error",
+			configure: func(ops *pathResolutionOps) {
+				ops.abs = func(string) (string, error) {
+					return "", absErr
+				}
+			},
+			wantErr: absErr,
+		},
+		{
+			name: "stat error after symlink resolution",
+			configure: func(ops *pathResolutionOps) {
+				ops.stat = func(string) (os.FileInfo, error) {
+					return nil, statErr
+				}
+			},
+			wantErr: statErr,
+		},
+		{
+			name: "configured file parent resolution error",
+			configure: func(ops *pathResolutionOps) {
+				evalSymlinks := ops.evalSymlinks
+				calls := 0
+				ops.evalSymlinks = func(path string) (string, error) {
+					calls++
+					if calls == 2 {
+						return "", parentResolutionErr
+					}
+					return evalSymlinks(path)
+				}
+			},
+			wantErr: parentResolutionErr,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ops := defaultPathResolutionOps()
+			tc.configure(&ops)
+
+			_, err := resolveAllowedPathsWithOps([]string{path}, ops)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("resolveAllowedPathsWithOps() error mismatch\ngot:  %v\nwant: %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestLocateFile__parentResolutionError(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing", "VERSION")
+
+	_, err := locateFile(path, path, filepath.EvalSymlinks)
+
+	if err == nil || !strings.Contains(err.Error(), "resolve directory") {
+		t.Errorf("locateFile() error mismatch\ngot:  %v\nwant error containing %q", err, "resolve directory")
 	}
 }
 

@@ -72,9 +72,27 @@ func SetAllowedPaths(paths []string) error {
 	return nil
 }
 
+type pathResolutionOps struct {
+	abs          func(string) (string, error)
+	evalSymlinks func(string) (string, error)
+	stat         func(string) (os.FileInfo, error)
+}
+
+func defaultPathResolutionOps() pathResolutionOps {
+	return pathResolutionOps{
+		abs:          filepath.Abs,
+		evalSymlinks: filepath.EvalSymlinks,
+		stat:         os.Stat,
+	}
+}
+
 // resolveAllowedPaths validates paths and returns one entry per distinct resolved path.
 // Paths that resolve to the same location (e.g. a directory and a symlink to it) are merged.
 func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
+	return resolveAllowedPathsWithOps(paths, defaultPathResolutionOps())
+}
+
+func resolveAllowedPathsWithOps(paths []string, ops pathResolutionOps) ([]allowedPath, error) {
 	allowed := make([]allowedPath, 0, len(paths))
 	seen := make(map[string]int, len(paths))
 	for _, path := range paths {
@@ -82,17 +100,17 @@ func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
 			return nil, errors.New("must not contain an empty path")
 		}
 
-		configured, err := filepath.Abs(path)
+		configured, err := ops.abs(path)
 		if err != nil {
 			return nil, fmt.Errorf("resolve %q: %w", path, err)
 		}
 		configured = filepath.Clean(configured)
-		resolved, err := filepath.EvalSymlinks(configured)
+		resolved, err := ops.evalSymlinks(configured)
 		if err != nil {
 			return nil, fmt.Errorf("resolve %q: %w", path, err)
 		}
 
-		info, err := os.Stat(resolved)
+		info, err := ops.stat(resolved)
 		if err != nil {
 			return nil, fmt.Errorf("stat %q: %w", path, err)
 		}
@@ -113,7 +131,7 @@ func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
 			isFile:     !info.IsDir(),
 		}
 		if entry.isFile {
-			entry.file, err = locateFile(configured, resolved)
+			entry.file, err = locateFile(configured, resolved, ops.evalSymlinks)
 			if err != nil {
 				return nil, fmt.Errorf("resolve %q: %w", path, err)
 			}
@@ -126,8 +144,8 @@ func resolveAllowedPaths(paths []string) ([]allowedPath, error) {
 
 // locateFile returns the path to open a configured file entry from.
 // See [allowedPath.file].
-func locateFile(configured, resolved string) (string, error) {
-	resolvedDir, err := filepath.EvalSymlinks(filepath.Dir(configured))
+func locateFile(configured, resolved string, evalSymlinks func(string) (string, error)) (string, error) {
+	resolvedDir, err := evalSymlinks(filepath.Dir(configured))
 	if err != nil {
 		return "", fmt.Errorf("resolve directory: %w", err)
 	}
@@ -230,8 +248,17 @@ func readUnder(baseDir, relative string) ([]byte, error) {
 	}
 	defer file.Close()
 
+	return readOpenedFile(file)
+}
+
+type openedFile interface {
+	io.Reader
+	Stat() (fs.FileInfo, error)
+}
+
+func readOpenedFile(file openedFile) ([]byte, error) {
 	// Stat again, as the file may have been swapped since the first check.
-	info, err = file.Stat()
+	info, err := file.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("stat file: %w", err)
 	}

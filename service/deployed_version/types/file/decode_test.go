@@ -156,6 +156,59 @@ func TestLookup_DecodeSelf(t *testing.T) {
 	}
 }
 
+func TestLookup_Decode(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   string
+		data     string
+		errRegex string
+	}{
+		{
+			name:   "JSON/empty data",
+			format: "json",
+			data:   "",
+		},
+		{
+			name:   "YAML/null data",
+			format: "yaml",
+			data:   "null",
+		},
+		{
+			name:     "base lookup decode error",
+			format:   "yaml",
+			data:     "type: []",
+			errRegex: `(?s)unmarshal`,
+		},
+		{
+			name:     "file lookup decode error",
+			format:   "yaml",
+			data:     "regex: {}",
+			errRegex: `(?s)unmarshal`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, testErr := test.AssertDecode(
+				t,
+				func(format string, data []byte) (*Lookup, error) {
+					return Decode(format, data, nil, nil, plainDefaultsConfig())
+				},
+				tc.format, tc.data,
+				func(v *Lookup) string { return v.String("") },
+				"",
+				tc.errRegex,
+				"Lookup.Decode",
+			)
+			if testErr != nil {
+				t.Fatal(testErr)
+			}
+		})
+	}
+}
+
 func TestLookup_ApplyOverrides(t *testing.T) {
 	dvCfg := plainDefaultsConfig()
 	optCfg := opttest.PlainDefaultsConfig()
