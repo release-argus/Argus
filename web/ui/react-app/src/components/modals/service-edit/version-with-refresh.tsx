@@ -12,6 +12,10 @@ import { QUERY_KEYS } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { beautifyGoErrors, removeEmptyValues } from '@/utils';
 import { mapRequest } from '@/utils/api/types/api-request-handler';
+import {
+	type DeployedVersionLookupType,
+	hasDeployedVersionSource,
+} from '@/utils/api/types/config/service/deployed-version';
 import type { ServiceSummary } from '@/utils/api/types/config/summary';
 import {
 	type URLCommandsSchemaWithValidation,
@@ -53,6 +57,20 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 	const schema = schemaFull.shape[vType];
 
 	const url = useWatch({ name: `${vType}.url` }) as string;
+	const deployedVersionType = useWatch({
+		name: 'deployed_version.type',
+	}) as DeployedVersionLookupType | undefined;
+	const filePath = useWatch({ name: 'deployed_version.path' }) as
+		| string
+		| undefined;
+	const hasSource =
+		vType === 'deployed_version'
+			? hasDeployedVersionSource({
+					path: filePath,
+					type: deployedVersionType,
+					url,
+				})
+			: !!url;
 
 	const vTypeErrors = useErrors(vType, true);
 	const { data, refetchData } = useValuesRefetch(vType);
@@ -128,7 +146,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 		refetchData();
 		// setTimeout to allow time for refetch setStates ^
 		const timeout = setTimeout(() => {
-			if (url) {
+			if (hasSource) {
 				fetchVersion();
 				setLastFetched(currentTime);
 			}
@@ -144,7 +162,7 @@ const VersionWithRefresh: FC<VersionWithRefreshProps> = ({
 				<Button
 					aria-label="Refresh the version"
 					className="ml-auto"
-					disabled={isFetching || !url}
+					disabled={isFetching || !hasSource}
 					onClick={refetch}
 					variant="secondary"
 				>

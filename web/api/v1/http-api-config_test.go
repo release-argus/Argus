@@ -233,8 +233,9 @@ func TestHTTP_Config(t *testing.T) {
 			name: "settings/only",
 			settings: &config.Settings{
 				Data: config.DataSettings{
-					DatabaseFile: "somewhere.db",
-					Readonly:     new(true),
+					DatabaseFile:  "somewhere.db",
+					FileReadPaths: []string{"/srv/versions", "/opt/app/VERSION"},
+					Readonly:      new(true),
 				},
 				Web: config.WebSettings{
 					ListenHost:     "127.0.0.1",
@@ -246,6 +247,7 @@ func TestHTTP_Config(t *testing.T) {
 					"settings": {
 						"data": {
 							"database_file": "somewhere.db",
+							"file_read_paths": ["/srv/versions", "/opt/app/VERSION"],
 							"readonly": true
 						},
 						"web": {

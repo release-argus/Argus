@@ -4,6 +4,11 @@
 #settings:
 #  auth:
 #    enabled: true
+#  data:
+#    # Directories (and anything beneath them) or individual files that file deployed-version lookups may read.
+#    # A directory given as a symlink (e.g. a `current` release link) is re-followed on every read.
+#    file_read_paths:
+#      - /path/to/allowed/files
 service:
   release-argus/Argus:
     latest_version:

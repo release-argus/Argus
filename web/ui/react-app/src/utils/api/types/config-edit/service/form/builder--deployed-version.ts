@@ -6,6 +6,7 @@ import {
 	type DeployedVersionLookupURL,
 } from '@/utils/api/types/config/service/deployed-version';
 import {
+	deployedVersionFileSchema,
 	type deployedVersionLookupSchema,
 	deployedVersionLookupSchemaDefault,
 	deployedVersionManualSchema,
@@ -17,8 +18,10 @@ import { safeParse } from '@/utils/api/types/config-edit/shared/safeparse';
 import type { BuilderResponse } from '@/utils/api/types/config-edit/shared/types';
 import { applyDefaultsRecursive } from '@/utils/api/types/config-edit/util';
 import {
+	absoluteFilePathValidator,
 	CUSTOM_ISSUE_CODE,
 	REQUIRED_MESSAGE,
+	regexStringWithFallback,
 	stringWithFallback,
 	urlPrefixValidator,
 } from '@/utils/api/types/config-edit/validators';
@@ -78,9 +81,25 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 				});
 			}
 		});
+	const dvFileSchema = deployedVersionFileSchema
+		.extend({
+			path: stringWithFallback(absoluteFilePathValidator, false),
+			regex: regexStringWithFallback(false),
+		})
+		.superRefine((arg, ctx) => {
+			// `regex` required if `regex_template` is set.
+			if (arg.regex_template && !arg.regex) {
+				ctx.addIssue({
+					code: CUSTOM_ISSUE_CODE,
+					message: REQUIRED_MESSAGE,
+					path: ['regex'],
+				});
+			}
+		});
 
 	// Deployed version schema.
 	const schemaRaw = z.discriminatedUnion('type', [
+		deployedVersionFileSchema,
 		deployedVersionManualSchema,
 		deployedVersionURLSchema.transform((data) => ({
 			...data,
@@ -88,7 +107,11 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 			template_toggle: data.template_toggle || !!data.regex_template,
 		})),
 	]);
-	const schema = z.discriminatedUnion('type', [dvManualSchema, dvURLSchema]);
+	const schema = z.discriminatedUnion('type', [
+		dvManualSchema,
+		dvURLSchema,
+		dvFileSchema,
+	]);
 
 	// Initial type.
 	const schemaDataType = isDeployedVersionType(data?.type)
@@ -124,7 +147,7 @@ export const buildDeployedVersionLookupSchemaWithFallbacks = (
 		fallback: {
 			headers: headersSchemaDataDefaults,
 			method: null,
-			type: fallbackData.type as DeployedVersionLookupType,
+			type: DEPLOYED_VERSION_LOOKUP_TYPE.URL.value as DeployedVersionLookupType,
 		},
 		path: `${path} (defaults)`,
 		schema: deployedVersionLookupSchemaDefault,

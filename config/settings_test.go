@@ -18,6 +18,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -32,6 +34,8 @@ import (
 )
 
 func TestSettings_MapEnvToStruct(t *testing.T) {
+	fileReadDirs := []string{t.TempDir(), t.TempDir()}
+
 	tests := []struct {
 		name     string
 		env      map[string]string
@@ -57,6 +61,30 @@ func TestSettings_MapEnvToStruct(t *testing.T) {
 				},
 			},
 			errRegex: `^$`,
+		},
+		{
+			name: "data.file_read_paths/plaintext",
+			env: map[string]string{
+				"ARGUS_DATA_FILE_READ_PATHS": fileReadDirs[0] + ", " + fileReadDirs[1],
+			},
+			want: &Settings{
+				Data: DataSettings{
+					FileReadPaths: []string{fileReadDirs[0], fileReadDirs[1]},
+				},
+			},
+			errRegex: `^$`,
+		},
+		{
+			name: "data.file_read_paths/missing path",
+			env: map[string]string{
+				"ARGUS_DATA_FILE_READ_PATHS": filepath.Join(fileReadDirs[0], "missing"),
+			},
+			want: &Settings{
+				Data: DataSettings{
+					FileReadPaths: []string{filepath.Join(fileReadDirs[0], "missing")},
+				},
+			},
+			errRegex: `file_read_paths: .*no such file or directory`,
 		},
 		{
 			name: "web.demo.username",
@@ -318,6 +346,13 @@ func TestDataSettings_IsZero(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "non-empty/FileReadPaths",
+			data: DataSettings{
+				FileReadPaths: []string{"/path/to/file"},
+			},
+			want: false,
+		},
+		{
 			name: "non-empty/Readonly",
 			data: DataSettings{
 				Readonly: new(true),
@@ -335,6 +370,67 @@ func TestDataSettings_IsZero(t *testing.T) {
 			if got != tc.want {
 				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.want)
 			}
+		})
+	}
+}
+
+func TestDataSettings_CheckValues(t *testing.T) {
+	allowedDir := t.TempDir()
+	allowedFile := filepath.Join(allowedDir, "VERSION")
+	if err := os.WriteFile(allowedFile, []byte("1.2.3"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile() failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		env      map[string]string
+		paths    []string
+		errRegex string
+	}{
+		{
+			name:     "no paths",
+			errRegex: `^$`,
+		},
+		{
+			name:     "directory",
+			paths:    []string{allowedDir},
+			errRegex: `^$`,
+		},
+		{
+			name:     "file",
+			paths:    []string{allowedFile},
+			errRegex: `^$`,
+		},
+		{
+			name:     "env vars expanded",
+			env:      map[string]string{"ARGUS_TEST_FILE_READ_PATH": allowedDir},
+			paths:    []string{"${ARGUS_TEST_FILE_READ_PATH}"},
+			errRegex: `^$`,
+		},
+		{
+			name:     "missing path",
+			paths:    []string{filepath.Join(allowedDir, "missing")},
+			errRegex: `^file_read_paths: "[^"]+" <invalid> .*resolve .*no such file or directory.*$`,
+		},
+		{
+			name:     "empty path",
+			paths:    []string{""},
+			errRegex: `^file_read_paths: "[^"]+" <invalid> .*must not contain an empty path.*$`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			test.IsolateEnv(t, tc.env)
+			input := DataSettings{FileReadPaths: tc.paths}
+
+			_ = test.AssertCheckValuesWithError(
+				t,
+				tc.errRegex,
+				input.CheckValues,
+			)
 		})
 	}
 }
@@ -2207,6 +2303,70 @@ func TestSettings_WebDisabledRoutes(t *testing.T) {
 			}
 
 			got := settings.WebDisabledRoutes()
+
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSettings_DataFileReadPaths(t *testing.T) {
+	tests := []struct {
+		name                 string
+		values, hardDefaults []string
+		env                  map[string]string
+		want                 []string
+	}{
+		{
+			name: "unset",
+			want: []string{},
+		},
+		{
+			name:   "config values",
+			values: []string{"/config/first", "/config/second"},
+			want:   []string{"/config/first", "/config/second"},
+		},
+		{
+			name:         "hard default fallback",
+			hardDefaults: []string{"/hard-default"},
+			want:         []string{"/hard-default"},
+		},
+		{
+			name:         "empty, not nil, config still falls back",
+			values:       []string{},
+			hardDefaults: []string{"/hard-default"},
+			want:         []string{"/hard-default"},
+		},
+		{
+			name:         "config overrides the hard defaults",
+			values:       []string{"/config"},
+			hardDefaults: []string{"/hard-default"},
+			want:         []string{"/config"},
+		},
+		{
+			name:   "env vars expanded",
+			env:    map[string]string{"ARGUS_FILE_READ_PATH": "/env/path"},
+			values: []string{"${ARGUS_FILE_READ_PATH}", "/config/second"},
+			want:   []string{"/env/path", "/config/second"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: sets env vars.
+
+			test.IsolateEnv(t, tc.env)
+			settings := Settings{
+				SettingsBase: SettingsBase{
+					Data: DataSettings{FileReadPaths: tc.values},
+				},
+				HardDefaults: SettingsBase{
+					Data: DataSettings{FileReadPaths: tc.hardDefaults},
+				},
+			}
+
+			got := settings.DataFileReadPaths()
 
 			if !slices.Equal(got, tc.want) {
 				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)

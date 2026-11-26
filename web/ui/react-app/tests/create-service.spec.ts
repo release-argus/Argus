@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import {
 	expectUpdateState,
@@ -145,6 +146,30 @@ test.describe('Service creation', () => {
 				url: bareEndpoint('{"version":"1.2.3"}'),
 			},
 		});
+	});
+
+	test('deployed-version=file reads and extracts the version', async ({
+		page,
+	}, testInfo) => {
+		const baseID = 'DEPLOYED_VERSION=FILE';
+		const id = withProject(baseID, testInfo.project.name);
+		createdIDs.push(id);
+		await openDashboardInEditMode(page);
+
+		await createService(page, id, {
+			deployedVersion: {
+				path: fileURLToPath(
+					new URL('./fixtures/files/VERSION', import.meta.url),
+				),
+				regex: 'productversion="([^"]+)"',
+				type: 'file',
+			},
+		});
+		await expectVersions(page, id, {
+			deployed: '1.2.3-54321',
+			latest: '1.2.3',
+		});
+		await deleteService(page, id);
 	});
 
 	test('deployed-version=url (basic auth)', async ({ page }, testInfo) => {

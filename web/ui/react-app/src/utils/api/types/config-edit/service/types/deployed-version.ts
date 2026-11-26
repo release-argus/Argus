@@ -19,8 +19,21 @@ export const deployedVersionManualSchema = z.object({
 	version: stringDefault,
 });
 
+/* Type: file */
+export const deployedVersionFileSchema = z.object({
+	path: stringDefault,
+	regex: stringDefault,
+	regex_template: stringDefault,
+	type: z.literal(DEPLOYED_VERSION_LOOKUP_TYPE.FILE.value),
+});
+
 const deployedVersionManualSchemaDefault = deployedVersionManualSchema.extend({
 	version: stringDefault,
+});
+const deployedVersionFileSchemaDefault = deployedVersionFileSchema.extend({
+	path: stringDefault,
+	regex: stringDefault,
+	regex_template: stringDefault,
 });
 
 /* Type: url */
@@ -77,6 +90,7 @@ const deployedVersionURLSchemaDefault = deployedVersionURLSchema.extend({
 export const deployedVersionLookupSchema = z.discriminatedUnion('type', [
 	deployedVersionManualSchema,
 	deployedVersionURLSchema,
+	deployedVersionFileSchema,
 ]);
 
 export type DeployedVersionLookupSchema = z.infer<
@@ -92,6 +106,7 @@ export const isDeployedVersionType = (
 export const deployedVersionLookupSchemaDefault = z.discriminatedUnion('type', [
 	deployedVersionManualSchemaDefault,
 	deployedVersionURLSchemaDefault,
+	deployedVersionFileSchemaDefault,
 ]);
 export type DeployedVersionLookupSchemaDefault = z.infer<
 	typeof deployedVersionLookupSchemaDefault

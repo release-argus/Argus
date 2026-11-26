@@ -28,6 +28,7 @@ import (
 
 	"github.com/release-argus/Argus/auth/session"
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
 )
@@ -122,6 +123,17 @@ func (s SettingsBase) IsZero() bool {
 // CheckValues validates the fields of the receiver.
 func (s *SettingsBase) CheckValues() error {
 	var errs []error
+
+	// Data.
+	if err := s.Data.CheckValues(); err != nil {
+		errs = append(
+			errs,
+			&decode.ErrKeyField{
+				Key: "data",
+				Err: err,
+			},
+		)
+	}
 
 	// Auth.
 	if err := s.Auth.CheckValues(); err != nil {
@@ -295,14 +307,28 @@ func (a AuthLocalSettings) IsZero() bool {
 
 // DataSettings holds data-related settings for the binary.
 type DataSettings struct {
-	DatabaseFile string `json:"database_file,omitzero" yaml:"database_file,omitzero"` // Database path.
-	Readonly     *bool  `json:"readonly,omitzero" yaml:"readonly,omitzero"`           // Disable saving config changes to disk.
+	DatabaseFile  string   `json:"database_file,omitzero" yaml:"database_file,omitzero"`       // Database path.
+	FileReadPaths []string `json:"file_read_paths,omitempty" yaml:"file_read_paths,omitempty"` // Directories or individual files local-file lookups may read.
+	Readonly      *bool    `json:"readonly,omitzero" yaml:"readonly,omitzero"`                 // Disable saving config changes to disk.
 }
 
 // IsZero implements the yaml.IsZeroer interface.
 func (s DataSettings) IsZero() bool {
 	return s.DatabaseFile == "" &&
+		len(s.FileReadPaths) == 0 &&
 		s.Readonly == nil
+}
+
+// CheckValues validates the fields of the receiver.
+func (s *DataSettings) CheckValues() error {
+	if err := fileaccess.ValidateAllowedPaths(evalEnvVarsSlice(s.FileReadPaths)); err != nil {
+		return &decode.ErrField{
+			Key:         "file_read_paths",
+			Value:       fmt.Sprint(s.FileReadPaths),
+			Description: err.Error(),
+		}
+	}
+	return nil
 }
 
 // LogSettings holds log-related settings for the binary.
@@ -823,6 +849,25 @@ func (s *Settings) DataDatabaseFile() string {
 		s.Data.DatabaseFile,
 		s.HardDefaults.Data.DatabaseFile,
 	)
+}
+
+// DataFileReadPaths resolves the allowed local-file lookup paths.
+func (s *Settings) DataFileReadPaths() []string {
+	paths := s.Data.FileReadPaths
+	if len(paths) == 0 {
+		paths = s.HardDefaults.Data.FileReadPaths
+	}
+
+	return evalEnvVarsSlice(paths)
+}
+
+// evalEnvVarsSlice returns a copy of values with environment variables evaluated.
+func evalEnvVarsSlice(values []string) []string {
+	resolved := make([]string, len(values))
+	for i, value := range values {
+		resolved[i] = util.EvalEnvVars(value)
+	}
+	return resolved
 }
 
 // DataReadonly resolves whether config changes should be withheld from disk.

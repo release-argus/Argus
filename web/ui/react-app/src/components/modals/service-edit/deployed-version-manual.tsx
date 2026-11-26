@@ -98,7 +98,7 @@ const DeployedVersionManual = () => {
 
 	return (
 		<>
-			<FieldGroup className="col-span-6 py-1 lg:col-span-10">
+			<FieldGroup className="col-span-8 py-1 lg:col-span-9">
 				<Controller
 					control={control}
 					defaultValue={serviceData?.status?.deployed_version ?? ''}

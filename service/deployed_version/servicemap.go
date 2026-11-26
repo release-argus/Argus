@@ -16,6 +16,7 @@
 package deployedver
 
 import (
+	dvfile "github.com/release-argus/Argus/service/deployed_version/types/file"
 	dvmanual "github.com/release-argus/Argus/service/deployed_version/types/manual"
 	dvweb "github.com/release-argus/Argus/service/deployed_version/types/web"
 	"github.com/release-argus/Argus/util/polymorphic"
@@ -25,10 +26,12 @@ import (
 var PossibleTypes = []string{
 	dvmanual.Type,
 	dvweb.Type,
+	dvfile.Type,
 }
 
 // ServiceMap maps a service type to a Lookup constructor.
 var ServiceMap = map[string]func() Lookup{
+	dvfile.Type:   func() Lookup { return &dvfile.Lookup{} },
 	dvweb.Type:    func() Lookup { return &dvweb.Lookup{} },
 	"web":         func() Lookup { return &dvweb.Lookup{} },
 	dvmanual.Type: func() Lookup { return &dvmanual.Lookup{} },

@@ -1,5 +1,5 @@
 import { removeEmptyValues } from '@/utils';
-import { DEPLOYED_VERSION_LOOKUP_TYPE } from '@/utils/api/types/config/service/deployed-version';
+import { hasDeployedVersionSource } from '@/utils/api/types/config/service/deployed-version';
 import { mapCommandsSchemaToAPIPayload } from '@/utils/api/types/config-edit/command/api/conversions';
 import { mapNotifiersSchemaToAPIPayload } from '@/utils/api/types/config-edit/notify/api/conversions';
 import type { buildServiceSchemaWithFallbacks } from '@/utils/api/types/config-edit/service/form/builder';
@@ -29,14 +29,8 @@ export const mapServiceToAPIRequest = (
 	>['typeDataDefaults'],
 ): ServiceSchemaOutgoing => {
 	const dv = data.deployed_version;
-	let deployedVersion = null;
 	// Have a deployed version lookup.
-	if (
-		(dv.type === DEPLOYED_VERSION_LOOKUP_TYPE.MANUAL.value && dv.version) ||
-		(dv.type === DEPLOYED_VERSION_LOOKUP_TYPE.URL.value && dv.url)
-	) {
-		deployedVersion = dv;
-	}
+	const deployedVersion = hasDeployedVersionSource(dv) ? dv : null;
 
 	return removeEmptyValues({
 		...data,

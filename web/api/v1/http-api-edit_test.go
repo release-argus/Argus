@@ -176,6 +176,7 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 
 	file := t.Name() + ".yml"
 	api := testAPI(t, file)
+	allowedFile, outsideFile := testFileReadPaths(t)
 	tests := []struct {
 		name   string
 		params map[string]string
@@ -250,6 +251,32 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			},
 			wants: wants{
 				bodyRegex:  `"message":"x509 `,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "file/valid vars",
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"type": "file",
+					"path": "` + allowedFile + `"
+				}`),
+			},
+			wants: wants{
+				bodyRegex:  `^{"version":"1\.2\.3","timestamp":"[^"]+"}\s$`,
+				statusCode: http.StatusOK,
+			},
+		},
+		{
+			name: "file/outside file_read_paths",
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"type": "file",
+					"path": "` + outsideFile + `"
+				}`),
+			},
+			wants: wants{
+				bodyRegex:  `"message":".*outside configured settings\.data\.file_read_paths`,
 				statusCode: http.StatusBadRequest,
 			},
 		},
@@ -660,6 +687,7 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 	api := testAPI(t, file)
 	apiMu := sync.RWMutex{}
 	headerAuthURL := test.HeaderAuthServer(t, "1.2.3")
+	allowedFile, outsideFile := testFileReadPaths(t)
 
 	tests := []struct {
 		name               string
@@ -922,6 +950,43 @@ func TestHTTP_DeployedVersionRefresh(t *testing.T) {
 			},
 			wants: wants{
 				bodyRegex:  `.*unmarshal.* array`,
+				statusCode: http.StatusBadRequest,
+			},
+		},
+		{
+			name:   "file/no changes",
+			params: map[string]string{},
+			svc: test.Must(t, func() (*service.Service, error) {
+				svcCfg := svctest.PlainDefaultsConfig()
+				return service.DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							semantic_versioning: false
+						deployed_version:
+							type: file
+							path: `+allowedFile+`
+					`)),
+					"__name__",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			wants: wants{
+				bodyRegex:       `{"version":"1\.2\.3",.*"}`,
+				statusCode:      http.StatusOK,
+				deployedVersion: "1.2.3",
+			},
+		},
+		{
+			name:               "file/uncreated, outside file_read_paths",
+			nilDeployedVersion: true,
+			params: map[string]string{
+				"overrides": test.TrimJSON(`{
+					"type": "file",
+					"path": "` + outsideFile + `"
+				}`),
+			},
+			wants: wants{
+				bodyRegex:  `"message":".*outside configured settings\.data\.file_read_paths`,
 				statusCode: http.StatusBadRequest,
 			},
 		},

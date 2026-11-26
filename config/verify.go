@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/release-argus/Argus/config/decode"
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
@@ -44,6 +45,21 @@ func (c *Config) CheckValues() bool {
 				Err: err,
 			},
 		)
+	} else {
+		paths := c.Settings.DataFileReadPaths()
+		if err := fileaccess.SetAllowedPaths(paths); err != nil {
+			errs = append(errs, &decode.ErrKeyField{
+				Key: "settings",
+				Err: &decode.ErrKeyField{
+					Key: "data",
+					Err: &decode.ErrField{
+						Key:         "file_read_paths",
+						Value:       fmt.Sprint(paths),
+						Description: err.Error(),
+					},
+				},
+			})
+		}
 	}
 	// defaults.
 	defaultsErr, defaultsChanged := c.Defaults.CheckValues()

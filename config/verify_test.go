@@ -17,9 +17,14 @@
 package config
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/notify/shoutrrr"
@@ -29,6 +34,7 @@ import (
 	opt "github.com/release-argus/Argus/service/option"
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
+	"github.com/release-argus/Argus/util/errfmt"
 	"github.com/release-argus/Argus/webhook"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
@@ -91,6 +97,11 @@ func TestConfig_CheckValues(t *testing.T) {
 	svcCfg := svctest.PlainDefaultsConfig()
 	notifyCfg := shoutrrrtest.PlainConfig()
 	whCfg := whtest.PlainConfig()
+	fileReadPaths := []string{
+		filepath.Join(t.TempDir(), "path1"),
+		filepath.Join(t.TempDir(), "path2"),
+		filepath.Join(t.TempDir(), "longer", "path3"),
+	}
 
 	tests := []struct {
 		name     string
@@ -119,6 +130,20 @@ func TestConfig_CheckValues(t *testing.T) {
 				^settings:
 					web:
 						cert_file: .*does_not_exist.pem.* no such file.*`,
+			),
+		},
+		{
+			name: "invalid file read paths",
+			cfg: &Config{
+				Settings: Settings{
+					Data: DataSettings{
+						FileReadPaths: fileReadPaths,
+					},
+				},
+			},
+			errRegex: fmt.Sprintf(
+				"(?s)^settings:\n  data:\n    file_read_paths: %s <invalid> .*resolve .*path1.*$",
+				regexp.QuoteMeta(fmt.Sprintf("%q", fmt.Sprint(fileReadPaths))),
 			),
 		},
 		{
@@ -372,6 +397,14 @@ func TestConfig_CheckValues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Serial: captures stdout.
+			if err := fileaccess.SetAllowedPaths(nil); err != nil {
+				t.Fatalf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
+			}
+			t.Cleanup(func() {
+				if err := fileaccess.SetAllowedPaths(nil); err != nil {
+					t.Errorf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
+				}
+			})
 
 			releaseLog := test.CaptureLog(t, logx.Default())
 			releaseStdout := test.CaptureStdout(t)
@@ -408,6 +441,71 @@ func TestConfig_CheckValues(t *testing.T) {
 			saveQueued := len(tc.cfg.SaveChannel) > 0
 			if saveQueued != tc.wantSave {
 				t.Errorf("save queue mismatch\ngot:  %t\nwant: %t", saveQueued, tc.wantSave)
+			}
+		})
+	}
+}
+
+func TestConfig_CheckValues__appliesFileReadPaths(t *testing.T) {
+	loadMu.Lock()
+	nilUndefinedFlags(t, &Settings{})
+	loadMu.Unlock()
+
+	allowedDir := t.TempDir()
+	allowedFile := filepath.Join(allowedDir, "VERSION")
+	outsideFile := filepath.Join(t.TempDir(), "VERSION")
+	for _, path := range []string{allowedFile, outsideFile} {
+		if err := os.WriteFile(path, []byte("1.2.3"), 0o600); err != nil {
+			t.Fatalf("os.WriteFile(%q) failed: %v", path, err)
+		}
+	}
+
+	// Serial: the allow-list is process-global.
+	if err := fileaccess.SetAllowedPaths(nil); err != nil {
+		t.Fatalf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := fileaccess.SetAllowedPaths(nil); err != nil {
+			t.Errorf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
+		}
+	})
+
+	cfg := testVerify(t)
+	cfg.Settings.Data.FileReadPaths = []string{allowedDir}
+
+	if ok := cfg.CheckValues(); !ok {
+		t.Fatalf("CheckValues() mismatch\ngot:  %t\nwant: %t", ok, true)
+	}
+
+	tests := []struct {
+		name     string
+		path     string
+		want     string
+		errRegex string
+	}{
+		{
+			name:     "file under configured path is readable",
+			path:     allowedFile,
+			want:     "1.2.3",
+			errRegex: `^$`,
+		},
+		{
+			name:     "file outside configured path is refused",
+			path:     outsideFile,
+			errRegex: `outside configured settings\.data\.file_read_paths`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := fileaccess.Read(tc.path)
+
+			e := errfmt.FormatError(err)
+			if !util.RegexCheck(tc.errRegex, e) {
+				t.Errorf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
+			}
+			if string(got) != tc.want {
+				t.Errorf("content mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

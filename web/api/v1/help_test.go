@@ -45,6 +45,7 @@ import (
 	"github.com/release-argus/Argus/config"
 	"github.com/release-argus/Argus/config/decode"
 	dbtype "github.com/release-argus/Argus/db/types"
+	"github.com/release-argus/Argus/internal/fileaccess"
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
 	logtest "github.com/release-argus/Argus/internal/test/log"
@@ -204,6 +205,33 @@ func testAPI(t *testing.T, path string) API {
 	})
 
 	return API{Config: cfg}
+}
+
+// testFileReadPaths writes a "1.2.3" VERSION file inside and outside a temp dir that it sets as the
+// process-global settings.data.file_read_paths, resetting the allow-list on cleanup.
+// Call it from the parent test (after [testAPI], which resets the allow-list) rather than from parallel subtests.
+func testFileReadPaths(t *testing.T) (allowedFile, outsideFile string) {
+	t.Helper()
+
+	allowedDir := t.TempDir()
+	allowedFile = filepath.Join(allowedDir, "VERSION")
+	outsideFile = filepath.Join(t.TempDir(), "VERSION")
+	for _, path := range []string{allowedFile, outsideFile} {
+		if err := os.WriteFile(path, []byte("1.2.3\n"), 0o600); err != nil {
+			t.Fatalf("os.WriteFile(%q) failed: %v", path, err)
+		}
+	}
+
+	if err := fileaccess.SetAllowedPaths([]string{allowedDir}); err != nil {
+		t.Fatalf("fileaccess.SetAllowedPaths(%q) failed: %v", allowedDir, err)
+	}
+	t.Cleanup(func() {
+		if err := fileaccess.SetAllowedPaths(nil); err != nil {
+			t.Errorf("fileaccess.SetAllowedPaths(nil) failed: %v", err)
+		}
+	})
+
+	return allowedFile, outsideFile
 }
 
 func testService(

@@ -5,6 +5,7 @@ export type SettingsLog = {
 
 export type SettingsData = {
 	database_file?: string;
+	file_read_paths?: string[];
 	readonly?: boolean;
 };
 

@@ -79,13 +79,13 @@ const DeployedVersionURL = () => {
 	return (
 		<>
 			<FieldSelect
-				colSize={{ lg: 2, xs: 6 }}
+				colSize={{ lg: 3, xs: 6 }}
 				label="Method"
 				name={methodFormName}
 				options={deployedVersionLookupURLMethodNormalised}
 			/>
 			<VersionWithLink
-				colSize={{ lg: 8, sm: 12 }}
+				colSize={{ lg: 6, sm: 12 }}
 				name={`${name}.url`}
 				tooltip={{
 					content: "URL to query for the version that's running",
