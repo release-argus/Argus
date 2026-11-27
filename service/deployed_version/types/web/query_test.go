@@ -48,6 +48,11 @@ func TestLookup_GetVersion(t *testing.T) {
 			errRegex: `^no version found in`,
 		},
 		{
+			name:     "whitespace body",
+			body:     []byte(" \n"),
+			errRegex: `^no version found in " \\n"$`,
+		},
+		{
 			name:        "plain body without regex or JSON",
 			body:        []byte("1.2.3"),
 			semVer:      true,
@@ -59,7 +64,7 @@ func TestLookup_GetVersion(t *testing.T) {
 			body:     []byte(`{"bar":""}`),
 			json:     "bar",
 			semVer:   true,
-			errRegex: `^no version found in.*$`,
+			errRegex: `^no version found in "\{\\"bar\\":\\"\\"\}"$`,
 		},
 		{
 			name:        "JSON/top-level key",
@@ -115,7 +120,26 @@ func TestLookup_GetVersion(t *testing.T) {
 			body:     []byte(plainBody),
 			regex:    `^bishBashBosh$`,
 			semVer:   true,
-			errRegex: `^regex .* didn't return any matches on.*$`,
+			errRegex: `^regex "[^"]+" didn't return any matches on .*$`,
+		},
+		{
+			name:     "regex giving an empty version",
+			body:     []byte(plainBody),
+			regex:    `version: ()`,
+			errRegex: `^regex "[^"]+" returned an empty version on .*$`,
+		},
+		{
+			name:     "regex giving a whitespace version",
+			body:     []byte(plainBody),
+			regex:    `version:( )`,
+			errRegex: `^regex "[^"]+" returned an empty version on .*$`,
+		},
+		{
+			name:          "regex template giving a whitespace version",
+			body:          []byte(plainBody),
+			regex:         `version`,
+			regexTemplate: " ",
+			errRegex:      `^regex "[^"]+" returned an empty version on .*$`,
 		},
 		{
 			name: "regex with template",
