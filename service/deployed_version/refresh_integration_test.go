@@ -96,6 +96,19 @@ func TestLookup_Refresh(t *testing.T) {
 			announce: 0,
 		},
 		{
+			name: "Preview finding an empty version errors",
+			args: args{
+				overrides:          []byte(`{"url": "` + test.LookupBare.URLValid + `/v", "regex": "v([0-9.]*)"}`),
+				semanticVersioning: new("false"),
+				version: versions{
+					deployedVersion: new("1.2.3"),
+				},
+			},
+			previous: testLookup(t, web.Type, false, "1.2.3"),
+			errRegex: `^regex "[^"]+" returned an empty version on "v"$`,
+			want:     "",
+		},
+		{
 			name: "Removal of URL",
 			args: args{
 				overrides: []byte(`{"url": ""}`),

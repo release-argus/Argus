@@ -168,10 +168,10 @@ func (l *Lookup) getVersion(body []byte, logFrom logx.LogFrom) (string, error) {
 		version = string(body)
 	}
 
-	if version == "" {
+	if strings.TrimSpace(version) == "" {
 		err := fmt.Errorf(
 			"no version found in %q",
-			util.TruncateMessage(version, 100),
+			util.TruncateMessage(string(body), 100),
 		)
 		logx.Warn(err, logFrom, true)
 		return "", err
@@ -192,7 +192,16 @@ func (l *Lookup) getVersion(body []byte, logFrom logx.LogFrom) (string, error) {
 		}
 
 		regexMatches := texts[0]
+		text := version
 		version = util.RegexTemplate(regexMatches, l.RegexTemplate)
+		if strings.TrimSpace(version) == "" {
+			err := fmt.Errorf(
+				"regex %q returned an empty version on %q",
+				l.Regex, util.TruncateMessage(text, 100),
+			)
+			logx.Warn(err, logFrom, true)
+			return "", err
+		}
 	}
 
 	// If semantic versioning is enabled, check the version is in the correct format.

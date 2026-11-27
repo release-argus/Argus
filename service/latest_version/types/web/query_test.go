@@ -160,6 +160,27 @@ func TestLookup_GetVersion(t *testing.T) {
 			},
 		},
 		{
+			name:            "whitespace body",
+			bodyOverride:    new(" \n"),
+			lookupOverrides: `url_commands: []`,
+			semVer:          false,
+			want: wantVars{
+				errRegex: `^no releases were found matching the url_commands`,
+			},
+		},
+		{
+			name: "url_commands giving only empty versions",
+			lookupOverrides: test.TrimYAML(`
+				url_commands:
+					- type: regex
+						regex: 'version ([a-z]*)[0-9]'
+			`),
+			semVer: false,
+			want: wantVars{
+				errRegex: `^no releases were found matching the url_commands`,
+			},
+		},
+		{
 			name:   "nil Require",
 			semVer: false,
 			want: wantVars{

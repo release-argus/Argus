@@ -241,7 +241,7 @@ func (c *URLCommand) CheckValues() error {
 func (s *URLCommands) GetVersions(text string, logFrom logx.LogFrom) ([]string, error) {
 	// No URLCommands to run, so treat the text as a single version.
 	if len(*s) == 0 {
-		if text == "" {
+		if isBlank(text) {
 			return nil, nil
 		}
 		return []string{text}, nil
@@ -264,7 +264,12 @@ func (s *URLCommands) Run(text string, logFrom logx.LogFrom) ([]string, error) {
 			return nil, err
 		}
 	}
-	return versions, nil
+	return slices.DeleteFunc(versions, isBlank), nil
+}
+
+// isBlank reports whether version is empty or only whitespace.
+func isBlank(version string) bool {
+	return strings.TrimSpace(version) == ""
 }
 
 // run applies the URLCommand to each version in versions.
