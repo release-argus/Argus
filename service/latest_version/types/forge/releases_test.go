@@ -459,6 +459,30 @@ func TestFilterReleases(t *testing.T) {
 			want:     []string{},
 		},
 		{
+			name: "release without a tag or name dropped",
+			releases: []forgetypes.Release{
+				{TagName: "0.99.0"},
+				{TagName: " "},
+				{},
+			},
+			want: []string{
+				"0.99.0",
+			},
+		},
+		{
+			name: "url_commands giving an empty version dropped",
+			releases: []forgetypes.Release{
+				{TagName: "v"},
+				{TagName: "v0.99.0"},
+			},
+			urlCommands: filter.URLCommands{
+				{Type: "regex", Regex: `v([0-9.]*)`},
+			},
+			want: []string{
+				"0.99.0",
+			},
+		},
+		{
 			name: "Name used when TagName is empty (the /tags endpoint)",
 			releases: []forgetypes.Release{
 				{Name: "0.99.0"},

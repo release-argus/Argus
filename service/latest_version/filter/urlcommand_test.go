@@ -673,6 +673,22 @@ func TestURLCommands_GetVersions(t *testing.T) {
 			errRegex:     `^$`,
 		},
 		{
+			name:         "empty slice+whitespace text",
+			urlCommands:  &URLCommands{},
+			text:         " \n",
+			wantVersions: nil,
+			errRegex:     `^$`,
+		},
+		{
+			name: "only empty versions",
+			urlCommands: &URLCommands{
+				{Type: "regex", Regex: `([h-z]*)[0-9]+`},
+			},
+			text:         testText,
+			wantVersions: nil,
+			errRegex:     `^$`,
+		},
+		{
 			name: "single version/regex",
 			urlCommands: &URLCommands{
 				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Index: new(1)},
@@ -799,6 +815,23 @@ func TestURLCommands_Run(t *testing.T) {
 			},
 			errRegex: `^$`,
 			want:     []string{"def"},
+		},
+		{
+			name: "regex/empty versions dropped",
+			urlCommands: &URLCommands{
+				{Type: "regex", Regex: `([a-c]*)[0-9]+`},
+			},
+			errRegex: `^$`,
+			want:     []string{"abc"},
+		},
+		{
+			name: "regex/whitespace version dropped",
+			urlCommands: &URLCommands{
+				{Type: "regex", Regex: `([a-z]+)[0-9]+`, Template: "$1 "},
+				{Type: "replace", Old: "def", New: ""},
+			},
+			errRegex: `^$`,
+			want:     []string{"abc "},
 		},
 		{
 			name: "regex/negative index",
