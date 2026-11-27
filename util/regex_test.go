@@ -17,6 +17,7 @@
 package util
 
 import (
+	"errors"
 	"regexp"
 	"testing"
 )
@@ -83,6 +84,74 @@ func TestRegexCheckWithVersion(t *testing.T) {
 
 			if got != tc.match {
 				t.Errorf("mismatch\ngot:  %t\nwant: %t", got, tc.match)
+			}
+		})
+	}
+}
+
+func TestRegexTemplateWithLimit(t *testing.T) {
+	tests := []struct {
+		name         string
+		regexMatches []string
+		template     string
+		limit        int
+		want         string
+		wantErr      bool
+	}{
+		{
+			name:         "within the limit",
+			regexMatches: []string{"v1-2-3", "1", "2", "3"},
+			template:     "$1.$2.$3",
+			limit:        8,
+			want:         "1.2.3",
+		},
+		{
+			name:         "no limit",
+			regexMatches: []string{"abc", "abc"},
+			template:     "$1$1$1",
+			want:         "abcabcabc",
+		},
+		{
+			name:         "result over the limit",
+			regexMatches: []string{"abc", "abc"},
+			template:     "$1$1$1",
+			limit:        8,
+			wantErr:      true,
+		},
+		{
+			name:         "template over the limit",
+			regexMatches: []string{"a", "a"},
+			template:     "x$1xxxxxxxx",
+			limit:        8,
+			wantErr:      true,
+		},
+		{
+			name:         "no template, last group over the limit",
+			regexMatches: []string{"abcdefghi", "abcdefghi"},
+			limit:        8,
+			wantErr:      true,
+		},
+		{
+			// Each insertion of $2 adds placeholders, so the check must run before every replacement.
+			name:         "intermediate over the limit, final within it",
+			regexMatches: []string{"", "", "$1$1$1$1$1"},
+			template:     "$2$2",
+			limit:        8,
+			wantErr:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := RegexTemplateWithLimit(tc.regexMatches, tc.template, tc.limit)
+
+			if gotErr := errors.Is(err, ErrTemplateTooLong); gotErr != tc.wantErr {
+				t.Fatalf("error mismatch\ngot:  %v\nwant: ErrTemplateTooLong=%t", err, tc.wantErr)
+			}
+			if got != tc.want {
+				t.Errorf("mismatch\ngot:  %q\nwant: %q", got, tc.want)
 			}
 		})
 	}

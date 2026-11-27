@@ -17,10 +17,12 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/util"
 	"github.com/release-argus/Argus/util/errfmt"
 )
@@ -140,6 +142,19 @@ func TestLookup_GetVersion(t *testing.T) {
 			regex:         `version`,
 			regexTemplate: " ",
 			errRegex:      `^regex "[^"]+" returned an empty version on .*$`,
+		},
+		{
+			name:     "regex match over the version limit",
+			body:     []byte(strings.Repeat("1", base.MaxVersionLength+1)),
+			regex:    `(?s).+`,
+			errRegex: `^regex "[^"]+" gave a version over the 1024-byte limit on .*$`,
+		},
+		{
+			name:          "regex_template over the version limit",
+			body:          []byte(strings.Repeat("1", 64)),
+			regex:         `(?s).+`,
+			regexTemplate: strings.Repeat("$0", 20),
+			errRegex:      `^regex "[^"]+" gave a version over the 1024-byte limit on .*$`,
 		},
 		{
 			name: "regex with template",

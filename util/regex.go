@@ -16,6 +16,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -37,9 +38,26 @@ func RegexCheckWithVersion(re, text, version string) bool {
 
 // RegexTemplate substitutes $N placeholders in template with regex capture groups.
 func RegexTemplate(regexMatches []string, template string) string {
+	result, _ := RegexTemplateWithLimit(regexMatches, template, 0)
+	return result
+}
+
+// ErrTemplateTooLong is returned by [RegexTemplateWithLimit] when the result would exceed its limit.
+var ErrTemplateTooLong = errors.New("templated result too long")
+
+// RegexTemplateWithLimit is [RegexTemplate], returning [ErrTemplateTooLong] rather than building
+// a result over limit bytes (0 for no limit).
+func RegexTemplateWithLimit(regexMatches []string, template string, limit int) (string, error) {
 	// No template, return the text at the last index.
 	if template == "" {
-		return regexMatches[len(regexMatches)-1]
+		result := regexMatches[len(regexMatches)-1]
+		if limit > 0 && len(result) > limit {
+			return "", ErrTemplateTooLong
+		}
+		return result, nil
+	}
+	if limit > 0 && len(template) > limit {
+		return "", ErrTemplateTooLong
 	}
 
 	// Replace placeholders with matched groups in reverse order
@@ -47,8 +65,15 @@ func RegexTemplate(regexMatches []string, template string) string {
 	result := template
 	for i, regexMatch := range slices.Backward(regexMatches) {
 		placeholder := fmt.Sprintf("$%d", i)
+		// Check before replacing, as an inserted match may hold placeholders of its own.
+		if limit > 0 {
+			count := strings.Count(result, placeholder)
+			if count > 0 && len(result)+count*(len(regexMatch)-len(placeholder)) > limit {
+				return "", ErrTemplateTooLong
+			}
+		}
 		result = strings.ReplaceAll(result, placeholder, regexMatch)
 	}
 
-	return result
+	return result, nil
 }

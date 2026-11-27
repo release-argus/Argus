@@ -26,6 +26,7 @@ import (
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/httpx"
 	"github.com/release-argus/Argus/internal/logx"
+	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/util"
 )
 
@@ -193,7 +194,16 @@ func (l *Lookup) getVersion(body []byte, logFrom logx.LogFrom) (string, error) {
 
 		regexMatches := texts[0]
 		text := version
-		version = util.RegexTemplate(regexMatches, l.RegexTemplate)
+		var err error
+		version, err = util.RegexTemplateWithLimit(regexMatches, l.RegexTemplate, base.MaxVersionLength)
+		if err != nil {
+			err = fmt.Errorf(
+				"regex %q gave a version over the %d-byte limit on %q",
+				l.Regex, base.MaxVersionLength, util.TruncateMessage(text, 100),
+			)
+			logx.Warn(err, logFrom, true)
+			return "", err
+		}
 		if strings.TrimSpace(version) == "" {
 			err := fmt.Errorf(
 				"regex %q returned an empty version on %q",
