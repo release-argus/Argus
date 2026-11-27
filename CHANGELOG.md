@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.40.2](https://github.com/release-argus/Argus/compare/0.40.1...0.40.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* **lv-docker:** inherit query token on require override ([#1099](https://github.com/release-argus/Argus/issues/1099)) ([7f33f21](https://github.com/release-argus/Argus/commit/7f33f21b9e282fcc4eaac33f76d749c6ec1f7455))
+* **lv,dv:** reject blank versions from queries ([#1110](https://github.com/release-argus/Argus/issues/1110)) ([0d4d2ab](https://github.com/release-argus/Argus/commit/0d4d2abe0be5191eb26abd5dafb767607db5b3c3))
+
 ## [0.40.1](https://github.com/release-argus/Argus/compare/0.40.0...0.40.1) (2026-11-21)
 
 
