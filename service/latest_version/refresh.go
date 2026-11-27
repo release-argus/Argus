@@ -39,8 +39,9 @@ func Refresh(
 
 	// Whether this new semantic_versioning resolves differently than the current one.
 	semanticVerDiff := lookup.GetOptions().SemanticVersioningDiffers(semanticVersioning)
+	hasOverrides := len(overrides) != 0
 	// Whether we need to create a new Lookup.
-	usingOverrides := overrides != nil || semanticVerDiff
+	usingOverrides := hasOverrides || semanticVerDiff
 
 	// Create a new Lookup if overrides provided.
 	newLookup, err := applyOverridesJSON(
@@ -62,7 +63,7 @@ func Refresh(
 		// Remove channels from Status when using overrides.
 		newLookup.SetStatus(lookup.GetStatus().Copy(false))
 	}
-	if overrides != nil {
+	if hasOverrides {
 		newLookup.InheritSecrets(lookup, secretRefs)
 		// Check values as they may have changed.
 		if err := newLookup.CheckValues(); err != nil {

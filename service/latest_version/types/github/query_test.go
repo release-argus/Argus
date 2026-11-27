@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -320,6 +321,31 @@ func TestLookup_Query__cachedLastPageEndsTheWalk(t *testing.T) {
 	}
 	if got, want := server.NotModifiedCount(), 1; got != want {
 		t.Errorf("Server.NotModifiedCount() mismatch\ngot:  %d\nwant: %d", got, want)
+	}
+}
+
+func TestLookup_Query__noSideEffects(t *testing.T) {
+	tests := []struct {
+		name               string
+		startLatestVersion string
+	}{
+		{name: "first version", startLatestVersion: ""},
+		{name: "newer version", startLatestVersion: "0.0.1"},
+		{name: "same version", startLatestVersion: "0.17.4"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := newGitHubServer(t, map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			})
+			lookup := testLookup(t)
+			lookup.apiRoot = server.URL
+
+			lvbasetest.AssertQueryNoSideEffects(t, lookup, tc.startLatestVersion, "0.17.4")
+		})
 	}
 }
 
@@ -1278,6 +1304,51 @@ func TestLookup_SetReleases(t *testing.T) {
 				"Data.Releases()",
 			); testErr != nil {
 				t.Fatal(testErr)
+			}
+		})
+	}
+}
+
+func TestLookup_HandleNewVersion(t *testing.T) {
+	tests := []struct {
+		name      string
+		writeToDB bool
+		wantLog   bool
+	}{
+		{
+			name:      "the first check logs that it checks again",
+			writeToDB: true,
+			wantLog:   true,
+		},
+		{
+			name: "no DB write, so no log",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+			releaseLog := test.CaptureLog(t, logx.Default())
+
+			server := newGitHubServer(t, map[string]githubEndpoint{
+				"releases": {Body: string(testBody)},
+			})
+			lookup := testLookup(t)
+			lookup.apiRoot = server.URL
+			lookup.Status.SetLatestVersion("0.0.1", "", false)
+
+			if _, err := lookup.handleNewVersion(
+				0, 1,
+				"0.17.4", "", "0.0.1",
+				tc.writeToDB,
+				logx.LogFrom{Primary: t.Name()},
+			); err != nil {
+				t.Fatalf("Lookup.handleNewVersion() failed: %v", err)
+			}
+
+			stdout := releaseLog()
+			if got := strings.Contains(stdout, `Possibly found a new version (From "0.0.1" to "0.17.4")`); got != tc.wantLog {
+				t.Errorf("stdout 'Possibly found' log mismatch\ngot:  %t (%q)\nwant: %t", got, stdout, tc.wantLog)
 			}
 		})
 	}

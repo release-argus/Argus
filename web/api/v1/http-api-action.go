@@ -114,6 +114,7 @@ const (
 //	200 OK: on success.
 //	400 Bad Request: on a malformed payload, missing target, or inactive service.
 //	404 Not Found: on an unknown service.
+//	409 Conflict: while the latest_version lookup has not found a version.
 func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 	logFrom := logx.LogFrom{Primary: "httpServiceRunActions", Secondary: getIP(r)}
 	// Service to run actions of.
@@ -152,6 +153,12 @@ func (api *API) httpServiceRunActions(w http.ResponseWriter, r *http.Request) {
 		err := errors.New("service is inactive, actions can't be run for it")
 		logx.Warn(err, logFrom, true)
 		failRequest(&w, err, http.StatusBadRequest)
+		return
+	}
+	if svc.Status.LatestVersion() == "" {
+		err := errors.New("no latest version found yet, so there is no release to action")
+		logx.Warn(err, logFrom, true)
+		failRequest(&w, err, http.StatusConflict)
 		return
 	}
 

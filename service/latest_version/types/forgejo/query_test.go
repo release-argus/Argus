@@ -30,6 +30,7 @@ import (
 
 	"github.com/release-argus/Argus/internal/logx"
 	"github.com/release-argus/Argus/internal/test"
+	lvbasetest "github.com/release-argus/Argus/service/latest_version/types/base/test"
 	"github.com/release-argus/Argus/service/latest_version/types/forge"
 	forgetypes "github.com/release-argus/Argus/service/latest_version/types/forge/api_type"
 	forgetest "github.com/release-argus/Argus/service/latest_version/types/forge/test"
@@ -651,7 +652,7 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 			lookupYAML := "host: " + server.URL + "\n" + test.TrimYAML(tc.lookupYAML)
 			lookup := testLookup(t, lookupYAML)
 
-			_, err := lookup.query(logx.LogFrom{Primary: t.Name()})
+			_, err := lookup.query(true, logx.LogFrom{Primary: t.Name()})
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
@@ -670,6 +671,30 @@ func TestLookup_Query__EndpointFallback(t *testing.T) {
 					requested, tc.wantRequested,
 				)
 			}
+		})
+	}
+}
+
+func TestLookup_Query__noSideEffects(t *testing.T) {
+	tests := []struct {
+		name               string
+		startLatestVersion string
+	}{
+		{name: "first version", startLatestVersion: ""},
+		{name: "newer version", startLatestVersion: "0.0.1"},
+		{name: "same version", startLatestVersion: "0.17.4"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := newForgeServer(t, map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			})
+			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+
+			lvbasetest.AssertQueryNoSideEffects(t, lookup, tc.startLatestVersion, "0.17.4")
 		})
 	}
 }
@@ -887,7 +912,7 @@ func TestLookup_QueryEndpoint(t *testing.T) {
 				lookup.Status.SetLatestVersion(tc.latestVersion, "", false)
 			}
 
-			newVersion, err := lookup.queryEndpoint(tc.endpoint, logx.LogFrom{Primary: t.Name()})
+			newVersion, err := lookup.queryEndpoint(tc.endpoint, true, logx.LogFrom{Primary: t.Name()})
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)
@@ -985,7 +1010,7 @@ func TestLookup_QueryPage(t *testing.T) {
 
 			// The second check, so it commits rather than re-checking.
 			newVersion, nextPage, err := lookup.queryPage(
-				1, tc.page, endpointReleases,
+				1, tc.page, endpointReleases, true,
 				logx.LogFrom{Primary: t.Name()},
 			)
 			e := errfmt.FormatError(err)
@@ -2034,6 +2059,47 @@ func TestLookup_FilterReleases(t *testing.T) {
 }
 
 func TestLookup_HandleNewVersion(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		writeToDB bool
+		wantLog   bool
+	}{
+		{
+			name:      "the first check logs that it checks again",
+			writeToDB: true,
+			wantLog:   true,
+		},
+		{
+			name: "no DB write, so no log",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Serial: captures stdout.
+			releaseLog := test.CaptureLog(t, logx.Default())
+
+			server := newForgeServer(t, map[string]forgeEndpoint{
+				endpointReleases: {Body: releasesBody},
+			})
+			lookup := testLookup(t, "host: "+server.URL+"\nurl: owner/repo")
+			lookup.Status.SetLatestVersion("0.0.1", "", false)
+
+			if _, err := lookup.handleNewVersion(
+				0,
+				"0.17.4", "2026-08-01T10:50:00Z", "0.0.1",
+				endpointReleases, 1,
+				tc.writeToDB,
+				logx.LogFrom{Primary: t.Name()},
+			); err != nil {
+				t.Fatalf("Lookup.handleNewVersion() failed: %v", err)
+			}
+
+			stdout := releaseLog()
+			if got := strings.Contains(stdout, `Possibly found a new version (From "0.0.1" to "0.17.4")`); got != tc.wantLog {
+				t.Errorf("stdout 'Possibly found' log mismatch\ngot:  %t (%q)\nwant: %t", got, stdout, tc.wantLog)
+			}
+		})
+	}
+
 	t.Run("the first check re-queries before committing", func(t *testing.T) {
 		t.Parallel()
 
@@ -2047,6 +2113,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			0,
 			version, "2026-08-01T10:50:00Z", "",
 			endpointReleases, 1,
+			true,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {
@@ -2074,6 +2141,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			1,
 			version, "2026-01-01T00:00:00Z", "",
 			endpointReleases, 1,
+			true,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {
@@ -2100,6 +2168,7 @@ func TestLookup_HandleNewVersion(t *testing.T) {
 			1,
 			version, "2026-01-01T00:00:00Z", "1.0.0",
 			endpointReleases, 1,
+			true,
 			logx.LogFrom{Primary: t.Name()},
 		)
 		if err != nil {

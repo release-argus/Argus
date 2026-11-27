@@ -43,6 +43,7 @@ import (
 	svctest "github.com/release-argus/Argus/service/test"
 	"github.com/release-argus/Argus/util"
 	apitype "github.com/release-argus/Argus/web/api/types"
+	"github.com/release-argus/Argus/web/metric"
 	whtest "github.com/release-argus/Argus/webhook/test"
 )
 
@@ -149,6 +150,13 @@ func TestHTTP_LatestVersionRefreshUncreated(t *testing.T) {
 			api.httpLatestVersionRefreshUncreated(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
+
+			// A preview leaves no metrics behind for its placeholder ID.
+			assertNoMetricSeries(t, "httpVersionRefreshUncreated_Latest", map[string]metricSeriesDeleter{
+				"LatestVersionIsDeployed":       metric.LatestVersionIsDeployed,
+				"LatestVersionQueryResultLast":  metric.LatestVersionQueryResultLast,
+				"LatestVersionQueryResultTotal": metric.LatestVersionQueryResultTotal,
+			})
 
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
@@ -271,6 +279,13 @@ func TestHTTP_DeployedVersionRefreshUncreated(t *testing.T) {
 			api.httpDeployedVersionRefreshUncreated(w, req)
 			res := w.Result()
 			t.Cleanup(func() { _ = res.Body.Close() })
+
+			// A preview leaves no metrics behind for its placeholder ID.
+			assertNoMetricSeries(t, "httpVersionRefreshUncreated_Deployed", map[string]metricSeriesDeleter{
+				"LatestVersionIsDeployed":         metric.LatestVersionIsDeployed,
+				"DeployedVersionQueryResultLast":  metric.DeployedVersionQueryResultLast,
+				"DeployedVersionQueryResultTotal": metric.DeployedVersionQueryResultTotal,
+			})
 
 			if got, want := res.StatusCode, tc.wants.statusCode; got != want {
 				t.Errorf(
@@ -1786,10 +1801,11 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 	apiMu := sync.RWMutex{}
 
 	tests := []struct {
-		name    string
-		svc     *service.Service
-		payload string
-		wants   wants
+		name                                     string
+		svc                                      *service.Service
+		startLatestVersion, startDeployedVersion string
+		payload                                  string
+		wants                                    wants
 	}{
 		{
 			name: "invalid JSON",
@@ -1809,11 +1825,11 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			},
 		},
 		{
-			name: "successful lv edit",
+			name: "lv edit/successful",
 			svc: test.Must(t, func() (*service.Service, error) {
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
-						name: successful lv edit
+						name: lv edit/successful
 						comment: hi
 						options:
 							active: false
@@ -1838,7 +1854,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 						dashboard:
 							icon: https://example.com/icon.png
 					`)),
-					"successful lv edit",
+					"lv edit/successful",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -1879,11 +1895,144 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			},
 		},
 		{
-			name: "successful dv edit",
+			name: "lv edit/keeps a DeployedVersion awaiting webhook approval",
 			svc: test.Must(t, func() (*service.Service, error) {
 				return service.DecodeService(
 					"yaml", []byte(test.TrimYAML(`
-						name: successful dv edit
+						options:
+							active: false
+						latest_version:
+							type: url
+							url: `+test.LookupBare.URLValid+`/version is v1.2.3
+							url_commands:
+								- type: regex
+									regex: v?([0-9.]+)
+							allow_invalid_certs: true
+						webhook:
+							test:
+								type: github
+								url: `+test.WebhookGitHub.URLValid+`
+								secret: `+test.WebhookGitHub.SecretPass+`
+					`)),
+					"lv edit/keeps a DeployedVersion awaiting webhook approval",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			startLatestVersion:   "1.2.3",
+			startDeployedVersion: "1.2.2",
+			payload: `
+				{
+					"id": "__name__",
+					"options": {
+						"interval": "99m"
+					},
+					"latest_version": {
+						"type": "url",
+						"url":  "` + test.LookupBare.URLValid + `/version is v1.2.3",
+						"allow_invalid_certs": true,
+						"url_commands": [
+							{
+								"type": "regex",
+								"regex": "v?([0-9.]+)"
+							}
+						]
+					},
+					"webhook": [
+						{
+							"name": "test",
+							"old_index": "test",
+							"type": "github",
+							"url": "` + test.WebhookGitHub.URLValid + `",
+							"secret": "<secret>"
+						}
+					]
+				}`,
+			wants: wants{
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"edited service[^}]+"}`,
+				latestVersionRegex:   `^1\.2\.3$`,
+				deployedVersionRegex: `^1\.2\.2$`,
+				serviceYAML: test.TrimYAML(`
+					options:
+						interval: 99m
+					latest_version:
+						type: url
+						url: ` + test.LookupBare.URLValid + `/version is v1.2.3
+						url_commands:
+							- type: regex
+								regex: v?([0-9.]+)
+						allow_invalid_certs: true
+					webhook:
+						test:
+							type: github
+							url: ` + test.WebhookGitHub.URLValid + `
+							secret: ` + test.WebhookGitHub.SecretPass + `
+				`),
+			},
+		},
+		{
+			name: "lv edit/new lookup moves DeployedVersion when nothing awaits approval",
+			svc: test.Must(t, func() (*service.Service, error) {
+				return service.DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						options:
+							active: false
+						latest_version:
+							type: url
+							url: `+test.LookupBare.URLValid+`/version is v1.2.2
+							url_commands:
+								- type: regex
+									regex: v?([0-9.]+)
+							allow_invalid_certs: true
+					`)),
+					"lv edit/new lookup moves DeployedVersion when nothing awaits approval",
+					svcCfg, notifyCfg, whCfg,
+				)
+			}),
+			startLatestVersion:   "1.2.2",
+			startDeployedVersion: "1.2.2",
+			payload: `
+				{
+					"id": "__name__",
+					"options": {
+						"interval": "99m"
+					},
+					"latest_version": {
+						"type": "url",
+						"url":  "` + test.LookupBare.URLValid + `/version is v1.2.3",
+						"allow_invalid_certs": true,
+						"url_commands": [
+							{
+								"type": "regex",
+								"regex": "v?([0-9.]+)"
+							}
+						]
+					}
+				}`,
+			wants: wants{
+				statusCode:           http.StatusOK,
+				bodyRegex:            `{"message":"edited service[^}]+"}`,
+				latestVersionRegex:   `^1\.2\.3$`,
+				deployedVersionRegex: `^1\.2\.3$`,
+				serviceYAML: test.TrimYAML(`
+					options:
+						interval: 99m
+					latest_version:
+						type: url
+						url: ` + test.LookupBare.URLValid + `/version is v1.2.3
+						url_commands:
+							- type: regex
+								regex: v?([0-9.]+)
+						allow_invalid_certs: true
+				`),
+			},
+		},
+		{
+			name: "dv edit/successful",
+			svc: test.Must(t, func() (*service.Service, error) {
+				return service.DecodeService(
+					"yaml", []byte(test.TrimYAML(`
+						name: dv edit/successful
 						comment: hello
 						options:
 							active: false
@@ -1910,7 +2059,7 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 						dashboard:
 							icon: https://example.com/icon.png
 					`)),
-					"successful dv edit",
+					"dv edit/successful",
 					svcCfg, notifyCfg, whCfg,
 				)
 			}),
@@ -2030,6 +2179,8 @@ func TestHTTP_ServiceEdit__edit(t *testing.T) {
 			if tc.svc != nil {
 				api.Config.OrderMu.Lock()
 				tc.svc.ID = serviceID
+				tc.svc.Status.SetLatestVersion(tc.startLatestVersion, "", false)
+				tc.svc.Status.SetDeployedVersion(tc.startDeployedVersion, "", false)
 				api.Config.Service[tc.svc.ID] = tc.svc
 				api.Config.Order = append(api.Config.Order, tc.svc.ID)
 				api.Config.OrderMu.Unlock()

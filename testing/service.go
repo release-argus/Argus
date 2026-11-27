@@ -55,13 +55,18 @@ func ServiceTest(flag *string, cfg *config.Config) bool {
 	svc := cfg.Service[*flag]
 
 	// LatestVersion.
-	_, err := svc.LatestVersion.Query(false, logFrom)
-	if err != nil {
+	if _, err := svc.LatestVersion.Query(false, logFrom); err != nil {
 		logx.Error(
 			fmt.Sprintf(
 				"No version matching the conditions specified could be found for %q at %q",
 				*flag, svc.LatestVersion.ServiceURL(),
 			),
+			logFrom,
+			true,
+		)
+	} else {
+		logx.Info(
+			fmt.Sprintf("Latest Release - %q", svc.Status.LatestVersion()),
 			logFrom,
 			true,
 		)

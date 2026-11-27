@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/release-argus/Argus/config/decode"
 	"github.com/release-argus/Argus/internal/logx"
@@ -144,52 +145,55 @@ func FromPayload(
 	return field, nil
 }
 
-// CheckFetches verifies that, if set, the LatestVersion and DeployedVersion can be retrieved.
+// CheckFetches verifies that, if set, the LatestVersion and DeployedVersion can be retrieved,
+// filling any version the Service lacks.
 func (s *Service) CheckFetches() error {
 	// Don't check if the Service is inactive.
 	if !s.Options.GetActive() {
 		return nil
 	}
 
-	// nil the channels, so we don't make any updates.
-	announceChannel := s.Status.AnnounceChannel
-	databaseChannel := s.Status.DatabaseChannel
-	s.Status.AnnounceChannel = nil
-	s.Status.DatabaseChannel = nil
-	// Restore on exit.
-	defer func() {
-		s.Status.AnnounceChannel = announceChannel
-		s.Status.DatabaseChannel = databaseChannel
-	}()
-
 	logFrom := logx.LogFrom{Primary: s.ID, Secondary: "CheckFetches"}
+
+	// A copy finding a different version leaves it for Track to handle.
+	var versionPending bool
 
 	// Fetch latest version.
 	if s.LatestVersion != nil {
-		// Erase DeployedVersion so that 'require' is checked.
-		deployedVersion := s.Status.DeployedVersion()
-		s.Status.SetDeployedVersion("", "", false)
-
-		if _, err := s.LatestVersion.Query(
+		lookup := s.LatestVersion
+		if s.Status.LatestVersion() != "" {
+			lookup = lookup.Copy(s.Status.Copy(false))
+		}
+		if _, err := lookup.Query(
 			false,
 			logFrom,
 		); err != nil {
 			return fmt.Errorf("latest_version fetches failed: %w", err)
 		}
-		s.Status.SetDeployedVersion(deployedVersion, "", false)
+		versionPending = lookup.GetStatus().LatestVersion() != s.Status.LatestVersion()
 	}
 
 	// Fetch deployed version.
 	if s.DeployedVersionLookup != nil && s.DeployedVersionLookup.GetType() != dvmanual.Type {
-		if err := s.DeployedVersionLookup.Query(
+		lookup := s.DeployedVersionLookup
+		if s.Status.DeployedVersion() != "" {
+			lookup = lookup.Copy(s.Status.Copy(false))
+		}
+		if err := lookup.Query(
 			false,
 			logFrom,
 		); err != nil {
 			return fmt.Errorf("deployed_version fetches failed: %w", err)
 		}
+		versionPending = versionPending || lookup.GetStatus().DeployedVersion() != s.Status.DeployedVersion()
 	}
 
-	s.Status.SetLastQueried("")
+	// Track queries straight away to handle what a copy found, else waits an interval.
+	if versionPending {
+		s.Status.SetLastQueried(time.Time{}.Format(time.RFC3339))
+	} else {
+		s.Status.SetLastQueried("")
+	}
 	return nil
 }
 
@@ -221,7 +225,7 @@ func (s *Service) giveSecrets(oldService *Service, secretRefs secretRefs) {
 	}
 	// Keep DeployedVersion if the DeployedVersionLookup is unchanged.
 	if deployedver.IsEqual(s.DeployedVersionLookup, oldService.DeployedVersionLookup) &&
-		oldService.Options.SemanticVersioning == s.Options.SemanticVersioning {
+		oldService.Options.SameSemanticVersioning(&s.Options) {
 		s.Status.SetDeployedVersion(oldService.Status.DeployedVersion(), oldService.Status.DeployedVersionTimestamp(), false)
 	}
 }

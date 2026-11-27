@@ -78,6 +78,29 @@ func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
 	}
 }
 
+func TestRefresh__emptyOverridesIsNotPreview(t *testing.T) {
+	lookup := testLookup(t, "url", false)
+	hadStatus := lookup.GetStatus()
+
+	version, _, err := Refresh(
+		lookup,
+		[]byte{},
+		nil, nil,
+		plainDefaultsConfig(),
+	)
+	if err != nil {
+		t.Fatalf("Refresh() failed: %v", err)
+	}
+
+	// A preview would swap the live Lookup onto a detached Status.
+	if gotStatus := lookup.GetStatus(); gotStatus != hadStatus {
+		t.Errorf("Lookup.GetStatus() mismatch\ngot:  %p\nwant: %p", gotStatus, hadStatus)
+	}
+	if got := hadStatus.LatestVersion(); got != version {
+		t.Errorf("Status.LatestVersion() mismatch\ngot:  %q\nwant: %q", got, version)
+	}
+}
+
 func TestApplyOverridesJSON(t *testing.T) {
 	lvCfg := plainDefaultsConfig()
 

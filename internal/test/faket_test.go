@@ -106,6 +106,31 @@ func TestFakeT(t *testing.T) {
 	}
 }
 
+func TestFakeT_Name(t *testing.T) {
+	fakeT := FakeT{TestName: "the test"}
+
+	if got := fakeT.Name(); got != "the test" {
+		t.Errorf("FakeT.Name() mismatch\ngot:  %q\nwant: %q", got, "the test")
+	}
+}
+
+func TestFakeT_RunCleanups(t *testing.T) {
+	var fakeT FakeT
+	var order []int
+	fakeT.Cleanup(func() { order = append(order, 1) })
+	fakeT.Cleanup(func() {
+		order = append(order, 2)
+		fakeT.Cleanup(func() { order = append(order, 3) })
+	})
+
+	fakeT.RunCleanups()
+	fakeT.RunCleanups() // Each cleanup runs once.
+
+	if want := []int{2, 3, 1}; !slices.Equal(order, want) {
+		t.Errorf("cleanup order mismatch\ngot:  %v\nwant: %v", order, want)
+	}
+}
+
 func TestFakeT_Aborted(t *testing.T) {
 	tests := []struct {
 		name        string

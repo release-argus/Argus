@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sync/errgroup"
 	_ "modernc.org/sqlite"
 
@@ -184,6 +185,8 @@ func testLoad(t *testing.T, file string) *config.Config {
 	if !cfg.Load(t.Context(), g, file, &flags) {
 		t.Fatalf("Config.Load(%q) failed", file)
 	}
+	// The SaveHandler flushes a pending save once the test ends, so wait for it.
+	t.Cleanup(func() { _ = g.Wait() })
 	announceChannel := make(chan []byte, 8)
 	cfg.HardDefaults.Service.Status.AnnounceChannel = announceChannel
 
@@ -244,6 +247,22 @@ func testService(
 	svc.Status.DatabaseChannel = databaseChannel
 
 	return svc
+}
+
+// metricSeriesDeleter is a Prometheus vector whose series can be deleted by label.
+type metricSeriesDeleter interface {
+	DeletePartialMatch(labels prometheus.Labels) int
+}
+
+// assertNoMetricSeries fails for each of vecs holding a series for id, deleting any it finds.
+func assertNoMetricSeries(t *testing.T, id string, vecs map[string]metricSeriesDeleter) {
+	t.Helper()
+
+	for name, vec := range vecs {
+		if got := vec.DeletePartialMatch(prometheus.Labels{"id": id}); got != 0 {
+			t.Errorf("metric.%s series count mismatch\ngot:  %d\nwant: 0", name, got)
+		}
+	}
 }
 
 func testCommand(failing bool) command.Command {

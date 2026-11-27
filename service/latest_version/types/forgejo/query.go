@@ -42,10 +42,10 @@ var (
 	errNotFound = errors.New("not found")
 )
 
-// Query queries the forge for releases, sets Prometheus metrics if requested, and returns whether a
-// new version was found.
+// Query queries the forge for releases, recording the result (metrics, DB, announces, logs) only if
+// metrics, and returns whether a new version was found.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
-	isNewVersion, err := l.query(logFrom)
+	isNewVersion, err := l.query(metrics, logFrom)
 
 	if metrics {
 		l.QueryMetrics(l, err)
@@ -56,8 +56,8 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 
 // query queries [endpointReleases], falling back to [endpointTags] for
 // repositories that publish no releases.
-func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
-	newVersion, releasesErr := l.queryEndpoint(endpointReleases, logFrom)
+func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) (bool, error) {
+	newVersion, releasesErr := l.queryEndpoint(endpointReleases, writeToDB, logFrom)
 	if !endpointYieldedNothing(releasesErr) {
 		return newVersion, releasesErr
 	}
@@ -67,7 +67,7 @@ func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 	}
 
 	logx.Verbose("/releases gave nothing, trying /tags", logFrom, true)
-	newVersion, tagsErr := l.queryEndpoint(endpointTags, logFrom)
+	newVersion, tagsErr := l.queryEndpoint(endpointTags, writeToDB, logFrom)
 	if !endpointYieldedNothing(tagsErr) {
 		return newVersion, tagsErr
 	}
@@ -108,7 +108,7 @@ func nothingFound(releasesErr, tagsErr error, triedTags bool) error {
 const maxPages = 100
 
 // queryEndpoint iterates pages of `endpoint` and returns whether a new version was found.
-func (l *Lookup) queryEndpoint(endpoint string, logFrom logx.LogFrom) (bool, error) {
+func (l *Lookup) queryEndpoint(endpoint string, writeToDB bool, logFrom logx.LogFrom) (bool, error) {
 	page := 1
 	var newVersion bool
 	var err error
@@ -123,7 +123,7 @@ func (l *Lookup) queryEndpoint(endpoint string, logFrom logx.LogFrom) (bool, err
 		}
 
 		var nextPage int
-		newVersion, nextPage, err = l.queryPage(0, page, endpoint, logFrom)
+		newVersion, nextPage, err = l.queryPage(0, page, endpoint, writeToDB, logFrom)
 		if newVersion {
 			return true, nil
 		}
@@ -147,6 +147,7 @@ func (l *Lookup) queryPage(
 	checkNumber int,
 	page int,
 	endpoint string,
+	writeToDB bool,
 	logFrom logx.LogFrom,
 ) (bool, int, error) {
 	body, nextPage, err := l.httpRequest(endpoint, page, logFrom)
@@ -177,13 +178,14 @@ func (l *Lookup) queryPage(
 			checkNumber,
 			version, releaseDate, previousLatestVersion,
 			endpoint, page,
+			writeToDB,
 			logFrom,
 		)
 		return newVersion, 0, err
 	}
 
 	// Inherit version.
-	l.HandleNoVersionChange(checkNumber, version, logFrom)
+	l.HandleNoVersionChange(checkNumber, version, writeToDB, logFrom)
 	return false, 0, nil
 }
 
@@ -439,6 +441,7 @@ func (l *Lookup) handleNewVersion(
 	version, releaseDate, latestVersion string,
 	endpoint string,
 	page int,
+	writeToDB bool,
 	logFrom logx.LogFrom,
 ) (bool, error) {
 	// Confirm that the version has changed.
@@ -447,12 +450,12 @@ func (l *Lookup) handleNewVersion(
 			"Possibly found a new version (From %q to %q). Checking again",
 			latestVersion, version,
 		)
-		logx.Verbose(msg, logFrom, latestVersion != "")
+		logx.Verbose(msg, logFrom, writeToDB && latestVersion != "")
 		time.Sleep(time.Second)
 
-		newVersion, _, err := l.queryPage(1, page, endpoint, logFrom)
+		newVersion, _, err := l.queryPage(1, page, endpoint, writeToDB, logFrom)
 		return newVersion, err
 	}
 
-	return l.HandleNewVersion(version, releaseDate, logFrom) //nolint:wrapcheck
+	return l.HandleNewVersion(version, releaseDate, writeToDB, logFrom) //nolint:wrapcheck
 }

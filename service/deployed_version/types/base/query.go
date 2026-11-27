@@ -21,7 +21,7 @@ import (
 	"github.com/release-argus/Argus/internal/logx"
 )
 
-// HandleNewVersion handles a new version, updating the status, and logging the event.
+// HandleNewVersion handles a new version, updating the status, and logging the event if writeToDB.
 func (l *Lookup) HandleNewVersion(
 	version, releaseDate string,
 	writeToDB, announce bool,
@@ -38,7 +38,7 @@ func (l *Lookup) HandleNewVersion(
 	logx.Info(
 		fmt.Sprintf("Updated to %q", version),
 		logFrom,
-		true,
+		writeToDB,
 	)
 
 	// Announce the version change to WebSocket clients.

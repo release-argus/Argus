@@ -166,17 +166,15 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	)
 	options.SemanticVersioning = util.StringToBoolPtr(queryParams.Get("semantic_versioning"))
 
-	lvDefaults := latestver.DefaultsConfig{
-		Soft: &api.Config.Defaults.Service.LatestVersion,
-		Hard: &api.Config.HardDefaults.Service.LatestVersion,
-	}
-
 	// Create the LatestVersionLookup.
 	lv, err := latestver.Decode(
 		"json", []byte(overrides),
 		options,
 		&svcStatus,
-		lvDefaults,
+		latestver.DefaultsConfig{
+			Soft: &api.Config.Defaults.Service.LatestVersion,
+			Hard: &api.Config.HardDefaults.Service.LatestVersion,
+		},
 	)
 	if err == nil {
 		err = lv.CheckValues()
@@ -189,15 +187,11 @@ func (api *API) httpLatestVersionRefreshUncreated(w http.ResponseWriter, r *http
 	}
 
 	// Query the latest version lookup.
-	version, _, err := latestver.Refresh(
-		lv,
-		nil, nil, nil,
-		lvDefaults,
-	)
-	if err != nil {
+	if _, err := lv.Query(false, logFrom); err != nil {
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
+	version := lv.GetStatus().LatestVersion()
 
 	// Return the version found.
 	api.writeJSON(
@@ -277,14 +271,11 @@ func (api *API) httpDeployedVersionRefreshUncreated(w http.ResponseWriter, r *ht
 	}
 
 	// Query the deployed version lookup.
-	version, err := deployedver.Refresh(
-		dvl,
-		"", nil, nil, nil,
-	)
-	if err != nil {
+	if err := dvl.Query(false, logFrom); err != nil {
 		failRequest(&w, err, http.StatusBadRequest)
 		return
 	}
+	version := dvl.GetStatus().DeployedVersion()
 
 	// Return the version found.
 	api.writeJSON(
@@ -867,8 +858,11 @@ func (api *API) httpServiceEdit(w http.ResponseWriter, r *http.Request, reqType 
 		return
 	}
 
-	// DeployedVersion is LatestVersion if there is no DeployedVersionLookup.
-	if newService.DeployedVersionLookup == nil {
+	// Without a DeployedVersionLookup, DeployedVersion follows LatestVersion,
+	// unless it is behind a release awaiting its Commands/Webhooks.
+	if newService.DeployedVersionLookup == nil &&
+		(newService.Status.DeployedVersion() == "" ||
+			(len(newService.Command) == 0 && len(newService.Webhook) == 0)) {
 		newService.Status.SetDeployedVersion(
 			newService.Status.LatestVersion(),
 			newService.Status.LatestVersionTimestamp(),

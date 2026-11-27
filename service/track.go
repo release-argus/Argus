@@ -60,9 +60,7 @@ func (s *Service) Track() {
 
 	// Track the deployed version in an infinite loop goroutine.
 	if s.DeployedVersionLookup != nil {
-		go func() {
-			go s.DeployedVersionLookup.Track()
-		}()
+		go s.DeployedVersionLookup.Track()
 	}
 
 	// If we have no LatestVersion, we can't track.
@@ -70,7 +68,6 @@ func (s *Service) Track() {
 		return
 	}
 
-	time.Sleep(2 * time.Second) // Give DeployedVersion some time to query first.
 	// Track forever.
 	logFrom := logx.LogFrom{Primary: s.ID}
 	logx.Verbose(

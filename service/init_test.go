@@ -613,6 +613,7 @@ func TestService_Init(t *testing.T) {
 				{Name: "DatabaseChannel", Got: tc.svc.Status.DatabaseChannel, Want: databaseChannel, Mode: test.CompareSamePointer},
 				{Name: "SaveChannel", Got: tc.svc.Status.SaveChannel, Want: saveChannel, Mode: test.CompareSamePointer},
 				{Name: "Dashboard", Got: tc.svc.Status.Dashboard, Want: &tc.svc.Dashboard, Mode: test.CompareSamePointer},
+				{Name: "HasDeployedVersionLookup()", Got: tc.svc.Status.HasDeployedVersionLookup(), Want: tc.svc.DeployedVersionLookup != nil, Mode: test.CompareEqual},
 			}
 			if testErr := test.AssertFields(t, fieldTests, "Status"); testErr != nil {
 				t.Fatal(testErr)

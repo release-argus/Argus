@@ -698,6 +698,46 @@ func TestOptions_SemanticVersioningDiffers(t *testing.T) {
 	}
 }
 
+func TestOptions_SameSemanticVersioning(t *testing.T) {
+	tests := []struct {
+		name        string
+		this, other *Options
+		want        bool
+	}{
+		{name: "both nil Options", want: true},
+		{name: "both unset", this: &Options{}, other: &Options{}, want: true},
+		{name: "nil Options and unset", other: &Options{}, want: true},
+		{
+			name:  "same value, different pointers",
+			this:  &Options{Base: Base{SemanticVersioning: new(true)}},
+			other: &Options{Base: Base{SemanticVersioning: new(true)}},
+			want:  true,
+		},
+		{
+			name:  "different values",
+			this:  &Options{Base: Base{SemanticVersioning: new(true)}},
+			other: &Options{Base: Base{SemanticVersioning: new(false)}},
+			want:  false,
+		},
+		{
+			name:  "set and unset",
+			this:  &Options{Base: Base{SemanticVersioning: new(true)}},
+			other: &Options{},
+			want:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := tc.this.SameSemanticVersioning(tc.other); got != tc.want {
+				t.Errorf("Options.SameSemanticVersioning() mismatch\ngot:  %t\nwant: %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestOptions_SetSemanticVersioning(t *testing.T) {
 	tests := []struct {
 		name      string

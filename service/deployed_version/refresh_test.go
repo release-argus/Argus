@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	dbtype "github.com/release-argus/Argus/db/types"
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/deployed_version/types/manual"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
@@ -388,6 +389,37 @@ func TestRefresh__overridesRemovingTheLookup(t *testing.T) {
 				t.Errorf("version mismatch\ngot:  %q\nwant: \"\"", got)
 			}
 		})
+	}
+}
+
+func TestRefresh__emptyOverridesIsNotPreview(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("1.2.3"))
+	}))
+	t.Cleanup(server.Close)
+	lookup := testLookup(t, web.Type, false, "")
+	lookup.(*web.Lookup).URL = server.URL
+	hadStatus := lookup.GetStatus()
+	databaseChannel := make(chan dbtype.Message, 4)
+	hadStatus.DatabaseChannel = databaseChannel
+
+	version, err := Refresh(
+		lookup,
+		web.Type,
+		[]byte{},
+		nil, nil,
+	)
+	if err != nil {
+		t.Fatalf("Refresh() failed: %v", err)
+	}
+
+	// A preview would swap the live Lookup onto a detached Status, and not write to the DB.
+	if testErr := test.AssertFields(t, []test.FieldAssertion{
+		{Name: "Lookup.GetStatus()", Got: lookup.GetStatus() == hadStatus, Want: true, Mode: test.CompareEqual},
+		{Name: "version", Got: version, Want: "1.2.3", Mode: test.CompareEqual},
+		{Name: "len(Status.DatabaseChannel)", Got: len(databaseChannel), Want: 1, Mode: test.CompareEqual},
+	}, ""); testErr != nil {
+		t.Error(testErr)
 	}
 }
 

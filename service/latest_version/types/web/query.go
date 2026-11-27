@@ -29,9 +29,10 @@ import (
 	"github.com/release-argus/Argus/util"
 )
 
-// Query fetches the URL, sets Prometheus metrics if requested, and returns whether a new version was found.
+// Query fetches the URL, recording the result (metrics, DB, announces, logs) only if metrics,
+// and returns whether a new version was found.
 func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
-	isNewVersion, err := l.query(logFrom)
+	isNewVersion, err := l.query(metrics, logFrom)
 
 	if metrics {
 		l.QueryMetrics(l, err)
@@ -41,7 +42,7 @@ func (l *Lookup) Query(metrics bool, logFrom logx.LogFrom) (bool, error) {
 }
 
 // query fetches the URL and returns whether a new version was found, updating LatestVersion if so.
-func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
+func (l *Lookup) query(writeToDB bool, logFrom logx.LogFrom) (bool, error) {
 	body, err := l.httpRequest(logFrom)
 	if err != nil {
 		return false, err
@@ -56,11 +57,10 @@ func (l *Lookup) query(logFrom logx.LogFrom) (bool, error) {
 
 	// If this version differs (new?).
 	if previousVersion := l.Status.LatestVersion(); version != previousVersion {
-		return l.HandleNewVersion(version, "", logFrom) //nolint:wrapcheck
+		return l.HandleNewVersion(version, "", writeToDB, logFrom) //nolint:wrapcheck
 	}
 
-	// Announce `LastQueried`.
-	l.Status.AnnounceQuery()
+	l.HandleNoVersionChange(0, version, writeToDB, logFrom)
 	// No version change.
 	return false, nil
 }

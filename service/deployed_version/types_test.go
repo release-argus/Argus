@@ -22,6 +22,7 @@ import (
 	"github.com/release-argus/Argus/internal/test"
 	"github.com/release-argus/Argus/service/deployed_version/types/base"
 	"github.com/release-argus/Argus/service/deployed_version/types/web"
+	opt "github.com/release-argus/Argus/service/option"
 )
 
 func TestIsEqual(t *testing.T) {
@@ -164,6 +165,34 @@ func TestIsEqual(t *testing.T) {
 					dvCfg,
 				)
 			}),
+			want: false,
+		},
+		{
+			name: "interval and active ignored",
+			a: func() Lookup {
+				l := &web.Lookup{}
+				l.Options = &opt.Options{Base: opt.Base{Interval: "10m"}}
+				return l
+			}(),
+			b: func() Lookup {
+				l := &web.Lookup{}
+				l.Options = &opt.Options{Base: opt.Base{Interval: "20m"}, Active: new(false)}
+				return l
+			}(),
+			want: true,
+		},
+		{
+			name: "semantic_versioning differs",
+			a: func() Lookup {
+				l := &web.Lookup{}
+				l.Options = &opt.Options{Base: opt.Base{SemanticVersioning: new(true)}}
+				return l
+			}(),
+			b: func() Lookup {
+				l := &web.Lookup{}
+				l.Options = &opt.Options{Base: opt.Base{SemanticVersioning: new(false)}}
+				return l
+			}(),
 			want: false,
 		},
 		{

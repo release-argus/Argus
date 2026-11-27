@@ -196,6 +196,7 @@ func TestLookup_Query(t *testing.T) {
 		previousDeployedVersion     string
 		overrides, optionsOverrides string
 		errRegex                    string
+		writeToDB                   bool
 		wantVersion                 string
 		announces                   int
 	}{
@@ -203,6 +204,7 @@ func TestLookup_Query(t *testing.T) {
 			name:        "No version",
 			overrides:   `version: ""`,
 			wantVersion: `^$`,
+			writeToDB:   true,
 			errRegex:    `^$`,
 			announces:   0,
 		},
@@ -212,6 +214,7 @@ func TestLookup_Query(t *testing.T) {
 			previousDeployedVersion: "3.2.1",
 			overrides:               `version: "3.2.1"`,
 			wantVersion:             `^3\.2\.1$`,
+			writeToDB:               true,
 			errRegex:                `^$`,
 			announces:               0,
 		},
@@ -221,6 +224,7 @@ func TestLookup_Query(t *testing.T) {
 			previousDeployedVersion: "1.2.3",
 			overrides:               `version: "1.2.4"`,
 			wantVersion:             `^1\.2\.4$`,
+			writeToDB:               true,
 			errRegex:                `^$`,
 			announces:               1,
 		},
@@ -230,6 +234,7 @@ func TestLookup_Query(t *testing.T) {
 			previousDeployedVersion: "1.2.3",
 			overrides:               `version: "1.2.2"`,
 			wantVersion:             `^1\.2\.2$`,
+			writeToDB:               true,
 			errRegex:                `^$`,
 			announces:               1,
 		},
@@ -238,6 +243,7 @@ func TestLookup_Query(t *testing.T) {
 			overrides:        `version: 1`,
 			optionsOverrides: `semantic_versioning: false`,
 			wantVersion:      `^1$`,
+			writeToDB:        true,
 			errRegex:         `^$`,
 			announces:        1,
 		},
@@ -246,6 +252,7 @@ func TestLookup_Query(t *testing.T) {
 			overrides:        `version: "1_2_3"`,
 			optionsOverrides: `semantic_versioning: true`,
 			wantVersion:      `^$`,
+			writeToDB:        true,
 			errRegex:         `failed to convert "[^"]+" to a semantic version`,
 			announces:        0,
 		},
@@ -254,13 +261,24 @@ func TestLookup_Query(t *testing.T) {
 			overrides:        `version: "1_2_3"`,
 			optionsOverrides: `semantic_versioning: false`,
 			wantVersion:      `^1_2_3$`,
+			writeToDB:        true,
 			errRegex:         `^$`,
 			announces:        1,
+		},
+		{
+			name:                    "Newer version/no DB write",
+			previousLatestVersion:   "1.2.3",
+			previousDeployedVersion: "1.2.3",
+			overrides:               `version: "1.2.4"`,
+			wantVersion:             `^1\.2\.4$`,
+			errRegex:                `^$`,
+			announces:               0,
 		},
 		{
 			name:        "valid semantic version",
 			overrides:   `version: 1.2.3`,
 			wantVersion: `^1\.2\.3$`,
+			writeToDB:   true,
 			errRegex:    `^$`,
 			announces:   1,
 		},
@@ -286,7 +304,7 @@ func TestLookup_Query(t *testing.T) {
 			dvl.Status.SetLatestVersion(tc.previousLatestVersion, oneMinuteAgo, false)
 			dvl.Status.SetDeployedVersion(tc.previousDeployedVersion, oneMinuteAgo, false)
 
-			err := dvl.Query(true, logx.LogFrom{})
+			err := dvl.Query(tc.writeToDB, logx.LogFrom{})
 			e := errfmt.FormatError(err)
 			if !util.RegexCheck(tc.errRegex, e) {
 				t.Fatalf("error mismatch\ngot:  %q\nwant: %q", e, tc.errRegex)

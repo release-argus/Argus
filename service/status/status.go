@@ -64,6 +64,7 @@ type Status struct {
 	deployedVersionTimestamp string       // UTC timestamp of latest DeployedVersion change.
 	latestVersionTimestamp   string       // UTC timestamp of latest LatestVersion change.
 	lastQueried              string       // UTC timestamp of latest LatestVersion query.
+	hasDeployedVersionLookup bool         // A DeployedVersionLookup sets the DeployedVersion, not the LatestVersion.
 	regexMissesContent       uint         // Counter for the number of regex misses on the URL content.
 	regexMissesVersion       uint         // Counter for the number of regex misses on the version.
 	Fails                    Fails        // Track the Notify/Webhook fails.
@@ -146,10 +147,11 @@ func (s *Status) Copy(withChannels bool) *Status {
 	newStatus.Init(
 		len(s.Fails.Shoutrrr.fails), newStatus.Fails.Command.Length(), newStatus.Fails.Webhook.Length(),
 		ServiceInfo{
-			ID:         s.ServiceInfo.ID,
-			Name:       s.ServiceInfo.Name,
-			Comment:    s.ServiceInfo.Comment,
-			ServiceURL: s.ServiceInfo.URL,
+			ID:                       s.ServiceInfo.ID,
+			Name:                     s.ServiceInfo.Name,
+			Comment:                  s.ServiceInfo.Comment,
+			ServiceURL:               s.ServiceInfo.URL,
+			HasDeployedVersionLookup: s.hasDeployedVersionLookup,
 		},
 		s.Dashboard.Copy(),
 	)
@@ -209,10 +211,11 @@ func (s *Status) String() string {
 
 // ServiceInfo holds identifying metadata passed to [Status.Init].
 type ServiceInfo struct {
-	ID         string
-	Name       string
-	Comment    string
-	ServiceURL string
+	ID                       string
+	Name                     string
+	Comment                  string
+	ServiceURL               string
+	HasDeployedVersionLookup bool
 }
 
 // Init initialises and resets the Status.
@@ -233,6 +236,7 @@ func (s *Status) Init(
 	s.ServiceInfo.Comment = serviceInfo.Comment
 	s.ServiceInfo.URL = serviceInfo.ServiceURL
 	s.ServiceInfo.Tags = dashboard.Tags
+	s.hasDeployedVersionLookup = serviceInfo.HasDeployedVersionLookup
 
 	s.Dashboard = dashboard
 	s.ServiceInfo.SetMutex(&s.mu)
@@ -307,6 +311,14 @@ func (s *Status) SetLastQueried(t string) {
 	} else {
 		s.lastQueried = t
 	}
+}
+
+// HasDeployedVersionLookup reports whether a DeployedVersionLookup sets the DeployedVersion.
+func (s *Status) HasDeployedVersionLookup() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.hasDeployedVersionLookup
 }
 
 // SameVersions reports whether the Status has the same versions as s.

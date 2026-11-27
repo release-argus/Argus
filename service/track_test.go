@@ -17,9 +17,12 @@
 package service
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -132,6 +135,18 @@ func TestService_Track(t *testing.T) {
 		t.Fatalf("Lookup.Query() failed: %v", err)
 	}
 	testURLLatestVersion := testURLService.Status.LatestVersion()
+	// The Service whose deployed_version lookup answers only once it has a latest_version.
+	var gatedService atomic.Pointer[Service]
+	gatedDeployedVersion := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); {
+			if svc := gatedService.Load(); svc != nil && svc.Status.LatestVersion() != "" {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		_, _ = w.Write([]byte("1.2.4"))
+	}))
+	t.Cleanup(gatedDeployedVersion.Close)
 
 	type versions struct {
 		startLatestVersion, wantLatestVersion     string
@@ -144,6 +159,7 @@ func TestService_Track(t *testing.T) {
 		overrides            []byte
 		wantQueryIn          string
 		keepDeployedLookup   bool
+		gateDeployedVersion  bool // Answer the deployed_version query once LatestVersion is set.
 		livenessMetric       metric.LatestVersionQueryResult
 		ignoreLivenessMetric bool
 		versions             versions
@@ -160,7 +176,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion,
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "first query updates LatestVersion and DeployedVersion - unchanged by active=true",
@@ -175,7 +191,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: testURLLatestVersion,
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "query finds a newer version/updates LatestVersion and DeployedVersion - no commands or webhooks",
@@ -279,7 +295,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "cert/signed allowed",
@@ -295,7 +311,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: "1.2.1", wantDeployedVersion: "1.2.1",
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "github/urlCommand, regex fail",
@@ -374,7 +390,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "handle leading v's/non-semantic",
@@ -391,7 +407,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: "v1.2.2", wantDeployedVersion: "v1.2.2",
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "github/non-semantic version fail",
@@ -411,7 +427,8 @@ func TestService_Track(t *testing.T) {
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "", wantDeployedVersion: "",
 			},
-			wantAnnounces: 0, wantDatabaseMessages: 0,
+			wantAnnounces:        0,
+			wantDatabaseMessages: 0,
 		},
 		{
 			name:              "url/non-semantic version fail",
@@ -431,7 +448,8 @@ func TestService_Track(t *testing.T) {
 				startLatestVersion: "", startDeployedVersion: "",
 				wantLatestVersion: "", wantDeployedVersion: "",
 			},
-			wantAnnounces: 0, wantDatabaseMessages: 0,
+			wantAnnounces:        0,
+			wantDatabaseMessages: 0,
 		},
 		{
 			name:              "progressive versioning (get older version)",
@@ -448,7 +466,7 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: "1.2.2", wantDeployedVersion: "1.2.2",
 			},
 			wantAnnounces:        1, // Announce: 1 for latest query.
-			wantDatabaseMessages: 2, // DB: 1 for deployed, 1 for latest.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed.
 		},
 		{
 			name:              "track gets DeployedVersion/unchanged",
@@ -480,7 +498,24 @@ func TestService_Track(t *testing.T) {
 				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "3.2.1",
 			},
 			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
-			wantDatabaseMessages: 1, // DB: 1 for deployed change.
+			wantDatabaseMessages: 1, // DB: 1 for deployed.
+		},
+		{
+			name:              "track with DeployedVersionLookup/LatestVersion query doesn't set DeployedVersion",
+			latestVersionType: "url",
+			overrides: []byte(test.TrimYAML(`
+				deployed_version:
+					url: ` + gatedDeployedVersion.URL + `
+			`)),
+			keepDeployedLookup:  true,
+			gateDeployedVersion: true,
+			livenessMetric:      metric.LatestVersionQueryResultSuccess,
+			versions: versions{
+				startLatestVersion: "", startDeployedVersion: "",
+				wantLatestVersion: testURLLatestVersion, wantDeployedVersion: "1.2.4",
+			},
+			wantAnnounces:        2, // Announce: 1 for latest query, 1 for deployed change.
+			wantDatabaseMessages: 2, // DB: 1 for latest, 1 for deployed (latest is not copied to deployed).
 		},
 		{
 			name:              "track that last did a Query less than interval ago waits until interval",
@@ -573,6 +608,8 @@ func TestService_Track(t *testing.T) {
 			}
 			if !tc.keepDeployedLookup {
 				svc.DeployedVersionLookup = nil
+				// Re-initialise so Status knows LatestVersion sets DeployedVersion.
+				svc.init(notifyCfg, whCfg, svc.Status.AnnounceChannel, svc.Status.DatabaseChannel, svc.Status.SaveChannel)
 			}
 			interval := svc.Options.GetIntervalDuration()
 			// Neither Lookup may query before this.
@@ -585,6 +622,9 @@ func TestService_Track(t *testing.T) {
 				lastQueried := time.Now().Add(-interval + wantQueryIn).UTC().Truncate(time.Second)
 				svc.Status.SetLastQueried(lastQueried.Format(time.RFC3339))
 				queryNotBefore = lastQueried.Add(interval)
+			}
+			if tc.gateDeployedVersion {
+				gatedService.Store(svc)
 			}
 			didFinish := make(chan bool, 1)
 			svcBefore := svc.String("")
